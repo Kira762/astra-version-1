@@ -201,7 +201,7 @@ function Window.new(properties)
         showName = properties.showName or properties.ShowName "Astra",
         showIcon = icons.resolve(properties.showIcon or properties.ShowIcon or constants.icons.astra, iconPack),
                 showIconOnly = properties.showIconOnly or properties.ShowIconOnly or false,
-                profileText = properties.profile or properties.Profile,
+                profileText = nil,
 
         themeProperties = {},
         localeProperties = {},
@@ -255,7 +255,7 @@ function Window.new(properties)
 
             self.settings = {
         toggleKeybind = Enum.KeyCode.K,
-        mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = true,         showProfile = true,     }
+        mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = true,     }
 
         self.screenGui = self:Create("ScreenGui", {
         Name = variables.httpService:GenerateGUID(false),
@@ -1397,19 +1397,6 @@ function Window:_buildSettingsUI()
     })
 
     self.rfSettings:CreateSection({ name = "Window" })
-
-        if self.layout.mode == "sidebar" and self.profile then
-        self.rfSettings:CreateToggle({
-            name = "Show profile",
-            description = "Shows your avatar and name at the base of the sidebar. Turn it off to keep "
-                .. "them out of a stream or a screenshot.",
-            value = self.settings.showProfile,
-            callback = function(state)
-                sidebar.setProfileEnabled(self, state)
-                self:SaveSettings()
-            end,
-        })
-    end
 
     self.rfSettings:CreateToggle({
         name = "Keep window on screen",

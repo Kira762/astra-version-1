@@ -17,11 +17,11 @@ function __ASTRA_ROBLOX_ICONS_V1.get(name,pack)
  if pack=="material" then root=root.."white/" end
  return root..folder.."/"..name..".png"
 end
-function __ASTRA_ROBLOX_ICONS_V1.resolve(value,pack)
+local customAssetFolder="custom_asset"local customAssetCache={}function __ASTRA_ROBLOX_ICONS_V1.resolve(value,pack)
  if value==nil or value==0 or value=="" then return value end
  if type(value)~="string" then return value end
  if string.match(value,"^rbxassetid://") or string.match(value,"^rbxasset://") or string.match(value,"^rbxthumb://") or string.match(value,"^https?://") then return value end
- return __ASTRA_ROBLOX_ICONS_V1.get(value,pack) or value
+ local c=customAssetCache[value]if c then return c end;local e=getfenv and getfenv()or _G;if type(e.getcustomasset)=="function"then local x={".png",".jpg",".jpeg",".webp",""}for _,v in x do local p=customAssetFolder.."/"..value..v;local s,u=pcall(e.getcustomasset,p)if s and type(u)=="string"and u~=""then customAssetCache[value]=u;return u end end end;return __ASTRA_ROBLOX_ICONS_V1.get(value,pack) or value
 end
 function __ASTRA_ROBLOX_ICONS_V1.getByPack(pack,name)return __ASTRA_ROBLOX_ICONS_V1.get(name,pack)end
 function __ASTRA_ROBLOX_ICONS_V1.packs()return {"lucide","material","tabler","phosphor","heroicons","feather"}end
@@ -1760,7 +1760,7 @@ fileName=L.fileName or L.FileName,customFolder=L.customFolder or L.CustomFolder}
 __index=function(M,N)local O=L.controls[N]return O and O.value end,__newindex=function(M,N,O)local P=L.controls[N]if not
 P then ak.warn("Astra: no flag '"..tostring(N).."' to set")return end P:Set(O)end,__iter=function()local M return
 function()local N M,N=next(L.controls,M)if M then return M,N.value end return nil end end})L.settings={toggleKeybind=
-Enum.KeyCode.K,mouseOverride=true,keepOnScreen=true,welcomeToast=true,haptics=true,showProfile=true}L.screenGui=L:
+Enum.KeyCode.K,mouseOverride=true,keepOnScreen=true,welcomeToast=true,haptics=true}L.screenGui=L:
 Create('ScreenGui',{Name=f.httpService:GenerateGUID(false),IgnoreGuiInset=true,ResetOnSpawn=false,Enabled=true,
 DisplayOrder=ai.displayOrder.window,ZIndexBehavior=Enum.ZIndexBehavior.Global,Parent=f.guiContainer})L.main=L:Create(
 'Frame',{BackgroundColor3=Color3.fromRGB(255,255,255),Name=L.name,ZIndex=1,AnchorPoint=Vector2.new(0.5,0.5),Position=
@@ -1946,10 +1946,7 @@ mouseOverride,callback=function(J)I.settings.mouseOverride=J I:SaveSettings()end
 'Welcome toast',description=[[Shows a 'Signed in as' toast the first time you open the menu on a new account.]],value=I.
 settings.welcomeToast,callback=function(J)I.settings.welcomeToast=J I:SaveSettings()end}I.rfSettings:CreateToggle{name=
 'Haptics',description=[[A subtle tap as you interact, on devices that support haptics.]],value=I.settings.haptics,
-callback=function(J)I.settings.haptics=J al.setEnabled(J)I:SaveSettings()end}I.rfSettings:CreateSection{name='Window'}if
-I.layout.mode=='sidebar'and I.profile then I.rfSettings:CreateToggle{name='Show profile',description=
-[[Shows your avatar and name at the base of the sidebar. Turn it off to keep them out of a stream or a screenshot.]],
-value=I.settings.showProfile,callback=function(J)e.setProfileEnabled(I,J)I:SaveSettings()end}end I.rfSettings:
+callback=function(J)I.settings.haptics=J al.setEnabled(J)I:SaveSettings()end}I.rfSettings:CreateSection{name='Window'}I.rfSettings:
 CreateToggle{name='Keep window on screen',description=
 [[Stops the window being dragged off the edge of the screen and lost.]],value=I.settings.keepOnScreen,callback=function(
 J)I.settings.keepOnScreen=J I:SaveSettings()end}I.rfSettings:CreateButton{name='Reset Window Position',callback=function

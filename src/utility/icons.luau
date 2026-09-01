@@ -10549,7 +10549,10 @@ function Icons.get(name: string, pack: string?): string?
     return packTable[name]
 end
 
--- Resolve a component icon. Existing Roblox asset IDs, asset URIs, and URLs pass through unchanged.
+local customAssetFolder = "custom_asset"
+local customAssetCache: { [string]: string } = {}
+
+-- Resolve a component icon. Checks custom_asset folder first, then icon packs, then passes through existing URLs.
 function Icons.resolve(value: (string | number)?, pack: string?): (string | number)?
     if value == nil or value == 0 or value == "" then
         return value
@@ -10563,6 +10566,23 @@ function Icons.resolve(value: (string | number)?, pack: string?): (string | numb
         or string.match(value, "^https?://")
     then
         return value
+    end
+    -- Check custom_asset folder
+    local cached = customAssetCache[value]
+    if cached then
+        return cached
+    end
+    local env = getfenv and getfenv() or _G
+    if type(env.getcustomasset) == "function" then
+        local exts = { ".png", ".jpg", ".jpeg", ".webp", "" }
+        for _, ext in exts do
+            local filePath = customAssetFolder .. "/" .. value .. ext
+            local ok, uri = pcall(env.getcustomasset, filePath)
+            if ok and type(uri) == "string" and uri ~= "" then
+                customAssetCache[value] = uri
+                return uri
+            end
+        end
     end
     return Icons.get(value, pack) or value
 end
