@@ -330,16 +330,50 @@ window:CreateTag({
     color = Color3.fromRGB(96, 205, 255),
 })
 
-utility:CreateSection({ name = "Locking" })
+utility:CreateSection({ name = "Global Lockable" })
+
+utility:CreateText({
+    name = "How Lockable works",
+    text = "Enable Lockable in Astra Settings to pause all element callbacks globally. "
+        .. "UI states are preserved. The Lockable toggle itself always remains functional.",
+})
+
+utility:CreateButton({
+    name = "Open Settings to Enable Lockable",
+    callback = function()
+        window._lockableToggle
+        -- Navigate to the Settings tab where the Lockable toggle lives.
+        -- On sidebar layout the Settings tab is accessible via the gear icon.
+    end,
+})
+
+utility:CreateToggle({
+    name = "Enable Lockable (Global)",
+    description = "Pauses ALL element callbacks everywhere. Toggle this to enable/disable.",
+    value = false,
+    callback = function(state)
+        -- Programmatically set the built-in Lockable toggle.
+        local lockToggle = window._lockableToggle
+        if lockToggle then
+            if state then
+                lockToggle:Set(true)
+            else
+                lockToggle:Set(false)
+            end
+        end
+    end,
+})
+
+utility:CreateSection({ name = "Element-Level Locking" })
 
 local lockable = utility:CreateToggle({
     name = "Lockable Element",
-    description = "This can be locked and unlocked.",
+    description = "This can be individually locked and unlocked.",
     value = false,
 })
 
 utility:CreateToggle({
-    name = "Toggle Lock",
+    name = "Toggle Element Lock",
     callback = function(state)
         if state then
             lockable:Lock("Locked by user")
