@@ -1416,11 +1416,11 @@ return end local f=ak.states[c.window.layout.mode][d]if not f then return end ak
 _spinGradients(c)if c.neglectSelector then return end local d=TweenInfo.new(0.7,Enum.EasingStyle.Quint,Enum.
 EasingDirection.Out)for e,f in{c.topbarItemGradient,c.topbarItemStrokeGradient}do f.Rotation=-270 ag.tweenService:
 Create(f,d,{Rotation=90}):Play()end end function ae.Select(c,d)if c.window._searching then aj.close(c.window,{showTabs=
-true,jumpTo=false})end c.window.selectedTab=c c.window:_jumpTo(c.tabPage)if c.window._applySettingsLayout then c.window._applySettingsLayout(c.window,c==c.window.rfSettings)endlocal e=d or not c.window:_interactive()if not
+true,jumpTo=false})end c.window.selectedTab=c c.window:_jumpTo(c.tabPage)local e=d or not c.window:_interactive()if not
 c.neglectSelector and not e then c:_applyVisual('selected',am)end for f,g in c.window.tabs do if g~=c.window.selectedTab
 then g:Deselect(e)end end if c~=c.window.rfSettings and c.window.settingsAction and not e then ag.tweenService:Create(c.
 window.settingsAction.iconLabel,TweenInfo.new(0.25,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{ImageTransparency=
-0.6}):Play()end end  function ae.Deselect(c,d)if not c.neglectSelector and not d then c:_applyVisual('unselected',am)end
+0.6}):Play()end end function ae.Deselect(c,d)if not c.neglectSelector and not d then c:_applyVisual('unselected',am)end
 end function ae._register(c,d)table.insert(c.elements,d)ah(d,#c.elements*10)c.window:_restoreLate(d)if not c.window.
 hidden then d:_setShown(true,true)end return d end function ae.CreateButton(c,d)return c:_register(ac(ab.Parent.button).
 new(c,d))end function ae.CreateToggle(c,d)return c:_register(ac(ab.Parent.toggle).new(c,d))end function ae.CreateSwitch(
@@ -1979,7 +1979,7 @@ _descriptionBefore J._descriptionBefore=nil end f.tweenService:Create(O.titleLab
 0.7}):Play()end function h._buildLockScrim(I,J)J.lockScrim=I:Create('TextButton',{Name='ElementLock',Active=true,
 AutoButtonColor=false,Size=UDim2.fromScale(1,1),BorderSizePixel=0,Text='',TextTransparency=1,ZIndex=ai.zIndex.
 elementLock,Visible=false,BackgroundTransparency=1,Parent=J.main},{BackgroundColor3={'WindowColor',C}})I:Create(
-'UICorner',{Parent=J.lockScrim},{CornerRadius='ElementCornerRadius'})end function h._applySettingsLayout(I,J)local K=I.layout;if K.mode~='sidebar'then return end;if J then if I.tabList then I.tabList.Visible=false end;if I.sidebar then I.sidebar.Visible=false end;local L=I.selectedTab;if L and L.tabPage then L.tabPage.Size=UDim2.new(1,0,1,0);L.tabPage.Position=UDim2.new(0,0,0,0)end else if I.tabList then I.tabList.Visible=true end;if I.sidebar then I.sidebar.Visible=true end;local L=I.selectedTab;if L and L.tabPage then L.tabPage.Size=UDim2.new(1,-35,1,0);L.tabPage.Position=UDim2.new(0,35,0,0)end end end function h._setContentVisible(I,J)I.elements.
+'UICorner',{Parent=J.lockScrim},{CornerRadius='ElementCornerRadius'})end function h._setContentVisible(I,J)I.elements.
 Visible=J I.tabList.Visible=J if I.sidebar then I.sidebar.Visible=J end end function h._fadeSurfaces(I,J,K)local L={[I.
 windowShadow]={Transparency=if J then 0.6 else 1},[I.windowStroke]={Transparency=if J then 0.95 else 1},[I.bottomFade]={
 BackgroundTransparency=if J then 0 else 1}}if I.elementsStroke then L[I.elements]={BackgroundTransparency=if J then I.
