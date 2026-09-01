@@ -88,7 +88,7 @@ export default {
 
 
 
-      const what = path === "/gen2-preview" ? "No Astra Gen2 preview build is published" : "Astra Gen2 is unavailable right now";
+      const what = path === "/gen2-preview" ? "No Astra version-1 preview build is published" : "Astra version-1 is unavailable right now";
       return new Response(`-- ${what}, try again shortly\n`, {
         status: 502,
         headers: {

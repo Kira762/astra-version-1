@@ -1,5 +1,5 @@
 <!--
-Thank you for contributing to Astra Gen 2.
+Thank you for contributing to Astra version-1.
 
 Target code pull requests at `dev`. Submit standalone documentation changes to
 https://github.com/SiriusSoftwareLtd/docs and link companion documentation work

@@ -24,7 +24,7 @@ local translations = {
 
 local window = Astra:CreateWindow({
     name = "Example",
-    subtitle = "Astra Gen2",
+    subtitle = "Astra version-1",
     translations = translations,
     sidebarLayout = true,     configuration = {
         autoSave = true,

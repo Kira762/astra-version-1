@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Astra Gen 2 documentation
+  - name: Astra version-1 documentation
     url: https://docs.sirius.menu/astra-version-1
     about: Check the official documentation for setup guidance and API usage before opening an issue.

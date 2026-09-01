@@ -1,4 +1,4 @@
-# Convenience targets for Astra Gen2.
+# Convenience targets for Astra version-1.
 # Requires GNU Make plus the Rokit-managed tools listed in rokit.toml.
 
 .DEFAULT_GOAL := help
@@ -26,8 +26,8 @@ SCRIPTS_DIR ?= scripts
 PROJECT_FILE ?= default.project.json
 TEST_PROJECT_FILE ?= test.project.json
 WAX_PROJECT ?= wax.project.json
-PLACE_FILE ?= Astra Gen2.rbxlx
-TEST_PLACE_FILE ?= Astra Gen2 Tests.rbxlx
+PLACE_FILE ?= Astra version-1.rbxlx
+TEST_PLACE_FILE ?= Astra version-1 Tests.rbxlx
 BUNDLE_FILE ?= build/bundled.luau
 TESTEZ_MODEL ?= build/TestEZ.rbxm
 TESTEZ_MODEL_URL ?= https://github.com/Roblox/testez/releases/download/v0.3.2/TestEZ.rbxm
@@ -43,7 +43,7 @@ COVERAGE_THRESHOLD ?= 70
 .PHONY: help install hooks ci check test test-verbose coverage coverage-baseline testez-model test-place format format-check lint typecheck build bundle serve sourcemap-watch dev clean
 
 help:
-	@echo Astra Gen2 Make targets:
+	@echo Astra version-1 Make targets:
 	@echo   install    Trust and install Rokit tools
 	@echo   hooks      Configure Git to use repository hooks
 	@echo   ci         Run the required format, lint, typecheck, test, and coverage gate
