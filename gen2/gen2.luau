@@ -1766,7 +1766,7 @@ fileName=L.fileName or L.FileName,customFolder=L.customFolder or L.CustomFolder}
 __index=function(M,N)local O=L.controls[N]return O and O.value end,__newindex=function(M,N,O)local P=L.controls[N]if not
 P then ak.warn("Astra: no flag '"..tostring(N).."' to set")return end P:Set(O)end,__iter=function()local M return
 function()local N M,N=next(L.controls,M)if M then return M,N.value end return nil end end})L.settings={toggleKeybind=
-Enum.KeyCode.K,mouseOverride=true,keepOnScreen=true,welcomeToast=true,haptics=true,showProfile=true,lockableEnabled=false}L.screenGui=L:
+Enum.KeyCode.K,mouseOverride=true,keepOnScreen=true,welcomeToast=true,haptics=true,showProfile=true}L.screenGui=L:
 Create('ScreenGui',{Name=f.httpService:GenerateGUID(false),IgnoreGuiInset=true,ResetOnSpawn=false,Enabled=true,
 DisplayOrder=ai.displayOrder.window,ZIndexBehavior=Enum.ZIndexBehavior.Global,Parent=f.guiContainer})L.main=L:Create(
 'Frame',{BackgroundColor3=Color3.fromRGB(255,255,255),Name=L.name,ZIndex=1,AnchorPoint=Vector2.new(0.5,0.5),Position=
@@ -1952,7 +1952,7 @@ mouseOverride,callback=function(J)I.settings.mouseOverride=J I:SaveSettings()end
 'Welcome toast',description=[[Shows a 'Signed in as' toast the first time you open the menu on a new account.]],value=I.
 settings.welcomeToast,callback=function(J)I.settings.welcomeToast=J I:SaveSettings()end}I.rfSettings:CreateToggle{name=
 'Haptics',description=[[A subtle tap as you interact, on devices that support haptics.]],value=I.settings.haptics,
-callback=function(J)I.settings.haptics=J al.setEnabled(J)I:SaveSettings()end}local am=I.rfSettings:CreateToggle{name='Lockable',description=[[Pauses all element callbacks while preserving UI states. The Lockable toggle itself always works.]],value=I.settings.lockableEnabled,callback=function(J)I.settings.lockableEnabled=J I:SaveSettings()end}am._isLockableControl=true I._lockableToggle=am I.rfSettings:CreateSection{name='Window'}if
+callback=function(J)I.settings.haptics=J al.setEnabled(J)I:SaveSettings()end}I.rfSettings:CreateSection{name='Window'}if
 I.layout.mode=='sidebar'and I.profile then I.rfSettings:CreateToggle{name='Show profile',description=
 [[Shows your avatar and name at the base of the sidebar. Turn it off to keep them out of a stream or a screenshot.]],
 value=I.settings.showProfile,callback=function(J)e.setProfileEnabled(I,J)I:SaveSettings()end}end I.rfSettings:
@@ -2077,7 +2077,6 @@ then f.tweenService:Create(J.hoverOverlay,K,{BackgroundTransparency=0.97}):Play(
 MouseLeave,function()f.tweenService:Create(J.stroke,K,{Transparency=L.ElementStrokeTransparency,Color=L.ElementStroke}):
 Play()f.tweenService:Create(J.title,K,{TextColor3=L.ContentColor}):Play()if J.hoverOverlay then f.tweenService:Create(J.
 hoverOverlay,K,{BackgroundTransparency=1}):Play()end end)end function h._runGuarded(I,J,K,...)if J.locked then return
-end if I.settings.lockableEnabled and not J._isLockableControl then return
 end local L=table.pack(...)task.spawn(function()local M,N=pcall(function()return K(table.unpack(L,1,L.n))end)if M or J.
 _errored then return end J._errored=true local O,P=J.flashTarget or J.main,TweenInfo.new(0.25,Enum.EasingStyle.Quint,
 Enum.EasingDirection.Out)f.tweenService:Create(O,P,{BackgroundColor3=I.theme.ErrorColor}):Play()f.tweenService:Create(J.
