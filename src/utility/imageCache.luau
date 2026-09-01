@@ -23,7 +23,7 @@ local cacheRoot = variables.fileSystemManager:getRootFolder()
 local cacheFolder = variables.fileSystemManager:getAssetsFolder()
 local assetResolver = variables.assetResolver
 
-local assetBase = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/assets/"
+local assetBase = "https://raw.githubusercontent.com/Haijo12/sisys_ididh/main/assets/"
 local headshotPx = 48
 local thumbEndpoint =
     "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=%dx%d&format=Png&isCircular=false"
