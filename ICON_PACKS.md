@@ -1,6 +1,6 @@
 # Astra Icon Packs
 
-Astra now exposes the catalog from [Haijo12/roblox-icons](https://github.com/Haijo12/roblox-icons) through `astra.Icons`. The catalog contains PNG assets from six open-source icon families and returns raw GitHub URLs that can be passed directly to Astra component `icon` properties.
+Astra now exposes the catalog from [Haijo12/sisys_ididh](https://github.com/Haijo12/sisys_ididh) through `astra.Icons`. The catalog contains PNG assets from six open-source icon families and returns raw GitHub URLs that can be passed directly to Astra component `icon` properties.
 
 > **Default rule:** use **Lucide** for new Astra UI. It provides a clean, minimal, consistent outline style and is the best visual match for Astra’s existing controls.
 

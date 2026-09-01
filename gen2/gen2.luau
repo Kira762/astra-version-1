@@ -6,7 +6,7 @@ __ASTRA_ROBLOX_ICONS_V1.Phosphor="phosphor"
 __ASTRA_ROBLOX_ICONS_V1.Heroicons="heroicons"
 __ASTRA_ROBLOX_ICONS_V1.Feather="feather"
 local __ASTRA_ROBLOX_ICON_PACK_NAMES_V1={lucide=true,material=true,tabler=true,phosphor=true,heroicons=true,feather=true}
-local __ASTRA_ROBLOX_ICON_BASE_V1="https://raw.githubusercontent.com/Haijo12/roblox-icons/main"
+local __ASTRA_ROBLOX_ICON_BASE_V1="https://raw.githubusercontent.com/Haijo12/sisys_ididh/main"
 function __ASTRA_ROBLOX_ICONS_V1.isPack(pack)return type(pack)=="string" and __ASTRA_ROBLOX_ICON_PACK_NAMES_V1[pack]==true end
 function __ASTRA_ROBLOX_ICONS_V1.get(name,pack)
  pack=pack or "lucide"

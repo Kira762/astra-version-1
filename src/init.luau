@@ -60,7 +60,7 @@ type WindowModule = { new: (types.WindowProps) -> types.Window }
 
 local astra = {} :: Astra
 
--- Public icon catalog backed by Haijo12/roblox-icons.
+-- Public icon catalog backed by Haijo12/sisys_ididh.
 -- Use astra.Icons.get(name, pack) for explicit pack selection.
 astra.Icons = icons
 
