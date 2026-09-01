@@ -5,17 +5,17 @@ constants.fontAsset = "rbxassetid://12187375716"
 constants.pillResizeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
 constants.icons = {
-    close = nil,
-    minimise = nil,
-    maximise = nil,
-    settings = nil,
-    search = nil,
-    chevron = nil,
-    check = nil,
-    dot = nil,
-    colorpicker = nil,
-    config = nil,
-    astra = nil,
+    close = "x",
+    minimise = "minus",
+    maximise = "maximize",
+    settings = "settings",
+    search = "search",
+    chevron = "chevron-down",
+    check = "check",
+    dot = "circle",
+    colorpicker = "palette",
+    config = "cog",
+    astra = "sparkles",
 }
 
 constants.accent = {
