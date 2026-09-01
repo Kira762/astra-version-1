@@ -1,5 +1,4 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Astra = require(ReplicatedStorage.Astra)
+local Astra = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/gen2/gen2.luau"))()
 
 task.wait(2)
 
