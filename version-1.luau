@@ -1416,7 +1416,7 @@ return end local f=ak.states[c.window.layout.mode][d]if not f then return end ak
 _spinGradients(c)if c.neglectSelector then return end local d=TweenInfo.new(0.7,Enum.EasingStyle.Quint,Enum.
 EasingDirection.Out)for e,f in{c.topbarItemGradient,c.topbarItemStrokeGradient}do f.Rotation=-270 ag.tweenService:
 Create(f,d,{Rotation=90}):Play()end end function ae.Select(c,d)if c.window._searching then aj.close(c.window,{showTabs=
-true,jumpTo=false})end c.window.selectedTab=c c.window:_jumpTo(c.tabPage)local e=d or not c.window:_interactive()if not
+true,jumpTo=false})end c.window.selectedTab=c c.window:_jumpTo(c.tabPage)if c.window.layout and c.window.layout.mode=='sidebar'then if c==c.window.rfSettings then if c.window.tabList then c.window.tabList.Visible=false end;if c.window.sidebar then c.window.sidebar.Visible=false end;if c.tabPage then c.tabPage.Size=UDim2.new(1,0,1,0);c.tabPage.Position=UDim2.new(0,0,0,0)end else if c.window.tabList then c.window.tabList.Visible=true end;if c.window.sidebar then c.window.sidebar.Visible=true end;if c.tabPage then c.tabPage.Size=UDim2.new(1,-35,1,0);c.tabPage.Position=UDim2.new(0,35,0,0)end end end local e=d or not c.window:_interactive()if not
 c.neglectSelector and not e then c:_applyVisual('selected',am)end for f,g in c.window.tabs do if g~=c.window.selectedTab
 then g:Deselect(e)end end if c~=c.window.rfSettings and c.window.settingsAction and not e then ag.tweenService:Create(c.
 window.settingsAction.iconLabel,TweenInfo.new(0.25,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{ImageTransparency=
