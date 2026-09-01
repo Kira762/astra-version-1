@@ -1,4 +1,4 @@
-local Astra = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/gen2/gen2.luau"))()
+local Astra = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"))()
 
 -- Unique local identifier: safe to paste beside other scripts.
 local AstraLucidePack = Astra.Icons.Lucide
