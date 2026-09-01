@@ -1,5 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Rayfield = require(ReplicatedStorage.Rayfield)
+local Astra = require(ReplicatedStorage.Astra)
 
 task.wait(2)
 
@@ -22,7 +22,7 @@ local translations = {
     },
 }
 
-local window = Rayfield:CreateWindow({
+local window = Astra:CreateWindow({
     name = "Example",
     subtitle = "Astra Gen2",
     translations = translations,

@@ -1,4 +1,4 @@
-local requireUtility = (_G :: any).__RAYFIELD_TEST_HELPERS.requireUtility
+local requireUtility = (_G :: any).__ASTRA_TEST_HELPERS.requireUtility
 
 return function()
     local paths = requireUtility("persistencePaths")
@@ -77,7 +77,7 @@ return function()
             local dir, fullPath = paths.getSettingsPath()
 
             expect(dir).to.equal("Root/Settings")
-            expect(fullPath).to.equal("Root/Settings/rayfield.rfld")
+            expect(fullPath).to.equal("Root/Settings/astra.rfld")
         end)
     end)
 end

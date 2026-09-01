@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem with Rayfield Gen 2
+description: Report a reproducible problem with Astra Gen 2
 title: "[Bug]: "
 labels:
   - bug
@@ -26,14 +26,14 @@ body:
     attributes:
       label: Problem
       description: Clearly and concisely describe the problem and its impact.
-      placeholder: What happened, and how does it affect your use of Rayfield Gen 2?
+      placeholder: What happened, and how does it affect your use of Astra Gen 2?
     validations:
       required: true
   - type: input
     id: version
     attributes:
       label: Affected version or commit
-      description: Provide the Rayfield Gen 2 release, branch, or full commit SHA.
+      description: Provide the Astra Gen 2 release, branch, or full commit SHA.
       placeholder: main at 0db691c... or vX.Y.Z
     validations:
       required: true
@@ -59,7 +59,7 @@ body:
       label: Steps to reproduce
       description: List the smallest reliable sequence that demonstrates the problem.
       placeholder: |
-        1. Load Rayfield Gen 2 with ...
+        1. Load Astra Gen 2 with ...
         2. Create ...
         3. Observe ...
     validations:

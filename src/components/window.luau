@@ -184,7 +184,7 @@ function Window.new(properties)
 
         icon = properties.icon or properties.Icon,
         showName = properties.showName or properties.ShowName "Astra",
-        showIcon = properties.showIcon or properties.ShowIcon or constants.icons.rayfield,
+        showIcon = properties.showIcon or properties.ShowIcon or constants.icons.astra,
                 showIconOnly = properties.showIconOnly or properties.ShowIconOnly or false,
                 profileText = properties.profile or properties.Profile,
 

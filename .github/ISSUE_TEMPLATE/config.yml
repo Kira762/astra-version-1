@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Rayfield Gen 2 documentation
-    url: https://docs.sirius.menu/rayfield-gen2
+  - name: Astra Gen 2 documentation
+    url: https://docs.sirius.menu/astra-version-1
     about: Check the official documentation for setup guidance and API usage before opening an issue.

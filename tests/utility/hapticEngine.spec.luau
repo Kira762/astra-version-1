@@ -1,4 +1,4 @@
-local helpers = (_G :: any).__RAYFIELD_TEST_HELPERS
+local helpers = (_G :: any).__ASTRA_TEST_HELPERS
 local requireUtility = helpers.requireUtility
 
 return function()

@@ -1,5 +1,5 @@
-local helpers = (_G :: any).__RAYFIELD_TEST_HELPERS
-local coverage = (_G :: any).__RAYFIELD_COVERAGE
+local helpers = (_G :: any).__ASTRA_TEST_HELPERS
+local coverage = (_G :: any).__ASTRA_COVERAGE
 local luau = require("@lune/luau") :: any
 
 local function runInstrumented(path, instrumented, fileCoverage)

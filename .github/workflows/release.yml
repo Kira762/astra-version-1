@@ -105,7 +105,7 @@ jobs:
         run: |
           set -euo pipefail
           {
-            printf -- '-- Rayfield Gen2 v%s\n' "$VERSION"
+            printf -- '-- Astra Gen2 v%s\n' "$VERSION"
             printf -- '-- loadstring(game:HttpGet("https://sirius.menu/gen2"))()\n'
             printf -- '--\n'
             printf -- '-- Copyright (c) 2026 Corridon Capital\n'
@@ -175,13 +175,13 @@ jobs:
             fi
           else
             {
-              printf 'The `%s` release of Rayfield Gen2.\n\n' "$RELEASE_TAG"
-              printf '    local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()\n\n'
-              printf 'Docs: https://docs.sirius.menu/rayfield-gen2\n'
+              printf 'The `%s` release of Astra Gen2.\n\n' "$RELEASE_TAG"
+              printf '    local Astra = loadstring(game:HttpGet("https://sirius.menu/gen2"))()\n\n'
+              printf 'Docs: https://docs.sirius.menu/astra-version-1\n'
             } > release-notes.md
             # tag the exact commit that was built, not wherever main is by now
             gh release create "$RELEASE_TAG" --target "$TARGET_COMMIT" --latest \
-              --title "Rayfield Gen2 $RELEASE_TAG" \
+              --title "Astra Gen2 $RELEASE_TAG" \
               --notes-file release-notes.md
           fi
 

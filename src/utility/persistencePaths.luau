@@ -35,7 +35,7 @@ end
 
 function paths.getSettingsPath(): (string, string)
     local dir = variables.fileSystemManager:getPath("Settings")
-    return dir, path.join(dir, "rayfield.rfld")
+    return dir, path.join(dir, "astra.rfld")
 end
 
 return paths

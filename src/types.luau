@@ -334,8 +334,8 @@ export type Window = {
     Unload: (self: Window) -> (),
 }
 
-export type Rayfield = {
-    CreateWindow: (self: Rayfield, props: WindowProps) -> Window,
+export type Astra = {
+    CreateWindow: (self: Astra, props: WindowProps) -> Window,
 }
 
 return {}

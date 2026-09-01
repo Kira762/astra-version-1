@@ -1,4 +1,4 @@
-# Convenience targets for Rayfield Gen2.
+# Convenience targets for Astra Gen2.
 # Requires GNU Make plus the Rokit-managed tools listed in rokit.toml.
 
 .DEFAULT_GOAL := help
@@ -26,8 +26,8 @@ SCRIPTS_DIR ?= scripts
 PROJECT_FILE ?= default.project.json
 TEST_PROJECT_FILE ?= test.project.json
 WAX_PROJECT ?= wax.project.json
-PLACE_FILE ?= Rayfield Gen2.rbxlx
-TEST_PLACE_FILE ?= Rayfield Gen2 Tests.rbxlx
+PLACE_FILE ?= Astra Gen2.rbxlx
+TEST_PLACE_FILE ?= Astra Gen2 Tests.rbxlx
 BUNDLE_FILE ?= build/bundled.luau
 TESTEZ_MODEL ?= build/TestEZ.rbxm
 TESTEZ_MODEL_URL ?= https://github.com/Roblox/testez/releases/download/v0.3.2/TestEZ.rbxm
@@ -43,13 +43,13 @@ COVERAGE_THRESHOLD ?= 70
 .PHONY: help install hooks ci check test test-verbose coverage coverage-baseline testez-model test-place format format-check lint typecheck build bundle serve sourcemap-watch dev clean
 
 help:
-	@echo Rayfield Gen2 Make targets:
+	@echo Astra Gen2 Make targets:
 	@echo   install    Trust and install Rokit tools
 	@echo   hooks      Configure Git to use repository hooks
 	@echo   ci         Run the required format, lint, typecheck, test, and coverage gate
 	@echo   check      Alias for the required CI gate
 	@echo   test       Run unit tests and enforce coverage for CI/local validation
-	@echo   test-verbose  Run unit tests with Rayfield logs enabled
+	@echo   test-verbose  Run unit tests with Astra logs enabled
 	@echo   coverage   Run tests and write coverage reports
 	@echo   coverage-baseline Refresh coverage-baseline.json from current coverage
 	@echo   testez-model Download the TestEZ model used by Studio tests
@@ -134,7 +134,7 @@ build:
 # naming the functions but not source lines.
 bundle:
 	$(MKDIR) "$(dir $(BUNDLE_FILE))"
-	$(LUNE) run wax bundle output="$(BUNDLE_FILE)" input="$(WAX_PROJECT)" minify=true env-name=Rayfield
+	$(LUNE) run wax bundle output="$(BUNDLE_FILE)" input="$(WAX_PROJECT)" minify=true env-name=Astra
 
 serve:
 	$(ROJO) serve $(PROJECT_FILE)

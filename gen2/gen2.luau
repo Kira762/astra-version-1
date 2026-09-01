@@ -13,8 +13,8 @@ type Window=j.Window export type Tab=j.Tab export type Group=j.Group export type
 Toggle export type Slider=j.Slider export type Dropdown=j.Dropdown export type Input=j.Input export type Keybind=j.
 Keybind export type ColorPicker=j.ColorPicker export type Stat=j.Stat export type Progress=j.Progress export type
 Console=j.Console export type Section=j.Section export type TabSection=j.TabSection export type Text=j.Text export type
-Divider=j.Divider export type Tag=j.Tag export type Popup=j.Popup export type Rayfield=j.Rayfield type WindowModule={new
-:(j.WindowProps)->j.Window}local k={}::Rayfield local function l()local m=Instance.new'ScreenGui'm.Name=f.httpService:
+Divider=j.Divider export type Tag=j.Tag export type Popup=j.Popup export type Astra=j.Astra type WindowModule={new
+:(j.WindowProps)->j.Window}local k={}::Astra local function l()local m=Instance.new'ScreenGui'm.Name=f.httpService:
 GenerateGUID(false)m.ClipToDeviceSafeArea=false m.DisplayOrder=i.displayOrder.banner m.IgnoreGuiInset=true m.
 ResetOnSpawn=false m.Enabled=true m.SafeAreaCompatibility=Enum.SafeAreaCompatibility.None m.ScreenInsets=Enum.
 ScreenInsets.DeviceSafeInsets m.ZIndexBehavior=Enum.ZIndexBehavior.Sibling m.Parent=f.guiContainer local n=Instance.new
@@ -1414,7 +1414,7 @@ ab.Parent.Parent.utility.log),20,6,3 local function ak(al)for am,b in al.tabs do
 true end end return#al.tabSections>0 end function ae.new(al,am)am=if typeof(am)=='table'then am else{}local b=
 setmetatable({window=assert(al,'Missing argument #1 (Window expected)'),name=am.name or am.Name or'Section',icon=am.icon
 or am.Icon},ae)if al.layout.mode~='sidebar'then if not al._warnedTabSection then al._warnedTabSection=true ag.warn
-[[Rayfield: Window:CreateSection needs the sidebar layout; it does nothing on the top strip.]]end b.inert=true return b
+[[Astra: Window:CreateSection needs the sidebar layout; it does nothing on the top strip.]]end b.inert=true return b
 end b.main=al:Create('Frame',{Name=b.name,Size=UDim2.new(1,-ah*2,0,0),AutomaticSize=Enum.AutomaticSize.Y,
 BackgroundTransparency=1,BorderSizePixel=0,Visible=false,Parent=al.tabList})b.padding=al:Create('UIPadding',{PaddingTop=
 UDim.new(0,if ak(al)then ai else 0),PaddingBottom=UDim.new(0,aj),Parent=b.main})al:Create('UIListLayout',{FillDirection=
@@ -1712,16 +1712,16 @@ then G.ElementStrokeGradient=ColorSequence.new(E(I,0.4))end if H.ElementStrokeHo
 0.52)end end if H.TabBackground and H.TabStroke==nil then G.TabStroke=ColorSequence.new(E(C(G.TabBackground),0.4))end
 end local function G(H)if typeof(H)=='table'then return H elseif typeof(H)=='string'then local I=g:FindFirstChild(string
 .lower(H))if I then return ac(I)end ak.warn("Astra: unknown theme '"..H.."', using default")elseif H~=nil then ak.
-warn[[Rayfield: invalid theme (expected a built-in name or a theme table), using default]]end return ac(g.default)end
+warn[[Astra: invalid theme (expected a built-in name or a theme table), using default]]end return ac(g.default)end
 local function H(I)local J,K=table.clone(ac(g.default)),G(I)for L,M in K do J[L]=B(L,M)end if typeof(I)=='table'then F(J
 ,K)end local L=if typeof(I)=='table'then I else nil if not(L and(L.Font or L.font))then J.Font=f.brandFont(Enum.
 FontWeight.Medium)end if not(L and(L.TitleFont or L.titleFont))then J.TitleFont=f.brandFont(Enum.FontWeight.SemiBold)end
 return J end function h.new(I)I=if typeof(I)=='table'then I else{}if I.translations or I.Translations then aj.register(I
 .translations or I.Translations)end if I.translator or I.Translator then aj.translator=I.translator or I.Translator end
 aj.setActive(I.locale or I.Locale or aj.detect())local J=I.fallbackFont or I.FallbackFont if J then f.setFallbackFont(J)
-end local K=z(I.sidebarLayout or I.SidebarLayout)local L=setmetatable({name=I.name or I.Name or'Rayfield Window',
+end local K=z(I.sidebarLayout or I.SidebarLayout)local L=setmetatable({name=I.name or I.Name or'Astra Window',
 subheading=I.subtitle or I.Subtitle,layout=K,size=w(K.mode),instances={},connections={},icon=I.icon or I.Icon,showName=I
-.showName or I.ShowName or'Rayfield',showIcon=I.showIcon or I.ShowIcon or ai.icons.rayfield,showIconOnly=I.showIconOnly
+.showName or I.ShowName or'Astra',showIcon=I.showIcon or I.ShowIcon or ai.icons.astra,showIconOnly=I.showIconOnly
 or I.ShowIconOnly or false,profileText=I.profile or I.Profile,themeProperties={},localeProperties={},tabs={},tabSections
 ={},tags={},selectedTab=nil,theme=H(I.theme or I.Theme),controls={},configuration=(function()local L=I.configuration or
 I.Configuration if not L then return{}end return{autoSave=L.autoSave or L.AutoSave,autoLoad=L.autoLoad or L.AutoLoad,
@@ -1783,7 +1783,7 @@ PaddingRight=UDim.new(0,10),Parent=L.tabList})end L.actionContainer=L:Create('Fr
 AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,24),Position=UDim2.new(1,-20,0.5,0),BackgroundTransparency=1,
 Parent=L.topbar})L.actionsListLayout=L:Create('UIListLayout',{Padding=UDim.new(0,5),FillDirection=Enum.FillDirection.
 Horizontal,VerticalAlignment=Enum.VerticalAlignment.Center,HorizontalAlignment=Enum.HorizontalAlignment.Right,SortOrder=
-Enum.SortOrder.LayoutOrder,Parent=L.actionContainer})L.rfSettings=L:CreateTab{name='Rayfield Settings',customOrder=1000,
+Enum.SortOrder.LayoutOrder,Parent=L.actionContainer})L.rfSettings=L:CreateTab{name='Astra Settings',customOrder=1000,
 neglectSelector=true,forgetState=true}ac(ab.Parent.action).new(L,{name='Close',icon=ai.icons.close,order=1,callback=
 function()L:ToggleHide()end})L.minimiseAction=ac(ab.Parent.action).new(L,{name='Minimise',icon=ai.icons.minimise,order=2
 ,callback=function()L:ToggleMinimise()end})L.settingsAction=ac(ab.Parent.action).new(L,{name='Settings',icon=ai.icons.
@@ -2251,7 +2251,7 @@ self:Window,theme:Theme)->(),SetLocale:(self:Window,localeId:string)->(),SetTran
 Translator?)->(),RegisterTranslations:(self:Window,translations:Translations)->(),Save:(self:Window,name:string?)->
 boolean,Load:(self:Window,name:string?)->boolean,ListConfigs:(self:Window)->{string},DeleteConfig:(self:Window,name:
 string)->boolean,GetPath:(self:Window)->(string,string),Get:(self:Window,flag:string)->any,Set:(self:Window,flag:string,
-value:any)->boolean,Unload:(self:Window)->()}export type Rayfield={CreateWindow:(self:Rayfield,props:WindowProps)->
+value:any)->boolean,Unload:(self:Window)->()}export type Astra={CreateWindow:(self:Astra,props:WindowProps)->
 Window}return{}end)()end,[40]=function()local aa,ab,ac=a(40)local ad return(function(...)local ae,af=ac(ab.Parent.
 variables),{}af.enabled=false type HapticTypes={click:Enum.HapticEffectType?,notify:Enum.HapticEffectType?}local ag:
 HapticTypes,ah,ai={},pcall(function()Instance.new'HapticEffect':Destroy()return{click=Enum.HapticEffectType.UIHover,
@@ -2301,7 +2301,7 @@ ae.contrastText(af:Color3):Color3 local ag=0.299*af.R+0.587*af.G+0.114*af.B retu
 ...)local ae={}ae.fontAsset='rbxassetid://12187365364'ae.pillResizeInfo=TweenInfo.new(0.4,Enum.EasingStyle.Exponential,
 Enum.EasingDirection.Out)ae.icons={close=83277910885129,minimise=108115485663409,maximise=88738500661569,settings=
 129180860773723,search=100604009889706,chevron=88479147175134,check=125626312718314,dot=91452555903853,colorpicker=
-91452555903853,banner=111263549366178,config=125823673784681,rayfield=80387863064905}ae.accent={on=Color3.fromRGB(23,153
+91452555903853,banner=111263549366178,config=125823673784681,astra=80387863064905}ae.accent={on=Color3.fromRGB(23,153
 ,110),onStroke=Color3.fromRGB(32,201,144)}ae.statAccents={positive={fill=ColorSequence.new(Color3.fromRGB(0,170,127),
 Color3.fromRGB(0,134,98)),stroke=ColorSequence.new(Color3.fromRGB(0,213,156),Color3.fromRGB(0,189,135))},negative={fill=
 ColorSequence.new(Color3.fromRGB(172,47,47),Color3.fromRGB(135,37,37)),stroke=ColorSequence.new(Color3.fromRGB(255,75,75
@@ -2453,7 +2453,7 @@ string}export type CacheSettledCallback=(failed:number)->()export type PreloadCa
 AvatarCallback=(uri:string)->()export type OnCachedCallback=(id:number)->()export type ThumbnailEntry={state:string?,
 imageUrl:string?}export type ThumbnailResponse={data:{ThumbnailEntry}?}local ai,aj,ak,al,am,b,c,d:{[number]:string}={},
 ag.fileSystemManager:getRootFolder(),ag.fileSystemManager:getAssetsFolder(),ag.assetResolver,
-[[https://raw.githubusercontent.com/SiriusSoftwareLtd/rayfield-gen2/main/assets/]],48,
+[[https://raw.githubusercontent.com/Kira762/astra-version-1/main/assets/]],48,
 [[https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=%dx%d&format=Png&isCircular=false]],{}for e,f
 in ah.icons do local g=f::number d[g]=am..tostring(g)..'.png'end local e=0 for f in d do e+=1 end ai.rewrites={}::
 RewriteMap ai.onCached=nil::OnCachedCallback?local f='\137PNG\r\n\26\n'local function g(h:string,i:string):string?if
@@ -2611,7 +2611,7 @@ string local c=ah.stripExtension(b,'.rfld')local d,e=c..' (Incorrect Format).rfl
 ak.getPath(b,c)if not d or not e then ag.warn("Astra: configuration name '"..tostring(c)..
 "' has no usable characters")return false end if typeof(af.isfile)~='function'then return false end local f,g=al(e)if
 not f and af.isfile(e)then local h,i=al(aj.tempPathFor(e))if h and i then f=h pcall(aj.write,d,e,i)end end if not f then
-if g then ag.warn[[Rayfield: Configuration file has an invalid format, backing up and resetting]]local h=am(e)pcall(
+if g then ag.warn[[Astra: Configuration file has an invalid format, backing up and resetting]]local h=am(e)pcall(
 function()af.ensureDir(d)af.writefile(h,g)af.delfile(e)end)end return false end local h,i=f::{[string]:unknown},b.
 _loading b._loading=true local j,k=pcall(function()for j,k in b.controls do ak.applyTo(k,h[j])end end)b._loading=i if
 not j then ag.warn('Astra: Failed to apply configuration - '..tostring(k))end b._loadedConfig=h b._loadedConfigPath=e
@@ -2630,7 +2630,7 @@ configuration:{fileName:string?,customFolder:string?},name:string}function ag.ge
 aj,af.sanitizeFolder(ah.configuration.customFolder))end if ai~=nil then local ak=af.sanitizeFile(ai)if ak==''then return
 nil,nil end return aj,af.join(aj,ak..'.rfld')end local ak=af.sanitizeFile(ah.configuration.fileName or ah.name)if ak==''
 then ak=af.sanitizeFile(ah.name)end if ak==''then ak='Configuration'end return aj,af.join(aj,ak..'.rfld')end function ag
-.getSettingsPath():(string,string)local ah=ae.fileSystemManager:getPath'Settings'return ah,af.join(ah,'rayfield.rfld')
+.getSettingsPath():(string,string)local ah=ae.fileSystemManager:getPath'Settings'return ah,af.join(ah,'astra.rfld')
 end return ag end)()end,[64]=function()local aa,ab,ac=a(64)local ad return(function(...)local ae,af,ag,ah,ai,aj=ac(ab.
 Parent.variables),ac(ab.Parent.filesystem),ac(ab.Parent.persistencePaths),ac(ab.Parent.persistenceWrite),ac(ab.Parent.
 enums),{}type SettingsWindow={settings:{toggleKeybind:EnumItem,mouseOverride:boolean,keepOnScreen:boolean,welcomeToast:
@@ -2660,7 +2660,7 @@ function(...)local ae=ac(ab.Parent.services)export type RuntimeState={secureMode
 Workspace,runService:RunService,userInputService:UserInputService,guiService:GuiService,localPlayer:Player?,tweenService
 :TweenService,httpService:HttpService,textService:TextService,replicatedStorage:ReplicatedStorage,localizationService:
 LocalizationService,guiContainer:Instance}local af={}::RuntimeState af.secureMode=(function()if typeof(getgenv)~=
-'function'then return false end local ag,ah=pcall(function()return getgenv().RAYFIELD_SECURE end)return ag and ah==true
+'function'then return false end local ag,ah=pcall(function()return getgenv().ASTRA_SECURE end)return ag and ah==true
 end)()af.coreGui=ae.getService'CoreGui'::CoreGui af.workspace=ae.getService'Workspace'::Workspace af.runService=ae.
 getService'RunService'::RunService af.userInputService=ae.getService'UserInputService'::UserInputService af.guiService=
 ae.getService'GuiService'::GuiService af.localPlayer=(ae.getService'Players'::Players).LocalPlayer af.tweenService=ae.

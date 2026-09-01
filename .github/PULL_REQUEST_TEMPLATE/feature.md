@@ -5,7 +5,7 @@ Submit standalone documentation changes to https://github.com/SiriusSoftwareLtd/
 and link companion documentation work below when this feature affects public documentation.
 
 Do not include vulnerability details here; report them privately at
-https://github.com/SiriusSoftwareLtd/rayfield-gen2/security/advisories/new.
+https://github.com/Kira762/astra-version-1/security/advisories/new.
 -->
 
 ## Summary

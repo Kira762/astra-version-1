@@ -1,4 +1,4 @@
-local requireUtility = (_G :: any).__RAYFIELD_TEST_HELPERS.requireUtility
+local requireUtility = (_G :: any).__ASTRA_TEST_HELPERS.requireUtility
 
 return function()
     local windowSizing = requireUtility("windowSizing")

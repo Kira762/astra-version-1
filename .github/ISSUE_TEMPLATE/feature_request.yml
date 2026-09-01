@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an improvement or new capability for Rayfield Gen 2
+description: Suggest an improvement or new capability for Astra Gen 2
 title: "[Feature]: "
 labels:
   - enhancement
@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping improve Rayfield Gen 2.
+        Thanks for helping improve Astra Gen 2.
 
         Search existing issues before submitting. Do not include credentials, access tokens, personal data, or other sensitive information. Security vulnerabilities must not be reported in a public issue; use the repository's Security tab instead.
   - type: checkboxes
@@ -33,8 +33,8 @@ body:
     id: proposal
     attributes:
       label: Proposed behavior
-      description: Explain how you would like Rayfield Gen 2 to address the problem.
-      placeholder: Rayfield Gen 2 could ...
+      description: Explain how you would like Astra Gen 2 to address the problem.
+      placeholder: Astra Gen 2 could ...
     validations:
       required: true
   - type: textarea

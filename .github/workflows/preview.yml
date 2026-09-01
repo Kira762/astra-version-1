@@ -58,7 +58,7 @@ jobs:
           VERSION="$(tr -d '[:space:]' < version.txt)"
           SHORT="$(git rev-parse --short "$COMMIT")"
           {
-            printf -- '-- Rayfield Gen2 v%s-preview (%s, %s)\n' "$VERSION" "$SHORT" "$(date -u +%Y-%m-%d)"
+            printf -- '-- Astra Gen2 v%s-preview (%s, %s)\n' "$VERSION" "$SHORT" "$(date -u +%Y-%m-%d)"
             printf -- '-- loadstring(game:HttpGet("https://sirius.menu/gen2-preview"))()\n'
             printf -- '--\n'
             printf -- '-- Copyright (c) 2026 Corridon Capital\n'
@@ -92,10 +92,10 @@ jobs:
           SHORT="$(git rev-parse --short "$COMMIT")"
 
           {
-            printf 'Rolling preview build of Rayfield Gen2, cut from `dev`.\n\n'
-            printf '    local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2-preview"))()\n\n'
+            printf 'Rolling preview build of Astra Gen2, cut from `dev`.\n\n'
+            printf '    local Astra = loadstring(game:HttpGet("https://sirius.menu/gen2-preview"))()\n\n'
             printf 'Built from `%s`, on the way to v%s. This tag moves with every green commit on dev and is not a supported release - use the stable loadstring for anything you ship.\n\n' "$SHORT" "$VERSION"
-            printf 'Docs: https://docs.sirius.menu/rayfield-gen2\n'
+            printf 'Docs: https://docs.sirius.menu/astra-version-1\n'
           } > preview-notes.md
 
           if gh release view preview >/dev/null 2>&1; then
@@ -103,6 +103,6 @@ jobs:
           fi
 
           gh release create preview --prerelease --target "$COMMIT" \
-            --title "Rayfield Gen2 preview ($SHORT)" \
+            --title "Astra Gen2 preview ($SHORT)" \
             --notes-file preview-notes.md \
             build/bundled.luau build/bundled.txt build/checksums.sha256

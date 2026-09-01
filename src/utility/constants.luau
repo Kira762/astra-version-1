@@ -13,7 +13,7 @@ constants.icons = {
     chevron = 88479147175134,
     check = 125626312718314,
     dot = 91452555903853,     colorpicker = 91452555903853,     banner = 111263549366178,
-    config = 125823673784681,     rayfield = 80387863064905, }
+    config = 125823673784681,     astra = 80387863064905, }
 
 constants.accent = {
     on = Color3.fromRGB(23, 153, 110),

@@ -1,5 +1,5 @@
 base: roblox
-name: rayfield
+name: astra
 globals:
 # these are functions that are defined by sUNC, but not roblox, so we need to tell the lsp about them
   writefile:

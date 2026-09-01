@@ -53,11 +53,11 @@ export type Text = types.Text
 export type Divider = types.Divider
 export type Tag = types.Tag
 export type Popup = types.Popup
-export type Rayfield = types.Rayfield
+export type Astra = types.Astra
 
 type WindowModule = { new: (types.WindowProps) -> types.Window }
 
-local rayfield = {} :: Rayfield
+local astra = {} :: Astra
 
 local function createBanner()
     local ui = Instance.new("ScreenGui")
@@ -87,7 +87,7 @@ local function createBanner()
     return ui
 end
 
-function rayfield:CreateWindow(properties: types.WindowProps): types.Window
+function astra:CreateWindow(properties: types.WindowProps): types.Window
     local banner = createBanner()
 
     local window: types.Window?         local queuedNotify: (() -> ())?
@@ -162,4 +162,4 @@ function rayfield:CreateWindow(properties: types.WindowProps): types.Window
     return built
 end
 
-return rayfield
+return astra

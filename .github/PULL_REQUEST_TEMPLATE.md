@@ -1,5 +1,5 @@
 <!--
-Thank you for contributing to Rayfield Gen 2.
+Thank you for contributing to Astra Gen 2.
 
 Target code pull requests at `dev`. Submit standalone documentation changes to
 https://github.com/SiriusSoftwareLtd/docs and link companion documentation work
@@ -7,7 +7,7 @@ below when this code change affects public documentation.
 
 Complete every applicable section and remove placeholder text. Do not include
 vulnerability details in a public pull request; use
-https://github.com/SiriusSoftwareLtd/rayfield-gen2/security/advisories/new.
+https://github.com/Kira762/astra-version-1/security/advisories/new.
 -->
 
 ## Summary

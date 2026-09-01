@@ -8,25 +8,25 @@ end
 local TestEZ = require(TestEZModule)
 local testsRoot = ReplicatedStorage:WaitForChild("Tests")
 
-_G.__RAYFIELD_TEST_HELPERS = {
+_G.__ASTRA_TEST_HELPERS = {
     requireUtility = function(name)
-        return require(ReplicatedStorage.Rayfield.utility[name])
+        return require(ReplicatedStorage.Astra.utility[name])
     end,
     requireComponent = function(name)
-        return require(ReplicatedStorage.Rayfield.components[name])
+        return require(ReplicatedStorage.Astra.components[name])
     end,
     requireTheme = function(name)
-        return require(ReplicatedStorage.Rayfield.themes[name])
+        return require(ReplicatedStorage.Astra.themes[name])
     end,
-    requireRayfield = function()
-        return require(ReplicatedStorage.Rayfield)
+    requireAstra = function()
+        return require(ReplicatedStorage.Astra)
     end,
 }
-_G.__RAYFIELD_TEST_VERBOSE_LOGS = _G.__RAYFIELD_TEST_VERBOSE_LOGS == true
+_G.__ASTRA_TEST_VERBOSE_LOGS = _G.__ASTRA_TEST_VERBOSE_LOGS == true
 
-local log = require(ReplicatedStorage.Rayfield.utility.log)
+local log = require(ReplicatedStorage.Astra.utility.log)
 log.setSuppressPredicate(function()
-    return _G.__RAYFIELD_TEST_VERBOSE_LOGS ~= true
+    return _G.__ASTRA_TEST_VERBOSE_LOGS ~= true
 end)
 
 local results = TestEZ.TestBootstrap:run({ testsRoot }, TestEZ.Reporters.TextReporter, {

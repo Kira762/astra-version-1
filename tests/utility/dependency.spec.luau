@@ -1,4 +1,4 @@
-local helpers = (_G :: any).__RAYFIELD_TEST_HELPERS
+local helpers = (_G :: any).__ASTRA_TEST_HELPERS
 local requireUtility = helpers.requireUtility
 
 return function()
@@ -15,7 +15,7 @@ return function()
         local prints
 
                 local function runnerSuppress()
-            return _G.__RAYFIELD_TEST_VERBOSE_LOGS ~= true
+            return _G.__ASTRA_TEST_VERBOSE_LOGS ~= true
         end
 
         local function captureConsole()
@@ -37,7 +37,7 @@ return function()
             originalPrint = print
             originalVariablesSecureMode = if variables then variables.secureMode else nil
             originalRuntimeSecureMode = runtime.secureMode
-            originalVerboseLogs = _G.__RAYFIELD_TEST_VERBOSE_LOGS
+            originalVerboseLogs = _G.__ASTRA_TEST_VERBOSE_LOGS
             warnings = {}
             prints = {}
         end)
@@ -59,7 +59,7 @@ return function()
                 end
                 log.setSuppressPredicate(runnerSuppress)
             end
-            _G.__RAYFIELD_TEST_VERBOSE_LOGS = originalVerboseLogs
+            _G.__ASTRA_TEST_VERBOSE_LOGS = originalVerboseLogs
             warn = originalWarn
             print = originalPrint
         end)
@@ -118,14 +118,14 @@ return function()
             captureConsole()
             runtime.secureMode = false
 
-            _G.__RAYFIELD_TEST_VERBOSE_LOGS = false
+            _G.__ASTRA_TEST_VERBOSE_LOGS = false
             log.warn("hidden")
             log.print("hidden")
 
             expect(#warnings).to.equal(0)
             expect(#prints).to.equal(0)
 
-            _G.__RAYFIELD_TEST_VERBOSE_LOGS = true
+            _G.__ASTRA_TEST_VERBOSE_LOGS = true
             log.warn("visible")
             log.print("visible")
 
@@ -140,12 +140,12 @@ return function()
             captureConsole()
 
             runtime.secureMode = false
-            _G.__RAYFIELD_TEST_VERBOSE_LOGS = false
+            _G.__ASTRA_TEST_VERBOSE_LOGS = false
             log.warn("visible")
             log.print("visible")
 
             runtime.secureMode = true
-            _G.__RAYFIELD_TEST_VERBOSE_LOGS = true
+            _G.__ASTRA_TEST_VERBOSE_LOGS = true
             log.warn("hidden")
             log.print("hidden")
 
