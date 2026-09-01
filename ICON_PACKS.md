@@ -17,7 +17,7 @@ Astra now exposes the catalog from [Haijo12/roblox-icons](https://github.com/Hai
 
 ## Usage
 
-Set the default pack once on the window, then pass plain icon names to tabs and components. The exported constants make the configuration readable:
+Set exactly one pack on the window, then pass plain icon names to tabs and components. The exported constants make the configuration readable:
 
 ```lua
 local Astra = require(path.to.astra)
@@ -42,11 +42,12 @@ tab:CreateButton({
 
 Every icon-bearing component uses the window’s selected pack, including tabs, buttons, toggles, sliders, inputs, dropdowns, keybinds, color pickers, stats, progress indicators, sections, tags, text, notifications, toasts, popups, and actions. Existing asset IDs, Roblox asset URIs, and direct URLs continue to pass through unchanged.
 
-For a one-off override, resolve the icon explicitly:
+A window accepts **one pack only**. If both `iconPack` and `IconPack` are supplied, or if `iconPack` is given a table/list containing multiple packs, Astra raises an error. Use one of the supported values: `Lucide`, `Material`, `Tabler`, `Phosphor`, `Heroicons`, or `Feather`. If no pack is supplied, Astra defaults to Lucide.
+
+The direct catalog methods remain available for discovery and tooling, but do not mix packs within a window’s normal component configuration:
 
 ```lua
-local searchIcon = Astra.Icons.get("search", Astra.Icons.Tabler)
-tab:CreateButton({ name = "Search", icon = searchIcon })
+local icon = Astra.Icons.get("arrow-right", Astra.Icons.Lucide)
 ```
 
 The pack argument is optional and defaults to `lucide`:
@@ -73,6 +74,6 @@ Astra’s internal close, minimize, maximize, settings, search, chevron, check, 
 
 ## Consistency rules
 
-Use one primary pack per surface. Prefer Lucide for the main Astra shell, Tabler when the UI needs a larger vocabulary, Phosphor when visual weight needs to vary, Heroicons when solid/outline pairing is intentional, Feather for lightweight utility controls, and Material only when the surrounding design already follows Material conventions. Avoid mixing packs for equivalent actions such as `settings`, `search`, or `close`, because stroke geometry and optical weight differ between families.
+Use exactly one pack per window. Prefer Lucide for the main Astra shell, Tabler when the UI needs a larger vocabulary, Phosphor when visual weight needs to vary, Heroicons when solid/outline pairing is intentional, Feather for lightweight utility controls, and Material only when the surrounding design already follows Material conventions. Avoid mixing packs for equivalent actions such as `settings`, `search`, or `close`, because stroke geometry and optical weight differ between families.
 
 The upstream repository retains each icon family’s original license. Keep the upstream attribution and license files when redistributing the catalog.

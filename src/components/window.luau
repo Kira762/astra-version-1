@@ -178,7 +178,15 @@ function Window.new(properties)
     end
 
         local layout = resolveLayout(properties.sidebarLayout or properties.SidebarLayout)
-    local iconPack = properties.iconPack or properties.IconPack or icons.Lucide
+    local lowerPack = properties.iconPack
+    local upperPack = properties.IconPack
+    if lowerPack ~= nil and upperPack ~= nil then
+        error("Astra: choose exactly one icon pack; provide either iconPack or IconPack, not both.", 2)
+    end
+    local iconPack = lowerPack or upperPack or icons.Lucide
+    if not icons.isPack(iconPack) then
+        error("Astra: iconPack must be exactly one supported pack: lucide, material, tabler, phosphor, heroicons, or feather.", 2)
+    end
 
     local self = setmetatable({
         name = properties.name or properties.Name or "Astra Window",

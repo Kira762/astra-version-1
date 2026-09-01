@@ -10534,6 +10534,10 @@ Icons.Phosphor = "phosphor"
 Icons.Heroicons = "heroicons"
 Icons.Feather = "feather"
 
+function Icons.isPack(pack: string?): boolean
+    return pack ~= nil and type(pack) == "string" and Icons[pack] ~= nil
+end
+
 -- Get icon URL by name (defaults to lucide pack)
 function Icons.get(name: string, pack: string?): string?
     pack = pack or "lucide"
