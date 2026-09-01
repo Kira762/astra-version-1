@@ -26,7 +26,7 @@ function TabSection.new(window, properties)
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
         name = properties.name or properties.Name or "Section",
-        icon = properties.icon or properties.Icon,
+        icon = window:ResolveIcon(properties.icon or properties.Icon),
     }, TabSection)
 
             if window.layout.mode ~= "sidebar" then

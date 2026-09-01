@@ -48,7 +48,7 @@ function Tab.new(window, properties)
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
         name = properties.name or properties.Name,
-        icon = properties.icon or properties.Icon,
+        icon = window:ResolveIcon(properties.icon or properties.Icon),
         neglectSelector = properties.neglectSelector or properties.NeglectSelector or false,
         customOrder = properties.customOrder or properties.CustomOrder or 0,
                 forgetState = properties.forgetState or properties.ForgetState or false,

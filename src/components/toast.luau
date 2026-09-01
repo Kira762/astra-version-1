@@ -38,7 +38,7 @@ function Toast.new(window, properties, container)
         window = assert(window, "Missing argument #1 (Window expected)"),
         title = properties.title or properties.Title or "",
         subtitle = properties.subtitle or properties.Subtitle,
-        icon = properties.icon or properties.Icon,
+        icon = window:ResolveIcon(properties.icon or properties.Icon),
                         avatar = properties.avatar or properties.Avatar,
                         minWidth = properties.minWidth or properties.MinWidth,
                         subtitleAbove = properties.subtitleAbove or properties.SubtitleAbove or false,

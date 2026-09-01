@@ -17,25 +17,36 @@ Astra now exposes the catalog from [Haijo12/roblox-icons](https://github.com/Hai
 
 ## Usage
 
+Set the default pack once on the window, then pass plain icon names to tabs and components. The exported constants make the configuration readable:
+
 ```lua
 local Astra = require(path.to.astra)
+local Lucide = Astra.Icons.Lucide
 
 local window = Astra:CreateWindow({
-    Title = "Icon demo",
+    name = "Example Hub",
+    subtitle = "Astra Gen2",
+    iconPack = Lucide,
 })
 
-local settingsIcon = Astra.Icons.get("settings", "lucide")
-local searchIcon = Astra.Icons.getByPack("tabler", "search")
-
-window:AddTab({
-    Name = "Settings",
-    Icon = settingsIcon,
+local tab = window:CreateTab({
+    name = "Home",
+    icon = "house",
 })
 
-window:AddButton({
-    Name = "Search",
-    Icon = searchIcon,
+tab:CreateButton({
+    name = "Settings",
+    icon = "settings",
 })
+```
+
+Every icon-bearing component uses the window’s selected pack, including tabs, buttons, toggles, sliders, inputs, dropdowns, keybinds, color pickers, stats, progress indicators, sections, tags, text, notifications, toasts, popups, and actions. Existing asset IDs, Roblox asset URIs, and direct URLs continue to pass through unchanged.
+
+For a one-off override, resolve the icon explicitly:
+
+```lua
+local searchIcon = Astra.Icons.get("search", Astra.Icons.Tabler)
+tab:CreateButton({ name = "Search", icon = searchIcon })
 ```
 
 The pack argument is optional and defaults to `lucide`:

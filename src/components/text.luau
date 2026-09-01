@@ -18,7 +18,7 @@ function Text.new(tab, properties)
         window = tab.window,
         name = tostring(properties.name or properties.Name or ""),
         text = tostring(properties.text or properties.Text or ""),
-        icon = properties.icon or properties.Icon,
+        icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
     }, Text)
 
             self.main = self.window:Create("Frame", {

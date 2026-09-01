@@ -17,7 +17,7 @@ function Tag.new(window, properties)
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
         text = properties.text or properties.Text or properties.title or properties.Title,
-        icon = properties.icon or properties.Icon,
+        icon = window:ResolveIcon(properties.icon or properties.Icon),
         color = properties.color or properties.Color or defaultColor,
     }, Tag)
 

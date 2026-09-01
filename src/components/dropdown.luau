@@ -103,7 +103,7 @@ function Dropdown.new(tab, properties)
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
         name = properties.name or properties.Name or "Dropdown",
-        icon = properties.icon or properties.Icon,
+        icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
         description = properties.description or properties.Description,
         forgetState = properties.forgetState or properties.ForgetState or tab.forgetState, 
         flag = properties.flag

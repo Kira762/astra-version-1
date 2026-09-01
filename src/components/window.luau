@@ -1,5 +1,6 @@
 local utility = script.Parent.Parent.utility
 local image = require(utility.image)
+local icons = require(utility.icons)
 local functions = require(utility.functions)
 local persistence = require(utility.persistence)
 local constants = require(utility.constants)
@@ -156,6 +157,10 @@ local function resolveTheme(value)
     return resolved
 end
 
+function Window:ResolveIcon(value, pack)
+    return icons.resolve(value, pack or self.iconPack)
+end
+
 function Window.new(properties)
     properties = if typeof(properties) == "table" then properties else {}
 
@@ -173,6 +178,7 @@ function Window.new(properties)
     end
 
         local layout = resolveLayout(properties.sidebarLayout or properties.SidebarLayout)
+    local iconPack = properties.iconPack or properties.IconPack or icons.Lucide
 
     local self = setmetatable({
         name = properties.name or properties.Name or "Astra Window",
@@ -182,9 +188,10 @@ function Window.new(properties)
         instances = {},
         connections = {},
 
-        icon = properties.icon or properties.Icon,
+        iconPack = iconPack,
+        icon = icons.resolve(properties.icon or properties.Icon, iconPack),
         showName = properties.showName or properties.ShowName "Astra",
-        showIcon = properties.showIcon or properties.ShowIcon or constants.icons.astra,
+        showIcon = icons.resolve(properties.showIcon or properties.ShowIcon or constants.icons.astra, iconPack),
                 showIconOnly = properties.showIconOnly or properties.ShowIconOnly or false,
                 profileText = properties.profile or properties.Profile,
 

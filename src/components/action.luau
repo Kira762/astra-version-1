@@ -14,7 +14,7 @@ function Action.new(window, properties)
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
         name = properties.name or properties.Name or "Action",
-        icon = assert(properties.icon or properties.Icon, "Missing argument (Icon expected)"),
+        icon = assert(window:ResolveIcon(properties.icon or properties.Icon), "Missing argument (Icon expected)"),
         callback = assert(properties.callback or properties.Callback, "Missing argument (Function expected)"),
         linkedTab = properties.linkedTab or properties.LinkedTab,
     }, Action)

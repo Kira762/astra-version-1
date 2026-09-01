@@ -3,6 +3,7 @@ export type Theme = string | { [string]: any }
 export type Translator = (source: string, localeId: string) -> string?
 
 export type Translations = { [string]: { [string]: string } }
+export type IconPack = "lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather"
 
 export type WindowConfiguration = {
     autoSave: boolean?,
@@ -16,6 +17,8 @@ export type WindowProps = {
     subtitle: string?,
     theme: Theme?,
     icon: (string | number)?,
+    iconPack: IconPack?,
+    IconPack: IconPack?,
     showName: string?,
     showIcon: (string | number)?,
     showIconOnly: boolean?,     sidebarLayout: boolean?,     profile: string?,     configuration: WindowConfiguration?,
@@ -309,7 +312,10 @@ export type Tab = {
 }
 
 export type Window = {
-    unloaded: boolean,             Flags: { [string]: any },
+    unloaded: boolean,
+    iconPack: IconPack,
+    ResolveIcon: (self: Window, value: (string | number)?, pack: IconPack?) -> (string | number)?,
+    Flags: { [string]: any },
     CreateTab: (self: Window, props: TabProps) -> Tab,
         CreateSection: (self: Window, props: SectionProps) -> TabSection,
     CreateTag: (self: Window, props: TagProps) -> Tag,
@@ -334,14 +340,19 @@ export type Window = {
     Unload: (self: Window) -> (),
 }
 
-export type IconPack = "lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather"
-
 export type IconCatalog = {
+    Lucide: IconPack,
+    Material: IconPack,
+    Tabler: IconPack,
+    Phosphor: IconPack,
+    Heroicons: IconPack,
+    Feather: IconPack,
     get: (name: string, pack: IconPack?) -> string?,
     getByPack: (pack: IconPack, name: string) -> string?,
     list: (pack: IconPack?) -> { string },
     packs: () -> { string },
     count: (pack: IconPack?) -> number,
+    resolve: (value: (string | number)?, pack: IconPack?) -> (string | number)?,
 }
 
 export type Astra = {

@@ -12,7 +12,7 @@ function Section.new(tab, properties)
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
         name = properties.name or properties.Name or "Section",
-        icon = properties.icon or properties.Icon,
+        icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
     }, Section)
 
             local topSpace = if #self.tab.elements == 0 then 0 else 13

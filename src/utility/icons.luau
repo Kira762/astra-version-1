@@ -10526,6 +10526,14 @@ Icons.feather = {
     ["zoom-out"] = "https://raw.githubusercontent.com/Haijo12/roblox-icons/main/icons-pack/feather-pack/z/zoom-out.png",
 }
 
+-- Stable pack constants for readable window configuration.
+Icons.Lucide = "lucide"
+Icons.Material = "material"
+Icons.Tabler = "tabler"
+Icons.Phosphor = "phosphor"
+Icons.Heroicons = "heroicons"
+Icons.Feather = "feather"
+
 -- Get icon URL by name (defaults to lucide pack)
 function Icons.get(name: string, pack: string?): string?
     pack = pack or "lucide"
@@ -10535,6 +10543,24 @@ function Icons.get(name: string, pack: string?): string?
         return nil
     end
     return packTable[name]
+end
+
+-- Resolve a component icon. Existing Roblox asset IDs, asset URIs, and URLs pass through unchanged.
+function Icons.resolve(value: (string | number)?, pack: string?): (string | number)?
+    if value == nil or value == 0 or value == "" then
+        return value
+    end
+    if type(value) ~= "string" then
+        return value
+    end
+    if string.match(value, "^rbxassetid://")
+        or string.match(value, "^rbxasset://")
+        or string.match(value, "^rbxthumb://")
+        or string.match(value, "^https?://")
+    then
+        return value
+    end
+    return Icons.get(value, pack) or value
 end
 
 -- Get icon URL by pack and name
