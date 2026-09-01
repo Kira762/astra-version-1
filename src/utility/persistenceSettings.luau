@@ -14,6 +14,7 @@ type SettingsWindow = {
         welcomeToast: boolean,
         haptics: boolean,
         showProfile: boolean,
+        lockableEnabled: boolean,
     },
 }
 
@@ -24,6 +25,7 @@ type DecodedSettings = {
     welcomeToast: unknown?,
     haptics: unknown?,
     showProfile: unknown?,
+    lockableEnabled: unknown?,
 }
 
 function persistenceSettings.getSettingsPath(): (string, string)
@@ -43,6 +45,7 @@ function persistenceSettings.saveSettings(window: SettingsWindow): boolean
         welcomeToast = window.settings.welcomeToast,
         haptics = window.settings.haptics,
         showProfile = window.settings.showProfile,
+        lockableEnabled = window.settings.lockableEnabled,
     }
 
     local ok, encoded = pcall(variables.httpService.JSONEncode, variables.httpService, data)
@@ -129,6 +132,10 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
 
     if type(settings.showProfile) == "boolean" then
         window.settings.showProfile = settings.showProfile
+    end
+
+    if type(settings.lockableEnabled) == "boolean" then
+        window.settings.lockableEnabled = settings.lockableEnabled
     end
 
     return true

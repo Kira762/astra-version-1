@@ -251,11 +251,15 @@ function Window.new(properties)
                 return nil
             end
         end,
-    })
-
-            self.settings = {
+    })        self.settings = {
         toggleKeybind = Enum.KeyCode.K,
-        mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = true,         showProfile = true,     }
+        mouseOverride = true,
+        keepOnScreen = true,
+        welcomeToast = true,
+        haptics = true,
+        showProfile = true,
+        lockableEnabled = false,
+    }
 
         self.screenGui = self:Create("ScreenGui", {
         Name = variables.httpService:GenerateGUID(false),
@@ -1396,6 +1400,18 @@ function Window:_buildSettingsUI()
         end,
     })
 
+    local lockableToggle = self.rfSettings:CreateToggle({
+        name = "Lockable",
+        description = "Pauses all element callbacks while preserving UI states. The Lockable toggle itself always works.",
+        value = self.settings.lockableEnabled,
+        callback = function(state)
+            self.settings.lockableEnabled = state
+            self:SaveSettings()
+        end,
+    })
+    lockableToggle._isLockableControl = true
+    self._lockableToggle = lockableToggle
+
     self.rfSettings:CreateSection({ name = "Window" })
 
         if self.layout.mode == "sidebar" and self.profile then
@@ -2198,7 +2214,11 @@ function Window:_wireElementHover(element)
 end
 
 function Window:_runGuarded(element, fn, ...)
-            if element.locked then
+    if element.locked then
+        return
+    end
+
+    if self.settings.lockableEnabled and not element._isLockableControl then
         return
     end
 
