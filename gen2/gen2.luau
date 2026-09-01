@@ -1758,7 +1758,7 @@ return J end function h:ResolveIcon(I,J)return __ASTRA_ROBLOX_ICONS_V1.resolve(I
 aj.setActive(I.locale or I.Locale or aj.detect())local J=I.fallbackFont or I.FallbackFont if J then f.setFallbackFont(J)
 end local K=z(I.sidebarLayout or I.SidebarLayout)local P=I.iconPack or I.IconPack if I.iconPack~=nil and I.IconPack~=nil then error('Astra: choose exactly one icon pack; provide either iconPack or IconPack, not both.',2)end P=P or __ASTRA_ROBLOX_ICONS_V1.Lucide if not __ASTRA_ROBLOX_ICONS_V1.isPack(P) then error('Astra: iconPack must be exactly one supported pack: lucide, material, tabler, phosphor, heroicons, or feather.',2)end local L=setmetatable({name=I.name or I.Name or'Astra Window',
 subheading=I.subtitle or I.Subtitle,layout=K,size=w(K.mode),instances={},connections={},iconPack=P,icon=__ASTRA_ROBLOX_ICONS_V1.resolve(I.icon or I.Icon,P),showName=I
-.showName or I.ShowName or'Astra',showIcon=__ASTRA_ROBLOX_ICONS_V1.resolve(I.showIcon or I.ShowIcon,P),showIconOnly=I.showIconOnly
+.showName or I.ShowName or'Astra',showIcon=__ASTRA_ROBLOX_ICONS_V1.resolve(I.showIcon or I.ShowIcon or ai.icons.astra,P),showIconOnly=I.showIconOnly
 or I.ShowIconOnly or false,profileText=I.profile or I.Profile,themeProperties={},localeProperties={},tabs={},tabSections
 ={},tags={},selectedTab=nil,theme=H(I.theme or I.Theme),controls={},configuration=(function()local L=I.configuration or
 I.Configuration if not L then return{}end return{autoSave=L.autoSave or L.AutoSave,autoLoad=L.autoLoad or L.AutoLoad,
@@ -2337,7 +2337,7 @@ ae.contrastText(af:Color3):Color3 local ag=0.299*af.R+0.587*af.G+0.114*af.B retu
 ...)local ae={}ae.fontAsset='rbxassetid://12187365364'ae.pillResizeInfo=TweenInfo.new(0.4,Enum.EasingStyle.Exponential,
 Enum.EasingDirection.Out)ae.icons={close=83277910885129,minimise=108115485663409,maximise=88738500661569,settings=
 129180860773723,search=100604009889706,chevron=88479147175134,check=125626312718314,dot=91452555903853,colorpicker=
-91452555903853,banner=111263549366178,config=125823673784681}ae.accent={on=Color3.fromRGB(23,153
+91452555903853,banner=111263549366178,config=125823673784681,astra=80387863064905}ae.accent={on=Color3.fromRGB(23,153
 ,110),onStroke=Color3.fromRGB(32,201,144)}ae.statAccents={positive={fill=ColorSequence.new(Color3.fromRGB(0,170,127),
 Color3.fromRGB(0,134,98)),stroke=ColorSequence.new(Color3.fromRGB(0,213,156),Color3.fromRGB(0,189,135))},negative={fill=
 ColorSequence.new(Color3.fromRGB(172,47,47),Color3.fromRGB(135,37,37)),stroke=ColorSequence.new(Color3.fromRGB(255,75,75

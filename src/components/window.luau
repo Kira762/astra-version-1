@@ -199,7 +199,7 @@ function Window.new(properties)
         iconPack = iconPack,
         icon = icons.resolve(properties.icon or properties.Icon, iconPack),
         showName = properties.showName or properties.ShowName "Astra",
-        showIcon = icons.resolve(properties.showIcon or properties.ShowIcon, iconPack),
+        showIcon = icons.resolve(properties.showIcon or properties.ShowIcon or constants.icons.astra, iconPack),
                 showIconOnly = properties.showIconOnly or properties.ShowIconOnly or false,
                 profileText = properties.profile or properties.Profile,
 
