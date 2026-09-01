@@ -17,6 +17,8 @@ export type ThumbnailResponse = {
 }
 local imageCache = {}
 
+type RemoteCallback = (uri: string?) -> ()
+
 local cacheRoot = variables.fileSystemManager:getRootFolder()
 local cacheFolder = variables.fileSystemManager:getAssetsFolder()
 local assetResolver = variables.assetResolver
@@ -39,6 +41,8 @@ end
 imageCache.rewrites = {} :: RewriteMap
 imageCache.onCached = nil :: OnCachedCallback? 
 local pngMagic = "\137PNG\r\n\26\n"
+local remoteRewrites: { [string]: string } = {}
+local remotePending: { [string]: { RemoteCallback } } = {}
 
 local function cacheFile(filePath: string, url: string): string?
         if type(getfenv().getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
@@ -57,6 +61,67 @@ local function cacheFile(filePath: string, url: string): string?
     end
     local ok, uri = pcall(getfenv().getcustomasset, filePath)
     return if ok and type(uri) == "string" then uri else nil
+end
+
+local function remoteFilePath(url: string): string
+    local hash = 0
+    for index = 1, #url do
+        hash = (hash * 33 + string.byte(url, index)) % 2147483647
+    end
+    return path.join(cacheFolder, "icon_" .. tostring(hash) .. ".png")
+end
+
+function imageCache.remote(url: string, onReady: RemoteCallback?): string
+    local env = getfenv()
+    if type(env.getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
+        if onReady then
+            task.defer(onReady, nil)
+        end
+        return ""
+    end
+
+    local rewritten = remoteRewrites[url]
+    if rewritten then
+        if onReady then
+            task.defer(onReady, rewritten)
+        end
+        return rewritten
+    end
+
+    local filePath = remoteFilePath(url)
+    if filesystem.isfile(filePath) then
+        local ok, uri = pcall(env.getcustomasset, filePath)
+        if ok and type(uri) == "string" then
+            remoteRewrites[url] = uri
+            if onReady then
+                task.defer(onReady, uri)
+            end
+            return uri
+        end
+    end
+
+    local pending = remotePending[url]
+    if not pending then
+        pending = {}
+        remotePending[url] = pending
+        task.spawn(function()
+            local uri = cacheFile(filePath, url)
+            if uri then
+                remoteRewrites[url] = uri
+            end
+            local callbacks = remotePending[url]
+            remotePending[url] = nil
+            if callbacks then
+                for _, callback in callbacks do
+                    pcall(callback, uri)
+                end
+            end
+        end)
+    end
+    if onReady then
+        table.insert(pending, onReady)
+    end
+    return ""
 end
 
 local function avatarPath(userId: number): string

@@ -2473,12 +2473,12 @@ ak:unknown):number?if type(ak)=='number'then return ak elseif type(ak)=='string'
 return''end function ag.preload(al:PreloadCallback?):(boolean,number)ah=false return ae.preload(function(am)ah=true
 table.clear(ag.pending)if al then al(am)end end)end function ag.avatar(al:number,am:AvatarCallback?):string if not af.
 secureMode then return`rbxthumb://type=AvatarHeadShot&id={al}&w=48&h=48`end return ae.avatar(al,am)end function ag.
-assign(al:Instance,am:string,b:unknown)local c=al::any if not ai[am]then c[am]=b return end c[am]=ag.resolve(b)if af.
+assign(al:Instance,am:string,b:unknown)local c=al::any if not ai[am]then c[am]=b return end local d=type(b)=='string'and string.match(b,'^https?://')~=nil if d then c[am]=ae.remote(b,function(e)if al.Parent then c[am]=e or''end end)else c[am]=ag.resolve(b)end if af.
 secureMode and not ah then local d=aj(b)if d and not ag.rewrites[d]then local e=ag.pending[d]if not e then e=
 setmetatable({},{__mode='k'})::any ag.pending[d]=e end local f=e[al]if not f then f={}e[al]=f end f[am]=true end end end
 ae.onCached=function(al:number)local am=ag.pending[al]if not am then return end local b=ag.rewrites[al]if b then for c,d
 in am do if c.Parent then local e=c::any for f in d do e[f]=b end end end end ag.pending[al]=nil end function ag.resolve
-(al:unknown):string if al==nil or al==0 or al==''then return''end if type(al)=='string'then if string.sub(al,1,11)==
+(al:unknown):string if al==nil or al==0 or al==''then return''end if type(al)=='string'then if string.match(al,'^https?://')then return ae.remote(al)end if string.sub(al,1,11)==
 'rbxasset://'then return al end if string.sub(al,1,11)=='rbxthumb://'then return if af.secureMode then ak(al)else al end
 end local am:number?if type(al)=='number'then am=al elseif type(al)=='string'then am=tonumber(string.match(al,
 '^rbxassetid://(%d+)$'))end local b=if am then ag.rewrites[am]else nil if b then return b end if af.secureMode then
@@ -2496,7 +2496,37 @@ RewriteMap ai.onCached=nil::OnCachedCallback?local f='\137PNG\r\n\26\n'local fun
 type(getfenv().getcustomasset)~='function'or typeof(ae.isfile)~='function'then return nil end if not ae.isfile(h)then
 pcall(ae.ensureFolder,aj)pcall(ae.ensureFolder,ak)local j=al:getAssetContentFromUrl(i,h,false)if not j or string.sub(j,1
 ,8)~=f then return nil end if not pcall(ae.writefile,h,j)then return nil end end local j,k=pcall(getfenv().
-getcustomasset,h)return if j and type(k)=='string'then k else nil end local function h(i:number):string return af.join(
+getcustomasset,h)return if j and type(k)=='string'then k else nil end
+local n:{[string]:string}={}
+local o:{[string]:{(string?)->()}}={}
+local function p(url:string):string
+ local q=0
+ for r=1,#url do q=(q*33+string.byte(url,r))%2147483647 end
+ return af.join(ak,'icon_'..tostring(q)..'.png')
+end
+function ai.remote(url:string,onReady:((string?)->())?):string
+ local env=getfenv()
+ if type(env.getcustomasset)~='function'or typeof(ae.isfile)~='function' then if onReady then task.defer(onReady,nil)end return''end
+ local cached=n[url]
+ if cached then if onReady then task.defer(onReady,cached)end return cached end
+ local filePath=p(url)
+ if ae.isfile(filePath)then local x,y=pcall(env.getcustomasset,filePath)if x and type(y)=='string'then n[url]=y if onReady then task.defer(onReady,y)end return y end end
+ local pending=o[url]
+ if not pending then
+  pending={}
+  o[url]=pending
+  task.spawn(function()
+   local uri=g(filePath,url)
+   if uri then n[url]=uri end
+   local callbacks=o[url]
+   o[url]=nil
+   if callbacks then for _,callback in callbacks do pcall(callback,uri)end end
+  end)
+ end
+ if onReady then table.insert(pending,onReady)end
+ return''
+end
+local function h(i:number):string return af.join(
 ak,'avatar_'..tostring(i)..'.png')end local function i(j:string):string?local k,l=pcall(function()return ag.httpService:
 JSONDecode(j)end)if not k or type(l)~='table'then return nil end local m=(l::ThumbnailResponse).data if type(m)~='table'
 then return nil end local n=m[1]if type(n)~='table'then return nil end local o=n::ThumbnailEntry if o.state=='Completed'

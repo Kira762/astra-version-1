@@ -62,7 +62,17 @@ function image.assign(instance: Instance, property: string, value: unknown)
         target[property] = value
         return
     end
-    target[property] = image.resolve(value)
+
+    local isRemoteUrl = type(value) == "string" and string.match(value, "^https?://") ~= nil
+    if isRemoteUrl then
+        target[property] = imageCache.remote(value :: string, function(uri)
+            if instance.Parent then
+                target[property] = uri or ""
+            end
+        end)
+    else
+        target[property] = image.resolve(value)
+    end
         if variables.secureMode and not settled then
         local id = idOf(value)
         if id and not image.rewrites[id] then
@@ -106,6 +116,9 @@ function image.resolve(value: unknown): string
     end
 
     if type(value) == "string" then
+        if string.match(value, "^https?://") then
+            return imageCache.remote(value)
+        end
         if string.sub(value, 1, 11) == "rbxasset://" then
             return value
         end
