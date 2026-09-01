@@ -1,3 +1,40 @@
+local __AstraIcons={}
+__AstraIcons.Lucide="lucide"
+__AstraIcons.Material="material"
+__AstraIcons.Tabler="tabler"
+__AstraIcons.Phosphor="phosphor"
+__AstraIcons.Heroicons="heroicons"
+__AstraIcons.Feather="feather"
+local __AstraIconPackNames={lucide=true,material=true,tabler=true,phosphor=true,heroicons=true,feather=true}
+local __AstraIconBase="https://raw.githubusercontent.com/Haijo12/roblox-icons/main"
+function __AstraIcons.isPack(pack)return type(pack)=="string" and __AstraIconPackNames[pack]==true end
+function __AstraIcons.get(name,pack)
+ pack=pack or "lucide"
+ if not __AstraIcons.isPack(pack) then warn("[Icons] Unknown pack: "..tostring(pack))return nil end
+ if type(name)~="string" or name=="" then return nil end
+ local folder=string.sub(name,1,1)
+ local root=__AstraIconBase.."/icons-pack/"..pack.."-pack/"
+ if pack=="material" then root=root.."white/" end
+ return root..folder.."/"..name..".png"
+end
+function __AstraIcons.resolve(value,pack)
+ if value==nil or value==0 or value=="" then return value end
+ if type(value)~="string" then return value end
+ if string.match(value,"^rbxassetid://") or string.match(value,"^rbxasset://") or string.match(value,"^rbxthumb://") or string.match(value,"^https?://") then return value end
+ return __AstraIcons.get(value,pack) or value
+end
+function __AstraIcons.getByPack(pack,name)return __AstraIcons.get(name,pack)end
+function __AstraIcons.packs()return {"lucide","material","tabler","phosphor","heroicons","feather"}end
+function __AstraIcons.list(pack)
+ pack=pack or "lucide"
+ if not __AstraIcons.isPack(pack) then return {} end
+ return {}
+end
+function __AstraIcons.count(pack)
+ if not __AstraIcons.isPack(pack or "lucide") then return 0 end
+ return 0
+end
+
 local a local aa,ab,ac,ad,ae,af,ag,ah,ai,aj,ak,al,am,b,c,d,e,f,g,h,i={function()local b,c,d=a(1)local e return(function(
 ...)local f,g,h,i,j=d(c.utility.variables),d(c.utility.image),d(c.utility.locale),d(c.utility.constants),d(c.types)
 export type Theme=j.Theme export type Translator=j.Translator export type Translations=j.Translations export type
@@ -14,7 +51,7 @@ Toggle export type Slider=j.Slider export type Dropdown=j.Dropdown export type I
 Keybind export type ColorPicker=j.ColorPicker export type Stat=j.Stat export type Progress=j.Progress export type
 Console=j.Console export type Section=j.Section export type TabSection=j.TabSection export type Text=j.Text export type
 Divider=j.Divider export type Tag=j.Tag export type Popup=j.Popup export type Astra=j.Astra type WindowModule={new
-:(j.WindowProps)->j.Window}local k={}::Astra local function l()local m=Instance.new'ScreenGui'm.Name=f.httpService:
+:(j.WindowProps)->j.Window}local k={}::Astra k.Icons=__AstraIcons local function l()local m=Instance.new'ScreenGui'm.Name=f.httpService:
 GenerateGUID(false)m.ClipToDeviceSafeArea=false m.DisplayOrder=i.displayOrder.banner m.IgnoreGuiInset=true m.
 ResetOnSpawn=false m.Enabled=true m.SafeAreaCompatibility=Enum.SafeAreaCompatibility.None m.ScreenInsets=Enum.
 ScreenInsets.DeviceSafeInsets m.ZIndexBehavior=Enum.ZIndexBehavior.Sibling m.Parent=f.guiContainer local n=Instance.new
@@ -1716,12 +1753,12 @@ warn[[Astra: invalid theme (expected a built-in name or a theme table), using de
 local function H(I)local J,K=table.clone(ac(g.default)),G(I)for L,M in K do J[L]=B(L,M)end if typeof(I)=='table'then F(J
 ,K)end local L=if typeof(I)=='table'then I else nil if not(L and(L.Font or L.font))then J.Font=f.brandFont(Enum.
 FontWeight.Medium)end if not(L and(L.TitleFont or L.titleFont))then J.TitleFont=f.brandFont(Enum.FontWeight.SemiBold)end
-return J end function h.new(I)I=if typeof(I)=='table'then I else{}if I.translations or I.Translations then aj.register(I
+return J end function h:ResolveIcon(I,J)return __AstraIcons.resolve(I,J or self.iconPack)end function h.new(I)I=if typeof(I)=='table'then I else{}if I.translations or I.Translations then aj.register(I
 .translations or I.Translations)end if I.translator or I.Translator then aj.translator=I.translator or I.Translator end
 aj.setActive(I.locale or I.Locale or aj.detect())local J=I.fallbackFont or I.FallbackFont if J then f.setFallbackFont(J)
-end local K=z(I.sidebarLayout or I.SidebarLayout)local L=setmetatable({name=I.name or I.Name or'Astra Window',
-subheading=I.subtitle or I.Subtitle,layout=K,size=w(K.mode),instances={},connections={},icon=I.icon or I.Icon,showName=I
-.showName or I.ShowName or'Astra',showIcon=I.showIcon or I.ShowIcon or ai.icons.astra,showIconOnly=I.showIconOnly
+end local K=z(I.sidebarLayout or I.SidebarLayout)local P=I.iconPack or I.IconPack if I.iconPack~=nil and I.IconPack~=nil then error('Astra: choose exactly one icon pack; provide either iconPack or IconPack, not both.',2)end P=P or __AstraIcons.Lucide if not __AstraIcons.isPack(P) then error('Astra: iconPack must be exactly one supported pack: lucide, material, tabler, phosphor, heroicons, or feather.',2)end local L=setmetatable({name=I.name or I.Name or'Astra Window',
+subheading=I.subtitle or I.Subtitle,layout=K,size=w(K.mode),instances={},connections={},iconPack=P,icon=__AstraIcons.resolve(I.icon or I.Icon,P),showName=I
+.showName or I.ShowName or'Astra',showIcon=__AstraIcons.resolve(I.showIcon or I.ShowIcon or ai.icons.astra,P),showIconOnly=I.showIconOnly
 or I.ShowIconOnly or false,profileText=I.profile or I.Profile,themeProperties={},localeProperties={},tabs={},tabSections
 ={},tags={},selectedTab=nil,theme=H(I.theme or I.Theme),controls={},configuration=(function()local L=I.configuration or
 I.Configuration if not L then return{}end return{autoSave=L.autoSave or L.AutoSave,autoLoad=L.autoLoad or L.AutoLoad,
@@ -2016,8 +2053,7 @@ _jumpTo(I,J)if J then I.elementsLayout:JumpTo(J)end end function h.Navigate(I,J)
 M in I.tabs do if M==J or M.name==J or M.tabPage==J then K=M break end end if not K then return end K:Select()end
 function h.Create(I,J,K,L)assert(typeof(J)=='string','Invalid argument #1 (string expected)')local M=Instance.new(J)if L
 and I.theme then for N,O in L do M[N]=(if typeof(O)=='table'then O[2](I.theme[O[1] ])else I.theme[O])end I.
-themeProperties[M]=L end if K then for N,O in K do if aj.isToken(O)then I:_bindLocale(M,N,aj.sourceOf(O))else af.assign(
-M,N,O)end end end table.insert(I.instances,M)return M end function h._bindLocale(I,J,K,L)J[K]=aj.resolve(L)local M=I.
+themeProperties[M]=L end if K then for N,O in K do if aj.isToken(O)then I:_bindLocale(M,N,aj.sourceOf(O))else af.assign(M,N,if N=='Image'then I:ResolveIcon(O)else O)end end end table.insert(I.instances,M)return M end function h._bindLocale(I,J,K,L)J[K]=aj.resolve(L)local M=I.
 localeProperties[J]if not M then M={}I.localeProperties[J]=M end M[K]=L end function h.SetLocale(I,J)aj.setActive(J)for
 K,L in I.localeProperties do for M,N in L do K[M]=aj.resolve(N)end end end function h.SetTranslator(I,J)aj.translator=J
 end function h.RegisterTranslations(I,J)aj.register(J)I:SetLocale(aj.current)end function h.CreateGlow(I,J,K,L,M)local N
