@@ -918,7 +918,7 @@ function Window:Hide()
     self.collapsedInteract.Visible = false 
                 if self.minimised then
         self.minimised = false
-        image.assign(self.minimiseAction.iconLabel, "Image", constants.icons.minimise)     end
+        image.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(constants.icons.minimise))     end
 
         self._restorePosition = self.main.Position
 
@@ -1060,7 +1060,7 @@ function Window:ToggleMinimise()
         end)
     else
         self.minimised = true
-        image.assign(self.minimiseAction.iconLabel, "Image", constants.icons.maximise) 
+        image.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(constants.icons.maximise)) 
                         self:_fadeSelectedElementsOut()
         for _, tab in pairs(self.tabs) do
             if not tab.neglectSelector and tab.topbarItem then
@@ -1622,6 +1622,27 @@ function Window:_buildLockScrim(element)
     self:Create("UICorner", {
         Parent = element.lockScrim,
     }, { CornerRadius = "ElementCornerRadius" })
+end
+
+function Window:_applySettingsLayout(isSettings)
+    if self.layout.mode ~= "sidebar" then return end
+    if isSettings then
+        if self.tabList then self.tabList.Visible = false end
+        if self.sidebar then self.sidebar.Visible = false end
+        local tab = self.selectedTab
+        if tab and tab.tabPage then
+            tab.tabPage.Size = UDim2.new(1, 0, 1, 0)
+            tab.tabPage.Position = UDim2.new(0, 0, 0, 0)
+        end
+    else
+        if self.tabList then self.tabList.Visible = true end
+        if self.sidebar then self.sidebar.Visible = true end
+        local tab = self.selectedTab
+        if tab and tab.tabPage then
+            tab.tabPage.Size = UDim2.new(1, -35, 1, 0)
+            tab.tabPage.Position = UDim2.new(0, 35, 0, 0)
+        end
+    end
 end
 
 function Window:_setContentVisible(visible)

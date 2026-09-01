@@ -1416,11 +1416,11 @@ return end local f=ak.states[c.window.layout.mode][d]if not f then return end ak
 _spinGradients(c)if c.neglectSelector then return end local d=TweenInfo.new(0.7,Enum.EasingStyle.Quint,Enum.
 EasingDirection.Out)for e,f in{c.topbarItemGradient,c.topbarItemStrokeGradient}do f.Rotation=-270 ag.tweenService:
 Create(f,d,{Rotation=90}):Play()end end function ae.Select(c,d)if c.window._searching then aj.close(c.window,{showTabs=
-true,jumpTo=false})end c.window.selectedTab=c c.window:_jumpTo(c.tabPage)local e=d or not c.window:_interactive()if not
+true,jumpTo=false})end c.window.selectedTab=c c.window:_jumpTo(c.tabPage)if c.window._applySettingsLayout then c.window._applySettingsLayout(c.window,c==c.window.rfSettings)endlocal e=d or not c.window:_interactive()if not
 c.neglectSelector and not e then c:_applyVisual('selected',am)end for f,g in c.window.tabs do if g~=c.window.selectedTab
 then g:Deselect(e)end end if c~=c.window.rfSettings and c.window.settingsAction and not e then ag.tweenService:Create(c.
 window.settingsAction.iconLabel,TweenInfo.new(0.25,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{ImageTransparency=
-0.6}):Play()end end function ae.Deselect(c,d)if not c.neglectSelector and not d then c:_applyVisual('unselected',am)end
+0.6}):Play()end end  function ae.Deselect(c,d)if not c.neglectSelector and not d then c:_applyVisual('unselected',am)end
 end function ae._register(c,d)table.insert(c.elements,d)ah(d,#c.elements*10)c.window:_restoreLate(d)if not c.window.
 hidden then d:_setShown(true,true)end return d end function ae.CreateButton(c,d)return c:_register(ac(ab.Parent.button).
 new(c,d))end function ae.CreateToggle(c,d)return c:_register(ac(ab.Parent.toggle).new(c,d))end function ae.CreateSwitch(
@@ -1869,8 +1869,7 @@ LayoutOrder,Padding=UDim.new(0,0),Parent=N})I[M]=N if L then D(I,false)end end r
 function h.Popup(I,J)if I.unloaded then return end return ac(ab.Parent.popup).new(I,J)end function h.Hide(I)if I.
 animating or I.hidden then return end if I._searching then d.close(I,{showTabs=false,jumpTo=I.selectedTab and I.
 selectedTab.tabPage})end if I._recordingKeybind then I._recordingKeybind:_stopRecording()end I.animating=true I.
-_revealing=true I.hidden=true I.collapsedInteract.Visible=false if I.minimised then I.minimised=false af.assign(I.
-minimiseAction.iconLabel,'Image',ai.icons.minimise)end I._restorePosition=I.main.Position local J,K=I:_collapsedRect()
+_revealing=true I.hidden=true I.collapsedInteract.Visible=false if I.minimised then I.minimised=false af.assign(I.minimiseAction.iconLabel,'Image',I:ResolveIcon(ai.icons.minimise))end I._restorePosition=I.main.Position local J,K=I:_collapsedRect()
 local L,M,N,O=TweenInfo.new(0.18,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),TweenInfo.new(0.35,Enum.EasingStyle.
 Exponential,Enum.EasingDirection.InOut),TweenInfo.new(0.35,Enum.EasingStyle.Exponential,Enum.EasingDirection.InOut),
 TweenInfo.new(0.2,Enum.EasingStyle.Quint,Enum.EasingDirection.Out)f.tweenService:Create(I.drag.dragCosmetic,L,{Size=
@@ -1888,14 +1887,13 @@ _setContentVisible(false)c.setCollapsedShown(I,true,O)end)end function h.ToggleH
 I.hidden then I:Show()else I:Hide()end end function h.ToggleMinimise(I)if I.animating or I.hidden then return end if I.
 _searching then d.close(I,{showTabs=true})end I.animating=true local J,K=TweenInfo.new(0.5,Enum.EasingStyle.Exponential,
 Enum.EasingDirection.Out),TweenInfo.new(0.4,Enum.EasingStyle.Exponential,Enum.EasingDirection.Out)if I.minimised then I.
-minimised=false af.assign(I.minimiseAction.iconLabel,'Image',ai.icons.minimise)f.tweenService:Create(I.main,J,{Size=I.
+minimised=false af.assign(I.minimiseAction.iconLabel,'Image',I:ResolveIcon(ai.icons.minimise))f.tweenService:Create(I.main,J,{Size=I.
 size}):Play()I:_fadeSurfaces(true,K)f.tweenService:Create(I.drag.drag,J,{Position=UDim2.new(I.main.Position.X.Scale,I.
 main.Position.X.Offset,I.main.Position.Y.Scale,I.main.Position.Y.Offset+I.size.Y.Offset/2+15)}):Play()task.delay(0.2,
 function()if I.minimised or I.hidden then return end I:_setContentVisible(true)for L,M in pairs(I.tabs)do if not M.
 neglectSelector and M.topbarItem then M.topbarItem.Visible=true M:_applyVisual(if I.selectedTab==M then'selected'else
 'unselected',K)end end I:_setTabSectionsVisible(true)I:_setTabSectionsShown(true,K)I:_revealElements(0.035,0.4)end)task.
-delay(0.5,function()I.animating=false end)else I.minimised=true af.assign(I.minimiseAction.iconLabel,'Image',ai.icons.
-maximise)I:_fadeSelectedElementsOut()for L,M in pairs(I.tabs)do if not M.neglectSelector and M.topbarItem then M:
+delay(0.5,function()I.animating=false end)else I.minimised=true af.assign(I.minimiseAction.iconLabel,'Image',I:ResolveIcon(ai.icons.maximise))I:_fadeSelectedElementsOut()for L,M in pairs(I.tabs)do if not M.neglectSelector and M.topbarItem then M:
 _applyVisual('hidden',K)end end I:_setTabSectionsShown(false,K)task.delay(0.3,function()if not I.minimised then return
 end I:_setContentVisible(false)for L,M in pairs(I.tabs)do if not M.neglectSelector and M.topbarItem then M.topbarItem.
 Visible=false end end I:_setTabSectionsVisible(false)end)I:_fadeSurfaces(false,K)f.tweenService:Create(I.main,J,{Size=
@@ -1981,7 +1979,7 @@ _descriptionBefore J._descriptionBefore=nil end f.tweenService:Create(O.titleLab
 0.7}):Play()end function h._buildLockScrim(I,J)J.lockScrim=I:Create('TextButton',{Name='ElementLock',Active=true,
 AutoButtonColor=false,Size=UDim2.fromScale(1,1),BorderSizePixel=0,Text='',TextTransparency=1,ZIndex=ai.zIndex.
 elementLock,Visible=false,BackgroundTransparency=1,Parent=J.main},{BackgroundColor3={'WindowColor',C}})I:Create(
-'UICorner',{Parent=J.lockScrim},{CornerRadius='ElementCornerRadius'})end function h._setContentVisible(I,J)I.elements.
+'UICorner',{Parent=J.lockScrim},{CornerRadius='ElementCornerRadius'})end function h._applySettingsLayout(I,J)local K=I.layout;if K.mode~='sidebar'then return end;if J then if I.tabList then I.tabList.Visible=false end;if I.sidebar then I.sidebar.Visible=false end;local L=I.selectedTab;if L and L.tabPage then L.tabPage.Size=UDim2.new(1,0,1,0);L.tabPage.Position=UDim2.new(0,0,0,0)end else if I.tabList then I.tabList.Visible=true end;if I.sidebar then I.sidebar.Visible=true end;local L=I.selectedTab;if L and L.tabPage then L.tabPage.Size=UDim2.new(1,-35,1,0);L.tabPage.Position=UDim2.new(0,35,0,0)end end end function h._setContentVisible(I,J)I.elements.
 Visible=J I.tabList.Visible=J if I.sidebar then I.sidebar.Visible=J end end function h._fadeSurfaces(I,J,K)local L={[I.
 windowShadow]={Transparency=if J then 0.6 else 1},[I.windowStroke]={Transparency=if J then 0.95 else 1},[I.bottomFade]={
 BackgroundTransparency=if J then 0 else 1}}if I.elementsStroke then L[I.elements]={BackgroundTransparency=if J then I.
