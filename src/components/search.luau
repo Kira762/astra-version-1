@@ -1,15 +1,3 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
--- Search: a pill that takes over the tab strip and searches every page at once. The Search
--- action toggles it; while open the tab selector hides and every content tab's elements are
--- gathered into one results page, filtered live by name. Closing puts everything back exactly
--- where it was. Values ported from the RF2 design (Window.Search).
-
 local utility = script.Parent.Parent.utility
 local variables = require(utility.variables)
 local constants = require(utility.constants)
@@ -18,15 +6,11 @@ local action = require(script.Parent.action)
 
 local search = {}
 
--- crossfade between the tab strip and the search pill, and the search parts fading in/out
 local swapInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
--- resting/lit brightness for the Search action icon, matching the other topbar actions
 local iconRest = 0.6
 local iconLit = 0.2
 
--- The searchable text for one unit: a leaf's own name, or every descendant leaf name joined
--- so a group matches when any child inside it does.
 local function unitText(unit)
     if unit.__type == "Group" then
         local parts = {}
@@ -45,8 +29,6 @@ local function unitText(unit)
     return unit.name or ""
 end
 
--- Every top-level element across the real content pages (the settings page and other
--- neglected tabs aren't pages you search). Sections are headers, so skip them.
 local function collectUnits(window)
     local units = {}
     for _, tab in window.tabs do
@@ -62,7 +44,6 @@ local function collectUnits(window)
     return units
 end
 
--- Fade the pill's fill, stroke, shadow, icon and field in or out together.
 local function setPillShown(window, shown, info)
     variables.tweenService
         :Create(window.searchPill, info, {
@@ -75,8 +56,6 @@ local function setPillShown(window, shown, info)
     variables.tweenService:Create(window.searchInput, info, { TextTransparency = if shown then 0.2 else 1 }):Play()
 end
 
--- Show/hide the content tab pills as the strip swaps with the search field. The sidebar rail
--- isn't in the field's way, so it stays put and keeps showing where you were.
 local function setTabsShown(window, shown, info)
     if window.layout.mode == "sidebar" then
         return
@@ -91,8 +70,6 @@ local function setTabsShown(window, shown, info)
     end
 end
 
--- Toggle each unit's visibility against the query. Empty query shows everything, so the
--- open field doubles as a browse-all-pages view.
 local function applyFilter(window, query)
     query = string.lower(query or "")
     local anyVisible = false
@@ -107,8 +84,6 @@ local function applyFilter(window, query)
     window.searchEmpty.Visible = not anyVisible and query ~= ""
 end
 
--- Pull every unit into the results page, remembering where each came from, and lay them out
--- grouped by page in creation order.
 local function gatherUnits(window)
     window._searchUnits = {}
     local order = 0
@@ -134,8 +109,6 @@ local function gatherUnits(window)
     end
 end
 
--- Put every unit back in the tab it came from, at its original order. Guards a unit whose
--- element was removed mid-search (its frame is gone).
 local function restoreUnits(window)
     for _, entry in window._searchUnits do
         local unit = entry.unit
@@ -154,8 +127,7 @@ local function restoreUnits(window)
 end
 
 function search.open(window)
-    -- minimised: the results page would render outside the collapsed bar and steal focus
-    if window._searching or window.minimised or not window:_interactive() then
+        if window._searching or window.minimised or not window:_interactive() then
         return
     end
     window._searching = true
@@ -164,8 +136,7 @@ function search.open(window)
     applyFilter(window, "")
     window:_jumpTo(window.searchPage)
 
-    -- strip swaps for the field
-    setTabsShown(window, false, swapInfo)
+        setTabsShown(window, false, swapInfo)
     task.delay(swapInfo.Time, function()
         if window._searching and window.layout.mode ~= "sidebar" then
             window.tabList.Visible = false
@@ -179,8 +150,6 @@ function search.open(window)
     variables.tweenService:Create(window.searchAction.iconLabel, swapInfo, { ImageTransparency = iconLit }):Play()
 end
 
--- config.showTabs: fade the tab strip back in (false when the caller hides the window).
--- config.jumpTo: the page to slide back to, or false to leave navigation to the caller.
 function search.close(window, config)
     if not window._searching then
         return
@@ -221,7 +190,6 @@ function search.toggle(window)
     end
 end
 
--- Keep the field in step with the rail: it sits over the card, so it's as wide as the card is.
 function search.railWidth(window, width)
     if window.searchPill then
         window.searchPill.Size = UDim2.new(1, -(width + 30), 0, 35)
@@ -231,8 +199,7 @@ end
 function search.build(window)
     window._searching = false
 
-    -- Results page: a page like a tab's, holding whatever the search gathers.
-    window.searchPage = window:Create("ScrollingFrame", {
+        window.searchPage = window:Create("ScrollingFrame", {
         Name = "Search",
         Size = UDim2.new(1, -20, 1, 0),
         Position = UDim2.new(0.5, 0, 0, 68),
@@ -243,8 +210,7 @@ function search.build(window)
         CanvasSize = UDim2.new(0, 0, 0, 0),
         ScrollBarThickness = 0,
         ScrollingDirection = Enum.ScrollingDirection.Y,
-        LayoutOrder = 2000, -- sits after every tab page
-
+        LayoutOrder = 2000, 
         Parent = window.elements,
     })
 
@@ -258,18 +224,14 @@ function search.build(window)
         Parent = window.searchPage,
     })
 
-    -- under a sidebar the field floats over the top of the card rather than replacing a strip,
-    -- so the results start below where it lands instead of under it
-    window:Create("UIPadding", {
+            window:Create("UIPadding", {
         PaddingTop = UDim.new(0, if window.layout.mode == "sidebar" then 53 else 10),
         PaddingBottom = UDim.new(0, 33),
 
         Parent = window.searchPage,
     })
 
-    -- Empty state, floated over the content area rather than in the results list so it centres
-    -- cleanly. Only shown when a query matches nothing.
-    window.searchEmpty = window:Create("TextLabel", {
+            window.searchEmpty = window:Create("TextLabel", {
         Name = "NoResults",
         Text = locale.t("No results"),
         FontFace = variables.brandFont(Enum.FontWeight.Medium),
@@ -285,12 +247,8 @@ function search.build(window)
         Parent = window.main,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-    -- Search pill: takes the tab strip's row, or the head of the content card when the tabs
-    -- are down the side. Ported from Window.Search.
-    local sidebarLayout = window.layout.mode == "sidebar"
-    -- the strip's own row in the top layout; a hair inside the card's top edge in the sidebar,
-    -- where search.railWidth keeps the width in step with the rail as it collapses
-    local top = if sidebarLayout then window.layout.chromeHeight + 8 else window.layout.tabStripTop + 1
+            local sidebarLayout = window.layout.mode == "sidebar"
+            local top = if sidebarLayout then window.layout.chromeHeight + 8 else window.layout.tabStripTop + 1
 
     window.searchPill = window:Create("Frame", {
         Name = "SearchBar",
@@ -301,8 +259,7 @@ function search.build(window)
         BorderSizePixel = 0,
         ZIndex = 10,
 
-        BackgroundTransparency = 1, -- shown = 0.9
-        Visible = false,
+        BackgroundTransparency = 1,         Visible = false,
 
         Parent = window.main,
     })
@@ -316,8 +273,7 @@ function search.build(window)
         Color = Color3.fromRGB(255, 255, 255),
         Thickness = 1,
 
-        Transparency = 1, -- shown = 0.85
-
+        Transparency = 1, 
         Parent = window.searchPill,
     })
 
@@ -326,8 +282,7 @@ function search.build(window)
         Color = Color3.fromRGB(255, 255, 255),
         ZIndex = -1,
 
-        Transparency = 1, -- shown = 0.92
-
+        Transparency = 1, 
         Parent = window.searchPill,
     })
 
@@ -339,8 +294,7 @@ function search.build(window)
         BackgroundTransparency = 1,
         ZIndex = 10,
 
-        ImageTransparency = 1, -- shown = 0.65
-
+        ImageTransparency = 1, 
         Parent = window.searchPill,
     }, { ImageColor3 = "ContentColor" })
 
@@ -357,8 +311,7 @@ function search.build(window)
         ClipsDescendants = true,
         ZIndex = 10,
 
-        TextTransparency = 1, -- shown = 0.2
-
+        TextTransparency = 1, 
         Parent = window.searchPill,
     }, { TextColor3 = "ContentColor", FontFace = "Font", PlaceholderColor3 = "PlaceholderColor" })
 
@@ -368,8 +321,7 @@ function search.build(window)
         end
     end)
 
-    -- Search action: last in the row (leftmost), toggles the field.
-    window.searchAction = action.new(window, {
+        window.searchAction = action.new(window, {
         name = "Search",
         icon = constants.icons.search,
         order = 4,
@@ -378,8 +330,7 @@ function search.build(window)
             search.toggle(window)
         end,
     })
-    -- keep the icon lit while the field is open, the way the settings cog stays lit on its page
-    window.searchAction.isLit = function()
+        window.searchAction.isLit = function()
         return window._searching
     end
 end

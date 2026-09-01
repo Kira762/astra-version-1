@@ -12,8 +12,7 @@ return function()
         local files
         local folders
         local fallback
-        -- a real face body starts with a font signature; anything else never reaches disk
-        local fontBinary = "\0\1\0\0font-binary"
+                local fontBinary = "\0\1\0\0font-binary"
 
         beforeEach(function()
             files = {}
@@ -191,8 +190,7 @@ return function()
             end
 
             expect(manager:loadFont(123)).to.equal(fallback)
-            -- a poisoned cached manifest would otherwise be re-read (and fail) forever
-            expect(files["Fonts/123.json"]).never.to.be.ok()
+                        expect(files["Fonts/123.json"]).never.to.be.ok()
         end)
 
         it("only writes a downloaded manifest to disk once it validates", function()
@@ -205,15 +203,13 @@ return function()
                 return if id == 123 then "downloaded-manifest" else fontBinary
             end
 
-            -- invalid body: nothing may land on disk
-            game:GetService("HttpService").JSONDecode = function()
+                        game:GetService("HttpService").JSONDecode = function()
                 return { name = "NoFaces" }
             end
             expect(manager:loadFont(123)).to.equal(fallback)
             expect(files["Fonts/123.json"]).never.to.be.ok()
 
-            -- valid body: cached for the next session
-            game:GetService("HttpService").JSONDecode = function()
+                        game:GetService("HttpService").JSONDecode = function()
                 return {
                     name = "SpecFont",
                     faces = {
@@ -277,9 +273,7 @@ return function()
                 return "<html>error page</html>"
             end
 
-            -- a poisoned .ttf is never re-downloaded (we only fetch when the file is missing),
-            -- so writing one would break the font for every session after
-            expect(manager:loadFont(123)).to.equal(fallback)
+                                    expect(manager:loadFont(123)).to.equal(fallback)
             expect(files["Fonts/SpecFont/Regular.ttf"]).never.to.be.ok()
             expect(files["Fonts/SpecFont/manifest.json"]).never.to.be.ok()
         end)
@@ -288,8 +282,7 @@ return function()
             local manager = makeManager(true)
             manager._debug = false
             files["Fonts/123.json"] = "stored-manifest"
-            -- a crash mid-write left a truncated face on disk
-            files["Fonts/SpecFont/Regular.ttf"] = "not-a-font"
+                        files["Fonts/SpecFont/Regular.ttf"] = "not-a-font"
             manager.assetResolver.resolve = function(_, id)
                 return tonumber(id) or 456
             end
@@ -336,9 +329,7 @@ return function()
                 return "asset://" .. assetPath
             end
 
-            -- a partial failure must not fall back to the remote asset id: that fetch is
-            -- exactly what secure mode exists to prevent
-            expect(manager:loadFont(123)).to.equal(fallback)
+                                    expect(manager:loadFont(123)).to.equal(fallback)
             expect(files["Fonts/SpecFont/manifest.json"]).never.to.be.ok()
         end)
     end)

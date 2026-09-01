@@ -1,16 +1,3 @@
---!nolint
---!nocheck
---!native
---!optimize 2
-
---[[
-    Wax - A Fast Runtime Lua 5.1x+/Luau Project Bundler, Using Roblox Models and Module-Require Semantics
-    MIT License | Copyright (c) 2023-2024 Latte Softworks <https://latte.to>
-
-    Wax Version: 0.4.1
-]]
-
-------------------------------------------------------------------------------------------------------
 
 local a local aa,ab,ac,ad,ae,af,ag,ah,ai,aj,ak,al,b,c,d,e,f,g,h,i={function()local b,c,d=a(1)local e return(function(...
 )if string.sub(_VERSION,1,4)~='Lune'then print
@@ -172,7 +159,7 @@ true end return C(ac)end Z.table=function(ac,ad)do local ae=Q[ac]if ae then retu
 __index=H})do ae.Prettify=(ad and false)or I ae.IndentCount=(ad and((not I and J)or 1))or J ae._StackLevel=(ad and 1)or
 P+1 ae._VisitedTables=Q end return F(ac,ae)end Z.boolean=function(ac)return ac and'true'or'false'end Z['nil']=function(
 ac)return'nil'end Z['function']=function(ac)if M then return ac()end return
-[=[function() --[[LuaEncode: `options.FunctionsReturnRaw` false; can't serialize functions]] return end]=]end Z.Axes=
+[=[function()  return end]=]end Z.Axes=
 function(ac)local ad,ae={},{['Enum.Axis.X']=ac.X,['Enum.Axis.Y']=ac.Y,['Enum.Axis.Z']=ac.Z}for af,ag in i,ae do if ag
 then y(ad,af)end end return'Axes.new('..x(ad,U)..')'end Z.BrickColor=function(ac)return'BrickColor.new('..(I and _(
 'string',ac.Name))or ac.Number..')'end Z.CFrame=function(ac)return'CFrame.new('..aa(ac:components())..')'end Z.
@@ -342,10 +329,7 @@ local ScriptsToRun = {}
 local SharedEnvironment = {}
 
 -- We're creating 'fake' instance refs soley for traversal of the DOM for require() compatibility
--- It's meant to be as lazy as possible
-local RefChildren = {} -- [Ref] = {ChildrenRef, ...}
-
--- Implemented instance methods
+local RefChildren = {} 
 local InstanceMethods = {
     GetFullName = { {}, function(self)
         local Path = self.Name
@@ -354,8 +338,7 @@ local InstanceMethods = {
         while ObjectPointer do
             Path = ObjectPointer.Name .. "." .. Path
 
-            -- Move up the DOM (parent will be nil at the end, and this while loop will stop)
-            ObjectPointer = ObjectPointer.Parent
+                        ObjectPointer = ObjectPointer.Parent
         end
 
         return Path
@@ -396,9 +379,7 @@ local InstanceMethods = {
 
         if recursive then
             for Child in next, Children do
-                -- Yeah, Roblox follows this behavior- instead of searching the entire base of a
-                -- ref first, the engine uses a direct recursive call
-                return Child:FindFirstChild(name, true)
+                                                return Child:FindFirstChild(name, true)
             end
         end
     end},
@@ -414,13 +395,11 @@ local InstanceMethods = {
         end
     end},
 
-    -- Just to implement for traversal usage
-    WaitForChild = { {"string", "number?"}, function(self, name)
+        WaitForChild = { {"string", "number?"}, function(self, name)
         return self:FindFirstChild(name)
     end},
 }
 
--- "Proxies" to instance methods, with err checks etc
 local InstanceMethodProxies = {}
 for MethodName, MethodObject in next, InstanceMethods do
     local Types = MethodObject[1]
@@ -457,16 +436,11 @@ for MethodName, MethodObject in next, InstanceMethods do
 end
 
 local function CreateRef(className, name, parent)
-    -- `name` and `parent` can also be set later by the init script if they're absent
+            local StringValue_Value
 
-    -- Extras
-    local StringValue_Value
+        local Children = setmetatable({}, {__mode = "k"})
 
-    -- Will be set to RefChildren later aswell
-    local Children = setmetatable({}, {__mode = "k"})
-
-    -- Err funcs
-    local function InvalidMember(member)
+        local function InvalidMember(member)
         error(member .. " is not a valid (virtual) member of " .. className .. " \"" .. name .. "\"", 3)
     end
     local function ReadOnlyProperty(property)
@@ -479,63 +453,52 @@ local function CreateRef(className, name, parent)
     RefMetatable.__metatable = false
 
     RefMetatable.__index = function(_, index)
-        if index == "ClassName" then -- First check "properties"
-            return className
+        if index == "ClassName" then             return className
         elseif index == "Name" then
             return name
         elseif index == "Parent" then
             return parent
         elseif className == "StringValue" and index == "Value" then
-            -- Supporting StringValue.Value for Rojo .txt file conv
-            return StringValue_Value
-        else -- Lastly, check "methods"
-            local InstanceMethod = InstanceMethodProxies[index]
+                        return StringValue_Value
+        else             local InstanceMethod = InstanceMethodProxies[index]
 
             if InstanceMethod then
                 return InstanceMethod
             end
         end
 
-        -- Next we'll look thru child refs
-        for Child in next, Children do
+                for Child in next, Children do
             if Child.Name == index then
                 return Child
             end
         end
 
-        -- At this point, no member was found; this is the same err format as Roblox
-        InvalidMember(index)
+                InvalidMember(index)
     end
 
     RefMetatable.__newindex = function(_, index, value)
-        -- __newindex is only for props fyi
-        if index == "ClassName" then
+                if index == "ClassName" then
             ReadOnlyProperty(index)
         elseif index == "Name" then
             name = value
         elseif index == "Parent" then
-            -- We'll just ignore the process if it's trying to set itself
-            if value == Ref then
+                        if value == Ref then
                 return
             end
 
             if parent ~= nil then
-                -- Remove this ref from the CURRENT parent
-                RefChildren[parent][Ref] = nil
+                                RefChildren[parent][Ref] = nil
             end
 
             parent = value
 
             if value ~= nil then
-                -- And NOW we're setting the new parent
-                RefChildren[value][Ref] = true
+                                RefChildren[value][Ref] = true
             end
         elseif className == "StringValue" and index == "Value" then
-            -- Supporting StringValue.Value for Rojo .txt file conv
-            StringValue_Value = value
+                        StringValue_Value = value
         else
-            -- Same err as __index when no member is found
-            InvalidMember(index)
+                        InvalidMember(index)
         end
     end
 
@@ -554,19 +517,15 @@ local function CreateRef(className, name, parent)
     return Ref
 end
 
--- Create real ref DOM from object tree
 local function CreateRefFromObject(object, parent)
     local RefId = object[1]
     local ClassNameId = object[2]
-    local Properties = object[3] -- Optional
-    local Children = object[4] -- Optional
-
+    local Properties = object[3]     local Children = object[4] 
     local ClassName = ClassNameIdBindings[ClassNameId]
 
     local Name = Properties and table_remove(Properties, 1) or ClassName
 
-    local Ref = CreateRef(ClassName, Name, parent) -- 3rd arg may be nil if this is from root
-    RefBindings[RefId] = Ref
+    local Ref = CreateRef(ClassName, Name, parent)     RefBindings[RefId] = Ref
 
     if Properties then
         for PropertyName, PropertyValue in next, Properties do
@@ -588,7 +547,6 @@ for _, Object in next, ObjectTree do
     CreateRefFromObject(Object, RealObjectRoot)
 end
 
--- Now we'll set script closure refs and check if they should be ran as a BaseScript
 for RefId, Closure in next, ClosureBindings do
     local Ref = RefBindings[RefId]
 
@@ -604,17 +562,14 @@ end
 local function LoadScript(scriptRef)
     local ScriptClassName = scriptRef.ClassName
 
-    -- First we'll check for a cached module value (packed into a tbl)
-    local StoredModuleValue = StoredModuleValues[scriptRef]
+        local StoredModuleValue = StoredModuleValues[scriptRef]
     if StoredModuleValue and ScriptClassName == "ModuleScript" then
         return unpack(StoredModuleValue)
     end
 
     local Closure = ScriptClosures[scriptRef]
 
-    -- Grabs the stack while it's still live; pcall alone would discard it. Guarded,
-    -- since some executors sandbox `debug` away entirely
-    local function CatchError(originalErrorMessage)
+            local function CatchError(originalErrorMessage)
         local Traceback
         local TracebackSuccess, TracebackResult = pcall(function()
             return debug.traceback(nil, 2)
@@ -631,8 +586,7 @@ local function LoadScript(scriptRef)
 
         local VirtualFullName = scriptRef:GetFullName()
 
-        -- Check for vanilla/Roblox format
-        local OriginalErrorLine, BaseErrorMessage = string_match(originalErrorMessage, "[^:]+:(%d+): (.+)")
+                local OriginalErrorLine, BaseErrorMessage = string_match(originalErrorMessage, "[^:]+:(%d+): (.+)")
 
         local FormattedMessage
         if not OriginalErrorLine or not LineOffsets then
@@ -659,8 +613,7 @@ local function LoadScript(scriptRef)
         return FormattedMessage
     end
 
-    -- If it's a BaseScript, we'll just run it directly!
-    if ScriptClassName == "LocalScript" or ScriptClassName == "Script" then
+        if ScriptClassName == "LocalScript" or ScriptClassName == "Script" then
         local RunSuccess, CaughtError = xpcall(Closure, CatchError)
         if not RunSuccess then
             error(FormatError(CaughtError), 0)
@@ -679,8 +632,6 @@ local function LoadScript(scriptRef)
     end
 end
 
--- We'll assign the actual func from the top of this output for flattening user globals at runtime
--- Returns (in a tuple order): wax, script, require
 function ImportGlobals(refId)
     local ScriptRef = RefBindings[refId]
 
@@ -695,8 +646,7 @@ function ImportGlobals(refId)
         return unpack(PCallReturn)
     end
 
-    -- `wax.shared` index
-    local WaxShared = table_freeze(setmetatable({}, {
+        local WaxShared = table_freeze(setmetatable({}, {
         __index = SharedEnvironment,
         __newindex = function(_, index, value)
             SharedEnvironment[index] = value
@@ -710,14 +660,12 @@ function ImportGlobals(refId)
     }))
 
     local Global_wax = table_freeze({
-        -- From AOT variable imports
-        version = WaxVersion,
+                version = WaxVersion,
         envname = EnvName,
 
         shared = WaxShared,
 
-        -- "Real" globals instead of the env set ones
-        script = script,
+                script = script,
         require = require,
     })
 
@@ -738,9 +686,7 @@ function ImportGlobals(refId)
 
             return LoadScript(module)
         elseif ModuleArgType == "string" and string_sub(module, 1, 1) ~= "@" then
-            -- The control flow on this SUCKS
-
-            if #module == 0 then
+                        if #module == 0 then
                 error("Attempted to call require with empty string", 2)
             end
 
@@ -759,8 +705,7 @@ function ImportGlobals(refId)
                     RealIndex = "Parent"
                 end
 
-                -- Don't advance dir if it's just another "/" either
-                if RealIndex ~= "" then
+                                if RealIndex ~= "" then
                     local ResultRef = CurrentRefPointer:FindFirstChild(RealIndex)
                     if not ResultRef then
                         local CurrentRefParent = CurrentRefPointer.Parent
@@ -776,8 +721,7 @@ function ImportGlobals(refId)
                     end
                 end
 
-                -- For possible checks next cycle
-                PreviousPathMatch = PathMatch
+                                PreviousPathMatch = PathMatch
             end
 
             if CurrentRefPointer.ClassName ~= "ModuleScript" then
@@ -792,8 +736,7 @@ function ImportGlobals(refId)
         return RealCall(require, module, ...)
     end
 
-    -- Now, return flattened globals ready for direct runtime exec
-    return Global_wax, Global_script, Global_require
+        return Global_wax, Global_script, Global_require
 end
 
 for _, ScriptRef in next, ScriptsToRun do

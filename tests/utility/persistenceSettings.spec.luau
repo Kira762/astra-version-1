@@ -111,8 +111,7 @@ return function()
             expect(persistenceSettings.saveSettings(makeWindow())).to.equal(true)
             expect(written[1]).to.equal("Root/Settings/rayfield.rfld.saving")
             expect(written[2]).to.equal("Root/Settings/rayfield.rfld")
-            -- the parked copy goes once the real file is whole again
-            expect(files["Root/Settings/rayfield.rfld.saving"]).never.to.be.ok()
+                        expect(files["Root/Settings/rayfield.rfld.saving"]).never.to.be.ok()
         end)
 
         it("recovers settings from the parked copy when the real file is torn", function()
@@ -128,8 +127,7 @@ return function()
 
             expect(persistenceSettings.loadSettings(window)).to.equal(true)
             expect(window.settings.haptics).to.equal(false)
-            -- and the wreck gets put right, so the next load reads it straight
-            expect(files["Root/Settings/rayfield.rfld"]).to.equal("settings-json")
+                        expect(files["Root/Settings/rayfield.rfld"]).to.equal("settings-json")
             expect(files["Root/Settings/rayfield.rfld.saving"]).never.to.be.ok()
         end)
 
@@ -167,26 +165,21 @@ return function()
             expect(window.settings.haptics).to.equal(false)
         end)
 
-        -- a settings file written before a key existed must not be treated as an opt-out:
-        -- the key is simply absent, so the current default stands
-        it("leaves a setting the file predates at its default", function()
+                        it("leaves a setting the file predates at its default", function()
             local window = makeWindow()
             window.settings.haptics = true
             window.settings.showProfile = true
             files["Root/Settings/rayfield.rfld"] = "settings-json"
-            decodedData = { mouseOverride = true } -- an older file, before these keys existed
-
+            decodedData = { mouseOverride = true } 
             expect(persistenceSettings.loadSettings(window)).to.equal(true)
             expect(window.settings.mouseOverride).to.equal(true)
             expect(window.settings.haptics).to.equal(true)
             expect(window.settings.showProfile).to.equal(true)
         end)
 
-        -- and the other way: a saved false is a real choice and survives a default flip
-        it("keeps a saved opt-out even when the default has since changed", function()
+                it("keeps a saved opt-out even when the default has since changed", function()
             local window = makeWindow()
-            window.settings.haptics = true -- the current default
-            files["Root/Settings/rayfield.rfld"] = "settings-json"
+            window.settings.haptics = true             files["Root/Settings/rayfield.rfld"] = "settings-json"
             decodedData = { haptics = false }
 
             expect(persistenceSettings.loadSettings(window)).to.equal(true)
@@ -231,8 +224,7 @@ return function()
         it("rejects valid JSON whose root is not a table", function()
             local window = makeWindow()
             files["Root/Settings/rayfield.rfld"] = "settings-json"
-            -- JSONDecode returns scalars for e.g. "5"; a corrupt file must not throw
-            decodedData = 5
+                        decodedData = 5
 
             expect(persistenceSettings.loadSettings(window)).to.equal(false)
             expect(window.settings.toggleKeybind).to.equal(Enum.KeyCode.RightShift)

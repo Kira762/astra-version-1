@@ -1,10 +1,3 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local filesystem = require(script.Parent.filesystem)
 local path = require(script.Parent.path)
 local variables = require(script.Parent.variables)
@@ -28,8 +21,6 @@ local cacheRoot = variables.fileSystemManager:getRootFolder()
 local cacheFolder = variables.fileSystemManager:getAssetsFolder()
 local assetResolver = variables.assetResolver
 
--- raw host, not the /blob/ page: that 302s and executors that dont follow redirects
--- would cache the redirect body instead of the png
 local assetBase = "https://raw.githubusercontent.com/SiriusSoftwareLtd/rayfield-gen2/main/assets/"
 local headshotPx = 48
 local thumbEndpoint =
@@ -46,22 +37,18 @@ for _ in manifest do
 end
 
 imageCache.rewrites = {} :: RewriteMap
-imageCache.onCached = nil :: OnCachedCallback? -- image sets this to rebind blank instances when a background download lands
-
+imageCache.onCached = nil :: OnCachedCallback? 
 local pngMagic = "\137PNG\r\n\26\n"
 
 local function cacheFile(filePath: string, url: string): string?
-    -- no custom assets or no file API means nothing can be cached at all
-    if type(getfenv().getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
+        if type(getfenv().getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
         return nil
     end
     if not filesystem.isfile(filePath) then
         pcall(filesystem.ensureFolder, cacheRoot)
         pcall(filesystem.ensureFolder, cacheFolder)
         local body = assetResolver:getAssetContentFromUrl(url, filePath, false)
-        -- never write a non-png body (error page, redirect html) to disk; a poisoned
-        -- cache file would shadow the real asset on every later session
-        if not body or string.sub(body, 1, 8) ~= pngMagic then
+                        if not body or string.sub(body, 1, 8) ~= pngMagic then
             return nil
         end
         if not pcall(filesystem.writefile, filePath, body) then
@@ -105,8 +92,7 @@ end
 local function fetchAvatar(userId: number): string?
     local cdnUrl: string? = nil
     for attempt = 1, 4 do
-        -- retries must bypass the session cache or a cached "Pending" response wins forever
-        local body = assetResolver:getAssetContentFromUrl(
+                local body = assetResolver:getAssetContentFromUrl(
             string.format(thumbEndpoint, userId, headshotPx, headshotPx),
             "avatar:" .. tostring(userId),
             attempt > 1
@@ -129,26 +115,20 @@ local function fetchAvatar(userId: number): string?
     return cacheFile(avatarPath(userId), cdnUrl)
 end
 
--- one fetch pipeline per user, and a miss is remembered for the session so the same
--- broken avatar doesnt re-burn the retry loop on every call
 local pendingAvatars: { [number]: { AvatarCallback } } = {}
 local failedAvatars: { [number]: boolean } = {}
 
--- onSettled(failed) fires once every background download has finished, with the count that never
--- cached (a genuine failure), so callers can surface it without spamming per-icon.
 function imageCache.preload(onSettled: PreloadCallback?): (boolean, number)
     local env = getfenv()
     if type(env.getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
         if onSettled then
-            -- defer so a caller that assigns state right after calling preload still sees this
-            task.defer(onSettled, manifestSize)
+                        task.defer(onSettled, manifestSize)
         end
         return false, manifestSize
     end
 
     local rewrites = imageCache.rewrites
-    table.clear(rewrites) -- drop stale entries before remapping (no-op on the fixed built-in manifest)
-
+    table.clear(rewrites) 
     local function settle()
         if not onSettled then
             return
@@ -163,8 +143,7 @@ function imageCache.preload(onSettled: PreloadCallback?): (boolean, number)
     end
 
     local pending, missing = 0, 0
-    local spawning = true -- keep a synchronously-finishing download from settling mid-loop
-    for id, url in manifest do
+    local spawning = true     for id, url in manifest do
         local filePath = path.join(cacheFolder, tostring(id) .. ".png")
         local uri: string? = nil
         if filesystem.isfile(filePath) then
@@ -172,19 +151,16 @@ function imageCache.preload(onSettled: PreloadCallback?): (boolean, number)
             uri = if ok and type(res) == "string" then res else nil
         end
         if uri then
-            -- already on disk from a past session: use it right away
-            rewrites[id] = uri
+                        rewrites[id] = uri
         else
-            -- not cached yet: fetch it in the background and swap it in once it lands
-            missing += 1
+                        missing += 1
             pending += 1
             task.spawn(function()
                 local cached = cacheFile(filePath, url)
                 if cached then
                     rewrites[id] = cached
                     if imageCache.onCached then
-                        -- a throw in here would strand the counter and settle would never fire
-                        pcall(imageCache.onCached, id)
+                                                pcall(imageCache.onCached, id)
                     end
                 end
                 pending -= 1
@@ -208,8 +184,7 @@ function imageCache.avatar(userId: unknown, onReady: AvatarCallback?): string
         return ""
     end
 
-    -- no file API means no local avatar cache; secure mode just goes without the headshot
-    if typeof(filesystem.isfile) ~= "function" then
+        if typeof(filesystem.isfile) ~= "function" then
         return ""
     end
 
@@ -221,14 +196,11 @@ function imageCache.avatar(userId: unknown, onReady: AvatarCallback?): string
         end
     end
 
-    -- this user already failed this session; dont spend another retry loop on them
-    if failedAvatars[userId] then
+        if failedAvatars[userId] then
         return ""
     end
 
-    -- a fetch already in flight for this user takes our callback along instead of
-    -- racing a duplicate pipeline
-    local waiting = pendingAvatars[userId]
+            local waiting = pendingAvatars[userId]
     if waiting then
         if onReady then
             table.insert(waiting, onReady)
@@ -248,8 +220,7 @@ function imageCache.avatar(userId: unknown, onReady: AvatarCallback?): string
             end
             if callbacks then
                 for _, callback in callbacks do
-                    -- one bad callback must not starve the rest
-                    pcall(callback, uri)
+                                        pcall(callback, uri)
                 end
             end
         end)

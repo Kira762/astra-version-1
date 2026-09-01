@@ -97,8 +97,7 @@ return function()
                 { StatusCode = 404, Body = "<html>not found</html>" },
                 { Success = false, Body = "rate limited" },
                 { Body = "" },
-                { Body = "no status of any kind" }, -- unknown shape, so we cant call it a success
-                "not-a-table",
+                { Body = "no status of any kind" },                 "not-a-table",
             }
             local call = 0
 
@@ -112,8 +111,7 @@ return function()
 
             for index = 1, #responses do
                 expect(resolver:getAssetContentFromUrl("https://example.invalid/raw", "key")).never.to.be.ok()
-                expect(call).to.equal(index) -- a failure must not be cached, so every call refetches
-            end
+                expect(call).to.equal(index)             end
         end)
 
         it("accepts responses that report success", function()
@@ -137,8 +135,7 @@ return function()
                 end
             end
 
-            -- well past the cap, so the first keys must have been dropped
-            for key = 1, 32 do
+                        for key = 1, 32 do
                 resolver:getAssetContentFromUrl("https://example.invalid/raw", key)
             end
 
@@ -150,8 +147,7 @@ return function()
             expect(resolver.contentCache[1]).never.to.be.ok()
             expect(resolver.contentCache[32]).to.equal("body-32")
 
-            -- an evicted key refetches, and a still-held one doesnt
-            expect(resolver:getAssetContentFromUrl("https://example.invalid/raw", 1)).to.equal("body-33")
+                        expect(resolver:getAssetContentFromUrl("https://example.invalid/raw", 1)).to.equal("body-33")
             expect(resolver:getAssetContentFromUrl("https://example.invalid/raw", 32)).to.equal("body-32")
             expect(calls).to.equal(33)
         end)
@@ -176,8 +172,7 @@ return function()
             task.spawn(function()
                 second = resolver:getAssetContentFromUrl("https://example.invalid/raw", "key")
             end)
-            expect(calls).to.equal(1) -- the second caller waits instead of downloading again
-
+            expect(calls).to.equal(1) 
             coroutine.resume(resume)
 
             expect(first).to.equal("shared-body")

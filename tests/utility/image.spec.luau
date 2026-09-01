@@ -8,9 +8,7 @@ return function()
     describe("utility.image", function()
         local originalAvatar
 
-        -- image.preload clears its settled flag on entry, so drive it through a stub that never
-        -- settles. otherwise a test that settles would stop every later one from tracking
-        local function resetSettled()
+                        local function resetSettled()
             local originalPreload = imageCache.preload
             imageCache.preload = function()
                 return true, 0
@@ -131,8 +129,7 @@ return function()
                 Parent = {},
             }
 
-            -- hot paths like a minimise toggle re-assign the same icon all session
-            for _ = 1, 50 do
+                        for _ = 1, 50 do
                 image.assign(instance, "Image", 321)
             end
 
@@ -148,8 +145,7 @@ return function()
             local instance: any = {
                 Parent = {},
             }
-            image.assign(instance, "Image", 654) -- never caches
-            expect(image.pending[654]).to.be.ok()
+            image.assign(instance, "Image", 654)             expect(image.pending[654]).to.be.ok()
 
             local originalPreload = imageCache.preload
             imageCache.preload = function(onSettled)
@@ -166,8 +162,7 @@ return function()
             expect(settledFailed).to.equal(1)
             expect(image.pending[654]).never.to.be.ok()
 
-            -- nothing can land after settle, so tracking anything more would just leak
-            image.assign(instance, "Image", 654)
+                        image.assign(instance, "Image", 654)
             expect(image.pending[654]).never.to.be.ok()
         end)
 

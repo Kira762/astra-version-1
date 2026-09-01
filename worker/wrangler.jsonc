@@ -4,16 +4,16 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-04-01",
 
-  // Two paths, one Worker. The stable route already existed; the preview route
-  // is the same code reading a different release.
-  //
-  // The trailing * matters: a route without one stops matching as soon as there is a
-  // query string, so /gen2?__fresh=1 fell through to the site Worker and got its 404
-  // page. It also means near-miss paths like /gen2x reach this Worker and get its
-  // plain-text "-- Not found" rather than a page of HTML aimed at a Roblox client.
-  // www is routed too. It is a real host that people reach, and without a route here the
-  // site Worker owns the path -- where /gen2 matches no static asset, so a browser got
-  // the site's HTML 404 for what is meant to be a loadstring URL.
+
+
+
+
+
+
+
+
+
+
   "routes": [
     { "pattern": "sirius.menu/gen2*", "zone_name": "sirius.menu" },
     { "pattern": "www.sirius.menu/gen2*", "zone_name": "sirius.menu" }

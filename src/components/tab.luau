@@ -1,27 +1,15 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local Tab = {}
 Tab.__index = Tab
 Tab.__type = "Tab"
 
--- Utility
 local utility = script.Parent.Parent.utility
 
--- Variables
 local variables = require(utility.variables)
 local assignOrder = require(utility.ordering)
 local hapticEngine = require(utility.HapticEngine)
 local search = require(script.Parent.search)
 local tabSelector = require(script.Parent.tabSelector)
 
--- Walk a tab or group's children (groups nest) and tear each element down: drop its flag from
--- the window registry and disconnect every connection it owns, so nothing outlives the
--- instances we're about to destroy.
 local function teardownElements(window, elements)
     for _, element in elements do
         if element.__type == "Group" then
@@ -30,22 +18,18 @@ local function teardownElements(window, elements)
             window:_unregisterControl(element)
         end
 
-        -- persistent connections filed via window:ConnectFor
-        if element.connections then
+                if element.connections then
             for _, connection in element.connections do
                 window:Disconnect(connection)
             end
             element.connections = nil
         end
 
-        -- transient, self-managed connections that may still be live if removed mid-interaction
-        if element._dragConnection then
+                if element._dragConnection then
             element._dragConnection:Disconnect()
             element._dragConnection = nil
         end
-        -- a keybind removed mid-rebind would otherwise leave the window skipping its toggle
-        -- key (and every keybind bailing) forever
-        if window._recordingKeybind == element then
+                        if window._recordingKeybind == element then
             window._recordingKeybind = nil
         end
         if element._outsideClickConn then
@@ -67,23 +51,18 @@ function Tab.new(window, properties)
         icon = properties.icon or properties.Icon,
         neglectSelector = properties.neglectSelector or properties.NeglectSelector or false,
         customOrder = properties.customOrder or properties.CustomOrder or 0,
-        -- when true, controls on this tab default to not persisting to config (the settings tab)
-        forgetState = properties.forgetState or properties.ForgetState or false,
+                forgetState = properties.forgetState or properties.ForgetState or false,
 
         elements = {},
-        connections = {}, -- tracked so Remove can drop them without waiting for Unload
-    }, Tab)
+        connections = {},     }, Tab)
 
-    -- a tab needs at least one of a name or an icon to show in the selector
-    assert(self.name or self.icon, "A tab needs a name or an icon.")
+        assert(self.name or self.icon, "A tab needs a name or an icon.")
 
-    -- Allow for tabs to be hidden from the tab selector, for Rayfield Settings.
-    if not self.neglectSelector then
+        if not self.neglectSelector then
         tabSelector.build(self, self.window.layout)
     end
 
-    -- Tab Page
-    self.tabPage = self.window:Create("ScrollingFrame", {
+        self.tabPage = self.window:Create("ScrollingFrame", {
         Name = self.name,
         Size = UDim2.new(1, -20, 1, 0),
         Position = UDim2.new(0.5, 0, 0, 68),
@@ -130,12 +109,10 @@ function Tab.new(window, properties)
             self.connections,
             self.window:Connect(self.topbarItemInteract.MouseEnter, function()
                 if not self.window:_interactive() then
-                    return -- window still revealing/hiding: dont light up mid-animation
-                end
+                    return                 end
                 if self.window.selectedTab ~= self then
                     self:_applyVisual("hover", hoverTweenInfo)
-                    self:_spinGradients() -- little gradient sweep, same as the intro flourish
-                end
+                    self:_spinGradients()                 end
             end)
         )
 
@@ -149,9 +126,7 @@ function Tab.new(window, properties)
         )
     end
 
-    -- Auto-select is handled by Window:CreateTab after insertion
-
-    return self
+        return self
 end
 
 function Tab:_applyVisual(stateName, tweenInfo)
@@ -167,8 +142,6 @@ function Tab:_applyVisual(stateName, tweenInfo)
     tabSelector.applyVisual(self, state, tweenInfo)
 end
 
--- Flourish: spin the pill's fill + stroke gradients one full turn back to their resting 90deg.
--- Used staggered per tab on the first reveal, and again when hovering an unselected tab.
 function Tab:_spinGradients()
     if self.neglectSelector then
         return
@@ -176,26 +149,19 @@ function Tab:_spinGradients()
 
     local spinInfo = TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     for _, gradient in { self.topbarItemGradient, self.topbarItemStrokeGradient } do
-        gradient.Rotation = 90 - 360 -- one full turn shy of rest, so the tween lands clockwise on 90
-        variables.tweenService:Create(gradient, spinInfo, { Rotation = 90 }):Play()
+        gradient.Rotation = 90 - 360         variables.tweenService:Create(gradient, spinInfo, { Rotation = 90 }):Play()
     end
 end
 
 function Tab:Select(noAnimation)
-    -- selecting a tab (e.g. via the settings action) leaves search: bring the strip back,
-    -- but let the navigation below pick the page.
-    if self.window._searching then
+            if self.window._searching then
         search.close(self.window, { showTabs = true, jumpTo = false })
     end
 
     self.window.selectedTab = self
     self.window:_jumpTo(self.tabPage)
 
-    -- noAnimation = initial selection, the pill is still hidden and the window reveal shows it.
-    -- a dev calling Navigate/Select before the first Show() hits the same case even without
-    -- passing it explicitly - a tween played now would resolve while main is invisible, so the
-    -- icon it targets would just pop straight to its end state the moment the window appears
-    local skipAnimation = noAnimation or not self.window:_interactive()
+                    local skipAnimation = noAnimation or not self.window:_interactive()
 
     if not self.neglectSelector and not skipAnimation then
         self:_applyVisual("selected", selectTweenInfo)
@@ -224,8 +190,6 @@ function Tab:Deselect(noAnimation)
     end
 end
 
--- shared tail for every CreateX: track it, order it, and reveal it if the window is
--- already open. without this, elements added after Window:Show stay fully transparent.
 function Tab:_register(element)
     table.insert(self.elements, element)
     assignOrder(element, #self.elements * 10)
@@ -238,12 +202,10 @@ function Tab:_register(element)
     return element
 end
 
--- Button
 function Tab:CreateButton(properties)
     return self:_register(require(script.Parent.button).new(self, properties))
 end
 
--- Switch/Toggle
 function Tab:CreateToggle(properties)
     return self:_register(require(script.Parent.toggle).new(self, properties))
 end
@@ -252,28 +214,22 @@ function Tab:CreateSwitch(properties)
     return self:CreateToggle(properties)
 end
 
--- Section
 function Tab:CreateSection(properties)
     return self:_register(require(script.Parent.section).new(self, properties))
 end
 
--- Text (a title, a body, or both)
 function Tab:CreateText(properties)
     return self:_register(require(script.Parent.text).new(self, properties))
 end
 
--- Divider
 function Tab:CreateDivider(properties)
     return self:_register(require(script.Parent.divider).new(self, properties))
 end
 
--- Stat
--- Progress bar
 function Tab:CreateProgress(properties)
     return self:_register(require(script.Parent.progress).new(self, properties))
 end
 
--- Console / code block
 function Tab:CreateConsole(properties)
     return self:_register(require(script.Parent.console).new(self, properties))
 end
@@ -282,33 +238,26 @@ function Tab:CreateStat(properties)
     return self:_register(require(script.Parent.stat).new(self, properties))
 end
 
--- Slider
 function Tab:CreateSlider(properties)
     return self:_register(require(script.Parent.slider).new(self, properties))
 end
 
--- Dropdown
 function Tab:CreateDropdown(properties)
     return self:_register(require(script.Parent.dropdown).new(self, properties))
 end
 
--- Input
 function Tab:CreateInput(properties)
     return self:_register(require(script.Parent.input).new(self, properties))
 end
 
--- Keybind
 function Tab:CreateKeybind(properties)
     return self:_register(require(script.Parent.keybind).new(self, properties))
 end
 
--- Color picker
 function Tab:CreateColorPicker(properties)
     return self:_register(require(script.Parent.colorpicker).new(self, properties))
 end
 
--- Group (layout container). A row that wraps by default; pass direction="column" for a
--- column. Nest a row of columns for a grid. Add elements via group:CreateX.
 function Tab:CreateGroup(properties)
     return self:_register(require(script.Parent.group).new(self, properties))
 end
@@ -329,9 +278,7 @@ end
 function Tab:Remove()
     local window = self.window
 
-    -- search reparents elements into its results page; close it first so this tabs
-    -- units go home before their page is destroyed under them
-    if window._searching then
+            if window._searching then
         search.close(window, { showTabs = true, jumpTo = window.selectedTab and window.selectedTab.tabPage })
     end
 
@@ -340,8 +287,7 @@ function Tab:Remove()
         table.remove(window.tabs, idx)
     end
 
-    -- If this was the active tab, hand selection to the next visible tab
-    if window.selectedTab == self then
+        if window.selectedTab == self then
         window.selectedTab = nil
         for _, tab in ipairs(window.tabs) do
             if not tab.neglectSelector then
@@ -351,13 +297,9 @@ function Tab:Remove()
         end
     end
 
-    -- Tear every element down (flags + connections) so nothing points at, or fires on, what
-    -- we're about to destroy. Groups nest, so walk their children too.
-    teardownElements(window, self.elements)
+            teardownElements(window, self.elements)
 
-    -- Tear down the UI; nil the refs so _applyVisual (which guards on self.topbarItem)
-    -- no-ops instead of touching a destroyed instance.
-    for _, connection in self.connections do
+            for _, connection in self.connections do
         window:Disconnect(connection)
     end
     self.connections = {}

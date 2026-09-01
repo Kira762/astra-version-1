@@ -1,12 +1,3 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
--- Dark theme with a rose accent. Partial: overrides the warm-plum tones + pink accent, inherits
--- corners, fonts and toggle/field behaviour from default.
 return {
     WindowColor = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 18, 22)),
@@ -35,12 +26,10 @@ return {
     SliderBackgroundHover = Color3.fromRGB(64, 50, 56),
     SliderProgress = ColorSequence.new(Color3.fromRGB(244, 88, 140), Color3.fromRGB(220, 60, 116)),
 
-    -- Rose accent for the active toggle, slider glow and popup primary button.
-    AccentColor = Color3.fromRGB(240, 82, 138),
+        AccentColor = Color3.fromRGB(240, 82, 138),
     AccentStroke = Color3.fromRGB(255, 134, 178),
 
-    ToggleKnobOff = Color3.fromRGB(236, 220, 226), -- warm off-knob on the dark track
-
+    ToggleKnobOff = Color3.fromRGB(236, 220, 226), 
     StatBackground = Color3.fromRGB(28, 20, 24),
 
     DropdownHighlight = Color3.fromRGB(240, 82, 138),

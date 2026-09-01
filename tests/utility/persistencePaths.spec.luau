@@ -54,8 +54,7 @@ return function()
                 configuration = {},
             }
 
-            -- falling back here would aim DeleteConfig("::") at the default config file
-            local dir, fullPath = paths.getConfigPath(window, "::")
+                        local dir, fullPath = paths.getConfigPath(window, "::")
 
             expect(dir).never.to.be.ok()
             expect(fullPath).never.to.be.ok()

@@ -1,10 +1,3 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local services = require(script.Parent.services)
 
 export type RuntimeState = {
@@ -26,8 +19,7 @@ export type RuntimeState = {
 local runtime = {} :: RuntimeState
 
 runtime.secureMode = (function()
-    -- getgenv lives in the executor's script environment, not _G, same as gethui below
-    if typeof(getgenv) ~= "function" then
+        if typeof(getgenv) ~= "function" then
         return false
     end
     local ok, val = pcall(function()
@@ -37,8 +29,7 @@ runtime.secureMode = (function()
 end)()
 
 runtime.coreGui = services.getService("CoreGui") :: CoreGui
-runtime.workspace = services.getService("Workspace") :: Workspace -- read for CurrentCamera
-runtime.runService = services.getService("RunService") :: RunService
+runtime.workspace = services.getService("Workspace") :: Workspace runtime.runService = services.getService("RunService") :: RunService
 runtime.userInputService = services.getService("UserInputService") :: UserInputService
 runtime.guiService = services.getService("GuiService") :: GuiService
 runtime.localPlayer = (services.getService("Players") :: Players).LocalPlayer
@@ -47,11 +38,9 @@ runtime.httpService = services.getService("HttpService") :: HttpService
 runtime.textService = services.getService("TextService") :: TextService
 runtime.replicatedStorage = services.getService("ReplicatedStorage") :: ReplicatedStorage
 runtime.localizationService = services.getService("LocalizationService") :: LocalizationService
--- a gethui stub that returns nil would parent every ScreenGui nowhere, so fall back to CoreGui
 runtime.guiContainer = (function(): Instance
     if runtime.runService:IsStudio() then
-        -- Run mode and the command bar have no LocalPlayer, so land in CoreGui instead
-        local player = runtime.localPlayer
+                local player = runtime.localPlayer
         if player then
             return player.PlayerGui
         end

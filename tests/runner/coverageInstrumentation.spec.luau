@@ -2,7 +2,6 @@ local helpers = (_G :: any).__RAYFIELD_TEST_HELPERS
 local coverage = (_G :: any).__RAYFIELD_COVERAGE
 local luau = require("@lune/luau") :: any
 
--- runs instrumented source with hit tracking wired up, returning whatever it returns
 local function runInstrumented(path, instrumented, fileCoverage)
     coverage.files[path] = fileCoverage
     local chunk = luau.load(instrumented, {
@@ -28,7 +27,6 @@ local value = [[
 local also = [=[
 (
 ]=]
---[=[
 {
 ]=]
 if value
@@ -77,16 +75,14 @@ return stored
 ]===]
             )
 
-            -- the body lines are coverable statements now, not swallowed by depth
-            expect(fileCoverage.coverable[6]).to.equal(true)
+                        expect(fileCoverage.coverable[6]).to.equal(true)
             expect(fileCoverage.coverable[7]).to.equal(true)
             expect(fileCoverage.coverable[8]).to.equal(true)
             expect(fileCoverage.coverable[9]).never.to.be.ok()
 
             local callback = runInstrumented(path, instrumented, fileCoverage)
 
-            -- registering the callback covers the registration line, not the body
-            expect(fileCoverage.hits[6]).to.equal(true)
+                        expect(fileCoverage.hits[6]).to.equal(true)
             expect(fileCoverage.hits[7]).never.to.be.ok()
             expect(fileCoverage.hits[8]).never.to.be.ok()
 
@@ -118,8 +114,7 @@ return runner
             expect(fileCoverage.coverable[5]).to.equal(true)
             expect(fileCoverage.coverable[6]).never.to.be.ok()
             expect(fileCoverage.coverable[7]).never.to.be.ok()
-            -- a single-line body cant take a mid-line hit; the registration line is all we get
-            expect(fileCoverage.coverable[8]).to.equal(true)
+                        expect(fileCoverage.coverable[8]).to.equal(true)
             expect(fileCoverage.coverable[9]).to.equal(true)
         end)
 
@@ -147,8 +142,7 @@ return signal
             expect(fileCoverage.coverable[4]).to.equal(true)
             expect(fileCoverage.coverable[6]).to.equal(true)
             expect(fileCoverage.coverable[7]).to.equal(true)
-            -- inner ends and the expression if didnt pop the callback context
-            expect(fileCoverage.coverable[9]).to.equal(true)
+                        expect(fileCoverage.coverable[9]).to.equal(true)
             expect(fileCoverage.coverable[10]).to.equal(true)
             expect(fileCoverage.coverable[11]).to.equal(true)
             expect(fileCoverage.coverable[12]).never.to.be.ok()

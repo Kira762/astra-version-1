@@ -1,18 +1,9 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local Statistic = {}
 Statistic.__index = Statistic
 Statistic.__type = "Statistic"
 
--- Utility
 local utility = script.Parent.Parent.utility
 
--- Variables
 local variables = require(utility.variables)
 local functions = require(utility.functions)
 local odometer = require(utility.odometer)
@@ -21,7 +12,6 @@ local constants = require(utility.constants)
 local locale = require(utility.locale)
 local log = require(utility.log)
 
--- Accent gradients per direction (fill drives the card + glow, stroke is the brighter edge)
 local accents = constants.statAccents
 
 local accentTransparency = NumberSequence.new({
@@ -33,7 +23,6 @@ local compactHeight = 41
 
 local accentTweenInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential)
 
--- UIShadow glows take one colour, so the halo uses the brightest stop of the direction's fill.
 local function glowColor(accent)
     return accent.fill.Keypoints[1].Value
 end
@@ -52,21 +41,17 @@ local function formatValue(value)
     if typeof(value) ~= "number" then
         return tostring(value)
     end
-    -- round (matching formatChange) and format without exponent notation so huge
-    -- values don't render as "1e+20"
-    local rounded = math.round(math.abs(value))
+            local rounded = math.round(math.abs(value))
     local s = string.format("%.0f", rounded)
     local result = s:reverse():gsub("%d%d%d", "%0,"):reverse()
     if result:sub(1, 1) == "," then
         result = result:sub(2)
     end
-    -- no "-0": a negative that rounds to zero shows plain 0
-    return if value < 0 and rounded ~= 0 then "-" .. result else result
+        return if value < 0 and rounded ~= 0 then "-" .. result else result
 end
 
 local function formatChange(delta)
-    -- sign follows the rounded value, so a delta that rounds to zero shows plain 0
-    local rounded = math.round(delta)
+        local rounded = math.round(delta)
     if rounded > 0 then
         return "+" .. formatValue(rounded)
     elseif rounded < 0 then
@@ -87,26 +72,20 @@ function Statistic.new(tab, properties)
         description = properties.description or properties.Description,
 
         value = if (properties.value or properties.Value) ~= nil then (properties.value or properties.Value) else 0,
-        -- did we start with a real value, or is the displayed number just a placeholder?
-        -- the first Set on a placeholder establishes the baseline instead of showing a change
-        _hasValue = (properties.value or properties.Value) ~= nil,
+                        _hasValue = (properties.value or properties.Value) ~= nil,
 
         numberEasing = if (properties.numberEasing ~= nil)
             then properties.numberEasing
             elseif properties.NumberEasing ~= nil then properties.NumberEasing
             else true,
 
-        changeMode = properties.changeMode or properties.ChangeMode or "percentage", -- "percentage" | "absolute"
-        changeBaseline = properties.changeBaseline or properties.ChangeBaseline or "previous",
+        changeMode = properties.changeMode or properties.ChangeMode or "percentage",         changeBaseline = properties.changeBaseline or properties.ChangeBaseline or "previous",
 
         prefix = properties.prefix or properties.Prefix or "",
         suffix = properties.suffix or properties.Suffix or "",
 
-        -- 41px single-readout card. config opt-in, forced on in a row. only room for
-        -- one number, so `display` picks value or % change.
-        compact = properties.compact or properties.Compact or tab.compact or false,
-        display = (properties.display or properties.Display or "value"), -- "value" | "change"
-
+                        compact = properties.compact or properties.Compact or tab.compact or false,
+        display = (properties.display or properties.Display or "value"), 
         _initialValue = if (properties.value or properties.Value) ~= nil
             then (properties.value or properties.Value)
             else nil,
@@ -130,7 +109,6 @@ function Statistic.new(tab, properties)
     return self
 end
 
--- full 90px card: title, value bottom-left, % change bottom-right
 function Statistic:_buildFull()
     local window = self.window
 
@@ -150,8 +128,7 @@ function Statistic:_buildFull()
     }, { CornerRadius = "ElementCornerRadius" })
 
     self.stroke = window:Create("UIStroke", {
-        Transparency = 1, -- Animation In = 0
-        Color = Color3.fromRGB(255, 255, 255),
+        Transparency = 1,         Color = Color3.fromRGB(255, 255, 255),
 
         Parent = self.main,
     }, { Transparency = "ElementStrokeTransparency" })
@@ -180,16 +157,13 @@ function Statistic:_buildFull()
         Size = UDim2.fromScale(1, 1),
         Position = UDim2.fromOffset(0, 0),
         BorderSizePixel = 0,
-        BackgroundTransparency = 1, -- In 0
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 1,         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         ZIndex = 5,
 
         Parent = self.main,
     })
 
-    -- Soft accent halo behind the card. UIShadow (no image) is our glow standard; its colour
-    -- follows the stat direction and it reveals from hidden to 0.7 like the rest of the card.
-    self.glow = window:CreateGlow(self.main, glowColor(accents.neutral), 13, 1)
+            self.glow = window:CreateGlow(self.main, glowColor(accents.neutral), 13, 1)
 
     self.title = window:Create("TextLabel", {
         Text = locale.t(self.name),
@@ -203,8 +177,7 @@ function Statistic:_buildFull()
         LayoutOrder = 1,
         ZIndex = 10,
 
-        TextTransparency = 1, -- In = 0
-
+        TextTransparency = 1, 
         Parent = self.titleContainer,
     }, { TextColor3 = "ContentColor", FontFace = "TitleFont" })
 
@@ -229,8 +202,7 @@ function Statistic:_buildFull()
             BackgroundTransparency = 1,
             ZIndex = 10,
 
-            ImageTransparency = 1, -- In = 0
-
+            ImageTransparency = 1, 
             Parent = self.titleContainer,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -245,8 +217,7 @@ function Statistic:_buildFull()
         Parent = self.titleContainer,
     })
 
-    -- Value (bottom-left) + change (bottom-right) odometer readouts.
-    self.valueHost = window:Create("Frame", {
+        self.valueHost = window:Create("Frame", {
         AnchorPoint = Vector2.new(0, 1),
         Position = UDim2.new(0, 20, 1, -15),
         Size = UDim2.fromOffset(200, 20),
@@ -271,8 +242,7 @@ function Statistic:_buildFull()
     self.valueOdo = odometer.new(window, self.valueHost, {
         textSize = 20,
         alignment = Enum.HorizontalAlignment.Left,
-        transparency = 1, -- revealed to 0 on show
-    })
+        transparency = 1,     })
     self.valueOdo:snap(self:_formatValue(self.value))
 
     self.changeOdo = odometer.new(window, self.changeHost, {
@@ -285,13 +255,10 @@ function Statistic:_buildFull()
     self._accentGradients = { self.strokeGradient, self.mainGradient }
 end
 
--- compact 41px card: icon+title left, one readout right. accent gradient sits on
--- the card (the flexed child), not a separate overlay
 function Statistic:_buildCompact()
     local window = self.window
 
-    -- in a row it's content-sized and flexes; standalone it's full-width, no flex item
-    local inRow = self.tab.compact or false
+        local inRow = self.tab.compact or false
 
     self.main = window:Create("Frame", {
         Name = self.name,
@@ -301,8 +268,7 @@ function Statistic:_buildCompact()
         BorderSizePixel = 0,
         ZIndex = 5,
 
-        BackgroundTransparency = 1, -- In = ElementTransparency
-
+        BackgroundTransparency = 1, 
         Parent = self.tab.tabPage,
     }, { BackgroundColor3 = "StatBackground", BackgroundTransparency = "ElementTransparency" })
 
@@ -311,8 +277,7 @@ function Statistic:_buildCompact()
     }, { CornerRadius = "ElementCornerRadius" })
 
     self.stroke = window:Create("UIStroke", {
-        Transparency = 1, -- In = ElementStrokeTransparency
-        Color = Color3.fromRGB(255, 255, 255),
+        Transparency = 1,         Color = Color3.fromRGB(255, 255, 255),
 
         Parent = self.main,
     }, { Transparency = "ElementStrokeTransparency" })
@@ -341,16 +306,14 @@ function Statistic:_buildCompact()
         Parent = self.main,
     })
 
-    -- accent surface + content: white base + accent gradient, title left, readout right
-    self.card = window:Create("Frame", {
+        self.card = window:Create("Frame", {
         AutomaticSize = Enum.AutomaticSize.X,
         Size = UDim2.fromOffset(0, compactHeight),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 5,
 
-        BackgroundTransparency = 1, -- In = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.main,
     })
 
@@ -383,8 +346,7 @@ function Statistic:_buildCompact()
         Parent = self.card,
     })
 
-    -- icon + title (left)
-    self.titleContainer = window:Create("Frame", {
+        self.titleContainer = window:Create("Frame", {
         AutomaticSize = Enum.AutomaticSize.X,
         Size = UDim2.fromOffset(0, 16),
         BackgroundTransparency = 1,
@@ -395,8 +357,7 @@ function Statistic:_buildCompact()
         Parent = self.card,
     })
 
-    -- title gives up room to the readout when tight
-    window:Create("UIFlexItem", {
+        window:Create("UIFlexItem", {
         FlexMode = Enum.UIFlexMode.Shrink,
         Parent = self.titleContainer,
     })
@@ -414,14 +375,12 @@ function Statistic:_buildCompact()
     if self.icon then
         self.iconLabel = window:Create("ImageLabel", {
             Image = self.icon,
-            Size = UDim2.fromOffset(20, 20), -- smaller than the full 32
-            BorderSizePixel = 0,
+            Size = UDim2.fromOffset(20, 20),             BorderSizePixel = 0,
             BackgroundTransparency = 1,
             LayoutOrder = 0,
             ZIndex = 6,
 
-            ImageTransparency = 1, -- In = 0
-
+            ImageTransparency = 1, 
             Parent = self.titleContainer,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -438,19 +397,15 @@ function Statistic:_buildCompact()
         LayoutOrder = 1,
         ZIndex = 6,
 
-        TextTransparency = 1, -- In = 0
-
+        TextTransparency = 1, 
         Parent = self.titleContainer,
-    }, { TextColor3 = "ContentColor", FontFace = "Font" }) -- Medium, like the other row elements
-
-    -- grows to its text, shrinks + ellipsizes when tight
-    window:Create("UIFlexItem", {
+    }, { TextColor3 = "ContentColor", FontFace = "Font" }) 
+        window:Create("UIFlexItem", {
         FlexMode = Enum.UIFlexMode.Shrink,
         Parent = self.title,
     })
 
-    -- single readout (right)
-    self.readoutHost = window:Create("Frame", {
+        self.readoutHost = window:Create("Frame", {
         AutomaticSize = Enum.AutomaticSize.X,
         Size = UDim2.fromOffset(0, 18),
         BackgroundTransparency = 1,
@@ -479,8 +434,7 @@ function Statistic:_setAccent(key, direction)
         self.glow.Color = glowColor(accent)
     end
 
-    -- Subtle rotation + offset shift to give the gradient a bit of life
-    local rotation = if direction == 1 then 14 elseif direction == -1 then -10 else 2
+        local rotation = if direction == 1 then 14 elseif direction == -1 then -10 else 2
     local offset = if direction == 1
         then Vector2.new(0.04, 0.5)
         elseif direction == -1 then Vector2.new(-0.04, 0.5)
@@ -502,8 +456,6 @@ function Statistic:_formatChange(delta)
     end
 end
 
--- Put a value on a readout: rolls when number easing is on and there's a previous number to
--- roll from, snaps otherwise. Both card shapes and ResetBaseline go through here.
 function Statistic:_showValue(odo, value, previousValue, hasNoHistory)
     if self.numberEasing and not hasNoHistory then
         odo:to(self:_formatValue(value), value >= previousValue)
@@ -512,7 +464,6 @@ function Statistic:_showValue(odo, value, previousValue, hasNoHistory)
     end
 end
 
--- full: roll value + change independently
 function Statistic:_updateFullReadouts(value, previousValue, targetChange, noChange, infinityText, hasNoHistory)
     self:_showValue(self.valueOdo, value, previousValue, hasNoHistory)
 
@@ -528,7 +479,6 @@ function Statistic:_updateFullReadouts(value, previousValue, targetChange, noCha
     end
 end
 
--- compact: roll the one readout
 function Statistic:_updateCompactReadout(value, previousValue, targetChange, noChange, infinityText, hasNoHistory)
     if self.display == "change" then
         if infinityText then
@@ -541,8 +491,7 @@ function Statistic:_updateCompactReadout(value, previousValue, targetChange, noC
             self.readoutOdo:snap(self:_formatChange(targetChange or 0))
             self._lastChange = targetChange or 0
         end
-    else -- "value"
-        self:_showValue(self.readoutOdo, value, previousValue, hasNoHistory)
+    else         self:_showValue(self.readoutOdo, value, previousValue, hasNoHistory)
     end
 end
 
@@ -561,8 +510,7 @@ function Statistic:Set(value)
     local refValue = if self.changeBaseline == "initial" then self._initialValue else previousValue
     local noChange = hasNoHistory or refValue == value
 
-    -- Determine target change, accent, and direction
-    local targetChange, infinityText, accentKey, direction
+        local targetChange, infinityText, accentKey, direction
     if noChange then
         targetChange = 0
         accentKey = "neutral"
@@ -601,8 +549,7 @@ function Statistic:ResetBaseline(newBaseline)
     self._hasValue = true
     self._lastChange = 0
 
-    -- change readout drops back to 0; the value readout follows the new baseline
-    if self.compact then
+        if self.compact then
         if self.display == "change" then
             self.readoutOdo:snap(self:_formatChange(0))
         else
@@ -654,15 +601,10 @@ function Statistic:_setShown(shown, animate)
     end
 end
 
--- Room the compact card needs: padding + icon (and gap) if shown + title text + the gap
--- to the readout + the readout number itself. Lets a horizontal group wrap sensibly.
 function Statistic:_minWidth()
-    local w = 30 + 10 -- 15+15 card padding, 10 gap between title and readout
-    if self.icon then
-        w += 26 -- 20 icon + 6 gap
-    end
-    -- measure what actually renders: the title shows the translated string
-    w += functions.textWidth(self.window.theme.Font, 16, locale.resolve(self.name))
+    local w = 30 + 10     if self.icon then
+        w += 26     end
+        w += functions.textWidth(self.window.theme.Font, 16, locale.resolve(self.name))
     local readout = if self.display == "change" then self:_formatChange(0) else self:_formatValue(self.value)
     w += functions.textWidth(self.window.theme.Font, 17, readout)
     return w

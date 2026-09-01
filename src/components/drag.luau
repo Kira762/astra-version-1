@@ -1,18 +1,9 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local Drag = {}
 Drag.__index = Drag
 Drag.__type = "Drag"
 
--- Utility
 local utility = script.Parent.Parent.utility
 
--- Variables
 local variables = require(utility.variables)
 local constants = require(utility.constants)
 
@@ -23,19 +14,14 @@ function Drag.new(window, properties)
         window = assert(window, "Missing argument #1 (Window expected)"),
     }, Drag)
 
-    -- Drag Point
-    self.drag = self.window:Create("Frame", {
+        self.drag = self.window:Create("Frame", {
         BackgroundTransparency = 1,
         Size = UDim2.fromOffset(150, 20),
         AnchorPoint = Vector2.new(0.5, 0.5),
-        -- hangs under the window's bottom edge; derived from the real size so it's right on the
-        -- first open too (Show/minimise recompute the same way against self.size)
-        Position = UDim2.new(0.5, 0, 0.5, self.window.size.Y.Offset / 2 + 15),
+                        Position = UDim2.new(0.5, 0, 0.5, self.window.size.Y.Offset / 2 + 15),
         ZIndex = constants.zIndex.drag,
 
-        -- Animation
-        Visible = false, -- In = true
-
+                Visible = false, 
         Parent = self.window.screenGui,
     })
 
@@ -45,10 +31,7 @@ function Drag.new(window, properties)
         Position = UDim2.fromScale(0.5, 0.3),
         ZIndex = constants.zIndex.drag,
 
-        -- Animation
-        BackgroundTransparency = 1, -- In = 0.7
-        Size = UDim2.fromOffset(0, 4), -- In = 100, 4
-
+                BackgroundTransparency = 1,         Size = UDim2.fromOffset(0, 4), 
         Parent = self.drag,
     })
 
@@ -58,8 +41,7 @@ function Drag.new(window, properties)
         Parent = self.dragCosmetic,
     })
 
-    -- White glow behind the drag bar
-    self.window:CreateGlow(self.dragCosmetic, Color3.fromRGB(255, 255, 255), 10, 0.5)
+        self.window:CreateGlow(self.dragCosmetic, Color3.fromRGB(255, 255, 255), 10, 0.5)
 
     self.dragInteract = self.window:Create("TextButton", {
         BackgroundTransparency = 1,
@@ -73,10 +55,7 @@ function Drag.new(window, properties)
     local dragging = false
     local relative = nil
 
-    -- main.Position offsets live in a space shifted from AbsolutePosition by the gui inset,
-    -- even though the ScreenGui ignores inset. so the drag target has to add the inset back
-    -- or the window lands ~inset px too high (measured in play: without it, jumps up ~58px).
-    local offset = Vector2.zero
+                local offset = Vector2.zero
     local screenGui = self.window.screenGui
 
     if screenGui and screenGui.IgnoreGuiInset then
@@ -92,19 +71,16 @@ function Drag.new(window, properties)
         return mouseLocation + validRelative + validOffset
     end
 
-    -- main sits at the cursor target, the drag bar hangs under its bottom edge
-    local function getTargets()
+        local function getTargets()
         local position = getPosition()
         local x, y = position.X, position.Y
 
-        -- keepOnScreen: clamp the centre so it cant be pulled off screen
-        if self.window.settings and self.window.settings.keepOnScreen then
+                if self.window.settings and self.window.settings.keepOnScreen then
             local size = self.window.main.AbsoluteSize
             local screen = self.window.screenGui.AbsoluteSize
             local margin = 8
             local halfX, halfY = size.X / 2, size.Y / 2
-            -- math.max in case the window is bigger than the screen
-            x = math.clamp(x, halfX + margin, math.max(halfX + margin, screen.X - halfX - margin))
+                        x = math.clamp(x, halfX + margin, math.max(halfX + margin, screen.X - halfX - margin))
             y = math.clamp(y, halfY + margin, math.max(halfY + margin, screen.Y - halfY - margin))
         end
 
@@ -137,10 +113,7 @@ function Drag.new(window, properties)
         end
     end)
 
-    -- Letting go, however it happens: the button coming up, the client losing focus, or the
-    -- window going away out from under the grab. Only settle the bar back into line when
-    -- theres something to look at, otherwise theres a tween to fight.
-    local function releaseDrag()
+                local function releaseDrag()
         if not dragging then
             return
         end
@@ -158,8 +131,7 @@ function Drag.new(window, properties)
             )
             :Play()
 
-        -- main lags while dragging, so settle both into line on release
-        local settle = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+                local settle = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
         local mainTarget, dragTarget = getTargets()
         variables.tweenService:Create(self.window.main, settle, { Position = mainTarget }):Play()
         variables.tweenService:Create(self.drag, settle, { Position = dragTarget }):Play()
@@ -172,15 +144,13 @@ function Drag.new(window, properties)
 
         local inputType = input.UserInputType.Name
         if inputType == "MouseButton1" or inputType == "Touch" then
-            -- a grab started mid-reveal would fight the tween thats still moving the window
-            if not self.window:_interactive() then
+                        if not self.window:_interactive() then
                 return
             end
 
             dragging = true
 
-            -- refetch in case the inset changed (e.g. topbar toggled) since construction
-            if screenGui and screenGui.IgnoreGuiInset then
+                        if screenGui and screenGui.IgnoreGuiInset then
                 offset = variables.guiService:GetGuiInset()
             end
 
@@ -206,13 +176,9 @@ function Drag.new(window, properties)
         end
     end)
 
-    -- alt-tabbing with the button still down never delivers InputEnded, so without this the
-    -- grab stays armed and the window snaps to the cursor the moment youre back
-    self.window:Connect(variables.userInputService.WindowFocusReleased, releaseDrag)
+            self.window:Connect(variables.userInputService.WindowFocusReleased, releaseDrag)
 
-    -- exponential smoothing per frame instead of a new tween each frame. constant is the
-    -- fraction of the gap left after 1s, so smaller = snappier. main lags, the bar tracks tight
-    local mainRemaining = 1e-7
+            local mainRemaining = 1e-7
     local barRemaining = 1e-60
 
     self.window:Connect(variables.runService.RenderStepped, function(dt)
@@ -220,9 +186,7 @@ function Drag.new(window, properties)
             return
         end
 
-        -- hidden or mid-animation means the grab went stale under us, so drop it here rather
-        -- than let it wake up later and yank the window to wherever the cursor drifted
-        if not self.window:_interactive() then
+                        if not self.window:_interactive() then
             releaseDrag()
             return
         end

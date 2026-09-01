@@ -18,8 +18,7 @@ return function()
             return window
         end
 
-        -- the layout under test, so nothing relies on it being the default (it isn't)
-        local function makeSidebar(properties)
+                local function makeSidebar(properties)
             properties = properties or {}
             properties.sidebarLayout = true
             return makeWindow(properties)
@@ -49,22 +48,19 @@ return function()
             expect(window.tabList.Parent).to.equal(window.sidebar)
             expect(window.tabListLayout.FillDirection).to.equal(Enum.FillDirection.Vertical)
 
-            -- the rail takes its width off the card, and the two tile the window between them
-            local rail = window.sidebar.Size.X.Offset
+                        local rail = window.sidebar.Size.X.Offset
             expect(rail).to.equal(layouts.sidebar.railWidth)
             expect(window.elements.Size.X.Offset).to.equal(-rail)
             expect(window.elements.Size.X.Scale).to.equal(1)
 
-            -- both start under the topbar and run to the base of the window
-            expect(window.sidebar.Size.Y.Offset).to.equal(-layouts.sidebar.chromeHeight)
+                        expect(window.sidebar.Size.Y.Offset).to.equal(-layouts.sidebar.chromeHeight)
             expect(window.elements.Size.Y.Offset).to.equal(-layouts.sidebar.chromeHeight)
         end)
 
         it("makes the content a card, and leaves it plain under top tabs", function()
             makeSidebar()
             expect(window.elementsStroke).never.to.equal(nil)
-            -- tucked into the window's corner: rounded on that diagonal, square on the other
-            expect(window.elementsCorner.TopLeftRadius).to.equal(window.theme.CornerRoundness)
+                        expect(window.elementsCorner.TopLeftRadius).to.equal(window.theme.CornerRoundness)
             expect(window.elementsCorner.BottomRightRadius).to.equal(window.theme.CornerRoundness)
             expect(window.elementsCorner.TopRightRadius).to.equal(UDim.new(0, 0))
             expect(window.elementsCorner.BottomLeftRadius).to.equal(UDim.new(0, 0))
@@ -81,8 +77,7 @@ return function()
             makeSidebar()
             expect(window.bottomFade.Size.X.Offset).to.equal(-layouts.sidebar.railWidth)
 
-            -- it only sits in one corner of the window, so it only rounds that one
-            expect(window.bottomFadeCorner.BottomRightRadius).to.equal(window.theme.CornerRoundness)
+                        expect(window.bottomFadeCorner.BottomRightRadius).to.equal(window.theme.CornerRoundness)
             expect(window.bottomFadeCorner.BottomLeftRadius).to.equal(UDim.new(0, 0))
             window:Unload()
 
@@ -90,8 +85,7 @@ return function()
             expect(window.bottomFade.Size.X.Offset).to.equal(0)
             expect(window.bottomFade.Size.X.Scale).to.equal(1)
 
-            -- the full width of the window's base, so both bottom corners are its own
-            expect(window.bottomFadeCorner.CornerRadius).to.equal(window.theme.CornerRoundness)
+                        expect(window.bottomFadeCorner.CornerRadius).to.equal(window.theme.CornerRoundness)
         end)
 
         it("slides the pages the way the selector runs", function()
@@ -116,19 +110,16 @@ return function()
             makeSidebar()
             local tab = window:CreateTab({ name = "Main", icon = 0 })
 
-            -- full width of the rail, not hugging its own label the way a pill does
-            expect(tab.topbarItem.Size.X.Scale).to.equal(1)
+                        expect(tab.topbarItem.Size.X.Scale).to.equal(1)
             expect(tab.topbarItem.Size.Y.Offset).to.equal(layouts.sidebar.rowHeight)
 
-            -- the same names the strip builds, so everything downstream is layout-blind
-            expect(tab.topbarItemInteract).never.to.equal(nil)
+                        expect(tab.topbarItemInteract).never.to.equal(nil)
             expect(tab.topbarItemStroke).never.to.equal(nil)
             expect(tab.topbarItemGradient).never.to.equal(nil)
             expect(tab.topbarItemStrokeGradient).never.to.equal(nil)
             expect(tab.topbarItemTitle).never.to.equal(nil)
 
-            -- a row lifts off the rail when selected; a pill has nothing to lift off
-            expect(tab.topbarItemShadow).never.to.equal(nil)
+                        expect(tab.topbarItemShadow).never.to.equal(nil)
         end)
 
         it("selects a row with its own transparencies, not the pill's", function()
@@ -141,8 +132,7 @@ return function()
             expect(tab.topbarItemShadow.Transparency).to.equal(0.8)
             expect(tab.topbarItemTitle.TextTransparency).to.equal(0)
 
-            -- unselected is bare text: no fill, no rim, no lift
-            tab:_applyVisual("unselected", nil)
+                        tab:_applyVisual("unselected", nil)
             expect(tab.topbarItem.BackgroundTransparency).to.equal(1)
             expect(tab.topbarItemStroke.Transparency).to.equal(1)
             expect(tab.topbarItemShadow.Transparency).to.equal(1)
@@ -167,8 +157,7 @@ return function()
             expect(tab.topbarItemLayout.HorizontalAlignment).to.equal(Enum.HorizontalAlignment.Center)
             expect(window.profileLabels.Visible).to.equal(false)
 
-            -- and puts them back once there's room again
-            window.size = UDim2.fromOffset(layout.railCollapseBelow + 100, 400)
+                        window.size = UDim2.fromOffset(layout.railCollapseBelow + 100, 400)
             window:_applyRailWidth()
 
             expect(window.sidebar.Size.X.Offset).to.equal(layout.railWidth)
@@ -183,18 +172,15 @@ return function()
             local named = window:CreateTab({ name = "Combat" })
             local iconed = window:CreateTab({ name = "Home", icon = 0 })
 
-            -- expanded: the label carries it, the initial is out of the way
-            expect(named.topbarItemInitial).never.to.equal(nil)
+                        expect(named.topbarItemInitial).never.to.equal(nil)
             expect(named.topbarItemInitial.Visible).to.equal(false)
             expect(named.topbarItemInitial.Text).to.equal("C")
-            -- a tab with a real icon needs no stand-in
-            expect(iconed.topbarItemInitial).to.equal(nil)
+                        expect(iconed.topbarItemInitial).to.equal(nil)
 
             window.size = UDim2.fromOffset(layout.railCollapseBelow - 1, 400)
             window:_applyRailWidth()
 
-            -- collapsed: the label is gone, so the initial has to be there or the row is blank
-            expect(named.topbarItemTitle.Visible).to.equal(false)
+                        expect(named.topbarItemTitle.Visible).to.equal(false)
             expect(named.topbarItemInitial.Visible).to.equal(true)
 
             window.size = UDim2.fromOffset(layout.railCollapseBelow + 100, 400)
@@ -237,8 +223,7 @@ return function()
             expect(window.profileName.Text).to.equal(variables.localPlayer.DisplayName)
             expect(window.profile.Size.Y.Offset).to.equal(layouts.sidebar.footerHeight)
 
-            -- the rows stop where the profile starts
-            expect(window.tabList.Size.Y.Offset).to.equal(-layouts.sidebar.footerHeight)
+                        expect(window.tabList.Size.Y.Offset).to.equal(-layouts.sidebar.footerHeight)
         end)
 
         it("leaves the name on its own until a profile line is set", function()
@@ -269,14 +254,12 @@ return function()
             makeSidebar()
             local sidebarModule = helpers.requireComponent("sidebar")
 
-            -- it fades before it goes, so the block is still there the frame the switch flips
-            sidebarModule.setProfileEnabled(window, false)
+                        sidebarModule.setProfileEnabled(window, false)
             expect(window.settings.showProfile).to.equal(false)
             expect(window.profile.Visible).to.equal(true)
             expect(window.profileName.TextTransparency).to.equal(1)
 
-            sidebarModule.reflowProfile(window) -- what the delayed pass does once it's faded
-            expect(window.profile.Visible).to.equal(false)
+            sidebarModule.reflowProfile(window)             expect(window.profile.Visible).to.equal(false)
             expect(window.tabList.Size.Y.Offset).to.equal(0)
             expect(window.tabList.Size.Y.Scale).to.equal(1)
 
@@ -298,8 +281,7 @@ return function()
             expect(persistence.loadSettings(window)).to.equal(true)
             expect(window.settings.showProfile).to.equal(false)
 
-            -- the settings file outlives this window, so hand it back the way we found it
-            window.settings.showProfile = true
+                        window.settings.showProfile = true
             expect(persistence.saveSettings(window)).to.equal(true)
         end)
 
@@ -310,8 +292,7 @@ return function()
 
             search.open(window)
             expect(window._searching).to.equal(true)
-            -- the field takes the card's head, not the rail's row, so the rail stays put
-            expect(window.tabList.Visible).to.equal(true)
+                        expect(window.tabList.Visible).to.equal(true)
 
             search.close(window, { showTabs = true })
             expect(window._searching).to.equal(false)
@@ -381,8 +362,7 @@ return function()
                 expect(first.main.Parent).to.equal(window.tabList)
                 expect(paddingOf(first)).to.equal(0)
 
-                -- a section following only another section still counts as having something above
-                local second = window:CreateSection({ name = "Modes" })
+                                local second = window:CreateSection({ name = "Modes" })
                 expect(paddingOf(second)).to.equal(6)
 
                 window:CreateTab({ name = "Home" })
@@ -399,9 +379,7 @@ return function()
 
             it("ignores the settings tab, which never takes a row", function()
                 makeSidebar()
-                -- rfSettings is built with the window and is neglectSelector, so the first
-                -- user section still heads the rail
-                expect(#window.tabs > 0).to.equal(true)
+                                                expect(#window.tabs > 0).to.equal(true)
                 expect(paddingOf(window:CreateSection({ name = "General" }))).to.equal(0)
             end)
 
@@ -425,8 +403,7 @@ return function()
                 local section = window:CreateSection({ name = "General" })
                 expect(section.inert).to.equal(true)
                 expect(section.main).never.to.be.ok()
-                -- still safe to call, so a dev swapping layouts doesn't have to guard every call
-                section:_setShown(true, false)
+                                section:_setShown(true, false)
                 section:_setVisible(true)
                 section:Remove()
             end)
@@ -438,8 +415,7 @@ return function()
                 section:Remove()
                 expect(#window.tabSections).to.equal(0)
 
-                -- a spent handle behaves like one that never built anything
-                section:Remove()
+                                section:Remove()
                 section:_setShown(true, false)
                 section:_setVisible(true)
             end)
@@ -455,8 +431,7 @@ return function()
 
                 window:_setTabSectionsShown(false, false)
                 expect(section.title.TextTransparency).to.equal(1)
-                -- fading out doesn't stop it drawing; the collapse does that separately
-                expect(section.main.Visible).to.equal(true)
+                                expect(section.main.Visible).to.equal(true)
 
                 window:_setTabSectionsVisible(false)
                 expect(section.main.Visible).to.equal(false)

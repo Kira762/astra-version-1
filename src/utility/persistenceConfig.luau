@@ -1,10 +1,3 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local variables = require(script.Parent.variables)
 local filesystem = require(script.Parent.filesystem)
 local log = require(script.Parent.log)
@@ -46,8 +39,7 @@ function persistenceConfig.save(window: ConfigWindow, name: unknown?): boolean
         return false
     end
 
-    -- no file API on this executor: nowhere to save, degrade as quietly as load does
-    if typeof(filesystem.writefile) ~= "function" then
+        if typeof(filesystem.writefile) ~= "function" then
         return false
     end
 
@@ -67,10 +59,7 @@ function persistenceConfig.save(window: ConfigWindow, name: unknown?): boolean
         end
     end
 
-    -- carry forward saved values whose elements aren't built yet; without this an early
-    -- autosave would permanently drop a late element's saved value. only into the file they
-    -- came from though, or Load("A") then Save("B") would smuggle A's flags into B.
-    local loadedConfig = window._loadedConfig
+                local loadedConfig = window._loadedConfig
     if loadedConfig and window._loadedConfigPath == fullPath then
         for flag, value in loadedConfig do
             if window.controls[flag] == nil then
@@ -94,10 +83,7 @@ function persistenceConfig.save(window: ConfigWindow, name: unknown?): boolean
         return false
     end
 
-    -- the file we just wrote is now the truth, so later carry-forwards use current values,
-    -- not the ones from load time; without this an element torn down after a change would
-    -- have its old value written back by the next autosave
-    if window._loadedConfigPath == nil or window._loadedConfigPath == fullPath then
+                if window._loadedConfigPath == nil or window._loadedConfigPath == fullPath then
         window._loadedConfig = flags
         window._loadedConfigPath = fullPath
     end
@@ -105,8 +91,6 @@ function persistenceConfig.save(window: ConfigWindow, name: unknown?): boolean
     return true
 end
 
--- Decode a saved config. Also hands back the raw text, so a file that read fine but isn't a
--- config can be backed up.
 local function decodeFile(fullPath: string): ({ [string]: unknown }?, string?)
     if not filesystem.isfile(fullPath) then
         return nil, nil
@@ -120,19 +104,15 @@ local function decodeFile(fullPath: string): ({ [string]: unknown }?, string?)
 
     local decodeOk, parsed = pcall(variables.httpService.JSONDecode, variables.httpService, contents)
 
-    -- a scalar root is valid JSON but not a config, so it resets like any other bad file
-    if not decodeOk or type(parsed) ~= "table" then
+        if not decodeOk or type(parsed) ~= "table" then
         return nil, contents
     end
 
     return parsed :: { [string]: unknown }, contents
 end
 
--- Every corrupt file gets its own backup. Reusing one name would let a second corruption
--- destroy the salvageable data the first backup exists to keep.
 local function backupPathFor(fullPath: string): string
-    -- same path logic as getConfigPath, so the backup lands next to the file it mirrors
-    local stem = path.stripExtension(fullPath, ".rfld")
+        local stem = path.stripExtension(fullPath, ".rfld")
     local candidate = stem .. " (Incorrect Format).rfld"
     local index = 2
     while index <= 100 and filesystem.isfile(candidate) do
@@ -149,21 +129,17 @@ function persistenceConfig.load(window: ConfigWindow, name: unknown?): boolean
         return false
     end
 
-    -- no file API on this executor: nothing to load, degrade quietly
-    if typeof(filesystem.isfile) ~= "function" then
+        if typeof(filesystem.isfile) ~= "function" then
         return false
     end
 
     local parsedFlags, raw = decodeFile(fullPath)
 
-    -- a save that died mid-overwrite leaves its whole copy parked beside the wreck, so take
-    -- that instead. only when the real file is really there, or a deleted config could come back.
-    if not parsedFlags and filesystem.isfile(fullPath) then
+            if not parsedFlags and filesystem.isfile(fullPath) then
         local parked, parkedRaw = decodeFile(atomic.tempPathFor(fullPath))
         if parked and parkedRaw then
             parsedFlags = parked
-            -- put it back where it belongs so the next load reads it straight
-            pcall(atomic.write, dir, fullPath, parkedRaw)
+                        pcall(atomic.write, dir, fullPath, parkedRaw)
         end
     end
 
@@ -183,29 +159,22 @@ function persistenceConfig.load(window: ConfigWindow, name: unknown?): boolean
     local flags = parsedFlags :: { [string]: unknown }
     local wasLoading = window._loading
     window._loading = true
-    -- the reset must survive a throwing restore, or autosave stays suppressed all session
-    local applyOk, applyErr = pcall(function()
+        local applyOk, applyErr = pcall(function()
         for flag, control in window.controls do
             persistenceConfig.applyTo(control, flags[flag])
         end
     end)
-    -- back to what it was, not just down: a nested load from a control callback must leave
-    -- the outer load's guard standing
-    window._loading = wasLoading
+            window._loading = wasLoading
     if not applyOk then
         log.warn("Rayfield: Failed to apply configuration - " .. tostring(applyErr))
     end
 
-    -- kept so elements built after this load can still restore themselves (see
-    -- Window:_restoreLate). without it a late element shows its default and the next
-    -- autosave writes that default over the saved value.
-    window._loadedConfig = flags
+                window._loadedConfig = flags
     window._loadedConfigPath = fullPath
 
     return true
 end
 
--- restore one control from a decoded config. callers own the window._loading guard.
 function persistenceConfig.applyTo(control: PersistedControl, value: unknown)
     if value == nil and not control._canBeNil then
         return
@@ -227,8 +196,7 @@ function persistenceConfig.list(window: ConfigWindow): { string }
     local dir = persistenceConfig.getPath(window)
 
     local names: { string } = {}
-    -- the no-name path always resolves; the guard just narrows the type
-    if not dir then
+        if not dir then
         return names
     end
     local ok, files = pcall(filesystem.listfiles, dir)
@@ -238,9 +206,7 @@ function persistenceConfig.list(window: ConfigWindow): { string }
 
     for _, filePath in files do
         local file = path.basename(filePath)
-        -- listfiles returns folders and anything else in the dir; only our own configs are
-        -- real names, so require the extension rather than listing whatever is lying around
-        if file:sub(-5) == ".rfld" then
+                        if file:sub(-5) == ".rfld" then
             local base = path.stripExtension(file, ".rfld")
             if base and base ~= "" and not base:find(" %(Incorrect Format[^%)]*%)$") then
                 table.insert(names, base)
@@ -265,8 +231,7 @@ function persistenceConfig.delete(window: ConfigWindow, name: unknown): boolean
         return false
     end
 
-    -- take the parked copy with it, or a later load could resurrect what was just deleted
-    pcall(filesystem.delfile, atomic.tempPathFor(fullPath))
+        pcall(filesystem.delfile, atomic.tempPathFor(fullPath))
 
     return (pcall(filesystem.delfile, fullPath))
 end

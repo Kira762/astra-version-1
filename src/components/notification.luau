@@ -1,46 +1,25 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local Notification = {}
 Notification.__index = Notification
 Notification.__type = "Notification"
 
--- Utility
 local utility = script.Parent.Parent.utility
 
--- Variables
 local variables = require(utility.variables)
 local functions = require(utility.functions)
 local constants = require(utility.constants)
 local hapticEngine = require(utility.HapticEngine)
 
--- Timings/easings copied from Rayfield Gen1 (all Exponential, Out).
 local growInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local fadeLong = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) -- bg + stroke
-local fadeShort = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) -- title/icon/desc/shadow
--- entry: card slides in from the right as the slot opens
-local swipeInInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
--- exit "scale": shrink width + collapse height while it fades
+local fadeLong = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local fadeShort = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local swipeInInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 local shrinkInfo = TweenInfo.new(0.9, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
 local offscreenRight = UDim2.new(0.5, 360, 0.5, 0)
 local centred = UDim2.new(0.5, 0, 0.5, 0)
 
--- Roughly what fits in the 800px stack. Past this the oldest is retired early rather than
--- left to march off the top of the screen still running its own dwell loop.
 local maxLive = 6
 
--- Gap between stacked notifications. Applied INSIDE each notification (as top
--- padding on the outer frame) rather than on the container's UIListLayout, so
--- removing one collapses its gap with it instead of dropping an external gap
--- and making the notifications above jump up.
 local stackPadding = 8
 
--- Auto duration from content length, clamped to a sensible window (Gen1-style)
 local function autoDuration(content)
     return math.clamp(#content * 0.06 + 3, 3, 9)
 end
@@ -61,9 +40,7 @@ function Notification.new(window, properties)
 
     local hasIcon = self.icon ~= nil and self.icon ~= 0 and self.icon ~= ""
 
-    -- Outer frame: the stack layout item. Invisible itself; only its height is
-    -- animated (grow in / collapse the gap on exit).
-    self.main = self.window:Create("Frame", {
+            self.main = self.window:Create("Frame", {
         Name = "Notification",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 0),
@@ -73,28 +50,20 @@ function Notification.new(window, properties)
         Parent = self.window.notifications,
     })
 
-    -- Inter-notification gap lives here (not on the stack layout) so it collapses
-    -- with the card and its neighbours don't jump when it's removed.
-    self.window:Create("UIPadding", {
+            self.window:Create("UIPadding", {
         PaddingTop = UDim.new(0, stackPadding),
 
         Parent = self.main,
     })
 
-    -- Inner body: the visible card. Centred so the exit width-shrink pulls in
-    -- symmetrically from both sides.
-    self.body = self.window:Create("Frame", {
+            self.body = self.window:Create("Frame", {
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         Size = UDim2.new(1, 0, 1, 0),
-        Position = offscreenRight, -- starts off to the right; _show slides it in
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Active = true, -- receives input for click-to-dismiss
-        BorderSizePixel = 0,
+        Position = offscreenRight,         AnchorPoint = Vector2.new(0.5, 0.5),
+        Active = true,         BorderSizePixel = 0,
         ZIndex = constants.zIndex.notification,
 
-        -- Animation
-        BackgroundTransparency = 1, -- In = 0
-
+                BackgroundTransparency = 1, 
         Parent = self.main,
     })
 
@@ -110,15 +79,12 @@ function Notification.new(window, properties)
     }, { CornerRadius = "CornerRoundness" })
 
     self.stroke = self.window:Create("UIStroke", {
-        Transparency = 1, -- In = 0.95
-
+        Transparency = 1, 
         Parent = self.body,
     }, { Color = "SurfaceStroke" })
 
-    self.shadow = self.window:CreateGlow(self.body, "ShadowColor", 20, 1) -- In = 0.6
-
-    -- Horizontal insets; vertical padding comes from centering the row in the grown height
-    self.window:Create("UIPadding", {
+    self.shadow = self.window:CreateGlow(self.body, "ShadowColor", 20, 1) 
+        self.window:Create("UIPadding", {
         PaddingLeft = UDim.new(0, 20),
         PaddingRight = UDim.new(0, 20),
 
@@ -144,15 +110,12 @@ function Notification.new(window, properties)
             LayoutOrder = 1,
             ZIndex = constants.zIndex.notification,
 
-            -- Animation
-            ImageTransparency = 1, -- In = 0
-
+                        ImageTransparency = 1, 
             Parent = self.body,
         }, { ImageColor3 = "ContentColor" })
     end
 
-    -- Text column fills the row minus icon + padding (container is 300 wide)
-    self.container = self.window:Create("Frame", {
+        self.container = self.window:Create("Frame", {
         Size = UDim2.fromOffset(hasIcon and 222 or 260, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
@@ -182,9 +145,7 @@ function Notification.new(window, properties)
         LayoutOrder = 1,
         ZIndex = constants.zIndex.notification,
 
-        -- Animation
-        TextTransparency = 1, -- In = 0
-
+                TextTransparency = 1, 
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "TitleFont" })
 
@@ -201,20 +162,15 @@ function Notification.new(window, properties)
             LayoutOrder = 2,
             ZIndex = constants.zIndex.notification,
 
-            -- Animation
-            TextTransparency = 1, -- In = 0.35
-
+                        TextTransparency = 1, 
             Parent = self.container,
         }, { TextColor3 = "ContentColor", FontFace = "Font" })
     end
 
-    -- Newest sits at the bottom of the (bottom-anchored) stack
-    self.window._notificationCount = (self.window._notificationCount or 0) + 1
+        self.window._notificationCount = (self.window._notificationCount or 0) + 1
     self.main.LayoutOrder = self.window._notificationCount
 
-    -- a callback that notifies in a loop would stack cards forever, so retire the oldest once
-    -- theres more than the stack can show
-    local live = self.window._liveNotifications
+            local live = self.window._liveNotifications
     if not live then
         live = {}
         self.window._liveNotifications = live
@@ -227,9 +183,7 @@ function Notification.new(window, properties)
         end
     end
 
-    -- tracked so _dismiss can drop them; notifications come and go so we cant let their
-    -- connections/instances sit in the window lists until Unload
-    self._connections = {
+            self._connections = {
         self.window:Connect(self.body.MouseEnter, function()
             self._hovered = true
         end),
@@ -253,8 +207,6 @@ function Notification.new(window, properties)
     return self
 end
 
--- Height the card needs, measured without rendering (so nothing flickers into
--- the stack before it's ready to animate).
 function Notification:_measure()
     local colWidth = self.iconLabel and 222 or 260
 
@@ -266,20 +218,14 @@ function Notification:_measure()
     return math.max(contentH, self.iconLabel and 24 or 0) + 28
 end
 
--- Enter: grow the height, then stagger the fades (Gen1 timing).
 function Notification:_show()
-    -- All sizing done before anything is visible: outer is height 0 and the body
-    -- is fully transparent until the grow tween starts, so there's no flicker.
-    -- +stackPadding because the outer's top padding holds the inter-card gap.
-    local target = self:_measure() + stackPadding
+                local target = self:_measure() + stackPadding
     if self._dismissed or not self.main.Parent then
-        return -- evicted mid-measure; dont replay the entrance over the exit
-    end
+        return     end
 
     hapticEngine.notify()
 
-    -- Open the slot and slide the card in from the right (body starts off-right), fading as it comes
-    variables.tweenService:Create(self.main, growInfo, { Size = UDim2.new(1, 0, 0, target) }):Play()
+        variables.tweenService:Create(self.main, growInfo, { Size = UDim2.new(1, 0, 0, target) }):Play()
     variables.tweenService:Create(self.body, swipeInInfo, { Position = centred }):Play()
     variables.tweenService:Create(self.body, fadeLong, { BackgroundTransparency = 0 }):Play()
     variables.tweenService:Create(self.titleLabel, fadeShort, { TextTransparency = 0 }):Play()
@@ -288,8 +234,7 @@ function Notification:_show()
 
     task.wait(0.05)
     if self._dismissed or not self.main.Parent then
-        return -- dismissed mid-stagger; dont fight the exit fade
-    end
+        return     end
     if self.iconLabel then
         variables.tweenService:Create(self.iconLabel, fadeShort, { ImageTransparency = 0 }):Play()
     end
@@ -302,8 +247,7 @@ function Notification:_show()
         variables.tweenService:Create(self.descriptionLabel, fadeShort, { TextTransparency = 0.35 }):Play()
     end
 
-    -- Dwell, pausing while hovered
-    local elapsed = 0
+        local elapsed = 0
     while elapsed < self.duration and not self._dismissed and self.main.Parent do
         local dt = task.wait()
         if not self._hovered then
@@ -314,7 +258,6 @@ function Notification:_show()
     self:_dismiss()
 end
 
--- Exit: fade out while the card shrinks (width + height) - Gen1's exit.
 function Notification:_dismiss()
     if self._dismissed then
         return
@@ -331,8 +274,7 @@ function Notification:_dismiss()
         return
     end
 
-    -- Fade everything out (runs during the shrink -> "goes transparent as it scales")
-    variables.tweenService:Create(self.body, fadeLong, { BackgroundTransparency = 1 }):Play()
+        variables.tweenService:Create(self.body, fadeLong, { BackgroundTransparency = 1 }):Play()
     variables.tweenService:Create(self.stroke, fadeLong, { Transparency = 1 }):Play()
     variables.tweenService:Create(self.shadow, fadeShort, { Transparency = 1 }):Play()
     variables.tweenService:Create(self.titleLabel, fadeShort, { TextTransparency = 1 }):Play()
@@ -343,8 +285,7 @@ function Notification:_dismiss()
         variables.tweenService:Create(self.iconLabel, fadeShort, { ImageTransparency = 1 }):Play()
     end
 
-    -- Shrink: narrow the card (width -90) and collapse the slot (height 0) together
-    variables.tweenService:Create(self.body, shrinkInfo, { Size = UDim2.new(1, -90, 1, 0) }):Play()
+        variables.tweenService:Create(self.body, shrinkInfo, { Size = UDim2.new(1, -90, 1, 0) }):Play()
     local collapse = variables.tweenService:Create(self.main, shrinkInfo, { Size = UDim2.new(1, 0, 0, 0) })
     collapse:Play()
     collapse.Completed:Wait()

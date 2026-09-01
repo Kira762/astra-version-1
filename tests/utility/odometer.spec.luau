@@ -51,9 +51,7 @@ return function()
         end)
 
         it("keys the digit metrics cache on font style", function()
-            -- italic digits measure wider here, so a style-blind cache would hand the italic
-            -- odometer the upright advances
-            variables.textService.GetTextBoundsAsync = function(_, params)
+                                    variables.textService.GetTextBoundsAsync = function(_, params)
                 local italic = params.Font.Style == Enum.FontStyle.Italic
                 return { X = if italic then 14 else 7, Y = params.Size }
             end

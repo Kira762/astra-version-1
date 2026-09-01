@@ -19,12 +19,10 @@ return function()
         end)
 
         it("leaves the top layout room for its strip and the sidebar none", function()
-            -- the strip sits inside the chrome, so the top layout's is the taller of the two
-            expect(layouts.top.chromeHeight).to.equal(layouts.top.tabStripTop + layouts.top.tabStripHeight + 3)
+                        expect(layouts.top.chromeHeight).to.equal(layouts.top.tabStripTop + layouts.top.tabStripHeight + 3)
             expect(layouts.top.chromeHeight > layouts.sidebar.chromeHeight).to.equal(true)
 
-            -- nothing hangs below the sidebar's topbar, so the rail starts right under it
-            expect(layouts.sidebar.chromeHeight).to.equal(layouts.sidebar.topbarHeight)
+                        expect(layouts.sidebar.chromeHeight).to.equal(layouts.sidebar.topbarHeight)
         end)
 
         it("hangs the strip a pixel into the topbar", function()
@@ -41,8 +39,7 @@ return function()
             expect(layouts.railWidthFor(layout, layout.railCollapseBelow - 1)).to.equal(collapsed)
             expect(layouts.railWidthFor(layout, 320)).to.equal(collapsed)
 
-            -- an icon rail still has to fit its icon and the inset either side of it
-            expect(collapsed > layout.rowInset * 2 + layout.rowIconSize).to.equal(true)
+                        expect(collapsed > layout.rowInset * 2 + layout.rowIconSize).to.equal(true)
         end)
 
         it("gives the top layout no rail to take width from", function()

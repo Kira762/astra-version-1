@@ -150,8 +150,7 @@ return function()
             expect(persistenceConfig.save(makeWindow())).to.equal(true)
             expect(written[1]).to.equal("Root/Configurations/Main.rfld.saving")
             expect(written[2]).to.equal("Root/Configurations/Main.rfld")
-            -- the parked copy goes once the real file is whole again
-            expect(files["Root/Configurations/Main.rfld.saving"]).never.to.be.ok()
+                        expect(files["Root/Configurations/Main.rfld.saving"]).never.to.be.ok()
         end)
 
         it("leaves the real file alone when the parked copy reads back short", function()
@@ -185,8 +184,7 @@ return function()
 
             expect(persistenceConfig.load(window)).to.equal(true)
             expect(setValue).to.equal(7)
-            -- the wreck is replaced rather than backed up, nothing was lost
-            expect(files["Root/Configurations/Main.rfld"]).to.equal("stored-json")
+                        expect(files["Root/Configurations/Main.rfld"]).to.equal("stored-json")
             expect(files["Root/Configurations/Main (Incorrect Format).rfld"]).never.to.be.ok()
             expect(files["Root/Configurations/Main.rfld.saving"]).never.to.be.ok()
         end)
@@ -241,8 +239,7 @@ return function()
             expect(setValue).to.equal(7)
             expect(deserialized).to.equal("stored")
             expect(nilSet).never.to.be.ok()
-            -- kept so elements built after the load can still restore themselves
-            expect(window._loadedConfig.Alpha).to.equal(7)
+                        expect(window._loadedConfig.Alpha).to.equal(7)
         end)
 
         it("applies a single control from a decoded config", function()
@@ -256,8 +253,7 @@ return function()
             }, 12)
             expect(applied).to.equal(12)
 
-            -- a deserializer wins over Set when the control has one
-            persistenceConfig.applyTo({
+                        persistenceConfig.applyTo({
                 flag = "Beta",
                 _deserialize = function(_, value)
                     deserialized = value
@@ -268,16 +264,14 @@ return function()
             }, "raw")
             expect(deserialized).to.equal("raw")
 
-            -- nil is skipped unless the control opts in
-            persistenceConfig.applyTo({
+                        persistenceConfig.applyTo({
                 flag = "Gamma",
                 Set = function()
                     error("should not be called")
                 end,
             }, nil)
 
-            -- a throwing control is warned about, not propagated
-            persistenceConfig.applyTo({
+                        persistenceConfig.applyTo({
                 flag = "Delta",
                 Set = function()
                     error("boom")
@@ -318,8 +312,7 @@ return function()
 
         it("derives the backup name from the real config path", function()
             local window = makeWindow()
-            -- getConfigPath sanitizes this to "My Hub.rfld"; the backup must match it
-            window.configuration.fileName = "My: Hub"
+                        window.configuration.fileName = "My: Hub"
             files["Root/Configurations/My Hub.rfld"] = "not-json"
             variables.httpService.JSONDecode = function()
                 error("decode failed")
@@ -340,8 +333,7 @@ return function()
             files["Root/Configurations/Main.rfld"] = "second-wreck"
             expect(persistenceConfig.load(window)).to.equal(false)
 
-            -- the first backup is the salvageable one, it must survive the second corruption
-            expect(files["Root/Configurations/Main (Incorrect Format).rfld"]).to.equal("first-wreck")
+                        expect(files["Root/Configurations/Main (Incorrect Format).rfld"]).to.equal("first-wreck")
             expect(files["Root/Configurations/Main (Incorrect Format 2).rfld"]).to.equal("second-wreck")
         end)
 
@@ -366,8 +358,7 @@ return function()
             }
 
             expect(persistenceConfig.load(window)).to.equal(true)
-            -- the nested load used to drop the guard here, so the rest of the outer restore autosaved
-            expect(guardDuringNested).to.equal(true)
+                        expect(guardDuringNested).to.equal(true)
             expect(window._loading).to.equal(false)
         end)
 
@@ -375,8 +366,7 @@ return function()
             local window = makeWindow()
             files["Root/Configurations/Main.rfld"] = "stored-json"
             decodedData = { Alpha = 1 }
-            -- iterating the controls throws; the flag must still come back down
-            window.controls = setmetatable({}, {
+                        window.controls = setmetatable({}, {
                 __iter = function()
                     error("iteration failed")
                 end,
@@ -398,8 +388,7 @@ return function()
             window.controls = {
                 Alpha = { value = 1 },
             }
-            -- Late's element isn't built yet; Alpha's control must still win over its old value
-            window._loadedConfig = { Late = "saved", Alpha = "stale" }
+                        window._loadedConfig = { Late = "saved", Alpha = "stale" }
             window._loadedConfigPath = "Root/Configurations/Main.rfld"
 
             expect(persistenceConfig.save(window)).to.equal(true)
@@ -414,8 +403,7 @@ return function()
 
             expect(persistenceConfig.load(window, "A")).to.equal(true)
 
-            -- saving somewhere else must not smuggle A's unbuilt flags into B
-            expect(persistenceConfig.save(window, "B")).to.equal(true)
+                        expect(persistenceConfig.save(window, "B")).to.equal(true)
             expect(encodedData.Late).never.to.be.ok()
 
             expect(persistenceConfig.save(window, "A")).to.equal(true)

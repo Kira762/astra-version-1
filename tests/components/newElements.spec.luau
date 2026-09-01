@@ -3,9 +3,7 @@ local helpers = (_G :: any).__RAYFIELD_TEST_HELPERS
 return function()
     local Window = helpers.requireComponent("window")
 
-    -- UDim2 stores its scales as 32-bit floats, so a value put in as 0.4 reads back as
-    -- 0.40000000596. Compare fractions with a tolerance rather than for equality.
-    local function near(actual, expected)
+            local function near(actual, expected)
         return math.abs(actual - expected) < 0.0001
     end
 
@@ -51,15 +49,12 @@ return function()
                 expect(bar:GetPercentage()).to.equal(0.25)
                 expect(bar.readout.Text).to.equal("25%")
 
-                -- a range given backwards is still a range
-                bar:SetRange(100, 0)
+                                bar:SetRange(100, 0)
                 expect(bar.min).to.equal(0)
                 expect(bar.max).to.equal(100)
-                expect(bar:Get()).to.equal(50) -- carried across, still in range
-                expect(bar:GetPercentage()).to.equal(0.5)
+                expect(bar:Get()).to.equal(50)                 expect(bar:GetPercentage()).to.equal(0.5)
 
-                -- and the value comes with the range when it no longer fits
-                bar:SetRange(0, 10)
+                                bar:SetRange(0, 10)
                 expect(bar:Get()).to.equal(10)
             end)
 
@@ -80,8 +75,7 @@ return function()
                 })
                 expect(bar.readout.Text).to.equal("3 of 8")
 
-                -- a fixed line still wins over the formatter
-                bar:SetText("Paused")
+                                bar:SetText("Paused")
                 expect(bar.readout.Text).to.equal("Paused")
             end)
 
@@ -93,8 +87,7 @@ return function()
             it("counts stages when it's stepped", function()
                 local bar = makeTab():CreateProgress({ name = "Setup", steps = 5, value = 2 })
 
-                -- steps set the range unless one was given, so the value counts them
-                expect(bar.min).to.equal(0)
+                                expect(bar.min).to.equal(0)
                 expect(bar.max).to.equal(5)
                 expect(#bar.stepFrames).to.equal(5)
                 expect(bar.readout.Text).to.equal("2/5")
@@ -102,8 +95,7 @@ return function()
                 bar:Set(4)
                 expect(bar.readout.Text).to.equal("4/5")
 
-                -- the segments tile the track exactly: the scale shares add up to one whole
-                local total = 0
+                                local total = 0
                 for _, step in bar.stepFrames do
                     total += step.segment.Size.X.Scale
                 end
@@ -129,8 +121,7 @@ return function()
             it("ignores a step count too small to be a row", function()
                 local bar = makeTab():CreateProgress({ name = "Setup", steps = 1 })
                 expect(bar.steps).to.equal(nil)
-                expect(bar.fill).never.to.equal(nil) -- fell back to a continuous track
-            end)
+                expect(bar.fill).never.to.equal(nil)             end)
 
             it("clamps anything outside 0 to 1, and reads a bad value as empty", function()
                 local bar = makeTab():CreateProgress({ name = "Download" })
@@ -139,8 +130,7 @@ return function()
                 expect(bar.value).to.equal(1)
                 bar:Set(-3)
                 expect(bar.value).to.equal(0)
-                bar:Set(0 / 0) -- NaN
-                expect(bar.value).to.equal(0)
+                bar:Set(0 / 0)                 expect(bar.value).to.equal(0)
                 bar:Set("nonsense" :: any)
                 expect(bar.value).to.equal(0)
                 expect(bar.readout.Text).to.equal("0%")
@@ -159,12 +149,9 @@ return function()
 
                 expect(bar.indeterminate).to.equal(true)
                 expect(bar._sweep).never.to.equal(nil)
-                -- it never leaves the track, so the track has no need to clip and the fill's
-                -- rounded ends are never squared off against the track's own corner
-                expect(bar.track.ClipsDescendants).never.to.equal(true)
+                                                expect(bar.track.ClipsDescendants).never.to.equal(true)
 
-                -- a real value ends the sweep rather than fighting it
-                bar:Set(0.6)
+                                bar:Set(0.6)
                 expect(bar.indeterminate).to.equal(false)
                 expect(bar._sweep).to.equal(nil)
                 expect(bar.fill.Position.X.Scale).to.equal(0)
@@ -178,21 +165,16 @@ return function()
                 local first = bar._sweep
                 expect(first).never.to.equal(nil)
 
-                bar:SetIndeterminate(true) -- already on: same loop, not a second one
-                expect(bar._sweep).to.equal(first)
+                bar:SetIndeterminate(true)                 expect(bar._sweep).to.equal(first)
 
                 bar:SetIndeterminate(false)
                 expect(bar._sweep).to.equal(nil)
-                expect(near(bar.fill.Size.X.Scale, 0.2)).to.equal(true) -- back to the value it held
-                expect(bar.fill.AnchorPoint).to.equal(Vector2.new(0, 0.5)) -- and anchored left again
-            end)
+                expect(near(bar.fill.Size.X.Scale, 0.2)).to.equal(true)                 expect(bar.fill.AnchorPoint).to.equal(Vector2.new(0, 0.5))             end)
 
             it("sweeps on a repeating tween rather than a loop of its own", function()
                 local bar = makeTab():CreateProgress({ name = "Syncing", indeterminate = true })
 
-                -- a tween, not a thread: Roblox repeats it, so there is nothing of ours left
-                -- running once the window goes and nothing to cancel by hand
-                expect(typeof(bar._sweep)).never.to.equal("thread")
+                                                expect(typeof(bar._sweep)).never.to.equal("thread")
                 expect(bar._sweep.Cancel).never.to.equal(nil)
             end)
 
@@ -230,8 +212,7 @@ return function()
                 expect(block.panel.Size.Y.Offset).to.equal(300)
 
                 block:SetHeight(nil :: any)
-                expect(block.height).to.equal(120) -- the default, not zero
-            end)
+                expect(block.height).to.equal(120)             end)
 
             it("appends, replaces and clears its body", function()
                 local block = makeTab():CreateConsole({ text = "first" })
@@ -242,8 +223,7 @@ return function()
                 block:Set("only")
                 expect(block:Get()).to.equal("only")
 
-                -- an empty block doesn't lead with a blank line
-                block:Clear()
+                                block:Clear()
                 block:Append("fresh")
                 expect(block:Get()).to.equal("fresh")
 
@@ -274,8 +254,7 @@ return function()
 
             it("says so rather than throwing when there's no clipboard", function()
                 local block = makeTab():CreateConsole({ text = "print()" })
-                expect(block:Copy()).to.equal(false) -- no executor here to provide one
-            end)
+                expect(block:Copy()).to.equal(false)             end)
 
             it("renders output as text, not markup", function()
                 local block = makeTab():CreateConsole({ text = "<b>not bold</b>" })
@@ -289,16 +268,14 @@ return function()
                 local block = makeTab():CreateConsole({ maxLines = 50 })
                 block:Clear()
 
-                -- fill it, then keep going: the pool stops growing and rows are recycled
-                for index = 1, 200 do
+                                for index = 1, 200 do
                     block:Append("line " .. index)
                 end
                 expect(#block.lines).to.equal(50)
                 expect(#block.lineLabels).to.equal(50)
                 expect(block:Get()).to.equal(table.concat(block.lines, "\n"))
 
-                -- the newest line owns the highest order, so it still sorts last
-                local newest, highest = nil, -1
+                                local newest, highest = nil, -1
                 for _, label in block.lineLabels do
                     if label.LayoutOrder > highest then
                         highest, newest = label.LayoutOrder, label
@@ -335,23 +312,20 @@ return function()
                 slider.track.AbsolutePosition = Vector2.new(100, 300)
                 slider.track.AbsoluteSize = Vector2.new(200, 14)
 
-                -- a programmatic set is nobody dragging anything
-                slider:Set(10)
+                                slider:Set(10)
                 expect(seen[1].value).to.equal(10)
                 expect(seen[1].dragging).to.equal(false)
 
                 helpers.services.UserInputService._setMouseLocation(Vector2.new(150, 80))
                 slider.interact.InputBegan:Fire({ UserInputType = Enum.UserInputType.MouseButton1 })
                 expect(seen[2].value).to.equal(25)
-                expect(seen[2].dragging).to.equal(true) -- the press already counts as dragging
-
+                expect(seen[2].dragging).to.equal(true) 
                 helpers.services.UserInputService._setMouseLocation(Vector2.new(200, 80))
                 helpers.services.RunService.RenderStepped:Fire()
                 expect(seen[3].value).to.equal(50)
                 expect(seen[3].dragging).to.equal(true)
 
-                -- release: one last call on the settled value, saying the gesture is over
-                helpers.services.UserInputService.InputEnded:Fire({ UserInputType = Enum.UserInputType.MouseButton1 })
+                                helpers.services.UserInputService.InputEnded:Fire({ UserInputType = Enum.UserInputType.MouseButton1 })
                 local last = seen[#seen]
                 expect(last.value).to.equal(50)
                 expect(last.dragging).to.equal(false)
@@ -378,10 +352,8 @@ return function()
                 expect(toggle:IsLocked()).to.equal(true)
                 expect(toggle.lockScrim).never.to.equal(nil)
                 expect(toggle.lockScrim.Visible).to.equal(true)
-                expect(toggle.lockScrim.Active).to.equal(true) -- it eats the input itself
-
-                -- the callback is the part that matters: a lock that only greys out is not a lock
-                toggle:Set(false)
+                expect(toggle.lockScrim.Active).to.equal(true) 
+                                toggle:Set(false)
                 expect(fired).to.equal(1)
 
                 toggle:Unlock()
@@ -405,18 +377,15 @@ return function()
                 local toggle = makeTab():CreateToggle({ name = "Auto Farm", forgetState = true })
                 toggle:Lock()
 
-                -- you can still read what is locked: the scrim only dims, and carries nothing
-                expect(toggle.lockScrim.BackgroundTransparency > 0.5).to.equal(true)
-                expect(#toggle.lockScrim:GetChildren()).to.equal(1) -- the corner, nothing else
-            end)
+                                expect(toggle.lockScrim.BackgroundTransparency > 0.5).to.equal(true)
+                expect(#toggle.lockScrim:GetChildren()).to.equal(1)             end)
 
             it("does nothing at all when unlocking something never locked", function()
                 local toggle = makeTab():CreateToggle({ name = "Auto Farm", forgetState = true })
 
                 toggle:Unlock()
                 expect(toggle:IsLocked()).to.equal(false)
-                -- no scrim was built for a state it was already in
-                expect(toggle.lockScrim).to.equal(nil)
+                                expect(toggle.lockScrim).to.equal(nil)
             end)
 
             it("takes a new reason while it's already locked", function()
@@ -426,9 +395,7 @@ return function()
                 button:Lock("Server is full")
                 expect(button.descriptor.titleLabel.Text).to.equal("Server is full")
 
-                -- and the element's own description survives, rather than the first reason
-                -- being mistaken for it
-                button:Unlock()
+                                                button:Unlock()
                 expect(button.descriptor.titleLabel.Text).to.equal("Go to the boss.")
             end)
 
@@ -483,8 +450,7 @@ return function()
                     configuration = { autoSave = false, autoLoad = false },
                 })
                 local _, iconSize = window:_collapsedRect()
-                expect(iconSize.X.Offset).to.equal(iconSize.Y.Offset) -- square, so it rounds to a circle
-                window:Unload()
+                expect(iconSize.X.Offset).to.equal(iconSize.Y.Offset)                 window:Unload()
 
                 collapsed({ name = "Pill", configuration = { autoSave = false, autoLoad = false } })
                 local _, pillSize = window:_collapsedRect()
@@ -495,16 +461,14 @@ return function()
                 local w = collapsed()
                 local uis = helpers.services.UserInputService
 
-                -- a press that barely moves is a tap: it opens
-                uis._setMouseLocation(Vector2.new(100, 100))
+                                uis._setMouseLocation(Vector2.new(100, 100))
                 w.collapsedInteract.InputBegan:Fire({ UserInputType = Enum.UserInputType.MouseButton1 })
                 uis._setMouseLocation(Vector2.new(102, 101))
                 helpers.services.RunService.RenderStepped:Fire()
                 uis.InputEnded:Fire({ UserInputType = Enum.UserInputType.MouseButton1 })
                 expect(w.hidden).to.equal(false)
 
-                -- and a press that travels is a drag: it moves and stays shut
-                w.hidden = true
+                                w.hidden = true
                 w.animating = false
                 uis._setMouseLocation(Vector2.new(100, 100))
                 w.collapsedInteract.InputBegan:Fire({ UserInputType = Enum.UserInputType.MouseButton1 })

@@ -1,5 +1,3 @@
---!nolint BuiltinGlobalWrite
-
 local helpers = (_G :: any).__RAYFIELD_TEST_HELPERS
 local requireUtility = helpers.requireUtility
 
@@ -16,8 +14,7 @@ return function()
         local warnings
         local prints
 
-        -- same predicate both runners install; afterEach restores it so other specs stay quiet
-        local function runnerSuppress()
+                local function runnerSuppress()
             return _G.__RAYFIELD_TEST_VERBOSE_LOGS ~= true
         end
 

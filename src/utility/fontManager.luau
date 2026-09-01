@@ -1,10 +1,3 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local services = require(script.Parent.services)
 local httpService = services.getService("HttpService")
 local runService = services.getService("RunService")
@@ -92,8 +85,6 @@ export type FontManager = FontManagerState & {
 
 export type fontManager = FontManager
 
--- the manifest comes off the network, so trust nothing about its shape. names feed straight
--- into disk paths, so sanitize them here too. returns nil for anything we cant use.
 local function validateManifest(manifest: unknown): FontManifest?
     local candidate = manifest :: any
     if type(candidate) ~= "table" or type(candidate.name) ~= "string" or type(candidate.faces) ~= "table" then
@@ -115,8 +106,6 @@ local function validateManifest(manifest: unknown): FontManifest?
     return candidate :: FontManifest
 end
 
--- a face only downloads when its file is missing, so an error page or a truncated body written to
--- disk would shadow the real font every session after. check the signature like we do for pngs
 local fontSignatures = { "\0\1\0\0", "OTTO", "true", "ttcf", "wOFF", "wOF2" }
 
 local function isFontBody(body: string): boolean
@@ -200,13 +189,10 @@ function fontManager.new(
         } :: FontManagerState,
         fontManager
     ) :: any
-    -- executors without filesystem support must degrade to the fallback font, not kill the require
-    pcall(fileSystem.ensureFolder, rootFolder)
+        pcall(fileSystem.ensureFolder, rootFolder)
     return self
 end
 
--- the full manifest + face pipeline for one font. slow path only; loadFont wraps it
--- with the session cache and in-flight dedup
 local function fetchFont(
     self: FontManager,
     resolvedId: number,
@@ -215,8 +201,7 @@ local function fetchFont(
     cacheKey: string
 ): Font?
     local manifestPath = self.rootFolder .. "/" .. resolvedId .. ".json"
-    -- fonts only load through the disk cache; without a file API there is just the fallback
-    if typeof(fileSystem.isfile) ~= "function" then
+        if typeof(fileSystem.isfile) ~= "function" then
         return self.defaultOptions.fallbackFont
     end
     local possibleFontManifest: string? = nil
@@ -229,8 +214,7 @@ local function fetchFont(
         local ok, contents = pcall(fileSystem.readfile, manifestPath)
         possibleFontManifest = ok and contents or nil
     else
-        -- written below only once it validates, so a bad body never poisons the cache
-        possibleFontManifest = self.assetResolver:getAssetContentFromId(resolvedId, false)
+                possibleFontManifest = self.assetResolver:getAssetContentFromId(resolvedId, false)
         downloadedManifest = possibleFontManifest ~= nil
     end
     local fontManifest: FontManifest? = nil
@@ -255,8 +239,7 @@ local function fetchFont(
         if self._debug then
             log.warn("Font manifest is nil for font id: " .. tostring(resolvedId))
         end
-        -- a cached manifest that fails validation would fail forever; drop it
-        pcall(fileSystem.delfile, manifestPath)
+                pcall(fileSystem.delfile, manifestPath)
         return self.defaultOptions.fallbackFont
     end
     if downloadedManifest and possibleFontManifest then
@@ -264,18 +247,13 @@ local function fetchFont(
     end
     local fontDirectory = self.rootFolder .. "/" .. fontManifest.name
     local madeAllFontsLocal = true
-    -- create folder for the font
-    if not pcall(fileSystem.ensureFolder, fontDirectory) then
+        if not pcall(fileSystem.ensureFolder, fontDirectory) then
         return self.defaultOptions.fallbackFont
     end
 
-    -- iterate over each face, caching each to disk like we do images: a face only downloads once,
-    -- later sessions reuse the local file and just re-resolve it
-    for i, face in ipairs(fontManifest.faces) do
+            for i, face in ipairs(fontManifest.faces) do
         local fontFacePath = fontDirectory .. "/" .. face.name:gsub(" ", "-") .. ".ttf"
-        -- a crash mid-write leaves a truncated face that shadows the real font forever, so
-        -- recheck the signature and let a bad file heal the way the manifest does above
-        if fileSystem.isfile(fontFacePath) then
+                        if fileSystem.isfile(fontFacePath) then
             local readOk, existing = pcall(fileSystem.readfile, fontFacePath)
             if not readOk or type(existing) ~= "string" or not isFontBody(existing) then
                 pcall(fileSystem.delfile, fontFacePath)
@@ -313,9 +291,7 @@ local function fetchFont(
             end
         end
     end
-    -- every face must be local before we hand the font over; falling back to the remote id
-    -- here would fetch the asset this whole flow exists to keep off the wire
-    if not madeAllFontsLocal then
+            if not madeAllFontsLocal then
         return self.defaultOptions.fallbackFont
     end
 
@@ -330,8 +306,7 @@ local function fetchFont(
         end
         return self.defaultOptions.fallbackFont
     end
-    -- load the font using the manifest
-    local ok, loadedFont = pcall(Font.new, fontManifestId :: any, requestedFontWeight, requestedFontStyle)
+        local ok, loadedFont = pcall(Font.new, fontManifestId :: any, requestedFontWeight, requestedFontStyle)
     if not ok or not loadedFont then
         if self._debug then
             log.warn("Failed to load font for id: " .. tostring(resolvedId))
@@ -339,8 +314,7 @@ local function fetchFont(
         return self.defaultOptions.fallbackFont
     end
 
-    -- write the font manifest to the disk
-    local fontCache = self.fontCache
+        local fontCache = self.fontCache
     if fontCache then
         fontCache[resolvedId] = {
             customId = fontManifestId,
@@ -380,8 +354,7 @@ function fontManager.loadFont(
         log.warn("Invalid font id: " .. tostring(id))
         return self.defaultOptions.fallbackFont
     end
-    -- if the font is already cached, return it
-    local fontCache = self.fontCache
+        local fontCache = self.fontCache
     if fontCache and not skipCache then
         local cachedFont = fontCache[resolvedId]
         if cachedFont then
@@ -411,8 +384,7 @@ function fontManager.loadFont(
         end
     end
 
-    -- if saveToDisk is false, we cannot load the font from disk, so we return the default font
-    if not saveToDisk then
+        if not saveToDisk then
         if self._debug then
             log.warn("Font loading without saving to disk can be detected by Anti-cheats.")
         end
@@ -420,8 +392,7 @@ function fontManager.loadFont(
         return self.defaultOptions.fallbackFont
     end
 
-    -- concurrent loads of the same variant share one pipeline instead of downloading twice
-    local pendingLoads = self._pendingLoads
+        local pendingLoads = self._pendingLoads
     local pendingKey = tostring(resolvedId) .. "|" .. cacheKey
     local waiting = pendingLoads[pendingKey]
     if waiting then
@@ -433,10 +404,7 @@ function fontManager.loadFont(
     local ok, result = pcall(fetchFont, self, resolvedId, requestedFontWeight, requestedFontStyle, cacheKey)
     local loadedFont = if ok then result else self.defaultOptions.fallbackFont
 
-    -- hand every waiter the same result, and always clear the entry so a failure
-    -- doesnt strand later callers. plain resume, since not every runtime's
-    -- task.spawn can take a thread
-    waiting = pendingLoads[pendingKey]
+                waiting = pendingLoads[pendingKey]
     pendingLoads[pendingKey] = nil
     if waiting then
         for _, thread in waiting do

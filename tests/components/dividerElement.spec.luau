@@ -21,8 +21,7 @@ return function()
             end
             window = nil
 
-            -- the locale module is shared state; drop the test locale so it can't leak
-            locale.strings["zz-test"] = nil
+                        locale.strings["zz-test"] = nil
             locale.setActive("en")
         end)
 
@@ -34,11 +33,9 @@ return function()
             expect(plain.__type).to.equal("Divider")
             expect(plain.left).to.be.ok()
             expect(plain.title).to.equal(nil)
-            expect(plain.right).to.equal(nil) -- one span, not two halves
-            expect(table.find(tab.elements, plain)).to.be.ok()
+            expect(plain.right).to.equal(nil)             expect(table.find(tab.elements, plain)).to.be.ok()
 
-            -- a word in the middle splits the rule, so it stays centred whatever the word is
-            local named = tab:CreateDivider({ text = "Advanced" })
+                        local named = tab:CreateDivider({ text = "Advanced" })
             expect(named.title.Text).to.equal("Advanced")
             expect(named.left).to.be.ok()
             expect(named.right).to.be.ok()
@@ -48,8 +45,7 @@ return function()
 
             named:Set("")
             expect(named.title.Visible).to.equal(false)
-            -- and the rule closes back up rather than leaving the gap the label sat in
-            expect(named.right.Visible).to.equal(false)
+                        expect(named.right.Visible).to.equal(false)
             expect(named.left.Visible).to.equal(true)
 
             named:Set("Back again")
@@ -66,22 +62,17 @@ return function()
             expect(plain.title).to.be.ok()
             expect(plain.title.Text).to.equal("Named later")
             expect(plain.title.Visible).to.equal(true)
-            expect(plain.right).to.be.ok() -- the rule splits to make room for it
-
-            -- clearing one that never had a word is the state it is already in, not a no-op trap
-            local untouched = tab:CreateDivider()
+            expect(plain.right).to.be.ok() 
+                        local untouched = tab:CreateDivider()
             untouched:Set("")
             expect(untouched.title).to.equal(nil)
 
-            -- a spacer has no rule to split, but it can still be given a word
-            local spacer = tab:CreateDivider({ line = false, spacing = 20 })
+                        local spacer = tab:CreateDivider({ line = false, spacing = 20 })
             spacer:Set("Room with a word")
             expect(spacer.title.Text).to.equal("Room with a word")
             expect(spacer.left).to.equal(nil)
-            expect(spacer.main.Size.Y.Offset).to.equal(54) -- 20 above, 20 below, 14 of label
-
-            -- one grown after the page is up comes in on its own, not fully transparent
-            w.hidden = false
+            expect(spacer.main.Size.Y.Offset).to.equal(54) 
+                        w.hidden = false
             local late = tab:CreateDivider()
             late:Set("Late")
             expect(late.title.TextTransparency < 1).to.equal(true)
@@ -91,16 +82,14 @@ return function()
             local w = makeWindow()
             local tab = w:CreateTab({ name = "Main" })
 
-            -- the other thing a divider gets reached for, and the only way to get it
-            local space = tab:CreateDivider({ line = false, spacing = 20 })
+                        local space = tab:CreateDivider({ line = false, spacing = 20 })
             expect(space.left).to.equal(nil)
             expect(space.main.Size.Y.Offset).to.equal(40)
 
             local rule = tab:CreateDivider({ spacing = 8 })
             expect(rule.main.Size.Y.Offset).to.equal(17)
 
-            -- default spacing when none is given, and a label takes the room the rule would
-            local plain = tab:CreateDivider()
+                        local plain = tab:CreateDivider()
             expect(plain.main.Size.Y.Offset).to.equal(25)
 
             local named = tab:CreateDivider({ text = "Advanced" })
@@ -120,14 +109,10 @@ return function()
             local divider = tab:CreateDivider({ text = "Built with this" })
             divider:Set("Set after the fact")
 
-            -- the window re-resolves every localised property from the source it was bound to,
-            -- so text written straight to the label would be replaced here by a translation of
-            -- the word it no longer shows
-            w:SetLocale("zz-test")
+                                                w:SetLocale("zz-test")
             expect(divider.title.Text).to.equal("Satf")
 
-            -- and setting again while a language is active still lands
-            divider:Set("Built with this")
+                        divider:Set("Built with this")
             expect(divider.title.Text).to.equal("Bwt")
 
             w:SetLocale("en")
@@ -149,8 +134,7 @@ return function()
             expect(divider.right.BackgroundTransparency < 1).to.equal(true)
             expect(divider.title.TextTransparency < 1).to.equal(true)
 
-            -- and one with no rule has nothing to fade, which must not error
-            local space = tab:CreateDivider({ line = false })
+                        local space = tab:CreateDivider({ line = false })
             space:_setShown(true, false)
             space:_setShown(false, false)
         end)

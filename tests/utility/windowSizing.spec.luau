@@ -27,27 +27,21 @@ return function()
         end)
 
         it("only widens once height is actually constrained", function()
-            -- tall enough for the full height, so width stays exactly default
-            local wideWidth = fit(2560, 1440)
+                        local wideWidth = fit(2560, 1440)
             expect(wideWidth).to.equal(top.defaultSize.X)
 
-            -- a short screen gives height up, and earns width back for it
-            local phoneWidth, phoneHeight = fit(844, 390)
+                        local phoneWidth, phoneHeight = fit(844, 390)
             expect(phoneHeight < top.defaultSize.Y).to.equal(true)
             expect(phoneWidth > top.defaultSize.X).to.equal(true)
         end)
 
         it("leaves exactly the topbar's room above, and gives the rest to the window", function()
-            -- pinned, so loosening the clearance fails here rather than sliding through the
-            -- bounds checks below. A centred window leaves half the slack above it, so the
-            -- height is the screen less twice the clearance.
-            for _, viewport in { Vector2.new(800, 360), Vector2.new(844, 390), Vector2.new(955, 440) } do
+                                                for _, viewport in { Vector2.new(800, 360), Vector2.new(844, 390), Vector2.new(955, 440) } do
                 local _, height = fit(viewport.X, viewport.Y)
                 expect(height).to.equal(viewport.Y - top.topbarClearance * 2)
             end
 
-            -- once the screen is tall enough, the ideal height is what caps it instead
-            local _, windowed = fit(1280, 600)
+                        local _, windowed = fit(1280, 600)
             expect(windowed).to.equal(top.defaultSize.Y)
         end)
 
@@ -60,8 +54,7 @@ return function()
         end)
 
         it("leaves room above a centred window for the roblox topbar", function()
-            -- the vertical cap is what clears the inset, so the gap above must beat it
-            for _, viewport in { Vector2.new(667, 375), Vector2.new(844, 390), Vector2.new(720, 360) } do
+                        for _, viewport in { Vector2.new(667, 375), Vector2.new(844, 390), Vector2.new(720, 360) } do
                 local _, height = fit(viewport.X, viewport.Y)
                 expect((viewport.Y - height) / 2 >= 36).to.equal(true)
             end
@@ -78,9 +71,7 @@ return function()
         end)
 
         it("holds the aspect ceiling against the height it actually ships", function()
-            -- the cap has to be measured off the whole-pixel height, not the fraction it came
-            -- from, or the shipped width can sit a pixel over it
-            for _, viewport in
+                                    for _, viewport in
                 { Vector2.new(1200, 240), Vector2.new(400, 201), Vector2.new(640, 260), Vector2.new(900, 300) }
             do
                 local width, height = fit(viewport.X, viewport.Y)
@@ -94,8 +85,7 @@ return function()
         end)
 
         it("gives the floor up rather than overflow a screen too small for it", function()
-            -- both of these clear the plausibility check but cannot hold the minimum size
-            local narrowWidth, narrowHeight = fit(240, 700)
+                        local narrowWidth, narrowHeight = fit(240, 700)
             expect(narrowWidth <= 240).to.equal(true)
             expect(narrowWidth < top.minSize.X).to.equal(true)
             expect(narrowHeight <= 700).to.equal(true)
@@ -154,8 +144,7 @@ return function()
         end)
 
         it("defends its width where the top layout defends its height", function()
-            -- the same cramped screen: the sidebar keeps proportionally more width
-            local viewport = Vector2.new(760, 520)
+                        local viewport = Vector2.new(760, 520)
             local sidebarWidth = select(1, fitSidebar(viewport.X, viewport.Y))
             local topWidth = select(1, fit(viewport.X, viewport.Y))
             expect(sidebarWidth > topWidth).to.equal(true)
@@ -209,8 +198,7 @@ return function()
             expect(windowSizing.pageHeight(height, "sidebar")).to.equal(height - sidebar.chromeHeight)
             expect(windowSizing.pageHeight(height, "sidebar") > windowSizing.pageHeight(height, "top")).to.equal(true)
 
-            -- no size yet: the smallest page that layout can have, never nothing
-            expect(windowSizing.pageHeight(nil, "sidebar")).to.equal(sidebar.minSize.Y - sidebar.chromeHeight)
+                        expect(windowSizing.pageHeight(nil, "sidebar")).to.equal(sidebar.minSize.Y - sidebar.chromeHeight)
             expect(windowSizing.pageHeight(0, "sidebar")).to.equal(sidebar.minSize.Y - sidebar.chromeHeight)
         end)
 

@@ -1,11 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Rayfield = require(ReplicatedStorage.Rayfield)
 
--- Let the viewport settle before opening, so the window fits to the full screen size.
 task.wait(2)
 
--- Localization. Keys are the English source strings exactly as they read in the UI. A partial table
--- is fine, anything left out stays in English. German is added at runtime to show that path too.
 local translations = {
     fr = {
         ["Gameplay"] = "Jeu",
@@ -29,19 +26,15 @@ local window = Rayfield:CreateWindow({
     name = "Example",
     subtitle = "Rayfield Gen2",
     translations = translations,
-    sidebarLayout = true, -- flip this for tabs across the top instead of down the left
-    configuration = {
+    sidebarLayout = true,     configuration = {
         autoSave = true,
         autoLoad = true,
         fileName = "ExampleConfigFile",
     },
 })
 
--- Rail sections group the tabs under them. Sidebar layout only - on the top strip they do
--- nothing. This one heads the list, so it carries no space above it.
 window:CreateSection({ name = "General" })
 
--- Home ----------------------------------------------------------------------
 local home = window:CreateTab({ name = "Home", icon = 93364949241311 })
 
 home:CreateSection({ name = "Gameplay" })
@@ -124,7 +117,6 @@ home:CreateButton({
     end,
 })
 
--- Combat --------------------------------------------------------------------
 local combat = window:CreateTab({ name = "Combat", icon = 84750991656135 })
 
 combat:CreateSection({ name = "Aiming" })
@@ -142,7 +134,6 @@ combat:CreateDropdown({
     placeholder = "None selected",
 })
 
--- Fields --------------------------------------------------------------------
 local fields = window:CreateTab({ name = "Fields", icon = 100604009889706 })
 
 fields:CreateSection({ name = "Setup" })
@@ -170,7 +161,6 @@ fields:CreateKeybind({
 
 fields:CreateColorPicker({ name = "Highlight", color = Color3.fromRGB(96, 205, 255) })
 
--- Stats ---------------------------------------------------------------------
 local stats = window:CreateTab({ name = "Stats", icon = 85925158736685 })
 
 stats:CreateSection({ name = "Session" })
@@ -186,7 +176,6 @@ stats:CreateButton({
     end,
 })
 
--- Layout --------------------------------------------------------------------
 local layout = window:CreateTab({ name = "Layout", icon = 84750991656135 })
 
 layout:CreateSection({ name = "Loadout" })
@@ -194,7 +183,6 @@ layout:CreateSection({ name = "Loadout" })
 local grid = layout:CreateGroup()
 
 local leftColumn = grid:CreateGroup({ direction = "column" })
--- own flag: "Aimbot" is taken by the Combat toggle and derived flags must stay unique
 leftColumn:CreateToggle({ name = "Aimbot", flag = "LoadoutAimbot", value = true })
 leftColumn:CreateToggle({ name = "Triggerbot" })
 
@@ -202,29 +190,23 @@ local rightColumn = grid:CreateGroup({ direction = "column" })
 rightColumn:CreateToggle({ name = "ESP", value = true })
 rightColumn:CreateToggle({ name = "Tracers" })
 
--- Text ----------------------------------------------------------------------
--- this one follows tabs, so it sits with a gap above it
 window:CreateSection({ name = "Reference" })
 
 local text = window:CreateTab({ name = "Text", icon = 100604009889706 })
 
 text:CreateSection({ name = "Text" })
 
--- a title and a body, the usual shape
 text:CreateText({
     name = "Read this first",
     text = "Text carries a title, a body, or both. Either half can be left out and the card closes up around what's left.",
 })
 
--- title only, for a heading that isn't a section
 text:CreateText({ name = "Heading on its own" })
 
--- body only, evenly padded with no room held for the missing title
 text:CreateText({
     text = "Body on its own, for a note that doesn't need a heading over it.",
 })
 
--- with an icon beside the title
 text:CreateText({
     name = "Worth knowing",
     text = "An icon sits to the left of the title.",
@@ -278,7 +260,6 @@ text:CreateButton({
     end,
 })
 
--- Language ------------------------------------------------------------------
 local language = window:CreateTab({ name = "Language", icon = 100604009889706 })
 
 language:CreateSection({ name = "Localization" })
@@ -307,7 +288,6 @@ language:CreateDropdown({
     end,
 })
 
--- What's new -----------------------------------------------------------------
 local whatsNew = window:CreateTab({ name = "What's New", icon = 93364949241311 })
 
 whatsNew:CreateSection({ name = "Progress" })
@@ -332,8 +312,7 @@ whatsNew:CreateProgress({
 whatsNew:CreateProgress({
     name = "Syncing",
     text = "Please wait",
-    indeterminate = true, -- a sweep, for work with no known length
-})
+    indeterminate = true, })
 
 whatsNew:CreateSlider({
     name = "Download progress",
@@ -354,9 +333,7 @@ local console = whatsNew:CreateConsole({
     name = "Console",
     text = "-- output lands here",
     height = 130,
-    follow = true, -- pins itself to the newest line
-    maxLines = 50, -- past this the oldest roll off the top
-})
+    follow = true,     maxLines = 50, })
 
 whatsNew:CreateButton({
     name = "Log a line",

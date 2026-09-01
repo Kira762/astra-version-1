@@ -1,10 +1,3 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local variables = require(script.Parent.variables)
 local filesystem = require(script.Parent.filesystem)
 local paths = require(script.Parent.persistencePaths)
@@ -66,7 +59,6 @@ function persistenceSettings.saveSettings(window: SettingsWindow): boolean
     return true
 end
 
--- Decode the settings file. Also hands back the raw text, so a parked copy can be put back.
 local function decodeFile(fullPath: string): (DecodedSettings?, string?)
     local fileExists = false
     pcall(function()
@@ -82,8 +74,7 @@ local function decodeFile(fullPath: string): (DecodedSettings?, string?)
     end
 
     local decodeOk, parsed = pcall(variables.httpService.JSONDecode, variables.httpService, contents)
-    -- JSONDecode happily returns scalars; a corrupt file must not brick CreateWindow
-    if not decodeOk or type(parsed) ~= "table" then
+        if not decodeOk or type(parsed) ~= "table" then
         return nil, contents
     end
 
@@ -95,13 +86,11 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
 
     local settings = decodeFile(fullPath)
 
-    -- a save that died mid-overwrite leaves its whole copy parked beside the wreck, so take that
-    if not settings then
+        if not settings then
         local parked, parkedRaw = decodeFile(atomic.tempPathFor(fullPath))
         if parked and parkedRaw then
             settings = parked
-            -- put it back where it belongs so the next load reads it straight
-            pcall(atomic.write, dir, fullPath, parkedRaw)
+                        pcall(atomic.write, dir, fullPath, parkedRaw)
         end
     end
 

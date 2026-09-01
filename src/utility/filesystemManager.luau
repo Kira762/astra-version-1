@@ -1,14 +1,6 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local filesystem = require(script.Parent.filesystem)
 local path = require(script.Parent.path)
 
--- defaults
 local DEFAULT_ROOT_PATH = "Rayfield"
 
 local fileSystemManager = {}
@@ -23,8 +15,7 @@ export type FileSystemManager = {
 }
 
 function fileSystemManager.new(name: string?): FileSystemManager
-    -- ensure the folder exists
-    local root = name or DEFAULT_ROOT_PATH
+        local root = name or DEFAULT_ROOT_PATH
     local self = setmetatable({
         root = root,
         assets = root .. "/Assets",

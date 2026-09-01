@@ -1,18 +1,9 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local Tag = {}
 Tag.__index = Tag
 Tag.__type = "Tag"
 
--- Utility
 local utility = script.Parent.Parent.utility
 
--- Variables
 local variables = require(utility.variables)
 local functions = require(utility.functions)
 local image = require(utility.image)
@@ -40,9 +31,7 @@ function Tag.new(window, properties)
         BorderSizePixel = 0,
         LayoutOrder = properties.order or properties.Order or 0,
 
-        -- Animation
-        BackgroundTransparency = 1, -- In = 0
-
+                BackgroundTransparency = 1, 
         Parent = self.window.tagContainer,
     })
 
@@ -79,9 +68,7 @@ function Tag.new(window, properties)
         Visible = self.icon ~= nil,
         ZIndex = 5,
 
-        -- Animation
-        ImageTransparency = 1, -- In = 0
-
+                ImageTransparency = 1, 
         Parent = self.main,
     })
 
@@ -101,24 +88,19 @@ function Tag.new(window, properties)
         LayoutOrder = 1,
         ZIndex = 5,
 
-        -- Animation
-        TextTransparency = 1, -- In = 0
-
+                TextTransparency = 1, 
         Parent = self.main,
     }, { FontFace = "Font" })
 
     self.window.tagContainer.Visible = true
 
-    -- if the window's already up, fade in now; otherwise its show handles it
-    if not self.window.hidden then
+        if not self.window.hidden then
         self:_setShown(true, setTweenInfo)
     end
 
     return self
 end
 
--- animate is a boolean like every other element's _setShown, or a TweenInfo when a caller
--- (the window's show/hide) wants its own timing. true uses the tag's default fade.
 function Tag:_setShown(shown, animate)
     local target = if shown then 0 else 1
     local info = if typeof(animate) == "TweenInfo" then animate elseif animate then setTweenInfo else nil
@@ -166,8 +148,7 @@ function Tag:Set(properties)
 end
 
 function Tag:Remove()
-    -- through the window so the tracked instances and theme entries go with it
-    self.window:DestroySubtree(self.main)
+        self.window:DestroySubtree(self.main)
     local idx = table.find(self.window.tags, self)
     if idx then
         table.remove(self.window.tags, idx)

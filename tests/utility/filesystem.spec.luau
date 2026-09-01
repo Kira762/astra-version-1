@@ -33,8 +33,7 @@ return function()
         it("creates the file when appending to a missing path", function()
             local filePath = rootName .. "/fresh.txt"
 
-            -- same semantics as the native appendfile global and the read+write fallback
-            filesystem.appendfile(filePath, "alpha")
+                        filesystem.appendfile(filePath, "alpha")
 
             expect(filesystem.readfile(filePath)).to.equal("alpha")
         end)

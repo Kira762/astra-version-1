@@ -1,14 +1,3 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
--- The sidebar layout's rail: a scrolling column of tab rows down the left, with the signed-in
--- player at its base. The rail owns its own width, so it also sizes what that width displaces -
--- the content card and the fade over it. Values ported from RF2-Sidebar.Window.Sidebar.
-
 local utility = script.Parent.Parent.utility
 local variables = require(utility.variables)
 local image = require(utility.image)
@@ -18,17 +7,12 @@ local search = require(script.Parent.search)
 
 local sidebar = {}
 
--- The profile line's resting brightness, matching the topbar's title over subtitle.
 local nameTransparency = 0
 local subtitleTransparency = 0.7
 local avatarPlateTransparency = 0.95
 
--- Settling the profile in or out from the settings switch. Quint Out, like every other
--- settle in the window.
 local settleInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
--- Whether this window has a profile block to show at all: sidebar layout, a real player, and
--- the user hasn't turned it off.
 local function profileVisible(window)
     return window.layout.mode == "sidebar"
         and window.profile ~= nil
@@ -39,8 +23,7 @@ end
 local function buildProfile(window, layout)
     local player = variables.localPlayer
     if not player then
-        return -- no player to show (Studio server view, or a headless run)
-    end
+        return     end
 
     window.profile = window:Create("Frame", {
         Name = "Profile",
@@ -71,9 +54,7 @@ local function buildProfile(window, layout)
         Parent = window.profileContainer,
     })
 
-    -- headshots resolve to a local getcustomasset file in secure mode, fetched async, so it can
-    -- land after this builds - hence the onReady that fills it in once it's there
-    window.profileAvatar = window:Create("ImageLabel", {
+            window.profileAvatar = window:Create("ImageLabel", {
         Name = "Avatar",
         Image = image.avatar(player.UserId, function(uri)
             if window.profileAvatar and not window.unloaded then
@@ -84,10 +65,7 @@ local function buildProfile(window, layout)
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
 
-        -- Animation
-        BackgroundTransparency = 1, -- In = 0.95
-        ImageTransparency = 1, -- In = 0
-
+                BackgroundTransparency = 1,         ImageTransparency = 1, 
         Parent = window.profileContainer,
     })
 
@@ -124,15 +102,11 @@ local function buildProfile(window, layout)
         TextSize = 16,
         TextXAlignment = Enum.TextXAlignment.Left,
 
-        -- Animation
-        TextTransparency = 1, -- In = 0
-
+                TextTransparency = 1, 
         Parent = window.profileLabels,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 
-    -- The dev's line under the name. Nothing set means the name stands on its own rather than
-    -- inventing a second line to fill the space.
-    window.profileSubtitle = window:Create("TextLabel", {
+            window.profileSubtitle = window:Create("TextLabel", {
         Text = "",
         Size = UDim2.fromOffset(50, 14),
         AutomaticSize = Enum.AutomaticSize.X,
@@ -142,15 +116,11 @@ local function buildProfile(window, layout)
         LayoutOrder = 1,
         Visible = false,
 
-        -- Animation
-        TextTransparency = 1, -- In = 0.7
-
+                TextTransparency = 1, 
         Parent = window.profileLabels,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 end
 
--- Build the rail and hand back the scrolling frame the tab rows live in. The window keeps it
--- as `tabList`, the same name the top strip uses, so everything downstream is layout-blind.
 function sidebar.build(window, layout)
     window.sidebar = window:Create("Frame", {
         Name = "Sidebar",
@@ -159,8 +129,7 @@ function sidebar.build(window, layout)
         Size = UDim2.new(0, layout.railWidth, 1, -layout.chromeHeight),
         BackgroundTransparency = 1,
 
-        Visible = false, -- In = true
-
+        Visible = false, 
         Parent = window.main,
     })
 
@@ -180,9 +149,7 @@ function sidebar.build(window, layout)
         Parent = window.sidebar,
     })
 
-    -- the scroller clips, and the selected row's stroke and glow reach past its own box, so
-    -- the column is inset the way a tab page insets its elements
-    window:Create("UIPadding", {
+            window:Create("UIPadding", {
         PaddingTop = UDim.new(0, layout.railPadding),
         PaddingBottom = UDim.new(0, layout.railPadding),
 
@@ -203,8 +170,6 @@ function sidebar.build(window, layout)
     sidebar.reflowProfile(window)
 end
 
--- Give the rows back the height the profile isn't using (and vice versa), so a hidden profile
--- leaves no dead strip at the base of the rail.
 function sidebar.reflowProfile(window)
     local layout = window.layout
     local shown = profileVisible(window)
@@ -215,8 +180,6 @@ function sidebar.reflowProfile(window)
     window.tabList.Size = UDim2.new(1, 0, 1, if shown then -layout.footerHeight else 0)
 end
 
--- Take the rail's width, and size what it displaces with it. The card and its fade start where
--- the rail ends, so all three move together or the seam shows.
 function sidebar.applyWidth(window, width)
     local layout = window.layout
 
@@ -242,7 +205,6 @@ function sidebar.applyWidth(window, width)
     end
 end
 
--- Fade the profile with the rest of the window's chrome. Nil tweenInfo snaps.
 function sidebar.setProfileShown(window, shown, tweenInfo)
     if not window.profile or not window.profile.Visible then
         return
@@ -268,8 +230,6 @@ function sidebar.setProfileShown(window, shown, tweenInfo)
     end
 end
 
--- Flip the profile on or off from settings. It fades out before it goes, and the rows only take
--- its height once it's actually gone, so neither end of the switch snaps.
 function sidebar.setProfileEnabled(window, enabled)
     if not window.profile then
         window.settings.showProfile = enabled
@@ -283,18 +243,15 @@ function sidebar.setProfileEnabled(window, enabled)
         return
     end
 
-    -- still on for the length of the fade, so setProfileShown has something to animate
-    sidebar.setProfileShown(window, false, settleInfo)
+        sidebar.setProfileShown(window, false, settleInfo)
     task.delay(settleInfo.Time, function()
         if window.unloaded or window.settings.showProfile then
-            return -- turned back on mid-fade
-        end
+            return         end
         sidebar.reflowProfile(window)
     end)
     window.settings.showProfile = false
 end
 
--- Set the line under the player's name. Empty (or nil) drops the line entirely.
 function sidebar.setSubtitle(window, text)
     if not window.profileSubtitle then
         return

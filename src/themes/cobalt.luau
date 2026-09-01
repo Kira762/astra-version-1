@@ -1,12 +1,3 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
--- Deep cobalt dark theme with blue accents. A partial theme: it only overrides the colours that
--- differ from default and inherits the rest (corners, fonts, toggle/field behaviour) from it.
 return {
     WindowColor = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 16, 34)),
@@ -35,17 +26,14 @@ return {
     SliderBackgroundHover = Color3.fromRGB(54, 64, 100),
     SliderProgress = ColorSequence.new(Color3.fromRGB(64, 132, 248), Color3.fromRGB(42, 104, 224)),
 
-    -- Blue accent for the active toggle, slider glow and popup primary button.
-    AccentColor = Color3.fromRGB(48, 120, 240),
+        AccentColor = Color3.fromRGB(48, 120, 240),
     AccentStroke = Color3.fromRGB(96, 164, 255),
 
-    ToggleKnobOff = Color3.fromRGB(196, 206, 232), -- cool off-knob on the dark track
-
+    ToggleKnobOff = Color3.fromRGB(196, 206, 232), 
     StatBackground = Color3.fromRGB(20, 26, 48),
 
     DropdownHighlight = Color3.fromRGB(48, 120, 240),
 
     NeutralButton = Color3.fromRGB(40, 48, 78),
     NeutralButtonHover = Color3.fromRGB(54, 64, 100),
-    NeutralButtonStroke = Color3.fromRGB(120, 138, 195), -- clearly lighter than the fill, reads at 0.85
-}
+    NeutralButtonStroke = Color3.fromRGB(120, 138, 195), }

@@ -1,18 +1,9 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local Toggle = {}
 Toggle.__index = Toggle
 Toggle.__type = "Toggle"
 
--- Utility
 local utility = script.Parent.Parent.utility
 
--- Variables
 local variables = require(utility.variables)
 local functions = require(utility.functions)
 local moveable = require(utility.moveable)
@@ -29,9 +20,7 @@ function Toggle.new(tab, properties)
         name = properties.name or properties.Name or "Switch",
         icon = properties.icon or properties.Icon,
         description = properties.description or properties.Description,
-        forgetState = properties.forgetState or properties.ForgetState or tab.forgetState, -- dont save config for this element if true.
-        compact = tab.compact or false, -- true when the host is a Row
-
+        forgetState = properties.forgetState or properties.ForgetState or tab.forgetState,         compact = tab.compact or false, 
         flag = properties.flag
             or properties.Flag
             or (
@@ -45,8 +34,7 @@ function Toggle.new(tab, properties)
         value = if (properties.value or properties.Value) ~= nil then (properties.value or properties.Value) else false,
     }, Toggle)
 
-    -- register as a saveable control if flagged (works in a row too)
-    self.window:_registerControl(self)
+        self.window:_registerControl(self)
 
     if self.compact then
         self:_buildCompact()
@@ -61,7 +49,6 @@ function Toggle.new(tab, properties)
     return self
 end
 
--- the pill switch. same in both layouts; caller places it (pinned right / flex item)
 function Toggle:_buildSwitch(parent)
     local window = self.window
 
@@ -69,8 +56,7 @@ function Toggle:_buildSwitch(parent)
         BorderSizePixel = 0,
         Size = UDim2.fromOffset(50, 21),
 
-        BackgroundTransparency = 1, -- In = ToggleTrackTransparency
-
+        BackgroundTransparency = 1, 
         Parent = parent,
     }, { BackgroundColor3 = "ToggleTrack" })
 
@@ -80,8 +66,7 @@ function Toggle:_buildSwitch(parent)
     })
 
     self.containerStroke = window:Create("UIStroke", {
-        Transparency = 1, -- In = 0.85
-        Parent = self.functionContainer,
+        Transparency = 1,         Parent = self.functionContainer,
     }, { Color = "SurfaceStroke" })
 
     self.indicator = window:Create("Frame", {
@@ -91,8 +76,7 @@ function Toggle:_buildSwitch(parent)
         AnchorPoint = Vector2.new(0, 0.5),
         BackgroundColor3 = self.value and self.window.theme.AccentColor or self.window.theme.ToggleKnobOff,
 
-        BackgroundTransparency = 1, -- In = 0.8
-
+        BackgroundTransparency = 1, 
         Parent = self.functionContainer,
     })
 
@@ -103,23 +87,19 @@ function Toggle:_buildSwitch(parent)
 
     self.indicatorStroke = window:Create("UIStroke", {
         Color = self.value and self.window.theme.AccentStroke or Color3.fromRGB(255, 255, 255),
-        Transparency = 1, -- In = 0.7
-        Parent = self.indicator,
+        Transparency = 1,         Parent = self.indicator,
     })
 
-    -- Accent glow behind the selector; hidden until on (gated by Transparency: 1 hidden, AccentGlow shown)
-    self.indicatorGlow = window:CreateGlow(self.indicator, "AccentColor", 20, 1)
+        self.indicatorGlow = window:CreateGlow(self.indicator, "AccentColor", 20, 1)
 
-    -- Dark wash over the switch for light themes (hidden on dark themes via DarkToggleOverlay).
-    self.overlay = window:Create("Frame", {
+        self.overlay = window:Create("Frame", {
         BorderSizePixel = 0,
         Size = UDim2.fromScale(1, 1),
         Position = UDim2.fromScale(0, 0),
         AnchorPoint = Vector2.new(0, 0),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 
-        BackgroundTransparency = 1, -- In = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.functionContainer,
     }, { Visible = "DarkToggleOverlay" })
 
@@ -145,7 +125,6 @@ function Toggle:_buildSwitch(parent)
     return self.functionContainer
 end
 
--- flip, animate, run callback (error-flash on fail), autosave. press anim is per-layout
 function Toggle:_performToggle()
     hapticEngine.click()
     self.value = not self.value
@@ -155,7 +134,6 @@ function Toggle:_performToggle()
     self.window:_persist(self)
 end
 
--- full-width: title/icon left, pill pinned right, width-bounce
 function Toggle:_buildFull()
     local window = self.window
 
@@ -199,8 +177,7 @@ function Toggle:_buildFull()
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
 
-            ImageTransparency = 1, -- In = 0
-
+            ImageTransparency = 1, 
             Parent = self.container,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -216,8 +193,7 @@ function Toggle:_buildFull()
         TextWrapped = true,
         LayoutOrder = 1,
 
-        TextTransparency = 1, -- In = 0
-
+        TextTransparency = 1, 
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
@@ -233,8 +209,7 @@ function Toggle:_buildFull()
         Parent = self.main,
     })
 
-    -- pill pinned to the right edge
-    self:_buildSwitch(self.main)
+        self:_buildSwitch(self.main)
     self.functionContainer.Position = UDim2.new(1, -15, 0, 20)
     self.functionContainer.AnchorPoint = Vector2.new(1, 0.5)
 
@@ -277,12 +252,10 @@ function Toggle:_buildFull()
     end)
 end
 
--- compact (row): title left, pill right (SpaceBetween)
 function Toggle:_buildCompact()
     local window = self.window
 
-    -- interact sits at ZIndex 10 so the switch pill layers cleanly over the row (see button.luau)
-    self.main, self.stroke, self.interact = window:_buildCompactRow(self.tab, self.name, 10)
+        self.main, self.stroke, self.interact = window:_buildCompactRow(self.tab, self.name, 10)
     self.hoverOverlay = self.interact
 
     window:Create("UIPadding", {
@@ -292,8 +265,7 @@ function Toggle:_buildCompact()
         Parent = self.interact,
     })
 
-    -- title left, pill right
-    window:Create("UIListLayout", {
+        window:Create("UIListLayout", {
         FillDirection = Enum.FillDirection.Horizontal,
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalFlex = Enum.UIFlexAlignment.SpaceBetween,
@@ -312,8 +284,7 @@ function Toggle:_buildCompact()
         Parent = self.interact,
     })
 
-    -- text gives up room to the pill when tight
-    window:Create("UIFlexItem", {
+        window:Create("UIFlexItem", {
         FlexMode = Enum.UIFlexMode.Shrink,
         Parent = self.container,
     })
@@ -335,8 +306,7 @@ function Toggle:_buildCompact()
             BackgroundTransparency = 1,
             LayoutOrder = 0,
 
-            ImageTransparency = 1, -- In = 0
-
+            ImageTransparency = 1, 
             Parent = self.container,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -352,19 +322,16 @@ function Toggle:_buildCompact()
         TextTruncate = Enum.TextTruncate.AtEnd,
         LayoutOrder = 1,
 
-        TextTransparency = 1, -- In = 0
-
+        TextTransparency = 1, 
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-    -- grows to its text, shrinks + ellipsizes when tight
-    window:Create("UIFlexItem", {
+        window:Create("UIFlexItem", {
         FlexMode = Enum.UIFlexMode.Shrink,
         Parent = self.title,
     })
 
-    -- pill as the right-hand flex item
-    self:_buildSwitch(self.interact)
+        self:_buildSwitch(self.interact)
     self.functionContainer.LayoutOrder = 1
 
     self.window:_wireElementHover(self)
@@ -425,15 +392,13 @@ function Toggle:_animateIndicator()
 end
 
 local toggleReveal = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
--- glow delayed so it doesn't bleed through the fill fade-in on window open
 local toggleGlowReveal = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0.35)
 
 function Toggle:_setShown(shown, animate)
     local w = self.window
     if shown then
         w:_revealCommon(self, animate)
-        -- carry the state colours here too, so revealing on a tab switch also picks up the theme
-        w:_reveal(self.indicator, {
+                w:_reveal(self.indicator, {
             BackgroundColor3 = self.value and w.theme.AccentColor or w.theme.ToggleKnobOff,
             BackgroundTransparency = self.value and 0 or w.theme.ToggleKnobOffTransparency,
         }, animate, toggleReveal)
@@ -466,8 +431,6 @@ function Toggle:_setShown(shown, animate)
     end
 end
 
--- Re-apply the visuals that aren't plain themeProperties (the knob's state colour + the reveal
--- transparencies) so a runtime ChangeTheme reaches the switch. Called on the visible tab only.
 function Toggle:_refreshTheme()
     local t = self.window.theme
     local info = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
@@ -485,15 +448,10 @@ function Toggle:_refreshTheme()
     end
 end
 
--- Room the compact toggle needs: side padding + icon (and gap) if shown + title text
--- + the gap to the pill + the pill itself. Lets a horizontal group wrap sensibly.
 function Toggle:_minWidth()
-    local w = 30 + 10 + 50 -- 15+15 padding, 10 gap to pill, 50 pill
-    if self.icon then
-        w += 21 -- 16 icon + 5 gap
-    end
-    -- measure what actually renders: the title shows the translated string
-    w += functions.textWidth(self.window.theme.Font, 16, locale.resolve(self.name))
+    local w = 30 + 10 + 50     if self.icon then
+        w += 21     end
+        w += functions.textWidth(self.window.theme.Font, 16, locale.resolve(self.name))
     return w
 end
 
@@ -508,11 +466,9 @@ function Toggle:Set(value, skipCallback)
         self:_animateIndicator()
     end
 
-    -- fire even when unchanged: config load calls Set and relies on the callback to apply
-    if not skipCallback then
+        if not skipCallback then
         self.window:_runGuarded(self, self.callback, self.value)
-        self.window:_persist(self) -- skipCallback means apply quietly, so dont autosave either
-    end
+        self.window:_persist(self)     end
 end
 
 return Toggle

@@ -1,13 +1,3 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
--- Window furniture: the collapsed "Show" face main wears while hidden (window.collapsed*
--- fields), plus the first-open new-user check. The welcome greeting itself is just a toast now.
-
 local utility = script.Parent.Parent.utility
 local variables = require(utility.variables)
 local filesystem = require(utility.filesystem)
@@ -17,15 +7,8 @@ local hapticEngine = require(utility.HapticEngine)
 
 local chrome = {}
 
--- How far the cursor may travel before a press on the collapsed pill counts as a drag rather
--- than a click. Small enough that a deliberate tap always opens, big enough to survive a
--- shaky finger on a phone.
 local dragThreshold = 5
 
--- The face main wears once collapsed: an icon + "name"/"Tap to show", drawn straight onto
--- the window frame itself. main already carries the pill's background (its own WindowColor
--- gradient reads the same as the old standalone pill), so shrinking main IS becoming the
--- pill - nothing to hand off to, nothing to swap.
 function chrome.buildCollapsedFace(window)
     local iconOnly = window.showIconOnly
 
@@ -35,12 +18,10 @@ function chrome.buildCollapsedFace(window)
         Position = if iconOnly then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 16, 0.5, 0),
         Size = UDim2.fromOffset(24, 24),
         BackgroundTransparency = 1,
-        -- raw value: Create routes Image through image.resolve (concat would double the prefix)
-        Image = window.showIcon,
+                Image = window.showIcon,
         ZIndex = constants.zIndex.restoreContent,
 
-        ImageTransparency = 1, -- shown = 0, set by chrome.setCollapsedShown
-
+        ImageTransparency = 1, 
         Parent = window.main,
     }, { ImageColor3 = "TitlingColor" })
 
@@ -81,8 +62,7 @@ function chrome.buildCollapsedFace(window)
         LayoutOrder = 1,
         ZIndex = constants.zIndex.restoreContent,
 
-        TextTransparency = 1, -- shown = 0, set by chrome.setCollapsedShown
-
+        TextTransparency = 1, 
         Parent = textContainer,
     }, { TextColor3 = "TitlingColor" })
 
@@ -97,16 +77,11 @@ function chrome.buildCollapsedFace(window)
         LayoutOrder = 2,
         ZIndex = constants.zIndex.restoreContent,
 
-        TextTransparency = 1, -- shown = 0.5, set by chrome.setCollapsedShown
-
+        TextTransparency = 1, 
         Parent = textContainer,
     }, { TextColor3 = "TitlingColor" })
 
-    -- covers the whole window but only takes clicks while collapsed - Window:Hide/Show flip
-    -- Visible as the morph starts/settles so it can never eat a click mid-animation or while
-    -- the window is fully open. Active alone doesn't stop a GuiButton from still receiving
-    -- clicks here, so Visible is what actually keeps it out of hit-testing.
-    window.collapsedInteract = window:Create("TextButton", {
+                    window.collapsedInteract = window:Create("TextButton", {
         Name = "CollapsedInteract",
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
@@ -121,16 +96,12 @@ function chrome.buildCollapsedFace(window)
     chrome.bindCollapsedDrag(window)
 end
 
--- Drag the collapsed pill around. A press only counts as a click if the cursor barely moved -
--- past dragThreshold it was a drag, and the window stays shut.
 function chrome.bindCollapsedDrag(window)
     local uis = variables.userInputService
     local dragging, moved = false, false
     local grabOffset, grabMouse = Vector2.zero, Vector2.zero
 
-    -- main.Position sits in a space shifted from AbsolutePosition by the gui inset, even though
-    -- the ScreenGui ignores it - add it back or the pill jumps on the first move
-    local function insetOffset()
+            local function insetOffset()
         if window.screenGui and window.screenGui.IgnoreGuiInset then
             return variables.guiService:GetGuiInset()
         end
@@ -162,17 +133,14 @@ function chrome.bindCollapsedDrag(window)
         dragging = false
 
         if moved then
-            window._collapsedPosition = window.main.Position -- stay where it was put
-            return
+            window._collapsedPosition = window.main.Position             return
         end
 
         hapticEngine.click()
         window:ToggleHide()
     end)
 
-    -- a release that never arrives (alt-tab with the button down) would otherwise leave the
-    -- pill stuck to the cursor
-    window:Connect(uis.WindowFocusReleased, function()
+            window:Connect(uis.WindowFocusReleased, function()
         dragging = false
     end)
 
@@ -181,14 +149,12 @@ function chrome.bindCollapsedDrag(window)
             return
         end
         if not window.hidden or window.animating then
-            dragging = false -- the grab went stale under us
-            return
+            dragging = false             return
         end
 
         local mouse = uis:GetMouseLocation()
         if not moved and (mouse - grabMouse).Magnitude < dragThreshold then
-            return -- still inside the slop: it might yet be a click
-        end
+            return         end
         moved = true
 
         local target = mouse + grabOffset + insetOffset()
@@ -202,8 +168,7 @@ function chrome.isNewUser()
         return false
     end
 
-    -- No filesystem available - just show the banner every launch.
-    if typeof(filesystem.isfile) ~= "function" or typeof(filesystem.writefile) ~= "function" then
+        if typeof(filesystem.isfile) ~= "function" or typeof(filesystem.writefile) ~= "function" then
         return true
     end
 
@@ -224,8 +189,6 @@ function chrome.isNewUser()
     return isNew
 end
 
--- Fade the collapsed face (icon + labels) in or out as main morphs into/out of the pill.
--- When tweenInfo is nil the values snap instantly.
 function chrome.setCollapsedShown(window, shown, tweenInfo)
     local targets = {
         [window.collapsedIcon] = { ImageTransparency = if shown then 0 else 1 },

@@ -1,10 +1,3 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local runtime = require(script.Parent.runtime)
 local constants = require(script.Parent.constants)
 local log = require(script.Parent.log)
@@ -31,8 +24,6 @@ log.setSecureModeSource(function()
     return variables.secureMode
 end)
 
--- built-in stand-in shown in secure mode until the real brand faces download. a dev can override
--- it per window with the FallbackFont prop (see setFallbackFont); defaults to BuilderSans.
 variables.fallbackFont = Font.fromEnum(Enum.Font.BuilderSans)
 
 variables.fileSystemManager = fileSystemManager.new()
@@ -50,8 +41,6 @@ variables.fontManager = fontManager.new(
     }
 ) :: FontManager
 
--- let a dev pick the stand-in font, as an Enum.Font or a ready Font. keeps the font managers
--- own fallback in step so the swap check in init still lines up.
 function variables.setFallbackFont(font: Enum.Font | Font)
     if typeof(font) == "EnumItem" then
         font = Font.fromEnum(font)
@@ -62,8 +51,6 @@ function variables.setFallbackFont(font: Enum.Font | Font)
     end
 end
 
--- brand font at a weight, non-blocking. normal mode streams the family id direct; secure mode
--- shows the fallback until the real faces download and swap in (see init).
 function variables.brandFont(weight: Enum.FontWeight?): Font
     if variables.secureMode then
         return Font.new(variables.fallbackFont.Family, weight)

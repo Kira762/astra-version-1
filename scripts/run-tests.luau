@@ -95,8 +95,7 @@ local function parseDirectoryArg(default)
         elseif arg == "--coverage-threshold" then
             skipNext = true
         elseif arg:sub(1, 2) == "--" then
-            -- Other options are ignored so future flags do not become paths.
-        elseif positional == nil then
+                    elseif positional == nil then
             positional = arg
         else
             warn("Only one coverage directory can be provided.")
@@ -242,8 +241,6 @@ local function readLongBracketEnd(line, index, equals)
     return nil
 end
 
--- tokens that put a following `if` in expression position (x = if a then b else c),
--- where it has no matching end and must not count as a block opener
 local expressionPrevTokens = {
     ["="] = true,
     ["("] = true,
@@ -273,18 +270,11 @@ local function makeLexerState()
         functionStack = {},
         longBracket = nil,
         pendingFunction = nil,
-        -- "then" or "do" while an if/elseif/for/while header is still open
-        pendingHeader = nil,
+                pendingHeader = nil,
         prevToken = nil,
     }
 end
 
--- scans one line, updating bracket depth and the function context stack. strings,
--- comments and long brackets are skipped so keywords inside them dont count.
--- when a `function` keyword's parameter list closes we push a context recording the
--- bracket depth its body statements sit at, and count the body's inner blocks
--- (if/for/while/do/repeat, nested functions handled by their own context) so only
--- the function's own `end` pops it.
 local function scanLine(line, lexerState)
     local stack = lexerState.functionStack
     local index = 1
@@ -302,8 +292,7 @@ local function scanLine(line, lexerState)
     local function closeBracket(char)
         local pending = lexerState.pendingFunction
         if pending and char == ")" and pending.parenDepth == lexerState.depth then
-            -- parameter list closed; body statements sit at the depth outside it
-            lexerState.pendingFunction = nil
+                        lexerState.pendingFunction = nil
             lexerState.depth -= 1
             table.insert(stack, { depth = lexerState.depth, blocks = 0 })
         else
@@ -331,9 +320,7 @@ local function scanLine(line, lexerState)
             lexerState.pendingHeader = "do"
         elseif word == "if" or word == "elseif" then
             lexerState.pendingHeader = "then"
-            -- statements only sit at the context depth, so an `if` deeper down
-            -- (table entries, call arguments) is always an expression
-            if
+                                    if
                 word == "if"
                 and top
                 and lexerState.depth == top.depth
@@ -426,13 +413,11 @@ local function scanLine(line, lexerState)
 end
 
 local function startsContinuation(text)
-    -- comment lines are excluded before this runs, so a leading `-` is a wrapped subtraction
-    return text:match("^or%s") or text:match("^and%s") or text:match("^%.") or text:match("^[,:%+%-%*/%%]")
+        return text:match("^or%s") or text:match("^and%s") or text:match("^%.") or text:match("^[,:%+%-%*/%%]")
 end
 
 local function endsContinuation(text)
-    -- `x = if cond` continues onto the next line, but a one-liner with its else is complete
-    local openIfExpression = text:match("=%s*if%s") ~= nil and text:match("%f[%w]else%f[%W]") == nil
+        local openIfExpression = text:match("=%s*if%s") ~= nil and text:match("%f[%w]else%f[%W]") == nil
     return text:match("=%s*$")
         or text:match("%.%.%s*$")
         or text:match("[,%+%-%*/%%]%s*$")
@@ -456,12 +441,6 @@ local function isContinuationOnly(text)
         or text == "%"
 end
 
--- a line is coverable when it starts a statement: at the current statement depth
--- (top level, or directly inside the innermost open function body), outside long
--- brackets, and not continuing the previous line. hits are injected before the
--- line, so a single-line callback (`f(function() work() end)`) can only credit its
--- registration line; injecting mid-line isnt possible, and thats the one place a
--- registration still counts as coverage without the callback running.
 local function isCoverableLine(line, atStatementDepth, inBlockComment, previousContinuation)
     if not atStatementDepth or inBlockComment or previousContinuation then
         return false
@@ -530,8 +509,7 @@ local function instrumentSource(relativePath, source)
         local startsInLongBracket = lexerState.longBracket ~= nil
         local text = line:match("^%s*(.-)%s*$")
         local atStatementDepth = lexerState.depth == statementDepth()
-        -- an unresolved if/for/while header means this line is still its condition
-        local continuing = previousContinuation or lexerState.pendingHeader ~= nil
+                local continuing = previousContinuation or lexerState.pendingHeader ~= nil
         local coverable = isCoverableLine(line, atStatementDepth, startsInLongBracket, continuing)
 
         if coverable then
@@ -811,7 +789,6 @@ local function makeSignal()
     return signal
 end
 
--- like Roblox, spawn/defer/delay take a function or a thread to resume
 local function resumeTask(callback, ...)
     local thread = if type(callback) == "thread" then callback else coroutine.create(callback)
     local ok, err = coroutine.resume(thread, ...)
@@ -1072,8 +1049,6 @@ local function propertySignalForService(service, property)
     return signal
 end
 
--- mutable input state so drag/pointer specs can steer the mocks; call the
--- underscore setters with a dot
 local mockMouseLocation = Vector2.new(120, 80)
 local mockMouseButtonPressed = false
 local mockGuiInset = Vector2.new(0, 0)
@@ -1142,9 +1117,7 @@ local services = {
         GenerateGUID = function()
             return "00000000-0000-4000-8000-000000000000"
         end,
-        -- real JSON via serde so specs exercise the actual on-disk shape.
-        -- like Roblox, encoding a function or other non-JSON value errors.
-        JSONDecode = function(_, value)
+                        JSONDecode = function(_, value)
             return serde.decode("json", value)
         end,
         JSONEncode = function(_, value)
@@ -1211,8 +1184,6 @@ _G.__RAYFIELD_TEST_HELPERS = {
 }
 _G.__RAYFIELD_TEST_VERBOSE_LOGS = verboseTestLogs
 
--- gag Rayfield's console output during test runs unless --verbose-logs is set. this is the
--- runner's job, not the library's: src must not know about test environments.
 local logModule = _G.__RAYFIELD_TEST_REQUIRE_UTILITY("log")
 logModule.setSuppressPredicate(function()
     return _G.__RAYFIELD_TEST_VERBOSE_LOGS ~= true
@@ -1457,8 +1428,7 @@ local function runTest(suite, test)
         runAfterEach(suite)
     end, debug.traceback)
     if not afterOk then
-        -- keep the tests own failure in front; the afterEach error alone usually hides the cause
-        err = if ok then afterErr else tostring(err) .. "\n\nafterEach also failed:\n" .. tostring(afterErr)
+                err = if ok then afterErr else tostring(err) .. "\n\nafterEach also failed:\n" .. tostring(afterErr)
         ok = false
     end
 
@@ -1472,8 +1442,6 @@ local function runTest(suite, test)
     end
 end
 
--- a failed beforeAll skips the suite, but its tests still count as failures so
--- the N/M totals stay honest; afterAll is skipped too since setup never finished
 local function failSkippedTests(suite, reason)
     for _, test in suite.tests do
         local nameWithSuites = testName(suite, test.name)
@@ -1528,8 +1496,7 @@ if #specs == 0 then
 end
 
 for _, specPath in specs do
-    -- a spec file that fails to load is a failed suite, not a dead run
-    local loadOk, spec = xpcall(function()
+        local loadOk, spec = xpcall(function()
         return require(specPath)
     end, debug.traceback)
 
@@ -1579,8 +1546,7 @@ local function fileCoverageSummary(relativePath)
     end
 
     table.sort(uncovered)
-    -- nil, not 100: a file with no coverable lines has no coverage to report
-    local percent = if coverableLines == 0 then nil else (coveredLines / coverableLines) * 100
+        local percent = if coverableLines == 0 then nil else (coveredLines / coverableLines) * 100
     return {
         path = relativePath,
         coveredLines = coveredLines,
@@ -1756,9 +1722,7 @@ local function writeCoverageBaseline(summary)
         return table.concat(jsonLines, "\n") .. "\n"
     end
 
-    -- keep the existing date when the numbers didnt move, so regenerating the baseline
-    -- daily (the pre-commit hook does) never churns the file
-    local baselinePath = root .. "/coverage-baseline.json"
+            local baselinePath = root .. "/coverage-baseline.json"
     local existing = if fs.isFile(baselinePath) then fs.readFile(baselinePath) else nil
     local existingDate = if existing then string.match(existing, '"measuredDate":%s*"([^"]+)"') else nil
     local content = renderBaseline(existingDate or os.date("!%Y-%m-%d"))
@@ -1787,8 +1751,7 @@ if results.failureCount > 0 then
 end
 
 if updateCoverageBaseline then
-    -- the baseline ratchets down to the configured floor, never through it
-    if coverageSummary.lineCoverage + coverageEpsilon < coverageThreshold then
+        if coverageSummary.lineCoverage + coverageEpsilon < coverageThreshold then
         warn(
             string.format(
                 "Refusing to update the coverage baseline: %.2f%% is below the %.2f%% threshold floor.",

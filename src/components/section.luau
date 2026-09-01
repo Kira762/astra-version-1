@@ -1,10 +1,3 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local Section = {}
 Section.__index = Section
 Section.__type = "Section"
@@ -22,9 +15,7 @@ function Section.new(tab, properties)
         icon = properties.icon or properties.Icon,
     }, Section)
 
-    -- first element in a tab shouldn't get extra space above it, only sections that
-    -- follow something. this section isn't registered yet so an empty list means first.
-    local topSpace = if #self.tab.elements == 0 then 0 else 13
+            local topSpace = if #self.tab.elements == 0 then 0 else 13
 
     self.main = self.window:Create("Frame", {
         Size = UDim2.new(1, -40, 0, 20 + topSpace),
@@ -56,16 +47,13 @@ function Section.new(tab, properties)
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
 
-            -- Animation
-            ImageTransparency = 1, -- In = 0.65
-
+                        ImageTransparency = 1, 
             Parent = self.main,
         }, { ImageColor3 = "ContentColor" })
     end
 
     self.title = self.window:Create("TextLabel", {
-        -- Configurables
-        Text = locale.t(self.name),
+                Text = locale.t(self.name),
 
         Size = UDim2.fromOffset(0, 16),
         BorderSizePixel = 0,
@@ -76,9 +64,7 @@ function Section.new(tab, properties)
         TextWrapped = true,
         LayoutOrder = 1,
 
-        -- Animation
-        TextTransparency = 1, -- In = 0.6
-
+                TextTransparency = 1, 
         Parent = self.main,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 

@@ -1,18 +1,9 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local Slider = {}
 Slider.__index = Slider
 Slider.__type = "Slider"
 
--- Utility
 local utility = script.Parent.Parent.utility
 
--- Variables
 local variables = require(utility.variables)
 local functions = require(utility.functions)
 local odometer = require(utility.odometer)
@@ -21,10 +12,6 @@ local lockable = require(utility.lockable)
 local locale = require(utility.locale)
 local hapticEngine = require(utility.HapticEngine)
 
--- Decimal places implied by an increment (0.1 -> 1, 0.25 -> 2, 1 -> 0). Used so
--- the readout formats mid-roll floats to the same precision as landed values.
--- Checks against the nearest whole number at each scale so float error can't
--- inflate the count (0.07 * 10 is 0.7000000000000001, still 2 decimals).
 local function decimalsOf(step)
     local decimals = 0
     while decimals < 6 do
@@ -37,8 +24,6 @@ local function decimalsOf(step)
     return decimals
 end
 
--- snap onto the increment grid anchored at range[1], so both endpoints stay reachable
--- (a zero-anchored grid cant express range = {0.5, 2.5} with increment 1)
 local function snapTo(range, increment, value)
     local snapped = range[1] + math.round((value - range[1]) / increment) * increment
     return math.clamp(snapped, range[1], range[2])
@@ -48,51 +33,19 @@ local tweenInfo = TweenInfo.new(0.45, Enum.EasingStyle.Exponential, Enum.EasingD
 local heldInfo = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 local followInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
--- Below this element width we reflow to the stacked layout (title/value on top, full-width
--- track under it) so the slider stays usable in a narrow column or small window instead of
--- overlapping. Sits well below a full-width slider (~435) - including the slightly narrower
--- width it has before the window's intro grow finishes - and well above a grid column (~180),
--- so those two cases land cleanly on either side and open/close transients never straddle it.
 local narrowWidth = 300
 
--- The pill's two sizes: at rest, and while it's held. Where the pill sits depends on how wide it
--- currently is, so the sizes live next to the geometry that reads them.
 local handleRest = Vector2.new(35, 20)
 local handleHeld = Vector2.new(41, 22)
 
--- Where the fill ends, and where the pill sits on the end of it.
---
--- The fill used to run to a plain fraction of the track with the pill hanging off its edge by a
--- fixed amount. That puts the pill outside the track at both ends: past the end at the top of the
--- range, and before the start at the bottom, where the fill has no width at all. A full-width
--- slider has enough margin either side to hide it. A grid column does not, and the pill draws over
--- the card beside it.
---
--- Both are inset by the pill instead, and by half of it where the fill is concerned. At the top of
--- the range the fill is the whole track, so the bar reads as full with the pill on the end of it.
--- At the bottom the fill reaches the middle of the pill, so the pill has green behind its left half
--- and nothing pokes out beside it. The pill lands inside the track at both ends, which is the point.
---
--- How far the two of them reach past the fill's fraction of the track: the whole pill at the bottom
--- of the range, none of it at the top. Whole pixels, because a UDim offset is, and they split this
--- one number between them rather than each halving the pill on its own - rounded apart they'd land
--- a pixel out and hang the pill over the end after all.
--- The pill's centre rides the fill's edge and maps straight onto the track, so at either end
--- half of it hangs past the track the way the design has it. Scale rather than pixels: the fill
--- and the pill read the same ratio, so they can't round apart and drift by a pixel.
 local function fillSize(ratio: number): UDim2
     return UDim2.new(ratio, 0, 1, 0)
 end
 
--- The pill sits centred on the fill's leading edge, and it lives inside the fill, so it tracks
--- the value without a position of its own: the fill resizes and carries it. Centred means half
--- of it is past the fill, which at either end of the range is half a pill past the track.
 local function handleOffset(): UDim2
     return UDim2.new(1, 0, 0.5, 0)
 end
 
--- The pointer maps over the whole track, because the pill's centre does too. Clamping covers
--- the ends, where half the pill sits past the track.
 local function ratioFromPointer(x: number, left: number, travel: number): number
     return math.clamp((x - left) / travel, 0, 1)
 end
@@ -115,20 +68,16 @@ function Slider.new(tab, properties)
         callback = properties.callback or properties.Callback or function() end,
 
         dragging = false,
-        minimal = properties.minimal or properties.Minimal or false, -- track only, no name/value
-
-        -- Where the pill is headed, which is where it already sits outside a drag
-        _handleWidth = handleRest.X,
+        minimal = properties.minimal or properties.Minimal or false, 
+                _handleWidth = handleRest.X,
     }, Slider)
 
-    -- catch a malformed range up front, before the clamp/snap math throws something cryptic
-    assert(
+        assert(
         typeof(self.range) == "table" and typeof(self.range[1]) == "number" and typeof(self.range[2]) == "number",
         "A slider range needs two numbers, like { 0, 100 }."
     )
 
-    -- keep range ascending and increment positive so the clamp/snap math stays sane
-    if self.range[1] > self.range[2] then
+        if self.range[1] > self.range[2] then
         self.range = { self.range[2], self.range[1] }
     end
     if self.increment <= 0 then
@@ -142,9 +91,7 @@ function Slider.new(tab, properties)
         )
         else self.range[1]
 
-    -- snap + clamp the starting value the same way Set does, so the stored value
-    -- and the bar never disagree (and a bad initial value can't be saved)
-    self.value = snapTo(self.range, self.increment, self.value)
+            self.value = snapTo(self.range, self.increment, self.value)
 
     self._decimals = decimalsOf(self.increment)
 
@@ -167,19 +114,16 @@ function Slider.new(tab, properties)
     self.stroke = self.window:StyleElementBody(self.main)
     self._lastValue = self.value
 
-    -- minimal is just the track (built below); skip the whole title/value block
-    if not self.minimal then
+        if not self.minimal then
         self:_buildLabel()
     end
 
-    -- Right: the track
-    self.track = self.window:Create("Frame", {
+        self.track = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(1, 0.5),
         Position = UDim2.new(1, -15, 0.5, 0),
         Size = UDim2.fromOffset(222, 14),
         BorderSizePixel = 0,
-        BackgroundTransparency = 1, -- In = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.main,
     }, { BackgroundColor3 = "SliderBackground" })
 
@@ -196,8 +140,7 @@ function Slider.new(tab, properties)
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 2,
-        BackgroundTransparency = 1, -- In = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.track,
     })
 
@@ -218,18 +161,14 @@ function Slider.new(tab, properties)
         Parent = self.progress,
     }, { Color = { "SliderProgress", functions.toColorSequence } })
 
-    -- Green glow behind the filled progress (revealed on show)
-    self.progressGlow = self.window:CreateGlow(self.progress, "AccentColor", 20, 1)
+        self.progressGlow = self.window:CreateGlow(self.progress, "AccentColor", 20, 1)
 
-    -- Handle blob: solid white at rest, ghosts + grows a stroke while held
-    self.handle = self.window:Create("Frame", {
+        self.handle = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = handleOffset(), -- rides the fill's edge, see fillSize
-        Size = UDim2.fromOffset(handleRest.X, handleRest.Y),
+        Position = handleOffset(),         Size = UDim2.fromOffset(handleRest.X, handleRest.Y),
         BorderSizePixel = 0,
         ZIndex = 50,
-        BackgroundTransparency = 1, -- In = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.progress,
     }, { BackgroundColor3 = "SliderHandle" })
 
@@ -239,12 +178,10 @@ function Slider.new(tab, properties)
         Parent = self.handle,
     })
 
-    -- White glow behind the drag handle (revealed on show)
-    self.handleGlow = self.window:CreateGlow(self.handle, Color3.fromRGB(255, 255, 255), 10, 1)
+        self.handleGlow = self.window:CreateGlow(self.handle, Color3.fromRGB(255, 255, 255), 10, 1)
 
     self.handleStroke = self.window:Create("UIStroke", {
-        Transparency = 1, -- 0.6 while held
-
+        Transparency = 1, 
         Parent = self.handle,
     }, { Color = "SliderStroke" })
 
@@ -258,11 +195,9 @@ function Slider.new(tab, properties)
         Parent = self.track,
     })
 
-    -- Subtle hover on the slider track itself, not the whole element row
-    self.window:ConnectFor(self, self.main.MouseEnter, function()
+        self.window:ConnectFor(self, self.main.MouseEnter, function()
         if not self.window:_interactive() then
-            return -- window still revealing/hiding: dont light up mid-animation
-        end
+            return         end
         variables.tweenService
             :Create(self.track, tweenInfo, { BackgroundColor3 = self.window.theme.SliderBackgroundHover })
             :Play()
@@ -279,20 +214,16 @@ function Slider.new(tab, properties)
             input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch
         then
-            hapticEngine.click() -- one tick on grab, not per drag frame
-            self.dragging = true
+            hapticEngine.click()             self.dragging = true
             self:_setHeld(true)
             self:_updateFromMouse()
 
-            -- drop any stale follow first, in case InputBegan fires again before InputEnded
-            if self._dragConnection then
+                        if self._dragConnection then
                 self._dragConnection:Disconnect()
                 self._dragConnection = nil
             end
 
-            -- Only run the per-frame follow while actually dragging. Self-terminates if the
-            -- window unloads mid-drag, since InputEnded won't fire to clean us up then.
-            self._dragConnection = variables.runService.RenderStepped:Connect(function()
+                                    self._dragConnection = variables.runService.RenderStepped:Connect(function()
                 if self.window.unloaded or not self.dragging then
                     if self._dragConnection then
                         self._dragConnection:Disconnect()
@@ -314,9 +245,7 @@ function Slider.new(tab, properties)
         end
     end)
 
-    -- releasing the button outside the Roblox window never fires InputEnded, so treat
-    -- losing focus as letting go too - otherwise the slider sticks to the cursor forever
-    self.window:ConnectFor(self, variables.userInputService.WindowFocusReleased, function()
+            self.window:ConnectFor(self, variables.userInputService.WindowFocusReleased, function()
         self:_endDrag()
     end)
 
@@ -324,15 +253,8 @@ function Slider.new(tab, properties)
         self.descriptor = require(script.Parent.descriptor).new(self.tab, { description = self.description })
     end
 
-    -- pick wide vs stacked from the real width, and keep it in sync if that width changes
-    -- (column resolves its size a frame after we build, and windows can be small)
-    self.window:ConnectFor(self, self.main:GetPropertyChangedSignal("AbsoluteSize"), function()
-        -- Ignore the transient widths the window sweeps through as it collapses/grows on
-        -- hide/show/minimise, so the slider just keeps the mode it settled on while visible.
-        -- The one time we DO want a hidden-window reflow is the initial layout pass before the
-        -- first open (the element sizes to its real/column width while the window's still
-        -- hidden) - so only block hidden reflows once the window has been shown at least once.
-        if self.window.animating or (self.window.hidden and self.window.hasShownOnce) then
+            self.window:ConnectFor(self, self.main:GetPropertyChangedSignal("AbsoluteSize"), function()
+                                                if self.window.animating or (self.window.hidden and self.window.hasShownOnce) then
             return
         end
         self:_applyLayout()
@@ -340,9 +262,7 @@ function Slider.new(tab, properties)
     self:_applyLayout()
 
     if self.minimal then
-        -- bare: no title/value, keep the compact 41px height so it lines up with
-        -- buttons/toggles/stats, and let the track fill the bar
-        self.main.Size = UDim2.new(1, -20, 0, 41)
+                        self.main.Size = UDim2.new(1, -20, 0, 41)
         self.track.AnchorPoint = Vector2.new(0.5, 0.5)
         self.track.Position = UDim2.new(0.5, 0, 0.5, 0)
         self.track.Size = UDim2.new(1, -30, 0, 14)
@@ -353,11 +273,8 @@ function Slider.new(tab, properties)
     return self
 end
 
--- The title + value block: the left column in the wide layout, the top row in the narrow
--- one. A minimal slider skips this entirely and shows only the track.
 function Slider:_buildLabel()
-    -- Left: title (+ icon) stacked over the value
-    self.container = self.window:Create("Frame", {
+        self.container = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 20, 0.5, 0),
         Size = UDim2.fromOffset(170, 33),
@@ -394,9 +311,7 @@ function Slider:_buildLabel()
         Parent = self.titleContainer,
     })
 
-    -- narrow layout puts title + value on one row; this fills the title so the value
-    -- gets pushed to the right. wide layout sets it back to None (title over value).
-    self.titleFlex = self.window:Create("UIFlexItem", {
+            self.titleFlex = self.window:Create("UIFlexItem", {
         FlexMode = Enum.UIFlexMode.None,
         Parent = self.titleContainer,
     })
@@ -409,9 +324,7 @@ function Slider:_buildLabel()
             BackgroundTransparency = 1,
             ZIndex = 5,
 
-            -- Animation
-            ImageTransparency = 1, -- In = 0
-
+                        ImageTransparency = 1, 
             Parent = self.titleContainer,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -423,47 +336,35 @@ function Slider:_buildLabel()
         BackgroundTransparency = 1,
         TextSize = 16,
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd, -- ellipsize instead of wrapping when the column's tight
-        RichText = true,
+        TextTruncate = Enum.TextTruncate.AtEnd,         RichText = true,
         LayoutOrder = 1,
         ZIndex = 5,
 
-        -- Animation
-        TextTransparency = 1, -- In = 0
-
+                TextTransparency = 1, 
         Parent = self.titleContainer,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-    -- shrink to share the title row with the icon when space is tight
-    self.window:Create("UIFlexItem", {
+        self.window:Create("UIFlexItem", {
         FlexMode = Enum.UIFlexMode.Shrink,
         Parent = self.title,
     })
 
-    -- Odometer readout: host frame in place of the old label; the odometer lays
-    -- its per-digit reels out inside it, left-aligned under the title.
-    self.valueHost = self.window:Create("Frame", {
+            self.valueHost = self.window:Create("Frame", {
         Size = UDim2.new(1, 0, 0, 16),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ZIndex = 6,
-        LayoutOrder = 1, -- sits under the title (wide) / right of it (narrow)
-
+        LayoutOrder = 1, 
         Parent = self.container,
     })
 
     self.valueOdo = odometer.new(self.window, self.valueHost, {
         textSize = 15,
         alignment = Enum.HorizontalAlignment.Left,
-        transparency = 1, -- revealed to 0.3 on show
-        duration = 0.28, -- snappy roll on :Set; drag snaps instead (stays glued to the handle)
-    })
+        transparency = 1,         duration = 0.28,     })
     self.valueOdo:snap(self:_format(self.value))
 end
 
--- Set the element height, keeping the width alone when a horizontal group owns it
--- (_widthManaged): there the stack freezes us to _minWidth and wraps, so we must not
--- stomp the X it set. Standalone we take the usual full width.
 function Slider:_setMainHeight(height)
     if self._widthManaged then
         self.main.Size = UDim2.new(self.main.Size.X.Scale, self.main.Size.X.Offset, 0, height)
@@ -472,16 +373,9 @@ function Slider:_setMainHeight(height)
     end
 end
 
--- wide: title over value on the left, fixed track on the right.
--- narrow: title + value share the top row (value pushed right), full-width track below.
--- Chosen from the slider's real width, so a slider in a narrow column (a grid) stacks while a
--- full-width one stays wide. The AbsoluteSize handler that calls this ignores the transient
--- widths the window sweeps through as it opens/closes, so this only ever runs on a settled
--- width (see the guard where it's connected).
 function Slider:_applyLayout()
     if self.minimal then
-        return -- bare mode has a fixed slim layout, nothing to reflow
-    end
+        return     end
     local width = self.main.AbsoluteSize.X
     local mode = if width > 0 and width < narrowWidth then "narrow" else "wide"
     if self._layoutMode == mode then
@@ -496,8 +390,7 @@ function Slider:_applyLayout()
         self.container.Position = UDim2.new(0, 20, 0, 14)
         self.container.Size = UDim2.new(1, -40, 0, 16)
         self.containerLayout.FillDirection = Enum.FillDirection.Horizontal
-        self.titleFlex.FlexMode = Enum.UIFlexMode.Fill -- title grows, value hugs the right
-        self.valueHost.AutomaticSize = Enum.AutomaticSize.X
+        self.titleFlex.FlexMode = Enum.UIFlexMode.Fill         self.valueHost.AutomaticSize = Enum.AutomaticSize.X
         self.valueHost.Size = UDim2.new(0, 0, 0, 16)
 
         self.track.AnchorPoint = Vector2.new(0.5, 1)
@@ -528,14 +421,6 @@ function Slider:_format(value)
     return text
 end
 
--- The one place the track's width and the pill's are read together: how far the pill insets the
--- fill and the pointer, and the room its centre has left to travel. The fill, the pill and the
--- pointer mapping all take these, so they can't come to different answers about the same two
--- numbers. A track too narrow to hold the pill has no travel to give, and neither has one that
--- hasn't been laid out yet - _updateFromMouse turns both away below rather than map onto nothing,
--- which is why neither the fill, the pill nor the pointer needs a guard of its own.
---
--- Travel is the whole track: the pill's centre reaches both ends and half of it hangs past.
 function Slider:_pillTravel()
     return math.max(self.track.AbsoluteSize.X, 0)
 end
@@ -565,15 +450,13 @@ function Slider:_updateFromMouse()
     if value ~= self.value then
         self.value = value
         if self.valueOdo then
-            self.valueOdo:snap(self:_format(value)) -- glued to the handle: no roll mid-drag
-        end
+            self.valueOdo:snap(self:_format(value))         end
         self._lastValue = value
         self:_renderProgress(followInfo)
         self:_fireCallback(value)
     end
 end
 
--- shared release path: InputEnded and window focus loss both land here
 function Slider:_endDrag()
     if not self.dragging then
         return
@@ -589,17 +472,8 @@ function Slider:_endDrag()
     self.window:_persist(self)
 end
 
--- Two tweens run over the pill during a drag: this one growing it, and the one _renderProgress
--- starts to follow the value. Roblox cancels an earlier tween when a later one takes the same
--- property, so if both wrote Position the first drag update would kill the grow halfway and leave
--- the pill at an in-between size. They're split by property instead: the held state owns Size and
--- the transparencies, _renderProgress owns Position and the fill. Handing the move over here keeps
--- that true while still putting the pill where its new width wants it.
 function Slider:_setHeld(held)
-    -- the press already fires with dragging true (the flag is set before the value lands), so
-    -- only the release needs a call of its own: it's the one that says the gesture is over.
-    -- _endDrag guards on self.dragging, so this can only follow a real drag.
-    if not held then
+                if not held then
         self:_fireCallback(self.value)
     end
 
@@ -616,9 +490,6 @@ function Slider:_setHeld(held)
     self:_renderProgress(heldInfo)
 end
 
--- pcall + debounced error-flash via Window:_runGuarded (fires every drag frame). The second
--- argument says whether the handle is still down, so a callback can show a preview while the
--- value is moving and commit once it settles.
 function Slider:_fireCallback(value)
     self.window:_runGuarded(self, self.callback, value, self.dragging == true)
 end
@@ -638,7 +509,6 @@ function Slider:Set(value, skipCallback)
     end
 end
 
--- glows delayed so they don't float in before the bar during the window-open fade
 local sliderGlowReveal = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0.35)
 
 function Slider:_setShown(shown, animate)
@@ -651,8 +521,7 @@ function Slider:_setShown(shown, animate)
         if self.valueOdo then
             self.valueOdo:reveal(0.3, animate)
         end
-        -- soften the accent bloom on light themes (AccentGlow) but never below the default 0.55
-        w:_reveal(self.progressGlow, { Transparency = math.max(0.55, w.theme.AccentGlow) }, animate, sliderGlowReveal)
+                w:_reveal(self.progressGlow, { Transparency = math.max(0.55, w.theme.AccentGlow) }, animate, sliderGlowReveal)
         w:_reveal(self.handleGlow, { Transparency = 0.8 }, animate, sliderGlowReveal)
     else
         w:_hideCommon(self, animate)
@@ -667,8 +536,6 @@ function Slider:_setShown(shown, animate)
     end
 end
 
--- Re-apply the accent glow strength on a runtime ChangeTheme (fill/handle/track ride
--- themeProperties). Called on the visible tab only.
 function Slider:_refreshTheme()
     variables.tweenService
         :Create(
@@ -679,20 +546,13 @@ function Slider:_refreshTheme()
         :Play()
 end
 
--- Room the slider needs in a row: its narrow layout puts title + value on the top row,
--- so that has to fit, and we floor it so the track underneath stays draggable.
 function Slider:_minWidth()
     if self.minimal then
-        return 100 -- a slim bar: side padding + a usable minimum track
-    end
-    local w = 40 -- container inset, 20 each side
-    if self.icon then
-        w += 22 -- 16 icon + 6 gap
-    end
-    -- measure what actually renders: the title shows the translated string
-    w += functions.textWidth(self.window.theme.Font, 16, locale.resolve(self.name))
-    w += 12 -- gap before the value
-    w += functions.textWidth(self.window.theme.Font, 15, self:_format(self.value))
+        return 100     end
+    local w = 40     if self.icon then
+        w += 22     end
+        w += functions.textWidth(self.window.theme.Font, 16, locale.resolve(self.name))
+    w += 12     w += functions.textWidth(self.window.theme.Font, 15, self:_format(self.value))
     return math.max(w, 160)
 end
 

@@ -9,8 +9,7 @@ return function()
     describe("utility.imageCache", function()
         local pathUtility = requireUtility("path")
 
-        -- the module's manifest is one entry per unique icon id
-        local manifestSize = 0
+                local manifestSize = 0
         do
             local seen = {}
             for _, id in constants.icons do
@@ -57,8 +56,7 @@ return function()
                 files[path] = content
             end
             variables.assetResolver.getAssetContentFromUrl = function(_, url)
-                -- real icon/avatar bodies are pngs; cacheFile checks the magic before writing
-                return "\137PNG\r\n\26\nbody:" .. tostring(url)
+                                return "\137PNG\r\n\26\nbody:" .. tostring(url)
             end
             variables.httpService.JSONDecode = function()
                 return {
@@ -131,8 +129,7 @@ return function()
             end)
 
             expect(ok).to.equal(false)
-            expect(missing).to.equal(manifestSize) -- nothing was on disk, every icon downloaded
-            expect(settled).to.equal(0)
+            expect(missing).to.equal(manifestSize)             expect(settled).to.equal(0)
             expect(cachedIds[constants.icons.close]).to.equal(true)
             expect(imageCache.rewrites[constants.icons.close]).to.be.ok()
         end)
@@ -150,8 +147,7 @@ return function()
                 settled = failed
             end)
 
-            -- a throw used to strand the pending counter, so settle never fired
-            expect(ok).to.equal(false)
+                        expect(ok).to.equal(false)
             expect(missing).to.equal(manifestSize)
             expect(settled).to.equal(0)
         end)
@@ -185,8 +181,7 @@ return function()
                 return path:match("avatar_42%.png$") ~= nil
             end
 
-            -- the exact custom-asset uri, not just anything ("" is the failure value)
-            local expected = "asset://"
+                        local expected = "asset://"
                 .. pathUtility.join(variables.fileSystemManager:getAssetsFolder(), "avatar_42.png")
             expect(imageCache.avatar(42)).to.equal(expected)
             expect(imageCache.avatar("42")).to.equal("")
@@ -283,8 +278,7 @@ return function()
             expect(imageCache.avatar(555, function() end)).to.equal("")
             expect(requests).to.equal(4)
 
-            -- the miss is cached for the session, so this must not re-burn the retry loop
-            expect(imageCache.avatar(555, function() end)).to.equal("")
+                        expect(imageCache.avatar(555, function() end)).to.equal("")
             expect(requests).to.equal(4)
         end)
 
@@ -312,12 +306,10 @@ return function()
             expect(imageCache.avatar(321, function()
                 readyCount += 1
             end)).to.equal("")
-            expect(requests).to.equal(1) -- the second call joined the first pipeline
-
+            expect(requests).to.equal(1) 
             coroutine.resume(resume)
 
             expect(readyCount).to.equal(2)
-            expect(requests).to.equal(2) -- one thumbnail lookup, one cdn download
-        end)
+            expect(requests).to.equal(2)         end)
     end)
 end

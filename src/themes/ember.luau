@@ -1,12 +1,3 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
--- Warm charcoal dark theme with an amber accent. Partial: overrides the warm tones + accent,
--- inherits corners, fonts and toggle/field behaviour from default.
 return {
     WindowColor = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 18, 16)),
@@ -35,12 +26,10 @@ return {
     SliderBackgroundHover = Color3.fromRGB(62, 52, 44),
     SliderProgress = ColorSequence.new(Color3.fromRGB(244, 152, 44), Color3.fromRGB(220, 110, 24)),
 
-    -- Amber accent for the active toggle, slider glow and popup primary button.
-    AccentColor = Color3.fromRGB(240, 142, 40),
+        AccentColor = Color3.fromRGB(240, 142, 40),
     AccentStroke = Color3.fromRGB(255, 182, 92),
 
-    ToggleKnobOff = Color3.fromRGB(232, 224, 214), -- warm off-knob on the dark track
-
+    ToggleKnobOff = Color3.fromRGB(232, 224, 214), 
     StatBackground = Color3.fromRGB(26, 21, 18),
 
     DropdownHighlight = Color3.fromRGB(240, 142, 40),

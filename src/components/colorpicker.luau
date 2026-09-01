@@ -1,18 +1,9 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local ColorPicker = {}
 ColorPicker.__index = ColorPicker
 ColorPicker.__type = "ColorPicker"
 
--- Utility
 local utility = script.Parent.Parent.utility
 
--- Variables
 local variables = require(utility.variables)
 local functions = require(utility.functions)
 local moveable = require(utility.moveable)
@@ -21,7 +12,6 @@ local constants = require(utility.constants)
 local locale = require(utility.locale)
 local hapticEngine = require(utility.HapticEngine)
 
--- Full hue wheel top (red) to bottom (back to red) for the vertical hue bar.
 local hueSequence = ColorSequence.new({
     ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
     ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
@@ -32,26 +22,13 @@ local hueSequence = ColorSequence.new({
     ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0)),
 })
 
--- Layout. The card is one frame that grows from a header row into the full picker; every
--- offset below is measured from the card's own top-left, no inner padding frame.
 local headerHeight = 41
-local contentY = 52 -- picker controls start just under the header
-local mapSize = Vector2.new(150, 120)
-local hueX = 184 -- map left (20) + 150 + 14 gap
-local hueWidth = 10
--- big gap so the two handles (which overhang their bars by ~6px each, more when held) never touch
-local alphaX = 214 -- hue right (194) + 20 gap
-local alphaWidth = 10
-local rightX = 240 -- alpha right (224) + 16 gap: left edge of the wide preview/field column
-local alphaFieldWidth = 62 -- the alpha % input, sits right of the hex field
-local fieldGap = 8
--- below this element width the preview + fields cant sit beside the map/bars without getting
--- too narrow, so they reflow to a full-width row under the map (see _applyLayout)
+local contentY = 52 local mapSize = Vector2.new(150, 120)
+local hueX = 184 local hueWidth = 10
+local alphaX = 214 local alphaWidth = 10
+local rightX = 240 local alphaFieldWidth = 62 local fieldGap = 8
 local narrowWidth = 400
 
--- Per-mode geometry for the bits that move between layouts. map + hue + alpha stay top-left in
--- both. "open" rects are where the preview morphs to and where the hex + alpha fields sit;
--- "height" is the card's open height. The preview morphs between its closed pill and this rect.
 local layoutSpec = {
     wide = {
         height = 190,
@@ -73,16 +50,12 @@ local layoutSpec = {
     },
 }
 
--- The preview is a single frame that morphs between the closed header pill and the mode's open
--- rect. AnchorPoint stays (1, 0.5) so only pos/size tween.
 local previewClosedPos = UDim2.new(1, -16, 0, headerHeight / 2)
 local previewClosedSize = UDim2.fromOffset(40, 22)
 
 local openInfo = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 local fadeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local followInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
--- short enough to track the mouse tightly, long enough that the cursor glides instead of
--- snapping. this is the "animated" feel a hard snap lost.
 local dragInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local heldInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
@@ -94,7 +67,6 @@ local function clampByte(n)
     return math.clamp(math.round(n), 0, 255)
 end
 
--- named colours accepted by the smart field
 local namedColors = {
     black = Color3.fromRGB(0, 0, 0),
     white = Color3.fromRGB(255, 255, 255),
@@ -112,7 +84,6 @@ local namedColors = {
     grey = Color3.fromRGB(128, 128, 128),
 }
 
--- hsl -> Color3 (h/s/l all 0..1). hsv has a built-in, hsl doesnt.
 local function hslToColor(h, s, l)
     if s <= 0 then
         return Color3.new(l, l, l)
@@ -133,7 +104,6 @@ local function hslToColor(h, s, l)
     return Color3.new(hue2(p, q, h + 1 / 3), hue2(p, q, h), hue2(p, q, h - 1 / 3))
 end
 
--- pull every number (ints or floats) out of a string, in order
 local function numbersIn(s)
     local out = {}
     for n in s:gmatch("[%d%.]+") do
@@ -142,9 +112,6 @@ local function numbersIn(s)
     return out
 end
 
--- Smart, forgiving colour parse. Handles hex (#fff, ffffff, 0xffffff), rgb (rgb(...),
--- "255,0,0", "255 0 0"), hsv/hsb, hsl, plain 0..1 float triplets, and named colours.
--- Returns a Color3 or nil.
 local function parseColor(input)
     if typeof(input) ~= "string" then
         return nil
@@ -179,8 +146,7 @@ local function parseColor(input)
         return Color3.fromRGB(clampByte(nums[1]), clampByte(nums[2]), clampByte(nums[3]))
     end
 
-    -- hex: with or without # / 0x, 3 or 6 digits
-    local hex = s:match("^#?(%x%x%x%x%x%x)$") or s:match("^#?(%x%x%x)$") or s:match("^0x(%x%x%x%x%x%x)$")
+        local hex = s:match("^#?(%x%x%x%x%x%x)$") or s:match("^#?(%x%x%x)$") or s:match("^0x(%x%x%x%x%x%x)$")
     if hex then
         local ok, color = pcall(Color3.fromHex, hex)
         if ok then
@@ -188,8 +154,7 @@ local function parseColor(input)
         end
     end
 
-    -- bare triplet, no model word: 0..1 floats read as raw channels, otherwise 0..255
-    if #nums >= 3 and not model then
+        if #nums >= 3 and not model then
         if nums[1] <= 1 and nums[2] <= 1 and nums[3] <= 1 then
             return Color3.new(clamp01(nums[1]), clamp01(nums[2]), clamp01(nums[3]))
         end
@@ -199,7 +164,6 @@ local function parseColor(input)
     return nil
 end
 
--- accept a Color3, or anything parseColor understands, or fall back to the given default
 local function coerceColor(value, fallback)
     if typeof(value) == "Color3" then
         return value
@@ -231,12 +195,9 @@ function ColorPicker.new(tab, properties)
         Color3.fromRGB(255, 255, 255)
     )
 
-    -- hue is kept alongside sat/val so dragging into a grey (where hue is undefined) doesnt
-    -- lose the colour you were on, same as the classic pickers
-    self.hue, self.sat, self.val = self.value:ToHSV()
+            self.hue, self.sat, self.val = self.value:ToHSV()
 
-    -- alpha (0..1). the callback gets it as a second arg; opacity of the preview + alpha slider
-    local a = properties.alpha or properties.Alpha
+        local a = properties.alpha or properties.Alpha
     self.alpha = if type(a) == "number" then clamp01(a) else 1
 
     self.flag = properties.flag
@@ -244,15 +205,12 @@ function ColorPicker.new(tab, properties)
         or (not self.forgetState and functions.deriveFlagFromName(self.name) or nil)
     self.window:_registerControl(self)
 
-    -- One card that grows from the header row into the full picker. No clip: the controls
-    -- below the header just sit fully transparent while collapsed, so nothing shows through.
-    self.main = self.window:Create("Frame", {
+            self.main = self.window:Create("Frame", {
         Size = UDim2.new(1, -20, 0, headerHeight),
         BorderSizePixel = 0,
         Name = self.name,
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundTransparency = 1, -- In = ElementTransparency
-
+        BackgroundTransparency = 1, 
         Parent = self.tab.tabPage,
     }, { BackgroundTransparency = "ElementTransparency" })
 
@@ -271,8 +229,7 @@ function ColorPicker.new(tab, properties)
         end
     end)
 
-    -- Hover: brighten stroke + title + overlay, but not while open (the picker's the focus then)
-    self.window:ConnectFor(self, self.main.MouseEnter, function()
+        self.window:ConnectFor(self, self.main.MouseEnter, function()
         if self._isOpen or not self.window:_interactive() then
             return
         end
@@ -304,17 +261,10 @@ function ColorPicker.new(tab, properties)
         self.descriptor = require(script.Parent.descriptor).new(self.tab, { description = self.description })
     end
 
-    -- establish the picker's hidden state once, from the single visibility list
-    self:_applyPickerVisibility(false, false)
-    self:_setControlsVisible(false) -- and keep the collapsed controls out of input entirely
-
-    -- pick wide/narrow from the real width and keep it in sync as that width changes (the
-    -- column resolves a frame after we build, and the window can be resized). Ignore the
-    -- transient widths swept while the window animates/hides, same as the slider.
-    self.window:ConnectFor(self, self.main:GetPropertyChangedSignal("AbsoluteSize"), function()
-        -- hasShownOnce: the initial layout pass happens while the window is still hidden,
-        -- and blocking it would freeze the width-0 layout mode (same fix as the slider)
-        if self.window.animating or (self.window.hidden and self.window.hasShownOnce) then
+        self:_applyPickerVisibility(false, false)
+    self:_setControlsVisible(false) 
+                self.window:ConnectFor(self, self.main:GetPropertyChangedSignal("AbsoluteSize"), function()
+                        if self.window.animating or (self.window.hidden and self.window.hasShownOnce) then
             return
         end
         self:_applyLayout()
@@ -326,7 +276,6 @@ function ColorPicker.new(tab, properties)
     return self
 end
 
--- Header row: icon + title on the left, the morphing colour preview on the right.
 function ColorPicker:_buildHeader()
     self.container = self.window:Create("Frame", {
         Size = UDim2.new(0, 170, 0, 16),
@@ -356,8 +305,7 @@ function ColorPicker:_buildHeader()
             BackgroundTransparency = 1,
             ZIndex = 5,
 
-            ImageTransparency = 1, -- In = 0
-
+            ImageTransparency = 1, 
             Parent = self.container,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -373,14 +321,11 @@ function ColorPicker:_buildHeader()
         LayoutOrder = 1,
         ZIndex = 5,
 
-        TextTransparency = 1, -- In = 0
-
+        TextTransparency = 1, 
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-    -- The colour preview. Starts as the header pill; on open it morphs (pos + size) into the
-    -- big swatch. No stroke - it reads as pure colour.
-    self.preview = self.window:Create("Frame", {
+            self.preview = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(1, 0.5),
         Position = previewClosedPos,
         Size = previewClosedSize,
@@ -388,8 +333,7 @@ function ColorPicker:_buildHeader()
         BorderSizePixel = 0,
         ZIndex = 3,
 
-        BackgroundTransparency = 1, -- In = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.main,
     })
 
@@ -398,13 +342,9 @@ function ColorPicker:_buildHeader()
         Parent = self.preview,
     })
 
-    -- Soft glow behind the preview, tinted to the colour. Its transparency tracks alpha
-    -- (0.6 solid -> 1 fully clear). One shadow follows the preview through the mini<->full morph.
-    self.previewShadow = self.window:CreateGlow(self.preview, self.value, 20, 1)
+            self.previewShadow = self.window:CreateGlow(self.preview, self.value, 20, 1)
 
-    -- Shown centred on the (open) preview once alpha reaches 0, since the swatch is fully clear
-    -- then: an icon + "Invisible" so it doesnt just look empty.
-    self.invisibleGroup = self.window:Create("Frame", {
+            self.invisibleGroup = self.window:Create("Frame", {
         Size = UDim2.fromScale(1, 1),
         Position = UDim2.fromScale(0.5, 0.5),
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -432,8 +372,7 @@ function ColorPicker:_buildHeader()
         BorderSizePixel = 0,
         ZIndex = 5,
 
-        ImageTransparency = 1, -- fades in near alpha 0
-
+        ImageTransparency = 1, 
         Parent = self.invisibleGroup,
     }, { ImageColor3 = "ContentColor" })
 
@@ -447,13 +386,11 @@ function ColorPicker:_buildHeader()
         LayoutOrder = 1,
         ZIndex = 5,
 
-        TextTransparency = 1, -- fades in near alpha 0
-
+        TextTransparency = 1, 
         Parent = self.invisibleGroup,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-    -- Covers only the header, so drags on the map/hue below dont toggle the card.
-    self.interact = self.window:Create("TextButton", {
+        self.interact = self.window:Create("TextButton", {
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, headerHeight),
         Position = UDim2.fromScale(0, 0),
@@ -467,9 +404,6 @@ function ColorPicker:_buildHeader()
     })
 end
 
--- Sat/val field, built from gradients (no image asset): a hue-tinted Frame with a white
--- left->right saturation gradient and a black top->bottom value gradient layered on top. Each
--- layer rounds its own corners so nothing needs clipping (which would clip the cursor).
 function ColorPicker:_buildMap()
     self.map = self.window:Create("Frame", {
         Position = UDim2.fromOffset(20, contentY),
@@ -478,8 +412,7 @@ function ColorPicker:_buildMap()
         BorderSizePixel = 0,
         ZIndex = 2,
 
-        BackgroundTransparency = 1, -- Open = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.main,
     })
 
@@ -487,20 +420,17 @@ function ColorPicker:_buildMap()
 
     self.mapStroke = self.window:Create("UIStroke", {
         Color = Color3.fromRGB(255, 255, 255),
-        Transparency = 1, -- Open = 0.9
-
+        Transparency = 1, 
         Parent = self.map,
     })
 
-    -- saturation: white on the left, fading to the bare hue on the right
-    self.satOverlay = self.window:Create("Frame", {
+        self.satOverlay = self.window:Create("Frame", {
         Size = UDim2.fromScale(1, 1),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 3,
 
-        BackgroundTransparency = 1, -- Open = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.map,
     })
     self.window:Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = self.satOverlay })
@@ -512,15 +442,13 @@ function ColorPicker:_buildMap()
         Parent = self.satOverlay,
     })
 
-    -- value: transparent at the top, fading to black at the bottom
-    self.valOverlay = self.window:Create("Frame", {
+        self.valOverlay = self.window:Create("Frame", {
         Size = UDim2.fromScale(1, 1),
         BackgroundColor3 = Color3.fromRGB(0, 0, 0),
         BorderSizePixel = 0,
         ZIndex = 4,
 
-        BackgroundTransparency = 1, -- Open = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.map,
     })
     self.window:Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = self.valOverlay })
@@ -534,8 +462,6 @@ function ColorPicker:_buildMap()
     })
 end
 
--- The picker guts: sat/val map, hue bar and an editable hex field, all sitting under the
--- header. They're fully transparent while collapsed and fade in on open.
 function ColorPicker:_buildPicker()
     self:_buildMap()
 
@@ -546,8 +472,7 @@ function ColorPicker:_buildPicker()
         BorderSizePixel = 0,
         ZIndex = 6,
 
-        BackgroundTransparency = 1, -- Open = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.map,
     })
 
@@ -559,8 +484,7 @@ function ColorPicker:_buildPicker()
     self.satCursorStroke = self.window:Create("UIStroke", {
         Color = Color3.fromRGB(255, 255, 255),
         Thickness = 2,
-        Transparency = 1, -- Open = 0 (solid white)
-
+        Transparency = 1, 
         Parent = self.satCursor,
     })
 
@@ -575,16 +499,14 @@ function ColorPicker:_buildPicker()
         Parent = self.map,
     })
 
-    -- Hue bar: vertical spectrum with a round handle tracking self.hue.
-    self.hueBar = self.window:Create("Frame", {
+        self.hueBar = self.window:Create("Frame", {
         Position = UDim2.fromOffset(hueX, contentY),
         Size = UDim2.fromOffset(hueWidth, mapSize.Y),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 2,
 
-        BackgroundTransparency = 1, -- Open = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.main,
     })
 
@@ -608,8 +530,7 @@ function ColorPicker:_buildPicker()
         BorderSizePixel = 0,
         ZIndex = 4,
 
-        BackgroundTransparency = 1, -- Open = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.hueBar,
     })
 
@@ -621,15 +542,13 @@ function ColorPicker:_buildPicker()
     self.hueHandleStroke = self.window:Create("UIStroke", {
         Color = Color3.fromRGB(255, 255, 255),
         Thickness = 2,
-        Transparency = 1, -- Open = 0 (solid white)
-
+        Transparency = 1, 
         Parent = self.hueHandle,
     })
 
     self.hueInteract = self.window:Create("TextButton", {
         BackgroundTransparency = 1,
-        -- pad the hit area sideways so the thin bar is easy to grab
-        Size = UDim2.new(1, 16, 1, 8),
+                Size = UDim2.new(1, 16, 1, 8),
         Position = UDim2.fromScale(0.5, 0.5),
         AnchorPoint = Vector2.new(0.5, 0.5),
         Text = "",
@@ -640,18 +559,14 @@ function ColorPicker:_buildPicker()
         Parent = self.hueBar,
     })
 
-    -- Alpha bar: the colour fading top(opaque)->bottom(transparent). The bar's own transparency
-    -- gradient does the fade (0 at top -> 1 at bottom), so the card shows through as it clears.
-    -- The round handle tracks self.alpha.
-    self.alphaBar = self.window:Create("Frame", {
+                self.alphaBar = self.window:Create("Frame", {
         Position = UDim2.fromOffset(alphaX, contentY),
         Size = UDim2.fromOffset(alphaWidth, mapSize.Y),
         BackgroundColor3 = self.value,
         BorderSizePixel = 0,
         ZIndex = 2,
 
-        BackgroundTransparency = 1, -- Open = 0 (then the gradient fades it down its length)
-
+        BackgroundTransparency = 1, 
         Parent = self.main,
     })
 
@@ -677,8 +592,7 @@ function ColorPicker:_buildPicker()
         BorderSizePixel = 0,
         ZIndex = 4,
 
-        BackgroundTransparency = 1, -- Open = 0
-
+        BackgroundTransparency = 1, 
         Parent = self.alphaBar,
     })
 
@@ -690,8 +604,7 @@ function ColorPicker:_buildPicker()
     self.alphaHandleStroke = self.window:Create("UIStroke", {
         Color = Color3.fromRGB(255, 255, 255),
         Thickness = 2,
-        Transparency = 1, -- Open = 0 (solid white)
-
+        Transparency = 1, 
         Parent = self.alphaHandle,
     })
 
@@ -708,16 +621,14 @@ function ColorPicker:_buildPicker()
         Parent = self.alphaBar,
     })
 
-    -- Hex field under the big preview.
-    self.hexBox = self.window:Create("Frame", {
+        self.hexBox = self.window:Create("Frame", {
         Position = UDim2.new(0, rightX, 0, contentY + 90),
         Size = UDim2.new(1, -(rightX + 20), 0, 30),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 2,
 
-        BackgroundTransparency = 1, -- Open = 0.9
-
+        BackgroundTransparency = 1, 
         Parent = self.main,
     })
 
@@ -728,8 +639,7 @@ function ColorPicker:_buildPicker()
 
     self.hexBoxStroke = self.window:Create("UIStroke", {
         Color = Color3.fromRGB(255, 255, 255),
-        Transparency = 1, -- Open = 0.85
-
+        Transparency = 1, 
         Parent = self.hexBox,
     })
 
@@ -746,21 +656,18 @@ function ColorPicker:_buildPicker()
         ClearTextOnFocus = false,
         ZIndex = 3,
 
-        TextTransparency = 1, -- Open = 0.4
-
+        TextTransparency = 1, 
         Parent = self.hexBox,
     }, { TextColor3 = "ContentColor", FontFace = "Font", PlaceholderColor3 = "PlaceholderColor" })
 
-    -- Alpha % field, sits right of the hex field. Same styling as hexBox.
-    self.alphaBox = self.window:Create("Frame", {
+        self.alphaBox = self.window:Create("Frame", {
         Position = UDim2.new(0, rightX, 0, contentY + 90),
         Size = UDim2.fromOffset(alphaFieldWidth, 30),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 2,
 
-        BackgroundTransparency = 1, -- Open = 0.9
-
+        BackgroundTransparency = 1, 
         Parent = self.main,
     })
 
@@ -771,8 +678,7 @@ function ColorPicker:_buildPicker()
 
     self.alphaBoxStroke = self.window:Create("UIStroke", {
         Color = Color3.fromRGB(255, 255, 255),
-        Transparency = 1, -- Open = 0.85
-
+        Transparency = 1, 
         Parent = self.alphaBox,
     })
 
@@ -789,8 +695,7 @@ function ColorPicker:_buildPicker()
         ClearTextOnFocus = false,
         ZIndex = 3,
 
-        TextTransparency = 1, -- Open = 0.4
-
+        TextTransparency = 1, 
         Parent = self.alphaBox,
     }, { TextColor3 = "ContentColor", FontFace = "Font", PlaceholderColor3 = "PlaceholderColor" })
 
@@ -830,9 +735,7 @@ function ColorPicker:_buildPicker()
         end
     end)
 
-    -- commit the field on enter/click-away, parsing whatever format they typed. anything
-    -- unrecognised just snaps back to the current colour.
-    self.window:ConnectFor(self, self.hexInput.FocusLost, function()
+            self.window:ConnectFor(self, self.hexInput.FocusLost, function()
         local color = parseColor(self.hexInput.Text)
         if color then
             self:Set(color)
@@ -841,8 +744,7 @@ function ColorPicker:_buildPicker()
         end
     end)
 
-    -- alpha field: take the first number as a percent, clamp 0..100, else snap back
-    self.window:ConnectFor(self, self.alphaInput.FocusLost, function()
+        self.window:ConnectFor(self, self.alphaInput.FocusLost, function()
         local n = tonumber((self.alphaInput.Text:gsub("[^%d%.]", "")))
         if n then
             self:SetAlpha(clamp01(n / 100))
@@ -852,13 +754,8 @@ function ColorPicker:_buildPicker()
     end)
 end
 
--- start following the mouse for the given region ("sat" or "hue"). Mirrors the slider: one
--- RenderStepped loop that self-terminates if the window unloads mid-drag. For a mouse drag
--- it also bails the moment the button is up, so a dropped InputEnded cant leave it running.
 function ColorPicker:_beginDrag(region, isMouse)
-    -- the interacts stay visible through the close fade, so a click landing in that window
-    -- would drag a picker thats already shut
-    if not self._isOpen then
+            if not self._isOpen then
         return
     end
     self._drag = region
@@ -900,8 +797,6 @@ function ColorPicker:_endDrag()
     self.window:_persist(self)
 end
 
--- grow only the grabbed control a touch while dragging, so it reads as a press (same idea as
--- the slider handle swelling when held). region is "sat"/"hue"/"alpha" while held, nil on release.
 function ColorPicker:_setHeld(region)
     local satSize = if region == "sat" then UDim2.fromOffset(16, 16) else UDim2.fromOffset(12, 12)
     local hueSize = if region == "hue" then UDim2.fromOffset(hueWidth + 12, 10) else UDim2.fromOffset(hueWidth + 8, 8)
@@ -913,10 +808,6 @@ function ColorPicker:_setHeld(region)
     variables.tweenService:Create(self.alphaHandle, heldInfo, { Size = alphaSize }):Play()
 end
 
--- Mouse in AbsolutePosition space. GetMouseLocation() sits one gui-inset below where
--- AbsolutePosition measures from (verified in play: GetGuiObjectsAtPosition lines up with
--- AbsolutePosition, and GetMouseLocation is +inset.Y off it), so subtract the inset. Only Y
--- matters here since the inset is vertical, but subtract both to be safe.
 function ColorPicker:_mouseLocation()
     local mouse = variables.userInputService:GetMouseLocation()
     local screenGui = self.window.screenGui
@@ -926,10 +817,8 @@ function ColorPicker:_mouseLocation()
     return mouse
 end
 
--- read the mouse for the active region, update the stored channels and repaint
 function ColorPicker:_pump()
-    -- the branches below mutate these in place
-    local prevHue, prevSat, prevVal, prevAlpha = self.hue, self.sat, self.val, self.alpha
+        local prevHue, prevSat, prevVal, prevAlpha = self.hue, self.sat, self.val, self.alpha
 
     if self._drag == "sat" then
         local size = self.map.AbsoluteSize
@@ -952,16 +841,12 @@ function ColorPicker:_pump()
             return
         end
         local mouse = self:_mouseLocation()
-        -- top of the bar is fully opaque (alpha 1), bottom is clear (alpha 0)
-        self.alpha = 1 - clamp01((mouse.Y - self.alphaBar.AbsolutePosition.Y) / height)
+                self.alpha = 1 - clamp01((mouse.Y - self.alphaBar.AbsolutePosition.Y) / height)
     else
         return
     end
 
-    -- held but stationary: nothing moved, so dont re-render and hammer the callback every frame.
-    -- compare the channels, not the colour they make: at val 0 (or sat 0) every hue is the same
-    -- black, so a colour check would freeze the handles for the whole drag.
-    if self.hue == prevHue and self.sat == prevSat and self.val == prevVal and self.alpha == prevAlpha then
+                if self.hue == prevHue and self.sat == prevSat and self.val == prevVal and self.alpha == prevAlpha then
         return
     end
 
@@ -970,19 +855,12 @@ function ColorPicker:_pump()
     self:_fireCallback()
 end
 
--- paint every surface from the current hue/sat/val/alpha.
--- mode "instant": everything snaps (initial build / Set while collapsed).
--- mode "drag":    map tint + cursors glide on a short tween so they track the mouse smoothly.
--- mode "animate": everything eases on the slower tween (a discrete Set while the picker's open).
--- Cursors/handles are tinted to the colour under them; the preview shows the colour at its alpha.
 function ColorPicker:_render(mode)
     local mapHue = Color3.fromHSV(self.hue, 1, 1)
     local satPos = UDim2.new(self.sat, 0, 1 - self.val, 0)
     local huePos = UDim2.new(0.5, 0, self.hue, 0)
     local alphaPos = UDim2.new(0.5, 0, 1 - self.alpha, 0)
-    local previewT = 1 - self.alpha -- preview opacity tracks alpha
-    local shadowT = 1 - 0.4 * self.alpha -- 0.6 (solid) at full alpha -> 1 (gone) at zero alpha
-
+    local previewT = 1 - self.alpha     local shadowT = 1 - 0.4 * self.alpha 
     if mode == "instant" then
         self.map.BackgroundColor3 = mapHue
         self.satCursor.Position, self.satCursor.BackgroundColor3 = satPos, self.value
@@ -1005,8 +883,7 @@ function ColorPicker:_render(mode)
         variables.tweenService
             :Create(self.alphaHandle, moveInfo, { Position = alphaPos, BackgroundColor3 = self.value })
             :Play()
-        -- the preview + its glow morph colour and opacity together on the softer follow tween
-        variables.tweenService:Create(self.alphaBar, followInfo, { BackgroundColor3 = self.value }):Play()
+                variables.tweenService:Create(self.alphaBar, followInfo, { BackgroundColor3 = self.value }):Play()
         local previewGoal = { BackgroundColor3 = self.value }
         local shadowGoal = { Color = self.value }
         if not self.window.hidden then
@@ -1017,8 +894,7 @@ function ColorPicker:_render(mode)
         variables.tweenService:Create(self.previewShadow, followInfo, shadowGoal):Play()
     end
 
-    -- dont fight the user while they're typing in a field
-    if not self.hexInput:IsFocused() then
+        if not self.hexInput:IsFocused() then
         self.hexInput.Text = "#" .. self.value:ToHex():upper()
     end
     if not self.alphaInput:IsFocused() then
@@ -1028,8 +904,6 @@ function ColorPicker:_render(mode)
     self:_renderInvisible(mode ~= "instant")
 end
 
--- Fade the "Invisible" overlay in as alpha nears 0 (only on the open preview - it wouldnt fit
--- the header pill). Fully in at alpha 0, gone by ~12% alpha.
 function ColorPicker:_renderInvisible(animate)
     local inv = 0
     if self._isOpen and not self.window.hidden then
@@ -1054,8 +928,7 @@ function ColorPicker:_open()
         return
     end
     self._isOpen = true
-    self:_setControlsVisible(true) -- back into input before they fade in
-
+    self:_setControlsVisible(true) 
     if self._outsideClickConn then
         self.window:Disconnect(self._outsideClickConn)
     end
@@ -1080,8 +953,7 @@ function ColorPicker:_open()
     end)
 
     variables.tweenService:Create(self.main, openInfo, { Size = UDim2.new(1, -20, 0, self._openHeight) }):Play()
-    -- the header pill morphs out into the big swatch as the card grows
-    variables.tweenService
+        variables.tweenService
         :Create(self.preview, openInfo, { Position = self._previewOpenPos, Size = self._previewOpenSize })
         :Play()
     self:_applyPickerVisibility(true, true)
@@ -1099,8 +971,7 @@ function ColorPicker:_close()
         self._outsideClickConn = nil
     end
 
-    -- a drag in progress shouldnt keep running once the picker is gone
-    if self._drag then
+        if self._drag then
         self:_endDrag()
     end
     if self.hexInput:IsFocused() then
@@ -1117,19 +988,13 @@ function ColorPicker:_close()
         :Play()
     variables.tweenService:Create(self.main, openInfo, { Size = UDim2.new(1, -20, 0, headerHeight) }):Play()
 
-    -- once the controls have faded, drop them out of input so a transparent field below the
-    -- collapsed header cant grab the cursor
-    task.delay(fadeInfo.Time, function()
+            task.delay(fadeInfo.Time, function()
         if not self._isOpen then
             self:_setControlsVisible(false)
         end
     end)
 end
 
--- One source of truth for the picker controls' shown/hidden transparencies. Used both to hide
--- them instantly at build and to fade them on open/close, so every control is listed in exactly
--- one place - adding one cant re-introduce the bleed-through we'd get from a stray opaque fill
--- (there's no clip). The card height + preview morph animate separately.
 function ColorPicker:_applyPickerVisibility(open, animate)
     local set = {
         [self.map] = { BackgroundTransparency = if open then 0 else 1 },
@@ -1163,19 +1028,12 @@ function ColorPicker:_applyPickerVisibility(open, animate)
     end
 end
 
--- The picker controls sit below the header even while collapsed (the card doesnt clip), so a
--- transparent TextBox or button down there would still catch the cursor and clicks. Toggling the
--- top control frames off drops the whole cluster out of input when closed. The preview pill is
--- separate, so it stays.
 function ColorPicker:_setControlsVisible(visible)
     for _, frame in { self.map, self.hueBar, self.alphaBar, self.hexBox, self.alphaBox } do
         frame.Visible = visible
     end
 end
 
--- Pick side-by-side (wide) vs stacked (narrow) from the real width and apply the mode's
--- geometry. map + hue stay top-left in both; only the preview's open rect, the hex field and
--- the open height change. Re-tweens live if the mode flips while open.
 function ColorPicker:_applyLayout()
     local width = self.main.AbsoluteSize.X
     local mode = if width > 0 and width < narrowWidth then "narrow" else "wide"
@@ -1204,8 +1062,7 @@ end
 function ColorPicker:Set(color, skipCallback)
     self.value = coerceColor(color, self.value)
     self.hue, self.sat, self.val = self.value:ToHSV()
-    -- ease the cursors only when the picker is open, otherwise theres nothing on screen to move
-    self:_render(if self._isOpen then "animate" else "instant")
+        self:_render(if self._isOpen then "animate" else "instant")
 
     if not skipCallback then
         self:_fireCallback()
@@ -1223,13 +1080,10 @@ function ColorPicker:SetAlpha(alpha, skipCallback)
     end
 end
 
--- Persistence: RRGGBB plus an alpha byte (AA) so alpha round-trips.
 function ColorPicker:_serialize()
     return self.value:ToHex() .. string.format("%02x", math.clamp(math.round((self.alpha or 1) * 255), 0, 255))
 end
 
--- Restore colour + alpha from that hex. Old 6-char configs (no alpha byte) still load. Alpha is
--- set silently first so the Set fires the callback just once, with the final colour and alpha.
 function ColorPicker:_deserialize(raw)
     local hex = tostring(raw)
     local alpha = nil
@@ -1238,9 +1092,7 @@ function ColorPicker:_deserialize(raw)
         hex = hex:sub(1, 6)
     end
 
-    -- resolve the colour before applying anything: fromHex throws on a malformed string, and
-    -- an alpha set first would stick while the colour fell back to the default
-    local ok, color = pcall(Color3.fromHex, hex)
+            local ok, color = pcall(Color3.fromHex, hex)
     if not ok then
         return
     end
@@ -1254,15 +1106,13 @@ function ColorPicker:_setShown(shown, animate)
     local w = self.window
     if shown then
         w:_revealCommon(self, animate)
-        -- the preview shows the colour at its alpha, so its opacity tracks alpha even in the header
-        w:_reveal(self.preview, { BackgroundTransparency = 1 - self.alpha }, animate)
+                w:_reveal(self.preview, { BackgroundTransparency = 1 - self.alpha }, animate)
         w:_reveal(self.previewShadow, { Transparency = 1 - 0.4 * self.alpha }, animate)
     else
         w:_hideCommon(self, animate)
         w:_reveal(self.preview, { BackgroundTransparency = 1 }, animate)
         w:_reveal(self.previewShadow, { Transparency = 1 }, animate)
-        -- if the window hides while we're open, collapse so we dont reopen mid-air
-        if self._isOpen then
+                if self._isOpen then
             self:_close()
         end
     end

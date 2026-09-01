@@ -1,17 +1,9 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local variables = require(script.utility.variables)
 local image = require(script.utility.image)
 local locale = require(script.utility.locale)
 local constants = require(script.utility.constants)
 local types = require(script.types)
 
--- re-export public types so consumers can annotate against Rayfield.Window etc
 export type Theme = types.Theme
 export type Translator = types.Translator
 export type Translations = types.Translations
@@ -63,7 +55,6 @@ export type Tag = types.Tag
 export type Popup = types.Popup
 export type Rayfield = types.Rayfield
 
--- the components are untyped luau, so this is where the window module meets the public contract
 type WindowModule = { new: (types.WindowProps) -> types.Window }
 
 local rayfield = {} :: Rayfield
@@ -99,15 +90,10 @@ end
 function rayfield:CreateWindow(properties: types.WindowProps): types.Window
     local banner = createBanner()
 
-    local window: types.Window? -- forward declared so the settle callback below can reach it
-    -- preload can settle before the window is built; hold the notify until it is
-    local queuedNotify: (() -> ())?
+    local window: types.Window?         local queuedNotify: (() -> ())?
 
     if variables.secureMode then
-        -- cache icons locally so secureMode doesnt leak asset ids. non-blocking: whats already on
-        -- disk applies now, the rest download in the background and rebind once ready. if any never
-        -- cache, tell the dev once - on screen only, secure mode stays off the console
-        image.preload(function(failed)
+                                image.preload(function(failed)
             if failed <= 0 then
                 return
             end
@@ -130,9 +116,7 @@ function rayfield:CreateWindow(properties: types.WindowProps): types.Window
         end)
     end
 
-    -- the banner is only torn down once the window is up, so a throw in here (bad props) would
-    -- otherwise strand it in the gui container for the rest of the session
-    local made, result = pcall(function()
+            local made, result = pcall(function()
         return (require(script.components.window) :: WindowModule).new(properties)
     end)
     if not made then
@@ -149,13 +133,10 @@ function rayfield:CreateWindow(properties: types.WindowProps): types.Window
     end
 
     if variables.secureMode then
-        -- secure mode renders the fallback up front (variables.brandFont), then downloads the real
-        -- brand faces off the main thread and swaps them in once ready, so startup never blocks
-        task.spawn(function()
+                        task.spawn(function()
             local body = variables.fontManager:loadFont(constants.fontAsset, Enum.FontWeight.Medium)
             local title = variables.fontManager:loadFont(constants.fontAsset, Enum.FontWeight.SemiBold)
-            -- the download can outlast the window; dont swap into one thats been unloaded
-            if
+                        if
                 not built.unloaded
                 and body
                 and title
@@ -173,9 +154,7 @@ function rayfield:CreateWindow(properties: types.WindowProps): types.Window
         banner:Destroy()
 
         task.wait(0.5)
-        -- the window can be unloaded inside this delay; showing it then would fire
-        -- saved-config callbacks and build toasts on destroyed instances
-        if not built.unloaded then
+                        if not built.unloaded then
             built:Show()
         end
     end)

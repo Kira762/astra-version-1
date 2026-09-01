@@ -1,10 +1,3 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local network = require(script.Parent.network)
 local log = require(script.Parent.log)
 
@@ -37,15 +30,7 @@ export type AssetResolver = AssetResolverState & {
     getAssetContentFromUrl: (self: AssetResolver, url: string, cacheKey: CacheKey?, forced: boolean?) -> string?,
     getAssetContentFromId: (self: AssetResolver, id: AssetId, forced: boolean?) -> string?,
 }
--- example asset ids:
---[[
-rbxassetid://12187277209,
-rbxassetid://12187293441
-]]
 
--- bodies are whole pngs and ttfs, and every caller gates on isfile, so a cached body is only ever
--- re-read inside a retry loop. keep the last few for that and evict the oldest, rather than pinning
--- a session's worth of assets in memory for readers that never come back
 local contentCacheLimit = 8
 
 function assetResolver.new(useCache: boolean?, assetContentDownloadUrl: AssetDownloadUrl?): AssetResolver
@@ -83,8 +68,6 @@ function assetResolver.resolve(_self: AssetResolver, value: unknown): ResolvedAs
     return nil
 end
 
--- executors disagree on response shape, so trust the body only when whatever status
--- info the executor does give us says the request actually succeeded
 local function isGoodResponse(response: unknown): boolean
     if type(response) ~= "table" then
         return false
@@ -101,8 +84,7 @@ local function isGoodResponse(response: unknown): boolean
     if type(shaped.Success) == "boolean" then
         return shaped.Success :: boolean
     end
-    -- no status of any kind: a shape we dont know, so we cant say the body is the asset
-    return false
+        return false
 end
 
 function assetResolver.getAssetContentFromUrl(
@@ -111,8 +93,7 @@ function assetResolver.getAssetContentFromUrl(
     cacheKey: CacheKey?,
     forced: boolean?
 ): string?
-    -- forced skips the session cache, so retry loops see fresh responses
-    local contentCache = self.contentCache
+        local contentCache = self.contentCache
     if cacheKey ~= nil and contentCache and not forced then
         local cachedContent = contentCache[cacheKey]
         if cachedContent then
@@ -120,9 +101,7 @@ function assetResolver.getAssetContentFromUrl(
         end
     end
 
-    -- one download per key at a time; late callers wait on the first request's body
-    -- instead of racing their own copy down
-    local pendingRequests = self.pendingRequests
+            local pendingRequests = self.pendingRequests
     if cacheKey ~= nil then
         local pending = pendingRequests[cacheKey]
         if pending then
@@ -163,9 +142,7 @@ function assetResolver.getAssetContentFromUrl(
         end
     end
 
-    -- resume waiters with whatever we got, nil included, and always clear the entry.
-    -- plain resume, since not every runtime's task.spawn can take a thread
-    if cacheKey ~= nil then
+            if cacheKey ~= nil then
         local waiting = pendingRequests[cacheKey]
         pendingRequests[cacheKey] = nil
         if waiting then
@@ -179,8 +156,7 @@ end
 
 function assetResolver.getAssetContentFromId(self: AssetResolver, id: AssetId, forced: boolean?): string?
     local resolvedId = self:resolve(id)
-    -- we can only download content for valid asset ids
-    if not resolvedId or type(resolvedId) ~= "number" then
+        if not resolvedId or type(resolvedId) ~= "number" then
         log.warn("Invalid asset id: " .. tostring(resolvedId))
         return nil
     end

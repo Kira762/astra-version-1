@@ -21,8 +21,7 @@ return function()
             end
             window = nil
 
-            -- the locale module is shared state; drop the test locale so it can't leak
-            locale.strings["zz-test"] = nil
+                        locale.strings["zz-test"] = nil
             locale.setActive("en")
         end)
 
@@ -40,8 +39,7 @@ return function()
             expect(text.titleRow.Visible).to.equal(true)
             expect(text.body.Visible).to.equal(true)
 
-            -- the card grows with its copy, since the length is not knowable in advance
-            expect(text.main.AutomaticSize).to.equal(Enum.AutomaticSize.Y)
+                        expect(text.main.AutomaticSize).to.equal(Enum.AutomaticSize.Y)
             expect(text.stroke).to.be.ok()
 
             expect(table.find(tab.elements, text)).to.be.ok()
@@ -58,10 +56,7 @@ return function()
             expect(titleOnly.titleRow.Visible).to.equal(true)
             expect(titleOnly.body.Visible).to.equal(false)
 
-            -- a body on its own has to sit evenly between the card's edges: the layout counts a
-            -- row it can see whether or not there is anything in it, so the row goes, not just
-            -- the label inside it, or the empty title still spends its gap above the body
-            local bodyOnly = tab:CreateText({ text = "Just a body" })
+                                                local bodyOnly = tab:CreateText({ text = "Just a body" })
             expect(bodyOnly.titleRow.Visible).to.equal(false)
             expect(bodyOnly.body.Visible).to.equal(true)
 
@@ -73,8 +68,7 @@ return function()
             end
             expect(padding.PaddingTop).to.equal(padding.PaddingBottom)
 
-            -- an icon is part of the title, so asking for one keeps the row
-            local iconOnly = tab:CreateText({ text = "Body", icon = 123 })
+                        local iconOnly = tab:CreateText({ text = "Body", icon = 123 })
             expect(iconOnly.titleRow.Visible).to.equal(true)
         end)
 
@@ -92,14 +86,12 @@ return function()
             expect(text.title.Text).to.equal("New heading")
             expect(text.body.Text).to.equal("New body")
 
-            -- clearing either half gives its room back
-            text:Set("")
+                        text:Set("")
             expect(text.body.Visible).to.equal(false)
             text:SetTitle("")
             expect(text.titleRow.Visible).to.equal(false)
 
-            -- and a body-only element can gain a title later
-            local bodyOnly = tab:CreateText({ text = "Body" })
+                        local bodyOnly = tab:CreateText({ text = "Body" })
             bodyOnly:SetTitle("Grown a heading")
             expect(bodyOnly.titleRow.Visible).to.equal(true)
             expect(bodyOnly.title.Text).to.equal("Grown a heading")
@@ -122,15 +114,11 @@ return function()
             text:Set("Set after the fact")
             text:SetTitle("New heading")
 
-            -- the window re-resolves every localised property from the source it was bound to,
-            -- so copy written straight to the label would be replaced here by a translation of
-            -- the text it no longer shows
-            w:SetLocale("zz-test")
+                                                w:SetLocale("zz-test")
             expect(text.body.Text).to.equal("Satf")
             expect(text.title.Text).to.equal("Nh")
 
-            -- and setting again while a language is active still lands
-            text:Set("Built with this")
+                        text:Set("Built with this")
             expect(text.body.Text).to.equal("Bwt")
 
             w:SetLocale("en")

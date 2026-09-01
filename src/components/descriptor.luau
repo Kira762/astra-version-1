@@ -1,10 +1,3 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local Descriptor = {}
 Descriptor.__index = Descriptor
 Descriptor.__type = "Descriptor"
@@ -43,14 +36,11 @@ function Descriptor.new(tab, properties)
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
 
-        -- Animation
-        TextTransparency = 1, -- In = 0.7
-
+                TextTransparency = 1, 
         Parent = self.main,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-    -- Bottom spacing
-    self.window:Create("Frame", {
+        self.window:Create("Frame", {
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         LayoutOrder = 1,

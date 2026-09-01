@@ -1,14 +1,3 @@
---!nonstrict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
--- Copy on a page: a title, a body, or both, on a card of its own. A Section names what follows
--- it and a description belongs to the element above it, so anything that simply needs to say
--- something had nowhere to go.
-
 local Text = {}
 Text.__index = Text
 Text.__type = "Text"
@@ -19,7 +8,6 @@ local locale = require(script.Parent.Parent.utility.locale)
 local titleSize = 16
 local bodySize = 14
 
--- the body sits back from the title, the way a description does under an element name
 local bodyShown = 0.45
 
 function Text.new(tab, properties)
@@ -33,18 +21,14 @@ function Text.new(tab, properties)
         icon = properties.icon or properties.Icon,
     }, Text)
 
-    -- the card grows with its copy rather than being given a height, since the whole point of
-    -- it is text of a length nobody knows in advance
-    self.main = self.window:Create("Frame", {
+            self.main = self.window:Create("Frame", {
         Size = UDim2.new(1, -20, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BorderSizePixel = 0,
         Name = if self.name ~= "" then self.name else "Text",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 
-        -- Animation
-        BackgroundTransparency = 1, -- In = ElementTransparency
-
+                BackgroundTransparency = 1, 
         Parent = self.tab.tabPage,
     }, { BackgroundTransparency = "ElementTransparency" })
 
@@ -66,8 +50,7 @@ function Text.new(tab, properties)
         Parent = self.main,
     })
 
-    -- the title and its icon share a row so they sit on one line above the body
-    self.titleRow = self.window:Create("Frame", {
+        self.titleRow = self.window:Create("Frame", {
         Name = "Title",
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
@@ -94,9 +77,7 @@ function Text.new(tab, properties)
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
 
-            -- Animation
-            ImageTransparency = 1, -- In = 0, with the rest of the shared set
-
+                        ImageTransparency = 1, 
             Parent = self.titleRow,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -113,9 +94,7 @@ function Text.new(tab, properties)
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 1,
 
-        -- Animation
-        TextTransparency = 1, -- In = 0, with the rest of the shared set
-
+                TextTransparency = 1, 
         Parent = self.titleRow,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 
@@ -131,9 +110,7 @@ function Text.new(tab, properties)
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 2,
 
-        -- Animation
-        TextTransparency = 1, -- In = bodyShown
-
+                TextTransparency = 1, 
         Parent = self.main,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
@@ -142,25 +119,17 @@ function Text.new(tab, properties)
     return self
 end
 
--- Hide what isn't there, row and all. A hidden child costs the layout nothing, but a visible
--- row holding an empty label still spends its 6px of padding, which is what left a body on its
--- own sitting 20 from the top of the card and 14 from the bottom.
 function Text:_applyPresence()
     self.titleRow.Visible = self.name ~= "" or self.icon ~= nil
     self.body.Visible = self.text ~= ""
 end
 
--- Swap the body. It rebinds rather than writing the label directly: the window remembers the
--- source each localised property was built from and re-resolves them all on SetLocale, so a
--- direct write would be undone by the next language change, replaced by a translation of the
--- copy this element no longer shows.
 function Text:Set(text)
     self.text = tostring(text)
     self.window:_bindLocale(self.body, "Text", self.text)
     self:_applyPresence()
 end
 
--- Swap the title, on the same terms.
 function Text:SetTitle(title)
     self.name = tostring(title)
     self.window:_bindLocale(self.title, "Text", self.name)
@@ -168,8 +137,7 @@ function Text:SetTitle(title)
 end
 
 function Text:_setShown(shown, animate)
-    -- the card, its stroke, the title and the icon are the shared set every element has
-    if shown then
+        if shown then
         self.window:_revealCommon(self, animate)
     else
         self.window:_hideCommon(self, animate)

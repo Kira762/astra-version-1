@@ -98,8 +98,7 @@ return function()
 
             locale.setActive("fr")
             expect(locale.resolve("Search")).to.equal("Chercher")
-            -- a non-string translation would reach a Text property and throw at render
-            expect(locale.strings.fr.Settings).never.to.be.ok()
+                        expect(locale.strings.fr.Settings).never.to.be.ok()
             expect(locale.strings.fr.Theme).never.to.be.ok()
             expect(locale.strings.fr[7]).never.to.be.ok()
             expect(locale.resolve("Settings")).to.equal("Settings")

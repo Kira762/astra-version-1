@@ -14,8 +14,7 @@ return function()
         end)
 
         afterEach(function()
-            hapticEngine.setEnabled(false) -- also tears the pooled effects down
-            hapticEngine.releaseContainer(container)
+            hapticEngine.setEnabled(false)             hapticEngine.releaseContainer(container)
             container:Destroy()
             container = nil
         end)
@@ -43,14 +42,12 @@ return function()
             expect(effects[1].ClassName).to.equal("HapticEffect")
             expect(effects[1].Played).to.equal(true)
 
-            -- a second click reuses the pooled effect rather than making another
-            effects[1].Played = false
+                        effects[1].Played = false
             hapticEngine.click()
             expect(effects[1].Played).to.equal(true)
             expect(#container:GetChildren()).to.equal(1)
 
-            -- notify pools its own preset and plays it too
-            hapticEngine.notify()
+                        hapticEngine.notify()
             expect(#container:GetChildren()).to.equal(2)
             for _, effect in container:GetChildren() do
                 expect(effect.Played).to.equal(true)

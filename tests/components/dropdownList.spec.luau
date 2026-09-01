@@ -7,8 +7,7 @@ return function()
     describe("component dropdown list", function()
         local window
 
-        -- mirrors the option geometry in dropdown.luau, so a row is worth the same here
-        local optionHeight = 38
+                local optionHeight = 38
         local optionGap = 5
         local rowStride = optionHeight + optionGap
 
@@ -21,9 +20,7 @@ return function()
             return window
         end
 
-        -- the page is the window's height less the chrome above the elements frame, so a page
-        -- of a given height is a window of that height plus the chrome
-        local windowChromeHeight = windowSizing.profile("top").chromeHeight
+                        local windowChromeHeight = windowSizing.profile("top").chromeHeight
 
         local function makePage(height)
             window.size = UDim2.fromOffset(400, height + windowChromeHeight)
@@ -58,13 +55,9 @@ return function()
                 forgetState = true,
             })
 
-            -- a stroke is drawn outside the frame it belongs to, and both cards fill the wrapper
-            -- exactly, so a clip there takes the border off each of them. unset reads as nil in
-            -- the harness, which is the same thing as not clipping.
-            expect(drop.main.ClipsDescendants or false).to.equal(false)
+                                                expect(drop.main.ClipsDescendants or false).to.equal(false)
 
-            -- the options card is what has contents to hide while collapsed, so the cut is its own
-            expect(drop.panel.ClipsDescendants).to.equal(true)
+                        expect(drop.panel.ClipsDescendants).to.equal(true)
             expect(drop.panelStroke).to.be.ok()
         end)
 
@@ -80,9 +73,7 @@ return function()
             drop.stroke.Transparency = 0.4
             drop.stroke.Color = window.theme.ElementStroke
 
-            -- the closed card carries the plain themed stroke, so both halves move exactly as
-            -- Window:_wireElementHover moves them everywhere else
-            drop.main.MouseEnter:Fire()
+                                    drop.main.MouseEnter:Fire()
             expect(drop.stroke.Transparency).to.equal(0.05)
             expect(drop.stroke.Color).to.equal(window.theme.ElementStrokeHover)
             expect(drop.hoverOverlay.BackgroundTransparency).to.equal(0.97)
@@ -117,16 +108,13 @@ return function()
             local four = drop:_openHeight()
             expect(four - two).to.equal(rowStride * 2)
 
-            -- past four it scrolls rather than growing without end
-            drop:Refresh(options(9))
+                        drop:Refresh(options(9))
             expect(drop:_openHeight()).to.equal(four)
         end)
 
         it("never opens taller than the page it sits on", function()
             makeWindow()
-            -- the shortest page the window can hand an element: the sizing floor less the chrome
-            -- above the elements frame
-            local shortPage = windowSizing.pageHeight(windowSizing.profile("top").minSize.Y, "top")
+                                    local shortPage = windowSizing.pageHeight(windowSizing.profile("top").minSize.Y, "top")
             local tab = makePage(shortPage)
             local drop = tab:CreateDropdown({ name = "Choice", options = options(9), forgetState = true })
 
@@ -135,11 +123,9 @@ return function()
             expect(squeezed <= shortPage).to.equal(true)
             expect(drop.main.Size.Y.Offset <= shortPage).to.equal(true)
 
-            -- still a card, not a sliver: the header and at least one option are in there
-            expect(squeezed > 41).to.equal(true)
+                        expect(squeezed > 41).to.equal(true)
 
-            -- the same list on a page with room opens further, so the cap is the page not the list
-            local roomy = makePage(500)
+                        local roomy = makePage(500)
             local other = roomy:CreateDropdown({ name = "Choice", options = options(9), forgetState = true })
             expect(other:_openHeight() > squeezed).to.equal(true)
         end)
@@ -155,11 +141,9 @@ return function()
                 forgetState = true,
             })
 
-            -- both cap at four rows, and the multi-select carries a bulk actions row on top
-            expect(multi:_openHeight() > drop:_openHeight()).to.equal(true)
+                        expect(multi:_openHeight() > drop:_openHeight()).to.equal(true)
 
-            -- the bar grows when it takes focus, so the card owes it the difference
-            local closed = drop:_openHeight()
+                        local closed = drop:_openHeight()
             drop._searchOpen = true
             expect(drop:_openHeight() - closed).to.equal(8)
             drop._searchOpen = false
@@ -173,9 +157,7 @@ return function()
 
             local measured = drop:_openHeight()
 
-            -- no size to read yet, so the card falls back to the smallest page a window can
-            -- have rather than to four rows it might have no room for
-            local sized = window.size
+                                    local sized = window.size
             window.size = nil
             local unmeasured = drop:_openHeight()
             window.size = sized
@@ -189,14 +171,12 @@ return function()
             local tab = makePage(500)
             local drop = tab:CreateDropdown({ name = "Choice", options = options(9), forgetState = true })
 
-            -- every option is still there to reach, capped card or not
-            expect(#drop._optionFrames).to.equal(9)
+                        expect(#drop._optionFrames).to.equal(9)
             expect(drop.list.ClipsDescendants).to.equal(true)
             expect(drop.list.AutomaticCanvasSize).to.equal(Enum.AutomaticSize.Y)
             expect(drop.list.ScrollingDirection).to.equal(Enum.ScrollingDirection.Y)
 
-            -- the list renders no lower than the card it sits in, or the card would cover it
-            expect(drop.list.ZIndex >= drop.panel.ZIndex).to.equal(true)
+                        expect(drop.list.ZIndex >= drop.panel.ZIndex).to.equal(true)
 
             drop:_open()
             drop.list.AbsoluteWindowSize = Vector2.new(300, 4 * rowStride)
@@ -205,13 +185,11 @@ return function()
             drop:_syncScrollHint()
             expect(drop.list.ScrollBarImageTransparency < 1).to.equal(true)
 
-            -- scrolled to the end, so there is nothing left to point at
-            drop.list.CanvasPosition = Vector2.new(0, 5 * rowStride)
+                        drop.list.CanvasPosition = Vector2.new(0, 5 * rowStride)
             drop:_syncScrollHint()
             expect(drop.list.ScrollBarImageTransparency).to.equal(1)
 
-            -- and a filtered list that now fits never shows one
-            drop.list.AbsoluteCanvasSize = Vector2.new(300, 2 * rowStride)
+                        drop.list.AbsoluteCanvasSize = Vector2.new(300, 2 * rowStride)
             drop.list.CanvasPosition = Vector2.new(0, 0)
             drop:_syncScrollHint()
             expect(drop.list.ScrollBarImageTransparency).to.equal(1)
@@ -230,15 +208,12 @@ return function()
             local all = drop:_openHeight()
 
             drop:_applyFilter("a")
-            expect(drop._optionFrames[2].frame.Visible).to.equal(true) -- Beta
-            expect(drop._optionFrames[5].frame.Visible).to.equal(false) -- Epsilon
-
+            expect(drop._optionFrames[2].frame.Visible).to.equal(true)             expect(drop._optionFrames[5].frame.Visible).to.equal(false) 
             drop:_applyFilter("alp")
             expect(drop:_openHeight() < all).to.equal(true)
             expect(drop.emptyLabel.Visible).to.equal(false)
 
-            -- a search that matches nothing keeps a row of room to say so
-            drop:_applyFilter("zzz")
+                        drop:_applyFilter("zzz")
             expect(drop.emptyLabel.Visible).to.equal(true)
 
             drop:_applyFilter("")
@@ -253,8 +228,7 @@ return function()
             local drop = tab:CreateDropdown({
                 name = "Choice",
                 options = { "Alpha" },
-                value = "Gamma", -- restored from a config, its option not built yet
-                forgetState = true,
+                value = "Gamma",                 forgetState = true,
                 callback = function(value)
                     handed = value
                 end,
@@ -266,8 +240,7 @@ return function()
             expect(drop.value[1]).to.equal("Gamma")
             expect(handed).to.equal("Gamma")
 
-            -- and the same intent survives a rebuild that takes the option away and gives it back
-            drop:Refresh({ "Alpha", "Beta" })
+                        drop:Refresh({ "Alpha", "Beta" })
             expect(#drop.value).to.equal(0)
             drop:Refresh({ "Alpha", "Gamma" })
             expect(drop.value[1]).to.equal("Gamma")
@@ -290,17 +263,14 @@ return function()
             local firstRow = drop._optionFrames[1].frame
             drop:Refresh({ "Delta", "Epsilon", "Zeta" })
 
-            -- the rows are the same instances: nothing was torn down to do this
-            expect(drop._optionFrames[1].frame).to.equal(firstRow)
+                        expect(drop._optionFrames[1].frame).to.equal(firstRow)
             expect(#drop._optionFrames).to.equal(3)
 
-            -- and every one now reads, shows and selects its new option
-            expect(drop._optionFrames[1].name).to.equal("Delta")
+                        expect(drop._optionFrames[1].name).to.equal("Delta")
             expect(drop._optionFrames[1].title.Text).to.equal("Delta")
             expect(drop._optionFrames[3].name).to.equal("Zeta")
 
-            -- the wire that matters: clicking a reused row must pick the option it now shows
-            drop:_open()
+                        drop:_open()
             drop._optionFrames[1].interact.MouseButton1Click:Fire()
             expect(drop.value[1]).to.equal("Delta")
             expect(picked).to.equal("Delta")
@@ -332,9 +302,7 @@ return function()
 
             drop:Refresh(options(2))
             expect(#drop._optionFrames).to.equal(2)
-            expect(drop._optionFrames[1].frame).to.equal(kept) -- reused
-            expect(surplus.Parent).to.equal(nil) -- and the rest actually went
-
+            expect(drop._optionFrames[1].frame).to.equal(kept)             expect(surplus.Parent).to.equal(nil) 
             drop:Refresh(options(5))
             expect(#drop._optionFrames).to.equal(5)
             expect(drop._optionFrames[1].frame).to.equal(kept)
@@ -356,13 +324,11 @@ return function()
             })
             fired = 0
 
-            -- Alpha survives, so nothing the dev can see changed
-            drop:Refresh({ "Alpha", "Gamma" })
+                        drop:Refresh({ "Alpha", "Gamma" })
             expect(fired).to.equal(0)
             expect(drop.value[1]).to.equal("Alpha")
 
-            -- Alpha is gone, so it did
-            drop:Refresh({ "Gamma", "Delta" })
+                        drop:Refresh({ "Gamma", "Delta" })
             expect(fired).to.equal(1)
             expect(#drop.value).to.equal(0)
         end)
@@ -374,12 +340,10 @@ return function()
 
             local before = #drop.connections
             drop:Refresh(options(3))
-            -- seven rows went, and their connections went with them
-            expect(#drop.connections < before).to.equal(true)
+                        expect(#drop.connections < before).to.equal(true)
 
             drop:Refresh(options(10))
-            drop:Refresh(options(10)) -- same length twice over: nothing should accumulate
-            local settled = #drop.connections
+            drop:Refresh(options(10))             local settled = #drop.connections
             drop:Refresh(options(10))
             expect(#drop.connections).to.equal(settled)
         end)
@@ -394,16 +358,14 @@ return function()
                 forgetState = true,
             })
 
-            drop:Set({ "Alpha", "Beta", "Gamma" }) -- Gamma hasnt loaded yet
-            drop:Remove("Alpha")
+            drop:Set({ "Alpha", "Beta", "Gamma" })             drop:Remove("Alpha")
 
             expect(table.find(drop._desiredValue, "Alpha")).to.equal(nil)
             expect(table.find(drop._desiredValue, "Gamma")).to.be.ok()
             expect(#drop.value).to.equal(1)
             expect(drop.value[1]).to.equal("Beta")
 
-            -- Gamma was only ever pending, so it comes back the moment it exists
-            drop:Add("Gamma")
+                        drop:Add("Gamma")
             expect(#drop.value).to.equal(2)
         end)
 
@@ -417,8 +379,7 @@ return function()
                 drop:Refresh(options(6))
             end
 
-            -- rebuild churn must not pile up dead connections on the element
-            expect(#drop.connections).to.equal(before)
+                        expect(#drop.connections).to.equal(before)
             expect(#drop._optionFrames).to.equal(6)
         end)
 
@@ -433,8 +394,7 @@ return function()
             })
 
             drop:Set({ "Beta" })
-            drop:_applyFilter("al") -- Beta is picked, and now out of sight
-
+            drop:_applyFilter("al") 
             local selectAll, clear
             for _, child in drop.actions:GetChildren() do
                 if child.Text == "Select all" then
@@ -452,8 +412,7 @@ return function()
             expect(#drop.value).to.equal(1)
             expect(drop.value[1]).to.equal("Beta")
 
-            -- a single-choice card has nothing to select all of
-            local single = tab:CreateDropdown({ name = "One", options = { "A", "B" }, forgetState = true })
+                        local single = tab:CreateDropdown({ name = "One", options = { "A", "B" }, forgetState = true })
             expect(single.actions).to.equal(nil)
         end)
 
@@ -465,28 +424,22 @@ return function()
             local page = tab.tabPage
             page.CanvasPosition = Vector2.new(0, 0)
 
-            -- sitting near the fold, so opening runs past it
-            drop.main.AbsolutePosition = Vector2.new(0, 260)
+                        drop.main.AbsolutePosition = Vector2.new(0, 260)
             drop:_bringIntoView()
             expect(page.CanvasPosition.Y > 0).to.equal(true)
 
-            -- the card fits the page now, so scrolling to it shows all of it
-            expect(page.CanvasPosition.Y + 300 >= 260 + drop:_openHeight()).to.equal(true)
+                        expect(page.CanvasPosition.Y + 300 >= 260 + drop:_openHeight()).to.equal(true)
 
-            -- never past the card's own top
-            expect(page.CanvasPosition.Y <= 260).to.equal(true)
+                        expect(page.CanvasPosition.Y <= 260).to.equal(true)
 
-            -- one that already ends inside the view is left where it is
-            page.CanvasPosition = Vector2.new(0, 0)
+                        page.CanvasPosition = Vector2.new(0, 0)
             drop.main.AbsolutePosition = Vector2.new(0, 10)
             drop:_bringIntoView()
             expect(page.CanvasPosition.Y).to.equal(0)
         end)
 
         describe("row order", function()
-            -- the rows sort on LayoutOrder, so it has to stay in step with the option list.
-            -- removing from the middle used to leave gaps a later Add could land in.
-            local function ordersOf(drop)
+                                    local function ordersOf(drop)
                 local out = {}
                 for _, data in drop._optionFrames do
                     table.insert(out, string.format("%s=%d", data.name, data.frame.LayoutOrder))
@@ -508,8 +461,7 @@ return function()
                 drop:Add("E")
 
                 expect(table.concat(drop.options, ",")).to.equal("A,D,E")
-                -- the row added last has to sort last, not into the gap the removals left
-                expect(ordersOf(drop)).to.equal("A=1 D=2 E=3")
+                                expect(ordersOf(drop)).to.equal("A=1 D=2 E=3")
             end)
 
             it("still numbers rows from one after shrinking off the end", function()

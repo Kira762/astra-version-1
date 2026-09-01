@@ -1,10 +1,3 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 local imageCache = require(script.Parent.imageCache)
 local variables = require(script.Parent.variables)
 
@@ -16,14 +9,10 @@ local image = {}
 image.rewrites = imageCache.rewrites
 image.onBlock = nil :: ((unknown) -> ())?
 
--- images that resolve blank in secure mode (their icon isnt cached yet) register here, so the real
--- texture can be dropped in once the background download lands instead of leaving a blank. keyed by
--- instance so re-assigning the same icon cant stack up, and weakly so a destroyed one isnt pinned
 type PendingProperties = { [string]: boolean }
 
 image.pending = {} :: { [number]: { [Instance]: PendingProperties } }
 
--- once preload settles nothing else will ever land, so theres nothing left worth tracking
 local settled = false
 
 local imageProperties: { [string]: boolean } = {
@@ -51,9 +40,7 @@ end
 function image.preload(onSettled: PreloadCallback?): (boolean, number)
     settled = false
     return imageCache.preload(function(failed)
-        -- everything that cached has already rebound through onCached, and everything else never
-        -- will, so drop whats left and stop tracking rather than growing all session
-        settled = true
+                        settled = true
         table.clear(image.pending)
         if onSettled then
             onSettled(failed)
@@ -76,8 +63,7 @@ function image.assign(instance: Instance, property: string, value: unknown)
         return
     end
     target[property] = image.resolve(value)
-    -- in secure mode an un-cached icon resolves blank; remember it so it appears once cached
-    if variables.secureMode and not settled then
+        if variables.secureMode and not settled then
         local id = idOf(value)
         if id and not image.rewrites[id] then
             local waiting = image.pending[id]
@@ -95,8 +81,6 @@ function image.assign(instance: Instance, property: string, value: unknown)
     end
 end
 
--- imageCache calls this when a background icon download lands: drop the real texture into every
--- instance that resolved blank waiting for it
 imageCache.onCached = function(id: number)
     local waiting = image.pending[id]
     if not waiting then

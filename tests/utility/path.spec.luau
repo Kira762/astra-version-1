@@ -28,9 +28,7 @@ return function()
             expect(path.sanitizeFolder("a\\b")).to.equal("a/b")
         end)
 
-        -- dots that only become ".." once the illegal characters are stripped used to walk
-        -- straight out of the workspace, so both sanitizers get held to it
-        it("never lets a stripped character rebuild a traversal", function()
+                        it("never lets a stripped character rebuild a traversal", function()
             expect(path.sanitizeFolder(".:./.:./x")).to.equal("x")
             expect(path.sanitizeFolder(".:.")).to.equal("")
             expect(path.sanitizeFolder(":..:")).to.equal("")

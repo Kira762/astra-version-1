@@ -1,21 +1,7 @@
---!strict
-
--- Copyright (c) 2026 Corridon Capital
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this
--- file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
--- Filesystem Abstraction
--- Uses native executor functions when available, simulates with instances
-
 local services = require(script.Parent.services)
--- local variables = require(script.Parent.variables)
-
 local filesystem = {}
 
 local isStudio = services.getService("RunService"):IsStudio()
--- writefile alone isnt proof of a full file API; every one of these gets called
--- unconditionally somewhere, so a partial set must fall through to no filesystem at all
 local hasNativeFS = not isStudio
     and typeof(writefile) == "function"
     and typeof(readfile) == "function"
@@ -27,9 +13,7 @@ local hasNativeFS = not isStudio
     and typeof(delfolder) == "function"
 
 if hasNativeFS then
-    -- Native executor environment - wrap globals directly
-
-    function filesystem.writefile(path: string, content: string)
+        function filesystem.writefile(path: string, content: string)
         writefile(path, content)
     end
 
@@ -37,9 +21,7 @@ if hasNativeFS then
         return readfile(path)
     end
 
-    -- appendfile is missing on several executors, so only wrap it when its real;
-    -- the shared fallback below covers the rest
-    if typeof(appendfile) == "function" then
+            if typeof(appendfile) == "function" then
         function filesystem.appendfile(path: string, content: string)
             appendfile(path, content)
         end
@@ -69,10 +51,7 @@ if hasNativeFS then
         delfolder(path)
     end
 elseif isStudio then
-    -- Studio simulation using Instance hierarchy under ReplicatedStorage.
-    -- Files are StringValues, folders are Folders. Glass is glass.
-
-    local root = Instance.new("Folder")
+            local root = Instance.new("Folder")
     root.Name = "Filesystem"
     root.Parent = services.getService("ReplicatedStorage")
 
@@ -243,8 +222,6 @@ elseif isStudio then
     end
 end
 
--- append built from read + write, shared by the studio sim and executors without
--- appendfile. creates the file when its missing, same as the native global does
 if filesystem.writefile and not filesystem.appendfile then
     function filesystem.appendfile(path: string, content: string)
         local existing = if filesystem.isfile(path) then filesystem.readfile(path) else nil

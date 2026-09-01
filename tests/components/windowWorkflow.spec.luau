@@ -26,8 +26,7 @@ return function()
             end
             window = nil
 
-            -- the locale module is shared state; drop the test locale so it can't leak
-            locale.strings["zz-test"] = nil
+                        locale.strings["zz-test"] = nil
             locale.translator = nil
             locale.setActive("en")
         end)
@@ -115,8 +114,7 @@ return function()
             expect(slider.value).to.equal(8.5)
             expect(sliderValue).to.equal(8.5)
 
-            -- the snap grid anchors at range[1]: both endpoints of a non-aligned range stay reachable
-            local offGrid = first:CreateSlider({
+                        local offGrid = first:CreateSlider({
                 name = "OffGrid",
                 range = { 0.5, 2.5 },
                 increment = 1,
@@ -147,21 +145,17 @@ return function()
             dropdown:Refresh({ "Blue", "Green" })
             dropdown:Set("Green")
             expect(dropdown.selectedLabel.Text).to.equal("Green")
-            -- removing the selected option must tell the callback the selection changed
-            dropdown:Remove("Green")
+                        dropdown:Remove("Green")
             expect(dropdownValue).to.equal(nil)
 
-            -- a user icon may be a rbxassetid string, not just a bare number
-            local stringIcon = first:CreateToggle({
+                        local stringIcon = first:CreateToggle({
                 name = "StringIcon",
                 icon = "rbxassetid://4483345998",
                 forgetState = true,
             })
             expect(stringIcon.iconLabel.Image).to.equal("rbxassetid://4483345998")
 
-            -- an open dropdown sizes itself to the options actually on screen, so a search
-            -- filter (and Add/Remove while open) resizes rather than leaving dead space
-            local sized = first:CreateDropdown({
+                                    local sized = first:CreateDropdown({
                 name = "Sized",
                 options = { "Alpha", "Beta", "Gamma" },
                 forgetState = true,
@@ -170,14 +164,12 @@ return function()
             expect(sized._isOpen).to.equal(true)
             local allHeight = sized:_openHeight()
 
-            -- filtering leaves fewer rows on screen, so the panel must shrink to fit
-            sized._searchOpen = true
+                        sized._searchOpen = true
             sized.searchInput.Text = "alp"
             sized:_applyFilter("alp")
             expect(sized:_openHeight() < allHeight).to.equal(true)
 
-            -- Add while a query is active must respect it, not show an excluded option
-            sized:Add("Delta")
+                        sized:Add("Delta")
             local delta
             for _, data in sized._optionFrames do
                 if data.name == "Delta" then
@@ -187,8 +179,7 @@ return function()
             expect(delta).to.be.ok()
             expect(delta.frame.Visible).to.equal(false)
 
-            -- clearing the query brings every row back, including the one added while filtered
-            sized._searchOpen = false
+                        sized._searchOpen = false
             sized:_applyFilter("")
             expect(delta.frame.Visible).to.equal(true)
             expect(sized:_openHeight() > allHeight or allHeight == 180).to.equal(true)
@@ -209,8 +200,7 @@ return function()
             expect(#multi.value).to.equal(2)
             expect(multi.selectedLabel.Text).to.equal("Various")
 
-            -- the callback gets a copy: a dev mutating it must not corrupt our selection
-            expect(handedOut).never.to.equal(multi.value)
+                        expect(handedOut).never.to.equal(multi.value)
             table.insert(handedOut, "Z")
             expect(#multi.value).to.equal(2)
 
@@ -229,41 +219,32 @@ return function()
             input.input.FocusLost:Fire()
             expect(input.value).to.equal("13")
 
-            -- scientific notation via :Set
-            input:Set("9e9")
+                        input:Set("9e9")
             expect(input.value).to.equal("9000000000")
             expect(inputValue).to.equal("9000000000")
 
-            -- lowercase e
-            input:Set("1.5e3")
+                        input:Set("1.5e3")
             expect(input.value).to.equal("1500")
 
-            -- uppercase E
-            input:Set("2E5")
+                        input:Set("2E5")
             expect(input.value).to.equal("200000")
 
-            -- exponent operator ^
-            input:Set("5^5")
+                        input:Set("5^5")
             expect(input.value).to.equal("3125")
 
-            -- zero exponent
-            input:Set("123^0")
+                        input:Set("123^0")
             expect(input.value).to.equal("1")
 
-            -- invalid e expression keeps the previous value
-            input:Set("e9")
+                        input:Set("e9")
             expect(input.value).to.equal("1")
 
-            -- invalid exponent keeps the previous value
-            input:Set("5^")
+                        input:Set("5^")
             expect(input.value).to.equal("1")
 
-            -- overflow (9e999999999 → math.huge) keeps the previous value
-            input:Set("9e999999999")
+                        input:Set("9e999999999")
             expect(input.value).to.equal("1")
 
-            -- plain numbers still work normally
-            input:Set("42.5")
+                        input:Set("42.5")
             expect(input.value).to.equal("42.5")
 
             local keybind = first:CreateKeybind({
@@ -289,8 +270,7 @@ return function()
             expect(keybind.value).to.equal(Enum.KeyCode.M)
             expect(keyChanged).to.equal(Enum.KeyCode.M)
 
-            -- a set (or restored bind) that clashes with the menu toggle key is refused
-            keybind:Set(w.settings.toggleKeybind)
+                        keybind:Set(w.settings.toggleKeybind)
             expect(keybind.value).to.equal(Enum.KeyCode.M)
 
             local invalidEnumOk = pcall(function()
@@ -321,9 +301,7 @@ return function()
             expect(colorPicker:_serialize()).to.equal("00FF0040")
             colorPicker:_deserialize("336699cc")
             expect(colorPicker.alpha).to.equal(0.8)
-            -- a malformed hex leaves the element as it was rather than landing half of it:
-            -- the colour throws, and the alpha byte must not have been applied already
-            colorPicker:_deserialize("notacolour")
+                                    colorPicker:_deserialize("notacolour")
             expect(colorPicker.alpha).to.equal(0.8)
             expect(colorPicker.value).to.equal(Color3.fromHex("336699"))
 
@@ -394,8 +372,7 @@ return function()
             })
             local tab = w:CreateTab({ name = "Main" })
 
-            -- stand in for a load having already happened, as autoLoad does on first Show
-            w._loadedConfig = { LateToggle = true, LateSlider = 42 }
+                        w._loadedConfig = { LateToggle = true, LateSlider = 42 }
 
             local seen
             local late = tab:CreateToggle({
@@ -405,16 +382,12 @@ return function()
                     seen = value
                 end,
             })
-            expect(late.value).to.equal(true) -- would be the default without _restoreLate
-            expect(seen).to.equal(true) -- the callback has to fire so the dev applies it
-
-            -- groups take the same tail
-            local row = tab:CreateGroup()
+            expect(late.value).to.equal(true)             expect(seen).to.equal(true) 
+                        local row = tab:CreateGroup()
             local lateSlider = row:CreateSlider({ name = "LateSlider", range = { 0, 100 }, increment = 1, value = 0 })
             expect(lateSlider.value).to.equal(42)
 
-            -- forgetState opts out of config entirely, so it must keep its default
-            local ignored = tab:CreateToggle({ name = "LateToggle", value = false, forgetState = true })
+                        local ignored = tab:CreateToggle({ name = "LateToggle", value = false, forgetState = true })
             expect(ignored.value).to.equal(false)
         end)
 
@@ -434,12 +407,10 @@ return function()
             w:Navigate(home)
             expect(w.selectedTab).to.equal(home)
 
-            -- a page instance still works for callers holding tabPage
-            w:Navigate(settings.tabPage)
+                        w:Navigate(settings.tabPage)
             expect(w.selectedTab).to.equal(settings)
 
-            -- an unknown tab is a no-op, not a crash or a silent desync
-            w:Navigate("Nope")
+                        w:Navigate("Nope")
             expect(w.selectedTab).to.equal(settings)
         end)
 
@@ -532,9 +503,7 @@ return function()
         it("keeps action icons hidden until the window is actually interactive", function()
             local w = makeWindow({ name = "Icon Window", showName = "Icons" })
 
-            -- a stray MouseLeave while the window is still hidden/revealing shouldnt settle
-            -- the icon early - it should stay exactly as Action.new left it
-            w.settingsAction.interact.MouseLeave:Fire()
+                                    w.settingsAction.interact.MouseLeave:Fire()
             expect(w.settingsAction.iconLabel.ImageTransparency).to.equal(1)
 
             w:Show()
@@ -547,9 +516,7 @@ return function()
             local home = w:CreateTab({ name = "Home" })
             local other = w:CreateTab({ name = "Other" })
 
-            -- picking a default tab before Show() is a normal setup pattern - it shouldnt play
-            -- a tween that resolves while main is still invisible, popping the icon on reveal
-            w:Navigate(other)
+                                    w:Navigate(other)
             expect(w.selectedTab).to.equal(other)
             expect(w.settingsAction.iconLabel.ImageTransparency).to.equal(1)
 
@@ -569,34 +536,29 @@ return function()
 
             w:Show()
 
-            -- a tab created after the window is open shows its pill right away
-            local late = w:CreateTab({ name = "Late" })
+                        local late = w:CreateTab({ name = "Late" })
             expect(late.topbarItem.Visible).to.equal(true)
 
-            -- rebuilding options must not grow the tracked instance/connection registries
-            local instancesBefore = #w.instances
+                        local instancesBefore = #w.instances
             local connectionsBefore = #w.connections
             dropdown:Refresh({ "A", "B", "C" })
             dropdown:Refresh({ "A", "B", "C" })
             expect(#w.instances).to.equal(instancesBefore)
             expect(#w.connections).to.equal(connectionsBefore)
 
-            -- search stays closed while minimised: it would render outside the collapsed bar
-            w:ToggleMinimise()
+                        w:ToggleMinimise()
             w.animating = false
             w.searchAction.interact.MouseButton1Click:Fire()
             expect(w._searching).to.equal(false)
             w:ToggleMinimise()
             w.animating = false
 
-            -- a removed tag takes its tracked instances with it
-            local tag = w:CreateTag({ text = "Gone" })
+                        local tag = w:CreateTag({ text = "Gone" })
             local trackedBefore = #w.instances
             tag:Remove()
             expect(#w.instances < trackedBefore).to.equal(true)
 
-            -- transient surfaces no-op after Unload instead of erroring on a dead ScreenGui
-            w:Unload()
+                        w:Unload()
             expect(w:Notify({ title = "Late" })).never.to.be.ok()
             expect(w:Toast({ title = "Late" })).never.to.be.ok()
             expect(w:Popup({ title = "Late" })).never.to.be.ok()
@@ -615,8 +577,7 @@ return function()
             tab:Remove()
             expect(w._recordingKeybind).to.equal(nil)
 
-            -- the menu toggle key must still work now nothing is mid-rebind
-            local toggle = { UserInputType = Enum.UserInputType.Keyboard, KeyCode = w.settings.toggleKeybind }
+                        local toggle = { UserInputType = Enum.UserInputType.Keyboard, KeyCode = w.settings.toggleKeybind }
             helpers.services.UserInputService.InputBegan:Fire(toggle, false)
             expect(w.hidden).to.equal(true)
             helpers.services.UserInputService.InputBegan:Fire(toggle, false)
@@ -732,8 +693,7 @@ return function()
                 expect(second._closed).to.equal(true)
                 expect(first._closed).to.equal(false)
 
-                -- the same press must not fall through to the popup underneath
-                helpers.services.UserInputService.InputBegan:Fire(escape, false)
+                                helpers.services.UserInputService.InputBegan:Fire(escape, false)
                 expect(first._closed).to.equal(false)
 
                 helpers.services.UserInputService.InputBegan:Fire({
@@ -817,10 +777,8 @@ return function()
                     end,
                 })
 
-                toggle:Set(true) -- the throw must stay inside the guard
-                expect(toggle.value).to.equal(true)
-                expect(toggle._errored).to.equal(false) -- flash already settled under instant tweens
-                expect(sawWarning("Grumpy")).to.equal(true)
+                toggle:Set(true)                 expect(toggle.value).to.equal(true)
+                expect(toggle._errored).to.equal(false)                 expect(sawWarning("Grumpy")).to.equal(true)
 
                 toggle:Set(false)
                 expect(toggle.value).to.equal(false)
@@ -838,9 +796,7 @@ return function()
         end)
 
         describe("toast stacking", function()
-            -- park each toast's dwell mid-flight so the stack actually accumulates; the shim's
-            -- task.wait normally returns straight away and a toast retires inside its constructor
-            local originalWait = task.wait
+                                    local originalWait = task.wait
 
             afterEach(function()
                 task.wait = originalWait
@@ -855,8 +811,7 @@ return function()
                 end
                 task.wait = originalWait
 
-                expect(toasts[1]._dismissed).to.equal(true) -- 7th arrival evicts the 1st (maxLive 6)
-                expect(toasts[2]._dismissed).to.equal(false)
+                expect(toasts[1]._dismissed).to.equal(true)                 expect(toasts[2]._dismissed).to.equal(false)
                 expect(toasts[7]._dismissed).to.equal(false)
             end)
 
@@ -977,8 +932,7 @@ return function()
             it("assigns descending LayoutOrder within the position container", function()
                 local w = makeWindow()
                 local originalWait = task.wait
-                task.wait = coroutine.yield -- keep all three alive so the frames are readable
-                local first = w:Toast({ title = "First", position = "Bottom", duration = 60 })
+                task.wait = coroutine.yield                 local first = w:Toast({ title = "First", position = "Bottom", duration = 60 })
                 local second = w:Toast({ title = "Second", position = "Bottom", duration = 60 })
                 local third = w:Toast({ title = "Third", position = "Bottom", duration = 60 })
                 task.wait = originalWait
@@ -1005,10 +959,7 @@ return function()
                 variables.tweenService.Create = originalTweenCreate
             end)
 
-            -- the collapse tween is the clock for handing input to the pill, so a tween that
-            -- stops short must still settle. otherwise animating stays up and Show, ToggleHide
-            -- and the toggle key all bail forever on a window nobody can get back.
-            it("settles even when the collapse motion is cancelled", function()
+                                                it("settles even when the collapse motion is cancelled", function()
                 local w = makeWindow()
                 w.hidden = false
                 w.hasShownOnce = true
@@ -1042,9 +993,7 @@ return function()
         end)
     end)
 
-    -- The primary flow: a dev sets autoSave/autoLoad and never opens the config manager.
-    -- A change to an element must autosave, and a fresh window must autoLoad it back.
-    describe("config round trip without the config manager", function()
+            describe("config round trip without the config manager", function()
         local variables = helpers.requireUtility("variables")
         local filesystem = helpers.requireUtility("filesystem")
 
@@ -1111,8 +1060,7 @@ return function()
             filesystem.delfile = originals.delfile
             filesystem.listfiles = originals.listfiles
 
-            -- the drag specs steer the shared input mocks; put them back
-            helpers.services.UserInputService._setMouseLocation(Vector2.new(120, 80))
+                        helpers.services.UserInputService._setMouseLocation(Vector2.new(120, 80))
             helpers.services.GuiService._setGuiInset(Vector2.new(0, 0))
         end)
 
@@ -1131,23 +1079,20 @@ return function()
             return w
         end
 
-        -- what actually landed on disk, through the real JSON shim
-        local function decodeConfig(w)
+                local function decodeConfig(w)
             local _, fullPath = w:GetPath()
             expect(type(files[fullPath])).to.equal("string")
             return variables.httpService:JSONDecode(files[fullPath])
         end
 
         it("autosaves a change and autoLoads it into a fresh window with an explicit flag", function()
-            -- session 1: the player flips a toggle, autosave writes the file
-            local w1 = newWindow(false)
+                        local w1 = newWindow(false)
             local tab1 = w1:CreateTab({ name = "Main" })
             local t1 = tab1:CreateToggle({ name = "Auto Farm", flag = "autoFarm", value = false })
             t1:Set(true)
             expect(next(files)).to.be.ok()
 
-            -- session 2: same script re-run, a brand new window autoLoads on first Show
-            local w2 = newWindow(true)
+                        local w2 = newWindow(true)
             local tab2 = w2:CreateTab({ name = "Main" })
             local restored
             local t2 = tab2:CreateToggle({
@@ -1161,14 +1106,10 @@ return function()
             w2:Show()
 
             expect(t2.value).to.equal(true)
-            -- the callback has to fire, so the dev's own logic (a farm loop, say) resumes
-            expect(restored).to.equal(true)
+                        expect(restored).to.equal(true)
         end)
 
-        -- Every update has to keep reading what an older one wrote. These configs are written
-        -- by hand in the shapes older versions saved, not by the current code, so a change to
-        -- the serialisation shape breaks here rather than in someone's game.
-        describe("configs written by older versions", function()
+                                describe("configs written by older versions", function()
             local function writeConfig(w, flags)
                 local _, fullPath = w:GetPath()
                 files[fullPath] = variables.httpService:JSONEncode(flags)
@@ -1176,14 +1117,12 @@ return function()
 
             it("restores a colour saved before the alpha byte existed", function()
                 local w = newWindow(true)
-                writeConfig(w, { accent = "336699" }) -- six chars, the pre-alpha shape
-                local tab = w:CreateTab({ name = "Main" })
+                writeConfig(w, { accent = "336699" })                 local tab = w:CreateTab({ name = "Main" })
                 local picker = tab:CreateColorPicker({ name = "Accent", flag = "accent" })
                 w:Show()
 
                 expect(picker.value).to.equal(Color3.fromHex("336699"))
-                expect(picker.alpha).to.equal(1) -- nothing saved, so it keeps the default
-            end)
+                expect(picker.alpha).to.equal(1)             end)
 
             it("restores a colour saved with the alpha byte", function()
                 local w = newWindow(true)
@@ -1251,9 +1190,7 @@ return function()
             local tab1 = w1:CreateTab({ name = "Main" })
             tab1:CreateSlider({ name = "Speed", range = { 0, 100 }, increment = 1, value = 0 }):Set(80)
 
-            -- session 2 builds its UI only after the window has already opened (e.g. after a
-            -- remote fetch). the late element still has to come back from the saved file.
-            local w2 = newWindow(true)
+                                    local w2 = newWindow(true)
             w2:Show()
             local tab2 = w2:CreateTab({ name = "Main" })
             local late = tab2:CreateSlider({ name = "Speed", range = { 0, 100 }, increment = 1, value = 0 })
@@ -1267,15 +1204,11 @@ return function()
             local t1 = tab1:CreateToggle({ name = "Auto Farm", flag = "autoFarm", value = false })
 
             t1:Set(true)
-            expect(w1:Save("PvP")).to.equal(true) -- snapshot the on state under a name
-            t1:Set(false) -- the live default is now off, the named config still on
-
-            -- picking PvP in the manager applies it and makes it the live state
-            expect(w1:_applyNamedConfig("PvP")).to.equal(true)
+            expect(w1:Save("PvP")).to.equal(true)             t1:Set(false) 
+                        expect(w1:_applyNamedConfig("PvP")).to.equal(true)
             expect(t1.value).to.equal(true)
 
-            -- next session autoLoads the default file, which now holds PvP's values
-            local w2 = newWindow(true)
+                        local w2 = newWindow(true)
             local tab2 = w2:CreateTab({ name = "Main" })
             local t2 = tab2:CreateToggle({ name = "Auto Farm", flag = "autoFarm", value = false })
             w2:Show()
@@ -1314,8 +1247,7 @@ return function()
         end)
 
         it("keeps a restored dropdown selection when its options arrive after autoLoad", function()
-            -- session 1: options are known, the player picks one
-            local w1 = newWindow(false)
+                        local w1 = newWindow(false)
             local tab1 = w1:CreateTab({ name = "Main" })
             tab1:CreateDropdown({
                 name = "Drop Ultimate",
@@ -1324,9 +1256,7 @@ return function()
                 value = {},
             }):Set({ "Ult A" })
 
-            -- session 2: the dropdown is built before its options exist (populated later from
-            -- game data), which is a normal pattern for a live list.
-            local w2 = newWindow(true)
+                                    local w2 = newWindow(true)
             local tab2 = w2:CreateTab({ name = "Main" })
             local d2 = tab2:CreateDropdown({ name = "Drop Ultimate", multiSelect = true, options = {}, value = {} })
             w2:Show()
@@ -1342,8 +1272,7 @@ return function()
                 tab:CreateDropdown({ name = "Drop Ultimate", multiSelect = true, options = { "A", "B" }, value = {} })
             d:Set({ "A", "B" })
 
-            -- a real options list that no longer offers A: the selection has to drop, not linger
-            d:Refresh({ "B" })
+                        d:Refresh({ "B" })
             expect(#d.value).to.equal(1)
             expect(d.value[1]).to.equal("B")
         end)
@@ -1358,30 +1287,25 @@ return function()
                 value = {},
             })
 
-            d.interact.MouseButton1Click:Fire() -- open the panel
-            for _, data in d._optionFrames do
+            d.interact.MouseButton1Click:Fire()             for _, data in d._optionFrames do
                 if data.name == "B" then
-                    data.interact.MouseButton1Click:Fire() -- the player picks B
-                end
+                    data.interact.MouseButton1Click:Fire()                 end
             end
             expect(#d.value).to.equal(1)
             expect(d.value[1]).to.equal("B")
 
-            -- a refresh of the same options must build on the live pick, not revert it
-            d:Refresh({ "A", "B", "C" })
+                        d:Refresh({ "A", "B", "C" })
             expect(#d.value).to.equal(1)
             expect(d.value[1]).to.equal("B")
         end)
 
         it("keeps a flipped value on disk after its tab is torn down", function()
-            -- session 1 seeds the file
-            local w1 = newWindow(false)
+                        local w1 = newWindow(false)
             local tab1 = w1:CreateTab({ name = "Main" })
             tab1:CreateToggle({ name = "Auto Farm", flag = "autoFarm", value = false }):Set(false)
             tab1:CreateSlider({ name = "Speed", flag = "speed", range = { 0, 100 }, increment = 1, value = 0 }):Set(10)
 
-            -- session 2 loads, flips the toggle, loses its tab, then another autosave lands
-            local w2 = newWindow(true)
+                        local w2 = newWindow(true)
             local farmTab = w2:CreateTab({ name = "Farm" })
             local toggle = farmTab:CreateToggle({ name = "Auto Farm", flag = "autoFarm", value = false })
             local otherTab = w2:CreateTab({ name = "Other" })
@@ -1391,8 +1315,7 @@ return function()
 
             toggle:Set(true)
             farmTab:Remove()
-            slider:Set(25) -- this autosave must carry the flip forward, not revert it
-
+            slider:Set(25) 
             local decoded = decodeConfig(w2)
             expect(decoded.autoFarm).to.equal(true)
             expect(decoded.speed).to.equal(25)
@@ -1404,8 +1327,7 @@ return function()
             tab1:CreateToggle({ name = "Ghost", flag = "ghost", value = false }):Set(true)
             expect(w1:Save("A")).to.equal(true)
 
-            -- a fresh session whose UI never builds the ghost element
-            local w2 = newWindow(false)
+                        local w2 = newWindow(false)
             local tab2 = w2:CreateTab({ name = "Main" })
             tab2:CreateToggle({ name = "Other", flag = "other", value = false })
             expect(w2:_applyNamedConfig("A")).to.equal(true)
@@ -1433,16 +1355,14 @@ return function()
             color:Set(Color3.fromRGB(51, 102, 153))
             color:SetAlpha(0.8)
 
-            -- the on-disk string is real JSON in the shapes _serialize promises
-            local decoded = decodeConfig(w1)
+                        local decoded = decodeConfig(w1)
             expect(decoded.toggle).to.equal(true)
             expect(decoded.slider).to.equal(0.5)
             expect(decoded.bind[1]).to.equal("Enum.KeyCode")
             expect(decoded.bind[2]).to.equal(Enum.KeyCode.J.Value)
             expect(decoded.color).to.equal("336699cc")
 
-            -- a fresh window restores every value exactly
-            local w2 = newWindow(true)
+                        local w2 = newWindow(true)
             local tab2 = w2:CreateTab({ name = "Main" })
             local toggle = tab2:CreateToggle({ name = "Flag Toggle", flag = "toggle", value = false })
             local slider =
@@ -1484,15 +1404,13 @@ return function()
                 end,
             })
 
-            d:Set("X") -- intent lands before any option exists
-            expect(#d.value).to.equal(0)
+            d:Set("X")             expect(#d.value).to.equal(0)
 
             d:Add("X")
             expect(d.value[1]).to.equal("X")
             expect(picks).to.equal(1)
 
-            d:Add("X") -- a duplicate add must not re-fire the selection
-            expect(picks).to.equal(1)
+            d:Add("X")             expect(picks).to.equal(1)
 
             local decoded = decodeConfig(w)
             expect(decoded.late[1]).to.equal("X")
@@ -1502,10 +1420,8 @@ return function()
             local w = newWindow(false)
             local tab = w:CreateTab({ name = "Main" })
             local input = tab:CreateInput({ name = "Amount", flag = "amount", value = "10", numeric = true })
-            table.clear(files) -- only the commit below could write
-
-            input.input.Text = "-1^0.5" -- (-1)^0.5 is nan
-            input.input.FocusLost:Fire()
+            table.clear(files) 
+            input.input.Text = "-1^0.5"             input.input.FocusLost:Fire()
 
             expect(input.value).to.equal("10")
             expect(input.input.Text).to.equal("10")
@@ -1513,8 +1429,7 @@ return function()
         end)
 
         it("follows the mouse through a drag and persists on release", function()
-            -- nonzero inset so the mouse-to-track math is exercised against real conditions
-            helpers.services.GuiService._setGuiInset(Vector2.new(0, 58))
+                        helpers.services.GuiService._setGuiInset(Vector2.new(0, 58))
 
             local w = newWindow(false)
             local tab = w:CreateTab({ name = "Main" })
@@ -1535,8 +1450,7 @@ return function()
             helpers.services.UserInputService._setMouseLocation(Vector2.new(150, 80))
             slider.interact.InputBegan:Fire({ UserInputType = Enum.UserInputType.MouseButton1 })
             expect(slider.dragging).to.equal(true)
-            expect(slider.value).to.equal(25) -- (150 - 100) / 200 of the range
-
+            expect(slider.value).to.equal(25) 
             helpers.services.UserInputService._setMouseLocation(Vector2.new(200, 80))
             helpers.services.RunService.RenderStepped:Fire()
             expect(slider.value).to.equal(50)
@@ -1546,8 +1460,7 @@ return function()
             helpers.services.UserInputService.InputEnded:Fire({ UserInputType = Enum.UserInputType.MouseButton1 })
             expect(slider.dragging).to.equal(false)
 
-            -- released: the per-frame follow is gone
-            helpers.services.UserInputService._setMouseLocation(Vector2.new(100, 80))
+                        helpers.services.UserInputService._setMouseLocation(Vector2.new(100, 80))
             helpers.services.RunService.RenderStepped:Fire()
             expect(slider.value).to.equal(50)
 
@@ -1585,9 +1498,7 @@ return function()
             return fitted
         end
 
-        -- a signal the specs can actually fire, so the watcher gets exercised rather than
-        -- just constructed
-        local function makeSignal()
+                        local function makeSignal()
             local handlers = {}
             return {
                 Connect = function(_, handler)
@@ -1612,8 +1523,7 @@ return function()
             }
         end
 
-        -- a camera the specs can move, standing in for a screen that rotates or resizes
-        local function makeCamera(x, y)
+                local function makeCamera(x, y)
             local changed = makeSignal()
             return {
                 ViewportSize = Vector2.new(x, y),
@@ -1654,8 +1564,7 @@ return function()
         it("sizes a new window from the current viewport", function()
             setViewport(844, 390)
             local w = makeWindow()
-            -- a short screen gives height up and earns a little width back for it
-            expect(w.size.Y.Offset < 500).to.equal(true)
+                        expect(w.size.Y.Offset < 500).to.equal(true)
             expect(w.size.X.Offset > 475).to.equal(true)
         end)
 
@@ -1680,8 +1589,7 @@ return function()
             setViewport(844, 390)
             w:_applyWindowSize()
 
-            -- the size is taken, but a collapsed window must not be yanked open by a rotation
-            expect(w.size.X.Offset > 475).to.equal(true)
+                        expect(w.size.X.Offset > 475).to.equal(true)
             expect(w.main.Size).to.equal(before)
         end)
 
@@ -1714,12 +1622,10 @@ return function()
             local w = makeWindow()
             w.hidden = false
             w.screenGui.AbsoluteSize = Vector2.new(1920, 1080)
-            -- parked near the right edge, then hidden, so this is where Show grows back to
-            w.main.Position = UDim2.fromOffset(1700, 900)
+                        w.main.Position = UDim2.fromOffset(1700, 900)
             w._restorePosition = w.main.Position
 
-            -- the screen shrinks under it while it is away
-            w.screenGui.AbsoluteSize = Vector2.new(700, 500)
+                        w.screenGui.AbsoluteSize = Vector2.new(700, 500)
             setViewport(700, 500)
             w:_applyWindowSize()
 
@@ -1746,8 +1652,7 @@ return function()
             w.hidden = false
             expect(w.size.X.Offset).to.equal(475)
 
-            -- the watcher alone must carry this through, so nothing calls _applyWindowSize here
-            camera.ViewportSize = Vector2.new(844, 390)
+                        camera.ViewportSize = Vector2.new(844, 390)
             camera.changed.fire()
 
             expect(w.size.X.Offset > 475).to.equal(true)
@@ -1760,13 +1665,10 @@ return function()
             w.hidden = false
 
             local replacement = setViewport(844, 390)
-            cameraSwapped.fire() -- respawn, or the game swapping CurrentCamera
+            cameraSwapped.fire() 
+                        expect(w.size.X.Offset > 475).to.equal(true)
 
-            -- rebinding re-fits straight away, off the new camera
-            expect(w.size.X.Offset > 475).to.equal(true)
-
-            -- and the replacement drives it from here, while the dead camera does not
-            replacement.ViewportSize = Vector2.new(1920, 1080)
+                        replacement.ViewportSize = Vector2.new(1920, 1080)
             replacement.changed.fire()
             expect(w.size.X.Offset).to.equal(475)
 
@@ -1783,8 +1685,7 @@ return function()
             w:_applyWindowSize()
             local before = w.main.Size
 
-            -- a rotation mid-reveal must not fight the tween, but must not be lost either
-            w._revealing = true
+                        w._revealing = true
             setViewport(844, 390)
             w:_applyWindowSize()
             expect(w.main.Size).to.equal(before)
