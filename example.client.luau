@@ -2,10 +2,13 @@ local Astra = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kira762
 
 task.wait(2)
 
+-- Unique local identifier: safe to paste beside other scripts.
+local AstraLucidePack = Astra.Icons.Lucide
+
 local window = Astra:CreateWindow({
     name = "Astra",
     subtitle = "Example UI - Lucide Icons",
-    iconPack = Astra.Icons.Lucide,
+    iconPack = AstraLucidePack,
     sidebarLayout = true,
     configuration = {
         autoSave = true,
