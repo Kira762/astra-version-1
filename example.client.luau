@@ -1,6 +1,5 @@
 local Astra = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"))()
 
--- Unique local identifier: safe to paste beside other scripts.
 local AstraLucidePack = Astra.Icons.Lucide
 
 local window = Astra:CreateWindow({
@@ -24,25 +23,16 @@ home:CreateSection({ name = "Buttons" })
 home:CreateButton({
     name = "Click Me",
     icon = "play",
-    callback = function()
-        print("Button clicked!")
-    end,
 })
 
 home:CreateButton({
     name = "With Icon",
     icon = "settings",
-    callback = function()
-        print("Icon button clicked!")
-    end,
 })
 
 home:CreateButton({
     name = "With Description",
     description = "This button has a description below it.",
-    callback = function()
-        print("Description button clicked!")
-    end,
 })
 
 home:CreateSection({ name = "Toggles" })
@@ -51,18 +41,12 @@ home:CreateToggle({
     name = "Basic Toggle",
     icon = "toggle-right",
     value = true,
-    callback = function(value)
-        print("Toggle:", value)
-    end,
 })
 
 home:CreateToggle({
     name = "Described Toggle",
     icon = "bell",
     description = "This toggle has a description.",
-    callback = function(value)
-        print("Described toggle:", value)
-    end,
 })
 
 home:CreateToggle({
@@ -78,9 +62,6 @@ home:CreateSlider({
     name = "Basic Slider",
     range = { 0, 100 },
     value = 50,
-    callback = function(value)
-        print("Slider:", value)
-    end,
 })
 
 home:CreateSlider({
@@ -104,9 +85,6 @@ home:CreateDropdown({
     name = "Basic Dropdown",
     options = { "Option 1", "Option 2", "Option 3" },
     value = "Option 1",
-    callback = function(value)
-        print("Dropdown:", value)
-    end,
 })
 
 home:CreateDropdown({
@@ -131,9 +109,6 @@ inputs:CreateSection({ name = "Text Inputs" })
 inputs:CreateInput({
     name = "Basic Input",
     placeholder = "Type here",
-    callback = function(value)
-        print("Input:", value)
-    end,
 })
 
 inputs:CreateInput({
@@ -159,9 +134,6 @@ inputs:CreateKeybind({
     name = "Hold Mode",
     hold = true,
     value = Enum.KeyCode.LeftShift,
-    callback = function(holding)
-        print("Holding:", holding)
-    end,
 })
 
 inputs:CreateSection({ name = "Color Pickers" })
@@ -202,7 +174,7 @@ display:CreateButton({
 
 display:CreateSection({ name = "Progress" })
 
-local progress1 = display:CreateProgress({
+display:CreateProgress({
     name = "Download",
     range = { 0, 100 },
     value = 35,
@@ -330,25 +302,6 @@ window:CreateTag({
     color = Color3.fromRGB(96, 205, 255),
 })
 
-utility:CreateSection({ name = "Locking" })
-
-local lockable = utility:CreateToggle({
-    name = "Lockable Element",
-    description = "This can be locked and unlocked.",
-    value = false,
-})
-
-utility:CreateToggle({
-    name = "Toggle Lock",
-    callback = function(state)
-        if state then
-            lockable:Lock("Locked by user")
-        else
-            lockable:Unlock()
-        end
-    end,
-})
-
 utility:CreateSection({ name = "Window Controls" })
 
 utility:CreateButton({
@@ -377,7 +330,6 @@ utility:CreateButton({
     callback = function()
         local configs = window:ListConfigs()
         for _, name in configs do
-            print("Config:", name)
         end
     end,
 })
