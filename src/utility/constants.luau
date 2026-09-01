@@ -1,6 +1,6 @@
 local constants = {}
 
-constants.fontAsset = "rbxassetid://12187365364"
+constants.fontAsset = "rbxassetid://12187375716"
 
 constants.pillResizeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
