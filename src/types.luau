@@ -20,7 +20,8 @@ export type WindowProps = {
     iconPack: IconPack?,
     IconPack: IconPack?,
     showName: string?,
-    sidebarLayout: boolean?,     profile: string?,     configuration: WindowConfiguration?,
+    showIcon: (string | number)?,
+    showIconOnly: boolean?,     sidebarLayout: boolean?,     profile: string?,     configuration: WindowConfiguration?,
     fallbackFont: (Font | Enum.Font)?,     locale: string?,     translations: Translations?,     translator: Translator?, }
 
 export type TabProps = {

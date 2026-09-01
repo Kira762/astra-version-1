@@ -23,6 +23,7 @@ Window.__index = Window
 local revealInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
 local collapsedSize = UDim2.fromOffset(185, 50)
+local collapsedIconSize = UDim2.fromOffset(50, 50)
 local collapsedTop = UDim2.new(0.5, 0, 0, 20)
 local topToastOpenPosition = UDim2.new(0.5, 0, 0, 12)
 local topToastClosedPosition = UDim2.new(0.5, 0, 0, collapsedTop.Y.Offset + collapsedSize.Y.Offset + 12)
@@ -198,6 +199,8 @@ function Window.new(properties)
         iconPack = iconPack,
         icon = icons.resolve(properties.icon or properties.Icon, iconPack),
         showName = properties.showName or properties.ShowName "Astra",
+        showIcon = icons.resolve(properties.showIcon or properties.ShowIcon, iconPack),
+                showIconOnly = properties.showIconOnly or properties.ShowIconOnly or false,
                 profileText = properties.profile or properties.Profile,
 
         themeProperties = {},
@@ -2373,7 +2376,7 @@ function Window:_hideCommon(element, animate)
 end
 
 function Window:_collapsedRect()
-    local size = collapsedSize
+    local size = if self.showIconOnly then collapsedIconSize else collapsedSize
         if self._collapsedPosition then
         return self._collapsedPosition, size
     end

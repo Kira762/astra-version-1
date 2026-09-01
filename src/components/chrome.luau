@@ -10,11 +10,31 @@ local chrome = {}
 local dragThreshold = 5
 
 function chrome.buildCollapsedFace(window)
+    local iconOnly = window.showIconOnly
+
+    window.collapsedIcon = window:Create("ImageLabel", {
+        Name = "CollapsedIcon",
+        AnchorPoint = if iconOnly then Vector2.new(0.5, 0.5) else Vector2.new(0, 0.5),
+        Position = if iconOnly then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 16, 0.5, 0),
+        Size = UDim2.fromOffset(24, 24),
+        BackgroundTransparency = 1,
+                Image = window.showIcon,
+        ZIndex = constants.zIndex.restoreContent,
+
+        ImageTransparency = 1, 
+        Parent = window.main,
+    }, { ImageColor3 = "TitlingColor" })
+
+    window:Create("UICorner", {
+        Parent = window.collapsedIcon,
+    }, { CornerRadius = "PillCornerRadius" })
+
     local textContainer = window:Create("Frame", {
         Name = "CollapsedText",
+        Visible = not iconOnly,
         AnchorPoint = Vector2.new(0, 0.5),
-        Position = UDim2.new(0, 16, 0.5, 0),
-        Size = UDim2.new(1, -32, 0, 32),
+        Position = UDim2.new(0, 50, 0.5, 0),
+        Size = UDim2.new(1, -60, 0, 32),
         BackgroundTransparency = 1,
         ZIndex = constants.zIndex.restoreContent,
 
@@ -171,9 +191,13 @@ end
 
 function chrome.setCollapsedShown(window, shown, tweenInfo)
     local targets = {
-        [window.collapsedTitle] = { TextTransparency = if shown then 0 else 1 },
-        [window.collapsedSubtitle] = { TextTransparency = if shown then 0.5 else 1 },
+        [window.collapsedIcon] = { ImageTransparency = if shown then 0 else 1 },
     }
+
+    if not window.showIconOnly then
+        targets[window.collapsedTitle] = { TextTransparency = if shown then 0 else 1 }
+        targets[window.collapsedSubtitle] = { TextTransparency = if shown then 0.5 else 1 }
+    end
 
     for instance, props in targets do
         if tweenInfo then

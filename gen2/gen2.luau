@@ -127,7 +127,11 @@ ElementStrokeTransparency}):Play()end)end function f._setShown(n,o,p)if o then n
 _hideCommon(n,p)end end function f._minWidth(n)local o=32 if n.icon then o+=22 end o+=i.textWidth(n.window.theme.Font,16
 ,l.resolve(n.name))return o end j(f)k(f)return f end)()end,[5]=function()local b,c,d=a(5)local e return(function(...)
 local f=c.Parent.Parent.utility local g,h,i,j,k,l,m=d(f.variables),d(f.filesystem),d(f.constants),d(f.locale),d(f.
-HapticEngine),{},5 function l.buildCollapsedFace(n)local p=n:Create('Frame',{Name='CollapsedText',
+HapticEngine),{},5 function l.buildCollapsedFace(n)local o=n.showIconOnly n.collapsedIcon=n:Create('ImageLabel',{Name=
+'CollapsedIcon',AnchorPoint=if o then Vector2.new(0.5,0.5)else Vector2.new(0,0.5),Position=if o then UDim2.fromScale(0.5
+,0.5)else UDim2.new(0,16,0.5,0),Size=UDim2.fromOffset(24,24),BackgroundTransparency=1,Image=n.showIcon,ZIndex=i.zIndex.
+restoreContent,ImageTransparency=1,Parent=n.main},{ImageColor3='TitlingColor'})n:Create('UICorner',{Parent=n.
+collapsedIcon},{CornerRadius='PillCornerRadius'})local p=n:Create('Frame',{Name='CollapsedText',Visible=not o,
 AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,50,0.5,0),Size=UDim2.new(1,-60,0,32),BackgroundTransparency=1,ZIndex
 =i.zIndex.restoreContent,Parent=n.main})n:Create('UIListLayout',{Padding=UDim.new(0,1),VerticalAlignment=Enum.
 VerticalAlignment.Center,SortOrder=Enum.SortOrder.LayoutOrder,Parent=p})n.collapsedTitle=n:Create('TextLabel',{Name=
@@ -151,7 +155,7 @@ return end q=true local v=u+r+t()n.main.Position=UDim2.fromOffset(v.X,v.Y)end)en
 localPlayer if not n then return false end if typeof(h.isfile)~='function'or typeof(h.writefile)~='function'then return
 true end local o,p,q=g.fileSystemManager:getPath'lastuser.txt',tostring(n.UserId),true pcall(function()if h.isfile(o)
 then q=h.readfile(o)~=p end end)pcall(function()h.writefile(o,p)end)return q end function l.setCollapsedShown(n,o,p)
-local q={ q[n.collapsedTitle]={
+local q={[n.collapsedIcon]={ImageTransparency=if o then 0 else 1}}if not n.showIconOnly then q[n.collapsedTitle]={
 TextTransparency=if o then 0 else 1}q[n.collapsedSubtitle]={TextTransparency=if o then 0.5 else 1}end for r,s in q do if
 p then g.tweenService:Create(r,p,s):Play()else for t,u in s do r[t]=u end end end end return l end)()end,[6]=function()
 local b,c,d=a(6)local e return(function(...)local f={}f.__index=f f.__type='ColorPicker'local g=c.Parent.Parent.utility
@@ -1754,7 +1758,8 @@ return J end function h:ResolveIcon(I,J)return __ASTRA_ROBLOX_ICONS_V1.resolve(I
 aj.setActive(I.locale or I.Locale or aj.detect())local J=I.fallbackFont or I.FallbackFont if J then f.setFallbackFont(J)
 end local K=z(I.sidebarLayout or I.SidebarLayout)local P=I.iconPack or I.IconPack if I.iconPack~=nil and I.IconPack~=nil then error('Astra: choose exactly one icon pack; provide either iconPack or IconPack, not both.',2)end P=P or __ASTRA_ROBLOX_ICONS_V1.Lucide if not __ASTRA_ROBLOX_ICONS_V1.isPack(P) then error('Astra: iconPack must be exactly one supported pack: lucide, material, tabler, phosphor, heroicons, or feather.',2)end local L=setmetatable({name=I.name or I.Name or'Astra Window',
 subheading=I.subtitle or I.Subtitle,layout=K,size=w(K.mode),instances={},connections={},iconPack=P,icon=__ASTRA_ROBLOX_ICONS_V1.resolve(I.icon or I.Icon,P),showName=I
-.showName or I.ShowName or'Astra',profileText=I.profile or I.Profile,themeProperties={},localeProperties={},tabs={},tabSections
+.showName or I.ShowName or'Astra',showIcon=__ASTRA_ROBLOX_ICONS_V1.resolve(I.showIcon or I.ShowIcon,P),showIconOnly=I.showIconOnly
+or I.ShowIconOnly or false,profileText=I.profile or I.Profile,themeProperties={},localeProperties={},tabs={},tabSections
 ={},tags={},selectedTab=nil,theme=H(I.theme or I.Theme),controls={},configuration=(function()local L=I.configuration or
 I.Configuration if not L then return{}end return{autoSave=L.autoSave or L.AutoSave,autoLoad=L.autoLoad or L.AutoLoad,
 fileName=L.fileName or L.FileName,customFolder=L.customFolder or L.CustomFolder}end)()},h)L.Flags=setmetatable({},{
@@ -2100,7 +2105,8 @@ BackgroundTransparency=I.theme.ElementTransparency or 0},K)if J.iconLabel then I
 0},K)end if J.descriptor then I:_reveal(J.descriptor.titleLabel,{TextTransparency=0.7},K)end end function h._hideCommon(
 I,J,K)I:_reveal(J.stroke,{Transparency=1},K)I:_reveal(J.title,{TextTransparency=1},K)I:_reveal(J.main,{
 BackgroundTransparency=1},K)if J.iconLabel then I:_reveal(J.iconLabel,{ImageTransparency=1},K)end if J.descriptor then I
-:_reveal(J.descriptor.titleLabel,{TextTransparency=1},K)end end function h._collapsedRect(I)local J=collapsedSize if I._collapsedPosition then return I._collapsedPosition,J end local K=UDim2.new(l.X.Scale,l.X.Offset,l.Y.
+:_reveal(J.descriptor.titleLabel,{TextTransparency=1},K)end end function h._collapsedRect(I)local J=if I.showIconOnly
+then k else j if I._collapsedPosition then return I._collapsedPosition,J end local K=UDim2.new(l.X.Scale,l.X.Offset,l.Y.
 Scale,l.Y.Offset+J.Y.Offset/2)return K,J end function h._interactive(I)return not I.animating and not I.hidden end
 function h._settled(I)return not I.hidden and not I._revealing end function h.Connect(I,J,K)local L=J:Connect(K)table.
 insert(I.connections,L)return L end function h.ConnectFor(I,J,K,L)local M=I:Connect(K,L)J.connections=J.connections or{}
@@ -2212,7 +2218,8 @@ ToggleKnobOff=Color3.fromRGB(236,220,226),StatBackground=Color3.fromRGB(28,20,24
 fromRGB(170,122,140)}end)()end,[38]=function()local aa,ab,ac=a(38)local ad return(function(...)export type Theme=string|
 {[string]:any}export type Translator=(source:string,localeId:string)->string?export type Translations={[string]:{[string
 ]:string}}export type WindowConfiguration={autoSave:boolean?,autoLoad:boolean?,fileName:string?,customFolder:string?}
-export type WindowProps={name:string?,subtitle:string?,theme:Theme?,icon:(string|number)?,showName:string?,sidebarLayout:boolean?,profile:string?,configuration:WindowConfiguration?,
+export type WindowProps={name:string?,subtitle:string?,theme:Theme?,icon:(string|number)?,showName:string?,showIcon:(
+string|number)?,showIconOnly:boolean?,sidebarLayout:boolean?,profile:string?,configuration:WindowConfiguration?,
 fallbackFont:(Font|Enum.Font)?,locale:string?,translations:Translations?,translator:Translator?}export type TabProps={
 name:string?,icon:(string|number)?}export type TagProps={text:string?,title:string?,icon:(string|number)?,color:Color3?,
 order:number?}export type SectionProps={name:string?,icon:(string|number)?}export type TextProps={name:string?,text:
