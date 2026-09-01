@@ -52,14 +52,14 @@ Keybind export type ColorPicker=j.ColorPicker export type Stat=j.Stat export typ
 Console=j.Console export type Section=j.Section export type TabSection=j.TabSection export type Text=j.Text export type
 Divider=j.Divider export type Tag=j.Tag export type Popup=j.Popup export type Astra=j.Astra type WindowModule={new
 :(j.WindowProps)->j.Window}local k={}::Astra k.Icons=__ASTRA_ROBLOX_ICONS_V1  function k.CreateWindow(m,n:j.
-WindowProps):j.Window local o,p:j.Window?,q:(()->())?=nilif f.secureMode then g.preload(function(r)if r<=0 then return
+WindowProps):j.Window local o,p:j.Window?,q:(()->())?=nil if f.secureMode then g.preload(function(r)if r<=0 then return
 end local function s()if not p or p.unloaded then return end p:Notify{title=h.resolve'Secure mode',content=if r==1 then
 h.resolve"An asset couldn't be cached and won't appear."else h.resolve"Some assets couldn't be cached and won't appear."
 }end if p then s()else q=s end end)end local r,s=pcall(function()return(d(c.components.window)::WindowModule).new(n)end)
-if not r then o:Destroy()error(s,0)end local t=s::j.Window p=t if q then task.spawn(q)q=nil end if f.secureMode then
+if not r then error(s,0)end local t=s::j.Window p=t if q then task.spawn(q)q=nil end if f.secureMode then
 task.spawn(function()local u,v=f.fontManager:loadFont(i.fontAsset,Enum.FontWeight.Medium),f.fontManager:loadFont(i.
 fontAsset,Enum.FontWeight.SemiBold)if not t.unloaded and u and v and u~=f.fallbackFont and v~=f.fallbackFont then t:
-ChangeTheme{Font=u,TitleFont=v}end end)end task.spawn(function()task.wait(0.5)o:Destroy()task.wait(0.5)if not t.unloaded
+ChangeTheme{Font=u,TitleFont=v}end end)end task.spawn(function()task.wait(0.5)task.wait(0.5)if not t.unloaded
 then t:Show()end end)return t end return k end)()end,[3]=function()local b,c,d=a(3)local e return(function(...)local f={
 }f.__index=f f.__type='Action'local g=c.Parent.Parent.utility local h,i,j=d(g.variables),d(g.log),d(g.HapticEngine)
 function f.new(k,l)l=if typeof(l)=='table'then l else{}local m=setmetatable({window=assert(k,
