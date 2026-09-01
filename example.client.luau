@@ -3,387 +3,376 @@ local Astra = require(ReplicatedStorage.Astra)
 
 task.wait(2)
 
-local translations = {
-    fr = {
-        ["Gameplay"] = "Jeu",
-        ["Interface"] = "Interface",
-        ["Auto Sprint"] = "Sprint auto",
-        ["Reduced Motion"] = "Animations réduites",
-        ["Field of View"] = "Champ de vision",
-        ["Player Name"] = "Nom du joueur",
-    },
-    es = {
-        ["Gameplay"] = "Juego",
-        ["Interface"] = "Interfaz",
-        ["Auto Sprint"] = "Sprint automático",
-        ["Reduced Motion"] = "Movimiento reducido",
-        ["Field of View"] = "Campo de visión",
-        ["Player Name"] = "Nombre del jugador",
-    },
-}
-
 local window = Astra:CreateWindow({
-    name = "Example",
-    subtitle = "Astra version-1",
-    translations = translations,
-    sidebarLayout = true,     configuration = {
+    name = "Astra",
+    subtitle = "Example UI",
+    sidebarLayout = true,
+    configuration = {
         autoSave = true,
         autoLoad = true,
-        fileName = "ExampleConfigFile",
+        fileName = "ExampleConfig",
     },
 })
 
-window:CreateSection({ name = "General" })
+window:CreateSection({ name = "Main" })
 
 local home = window:CreateTab({ name = "Home", icon = 93364949241311 })
 
-home:CreateSection({ name = "Gameplay" })
+home:CreateSection({ name = "Buttons" })
+
+home:CreateButton({
+    name = "Click Me",
+    callback = function()
+        print("Button clicked!")
+    end,
+})
+
+home:CreateButton({
+    name = "With Icon",
+    icon = 125823673784681,
+    callback = function()
+        print("Icon button clicked!")
+    end,
+})
+
+home:CreateButton({
+    name = "With Description",
+    description = "This button has a description below it.",
+    callback = function()
+        print("Description button clicked!")
+    end,
+})
+
+home:CreateSection({ name = "Toggles" })
 
 home:CreateToggle({
-    name = "Auto Sprint",
+    name = "Basic Toggle",
     value = true,
     callback = function(value)
-        print("Auto Sprint:", value)
+        print("Toggle:", value)
     end,
 })
 
 home:CreateToggle({
-    name = "Reduced Motion",
-    description = "Disables screen shake and camera effects for a smoother experience.",
+    name = "Described Toggle",
+    description = "This toggle has a description.",
     callback = function(value)
-        print("Reduced Motion:", value)
+        print("Described toggle:", value)
+    end,
+})
+
+home:CreateToggle({
+    name = "Flagged Toggle",
+    flag = "MyFlag",
+    value = false,
+})
+
+home:CreateSection({ name = "Sliders" })
+
+home:CreateSlider({
+    name = "Basic Slider",
+    range = { 0, 100 },
+    value = 50,
+    callback = function(value)
+        print("Slider:", value)
     end,
 })
 
 home:CreateSlider({
-    name = "Field of View",
-    range = { 70, 120 },
+    name = "With Suffix",
+    range = { 0, 360 },
+    value = 180,
     increment = 1,
-    value = 90,
     suffix = "°",
-    callback = function(value)
-        workspace.CurrentCamera.FieldOfView = value
-    end,
 })
 
-home:CreateSection({ name = "Interface" })
+home:CreateSlider({
+    name = "With Description",
+    description = "This slider has a description.",
+    range = { 1, 10 },
+    value = 5,
+})
 
-home:CreateToggle({ name = "Show FPS Counter" })
+home:CreateSection({ name = "Dropdowns" })
 
 home:CreateDropdown({
-    name = "Quality",
-    options = { "Low", "Medium", "High", "Ultra" },
-    value = "High",
+    name = "Basic Dropdown",
+    options = { "Option 1", "Option 2", "Option 3" },
+    value = "Option 1",
     callback = function(value)
-        print("Quality:", value)
+        print("Dropdown:", value)
     end,
 })
 
-home:CreateSection({ name = "Feedback" })
-
-home:CreateButton({
-    name = "Send Notification",
-    icon = 93364949241311,
-    callback = function()
-        window:Notify({
-            title = "Auto-saved",
-            content = "Your configuration was saved.",
-            icon = 125823673784681,
-        })
-    end,
-})
-
-home:CreateButton({
-    name = "Send Toast",
-    icon = 125823673784681,
-    callback = function()
-        window:Toast({ title = "Saved", icon = 125823673784681 })
-    end,
-})
-
-home:CreateButton({
-    name = "Open Popup",
-    icon = 83277910885129,
-    callback = function()
-        window:Popup({
-            title = "Reset everything?",
-            content = "This clears every saved value and puts the menu back to its defaults. You can't undo it.",
-            icon = 83277910885129,
-            options = {
-                { text = "Cancel" },
-                { text = "Reset", style = "danger" },
-            },
-        })
-    end,
-})
-
-local combat = window:CreateTab({ name = "Combat", icon = 84750991656135 })
-
-combat:CreateSection({ name = "Aiming" })
-
-combat:CreateToggle({ name = "Aimbot", value = true })
-
-combat:CreateSlider({ name = "Smoothness", range = { 0, 100 }, value = 40, suffix = "%" })
-
-combat:CreateDropdown({
-    name = "Modules",
-    description = "Pick any combination of modules to load.",
+home:CreateDropdown({
+    name = "Multi Select",
     multiSelect = true,
-    options = { "Aimbot", "ESP", "Triggerbot", "Fly" },
-    value = { "ESP" },
-    placeholder = "None selected",
+    options = { "A", "B", "C", "D" },
+    value = { "A", "C" },
+    placeholder = "Pick items",
 })
 
-local fields = window:CreateTab({ name = "Fields", icon = 100604009889706 })
-
-fields:CreateSection({ name = "Setup" })
-
-fields:CreateInput({ name = "Player Name", placeholder = "Enter a name" })
-
-fields:CreateInput({
-    name = "Max Players",
-    description = "Numeric only, commits when you click away or press enter.",
-    numeric = true,
-    value = "16",
+home:CreateDropdown({
+    name = "With Description",
+    description = "This dropdown has a description.",
+    options = { "Low", "Medium", "High" },
+    value = "Medium",
 })
 
-fields:CreateKeybind({ name = "Sprint", value = Enum.KeyCode.LeftShift })
+local inputs = window:CreateTab({ name = "Inputs", icon = 84750991656135 })
 
-fields:CreateKeybind({
-    name = "Zoom",
-    description = "Hold mode: fires true once held, false on release.",
-    value = Enum.KeyCode.C,
-    hold = true,
-    callback = function(holding)
-        print("Zoom:", holding)
-    end,
-})
+inputs:CreateSection({ name = "Text Inputs" })
 
-fields:CreateColorPicker({ name = "Highlight", color = Color3.fromRGB(96, 205, 255) })
-
-local stats = window:CreateTab({ name = "Stats", icon = 85925158736685 })
-
-stats:CreateSection({ name = "Session" })
-
-local revenue = stats:CreateStat({ name = "Revenue", prefix = "$", value = 12400 })
-local kills = stats:CreateStat({ name = "Kills", value = 128 })
-
-stats:CreateButton({
-    name = "Simulate Round",
-    callback = function()
-        revenue:Set(revenue.value + math.random(500, 3000))
-        kills:Set(kills.value + math.random(1, 20))
-    end,
-})
-
-local layout = window:CreateTab({ name = "Layout", icon = 84750991656135 })
-
-layout:CreateSection({ name = "Loadout" })
-
-local grid = layout:CreateGroup()
-
-local leftColumn = grid:CreateGroup({ direction = "column" })
-leftColumn:CreateToggle({ name = "Aimbot", flag = "LoadoutAimbot", value = true })
-leftColumn:CreateToggle({ name = "Triggerbot" })
-
-local rightColumn = grid:CreateGroup({ direction = "column" })
-rightColumn:CreateToggle({ name = "ESP", value = true })
-rightColumn:CreateToggle({ name = "Tracers" })
-
-window:CreateSection({ name = "Reference" })
-
-local text = window:CreateTab({ name = "Text", icon = 100604009889706 })
-
-text:CreateSection({ name = "Text" })
-
-text:CreateText({
-    name = "Read this first",
-    text = "Text carries a title, a body, or both. Either half can be left out and the card closes up around what's left.",
-})
-
-text:CreateText({ name = "Heading on its own" })
-
-text:CreateText({
-    text = "Body on its own, for a note that doesn't need a heading over it.",
-})
-
-text:CreateText({
-    name = "Worth knowing",
-    text = "An icon sits to the left of the title.",
-    icon = 93364949241311,
-})
-
-local live = text:CreateText({ name = "Changes at runtime", text = "Waiting." })
-
-text:CreateButton({
-    name = "Rewrite the body",
-    callback = function()
-        live:Set("Rewritten at " .. os.date("%H:%M:%S") .. ".")
-    end,
-})
-
-text:CreateButton({
-    name = "Rewrite the title",
-    callback = function()
-        live:SetTitle("Retitled")
-    end,
-})
-
-text:CreateSection({ name = "Dividers" })
-
-text:CreateText({ text = "A plain rule, with the default room around it." })
-text:CreateDivider()
-
-text:CreateText({ text = "A rule with a word in the middle." })
-text:CreateDivider({ text = "or" })
-
-text:CreateText({ text = "More room above and below." })
-text:CreateDivider({ text = "spaced", spacing = 24 })
-
-text:CreateText({ text = "No rule at all, just the room. A spacer." })
-text:CreateDivider({ line = false, spacing = 20 })
-
-text:CreateText({ text = "The one below starts bare and gains a word." })
-local divider = text:CreateDivider()
-
-text:CreateButton({
-    name = "Give the divider a word",
-    callback = function()
-        divider:Set("added later")
-    end,
-})
-
-text:CreateButton({
-    name = "Take it back off",
-    callback = function()
-        divider:Set("")
-    end,
-})
-
-local language = window:CreateTab({ name = "Language", icon = 100604009889706 })
-
-language:CreateSection({ name = "Localization" })
-
-local localeIds = { English = "en", ["Français"] = "fr", ["Español"] = "es", ["Deutsch"] = "de" }
-
-language:CreateDropdown({
-    name = "Language",
-    description = "Switches every localized label in place. Untranslated strings stay in English.",
-    options = { "English", "Français", "Español", "Deutsch" },
-    value = "English",
-    forgetState = true,
+inputs:CreateInput({
+    name = "Basic Input",
+    placeholder = "Type here",
     callback = function(value)
-        if value == "Deutsch" then
-            window:RegisterTranslations({
-                de = {
-                    ["Gameplay"] = "Spiel",
-                    ["Interface"] = "Benutzeroberfläche",
-                    ["Auto Sprint"] = "Auto-Sprint",
-                    ["Field of View"] = "Sichtfeld",
-                    ["Player Name"] = "Spielername",
-                },
-            })
-        end
-        window:SetLocale(localeIds[value] or "en")
+        print("Input:", value)
     end,
 })
 
-local whatsNew = window:CreateTab({ name = "What's New", icon = 93364949241311 })
+inputs:CreateInput({
+    name = "Numeric Input",
+    numeric = true,
+    value = "42",
+})
 
-whatsNew:CreateSection({ name = "Progress" })
+inputs:CreateInput({
+    name = "With Description",
+    description = "This input has a description.",
+    placeholder = "Enter value",
+})
 
-local download = whatsNew:CreateProgress({
+inputs:CreateSection({ name = "Keybinds" })
+
+inputs:CreateKeybind({
+    name = "Basic Keybind",
+    value = Enum.KeyCode.F,
+})
+
+inputs:CreateKeybind({
+    name = "Hold Mode",
+    hold = true,
+    value = Enum.KeyCode.LeftShift,
+    callback = function(holding)
+        print("Holding:", holding)
+    end,
+})
+
+inputs:CreateSection({ name = "Color Pickers" })
+
+inputs:CreateColorPicker({
+    name = "Basic Color",
+    color = Color3.fromRGB(96, 205, 255),
+})
+
+inputs:CreateColorPicker({
+    name = "With Alpha",
+    color = Color3.fromRGB(255, 100, 100),
+    alpha = 0.8,
+})
+
+local display = window:CreateTab({ name = "Display", icon = 85925158736685 })
+
+display:CreateSection({ name = "Stats" })
+
+local stat1 = display:CreateStat({
+    name = "Revenue",
+    prefix = "$",
+    value = 12400,
+})
+
+local stat2 = display:CreateStat({
+    name = "Kills",
+    value = 128,
+})
+
+display:CreateButton({
+    name = "Update Stats",
+    callback = function()
+        stat1:Set(stat1.value + math.random(500, 3000))
+        stat2:Set(stat2.value + math.random(1, 20))
+    end,
+})
+
+display:CreateSection({ name = "Progress" })
+
+local progress1 = display:CreateProgress({
     name = "Download",
-    description = "Takes a range like a slider does. The readout is a percentage unless you give it a line of your own.",
     range = { 0, 100 },
     value = 35,
-    format = function(value, _, max)
-        return string.format("%d of %d MB", value, max)
-    end,
 })
 
-whatsNew:CreateProgress({
-    name = "Setup",
-    description = "A stepped bar counts stages instead of distance.",
+display:CreateProgress({
+    name = "Steps",
     steps = 5,
     value = 2,
 })
 
-whatsNew:CreateProgress({
-    name = "Syncing",
-    text = "Please wait",
-    indeterminate = true, })
-
-whatsNew:CreateSlider({
-    name = "Download progress",
-    description = "Drives the bar above. The slider now tells its callback whether you are still dragging.",
-    range = { 0, 100 },
-    value = 35,
-    suffix = "%",
-    forgetState = true,
-    callback = function(value, dragging)
-        download:Set(value)
-        download:SetText(if dragging then "Downloading" else nil)
-    end,
+display:CreateProgress({
+    name = "Loading",
+    indeterminate = true,
 })
 
-whatsNew:CreateSection({ name = "Output" })
+display:CreateSection({ name = "Text" })
 
-local console = whatsNew:CreateConsole({
+display:CreateText({
+    name = "Title",
+    text = "This is a text element with a title and body.",
+})
+
+display:CreateText({
+    text = "This is body text only.",
+})
+
+display:CreateText({
+    name = "With Icon",
+    text = "This text has an icon.",
+    icon = 93364949241311,
+})
+
+display:CreateSection({ name = "Dividers" })
+
+display:CreateDivider()
+
+display:CreateDivider({ text = "or" })
+
+display:CreateDivider({ text = "spaced", spacing = 24 })
+
+display:CreateDivider({ line = false, spacing = 20 })
+
+display:CreateSection({ name = "Console" })
+
+local console = display:CreateConsole({
     name = "Console",
     text = "-- output lands here",
     height = 130,
-    follow = true,     maxLines = 50, })
+    follow = true,
+    maxLines = 50,
+})
 
-whatsNew:CreateButton({
-    name = "Log a line",
-    description = "The block holds its height and scrolls inside itself, so the page never grows.",
+display:CreateButton({
+    name = "Log Line",
     callback = function()
-        console:Append(string.format("[%s] player joined", os.date("%H:%M:%S")))
+        console:Append(string.format("[%s] New entry", os.date("%H:%M:%S")))
     end,
 })
 
-local group = whatsNew:CreateGroup()
-
-group:CreateButton({
-    name = "Copy",
-    callback = function()
-        window:Notify({
-            title = if console:Copy() then "Copied" else "No clipboard here",
-            content = "Copy needs an executor that provides setclipboard.",
-        })
-    end,
-})
-
-group:CreateButton({
-    name = "Clear",
+display:CreateButton({
+    name = "Clear Console",
     callback = function()
         console:Clear()
     end,
 })
 
-whatsNew:CreateSection({ name = "Locking" })
+display:CreateSection({ name = "Groups" })
 
-local lockable = whatsNew:CreateToggle({
-    name = "Auto Farm",
-    description = "Lock this and it dims, stops taking input, and never fires its callback.",
-    value = false,
-    forgetState = true,
-    callback = function(state)
-        print("this never runs while the toggle is locked", state)
+local grid = display:CreateGroup()
+
+local left = grid:CreateGroup({ direction = "column" })
+left:CreateToggle({ name = "Left Toggle 1", value = true })
+left:CreateToggle({ name = "Left Toggle 2" })
+
+local right = grid:CreateGroup({ direction = "column" })
+right:CreateToggle({ name = "Right Toggle 1", value = true })
+right:CreateToggle({ name = "Right Toggle 2" })
+
+local utility = window:CreateTab({ name = "Utility", icon = 100604009889706 })
+
+utility:CreateSection({ name = "Notifications" })
+
+utility:CreateButton({
+    name = "Send Notification",
+    callback = function()
+        window:Notify({
+            title = "Hello",
+            content = "This is a notification.",
+            icon = 125823673784681,
+        })
     end,
 })
 
-whatsNew:CreateToggle({
-    name = "Lock Auto Farm",
-    description = "Locking is what a key check or a missing dependency should do to an element.",
+utility:CreateButton({
+    name = "Send Toast",
+    callback = function()
+        window:Toast({
+            title = "Saved",
+            icon = 125823673784681,
+        })
+    end,
+})
+
+utility:CreateButton({
+    name = "Open Popup",
+    callback = function()
+        window:Popup({
+            title = "Are you sure?",
+            content = "This action cannot be undone.",
+            icon = 83277910885129,
+            options = {
+                { text = "Cancel" },
+                { text = "Confirm", style = "danger" },
+            },
+        })
+    end,
+})
+
+utility:CreateSection({ name = "Tags" })
+
+window:CreateTag({
+    text = "v1.0.0",
+    title = "Version",
+    color = Color3.fromRGB(96, 205, 255),
+})
+
+utility:CreateSection({ name = "Locking" })
+
+local lockable = utility:CreateToggle({
+    name = "Lockable Element",
+    description = "This can be locked and unlocked.",
     value = false,
-    forgetState = true,
+})
+
+utility:CreateToggle({
+    name = "Toggle Lock",
     callback = function(state)
         if state then
-            lockable:Lock("Needs a premium key")
+            lockable:Lock("Locked by user")
         else
             lockable:Unlock()
+        end
+    end,
+})
+
+utility:CreateSection({ name = "Window Controls" })
+
+utility:CreateButton({
+    name = "Hide Window",
+    callback = function()
+        window:Hide()
+    end,
+})
+
+utility:CreateButton({
+    name = "Save Config",
+    callback = function()
+        window:Save()
+    end,
+})
+
+utility:CreateButton({
+    name = "Load Config",
+    callback = function()
+        window:Load()
+    end,
+})
+
+utility:CreateButton({
+    name = "List Configs",
+    callback = function()
+        local configs = window:ListConfigs()
+        for _, name in configs do
+            print("Config:", name)
         end
     end,
 })
