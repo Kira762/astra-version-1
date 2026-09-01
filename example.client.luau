@@ -4,7 +4,8 @@ task.wait(2)
 
 local window = Astra:CreateWindow({
     name = "Astra",
-    subtitle = "Example UI",
+    subtitle = "Example UI - Lucide Icons",
+    iconPack = Astra.Icons.Lucide,
     sidebarLayout = true,
     configuration = {
         autoSave = true,
@@ -15,12 +16,13 @@ local window = Astra:CreateWindow({
 
 window:CreateSection({ name = "Main" })
 
-local home = window:CreateTab({ name = "Home", icon = 93364949241311 })
+local home = window:CreateTab({ name = "Home", icon = "house" })
 
 home:CreateSection({ name = "Buttons" })
 
 home:CreateButton({
     name = "Click Me",
+    icon = "play",
     callback = function()
         print("Button clicked!")
     end,
@@ -28,7 +30,7 @@ home:CreateButton({
 
 home:CreateButton({
     name = "With Icon",
-    icon = 125823673784681,
+    icon = "settings",
     callback = function()
         print("Icon button clicked!")
     end,
@@ -46,6 +48,7 @@ home:CreateSection({ name = "Toggles" })
 
 home:CreateToggle({
     name = "Basic Toggle",
+    icon = "toggle-right",
     value = true,
     callback = function(value)
         print("Toggle:", value)
@@ -54,6 +57,7 @@ home:CreateToggle({
 
 home:CreateToggle({
     name = "Described Toggle",
+    icon = "bell",
     description = "This toggle has a description.",
     callback = function(value)
         print("Described toggle:", value)
@@ -62,6 +66,7 @@ home:CreateToggle({
 
 home:CreateToggle({
     name = "Flagged Toggle",
+    icon = "flag",
     flag = "MyFlag",
     value = false,
 })
@@ -118,7 +123,7 @@ home:CreateDropdown({
     value = "Medium",
 })
 
-local inputs = window:CreateTab({ name = "Inputs", icon = 84750991656135 })
+local inputs = window:CreateTab({ name = "Inputs", icon = "keyboard" })
 
 inputs:CreateSection({ name = "Text Inputs" })
 
@@ -171,7 +176,7 @@ inputs:CreateColorPicker({
     alpha = 0.8,
 })
 
-local display = window:CreateTab({ name = "Display", icon = 85925158736685 })
+local display = window:CreateTab({ name = "Display", icon = "layout-dashboard" })
 
 display:CreateSection({ name = "Stats" })
 
@@ -227,7 +232,7 @@ display:CreateText({
 display:CreateText({
     name = "With Icon",
     text = "This text has an icon.",
-    icon = 93364949241311,
+    icon = "house",
 })
 
 display:CreateSection({ name = "Dividers" })
@@ -276,7 +281,7 @@ local right = grid:CreateGroup({ direction = "column" })
 right:CreateToggle({ name = "Right Toggle 1", value = true })
 right:CreateToggle({ name = "Right Toggle 2" })
 
-local utility = window:CreateTab({ name = "Utility", icon = 100604009889706 })
+local utility = window:CreateTab({ name = "Utility", icon = "search" })
 
 utility:CreateSection({ name = "Notifications" })
 
@@ -286,7 +291,7 @@ utility:CreateButton({
         window:Notify({
             title = "Hello",
             content = "This is a notification.",
-            icon = 125823673784681,
+            icon = "settings",
         })
     end,
 })
@@ -296,7 +301,7 @@ utility:CreateButton({
     callback = function()
         window:Toast({
             title = "Saved",
-            icon = 125823673784681,
+            icon = "settings",
         })
     end,
 })
@@ -307,7 +312,7 @@ utility:CreateButton({
         window:Popup({
             title = "Are you sure?",
             content = "This action cannot be undone.",
-            icon = 83277910885129,
+            icon = "x",
             options = {
                 { text = "Cancel" },
                 { text = "Confirm", style = "danger" },
