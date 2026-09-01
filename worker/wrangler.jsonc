@@ -4,18 +4,4 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-04-01",
 
-
-
-
-
-
-
-
-
-
-
-  "routes": [
-    { "pattern": "sirius.menu/gen2*", "zone_name": "sirius.menu" },
-    { "pattern": "www.sirius.menu/gen2*", "zone_name": "sirius.menu" }
-  ]
 }
