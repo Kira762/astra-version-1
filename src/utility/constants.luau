@@ -12,7 +12,7 @@ constants.icons = {
     search = 100604009889706,
     chevron = 88479147175134,
     check = 125626312718314,
-    dot = 91452555903853,     colorpicker = 91452555903853,     banner = 111263549366178,
+    dot = 91452555903853,     colorpicker = 91452555903853,
     config = 125823673784681,     astra = 80387863064905, }
 
 constants.accent = {
@@ -49,7 +49,7 @@ constants.zIndex = {
 
 constants.displayOrder = {
     window = 99999,
-    banner = 100000,
+    
         popup = 100001,
 }
 

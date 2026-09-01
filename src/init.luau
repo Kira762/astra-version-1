@@ -64,37 +64,7 @@ local astra = {} :: Astra
 -- Use astra.Icons.get(name, pack) for explicit pack selection.
 astra.Icons = icons
 
-local function createBanner()
-    local ui = Instance.new("ScreenGui")
-    ui.Name = variables.httpService:GenerateGUID(false)
-    ui.ClipToDeviceSafeArea = false
-    ui.DisplayOrder = constants.displayOrder.banner
-    ui.IgnoreGuiInset = true
-    ui.ResetOnSpawn = false
-    ui.Enabled = true
-    ui.SafeAreaCompatibility = Enum.SafeAreaCompatibility.None
-    ui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
-    ui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ui.Parent = variables.guiContainer
-
-    local banner = Instance.new("ImageLabel")
-    banner.Name = "Banner"
-    banner.AnchorPoint = Vector2.new(0.5, 0.5)
-    banner.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    banner.BackgroundTransparency = 1
-    banner.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    banner.BorderSizePixel = 0
-    banner.Image = image.resolve(constants.icons.banner)
-    banner.Position = UDim2.fromScale(0.5, 0.5)
-    banner.Size = UDim2.fromOffset(262, 60)
-    banner.Parent = ui
-
-    return ui
-end
-
 function astra:CreateWindow(properties: types.WindowProps): types.Window
-    local banner = createBanner()
-
     local window: types.Window?         local queuedNotify: (() -> ())?
 
     if variables.secureMode then
@@ -125,7 +95,6 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
         return (require(script.components.window) :: WindowModule).new(properties)
     end)
     if not made then
-        banner:Destroy()
         error(result, 0)
     end
 
@@ -155,9 +124,6 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
 
     task.spawn(function()
         task.wait(0.5)
-
-        banner:Destroy()
-
         task.wait(0.5)
                         if not built.unloaded then
             built:Show()
