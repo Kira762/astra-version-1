@@ -609,7 +609,7 @@ function Popup:_buildButton(parent, option, order)
                 task.spawn(function()
                     local ok, err = pcall(callback)
                     if not ok then
-                        log.warn("Rayfield: popup button '" .. label .. "' callback errored:")
+                        log.warn("Astra: popup button '" .. label .. "' callback errored:")
                         log.print(err)
                     end
                 end)

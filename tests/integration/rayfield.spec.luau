@@ -5,7 +5,7 @@ return function()
     local image = helpers.requireUtility("image")
     local variables = helpers.requireUtility("variables")
 
-    describe("Rayfield init and themes", function()
+    describe("Astra init and themes", function()
         local originalSecureMode
         local originalPreload
         local originalLoadFont

@@ -629,7 +629,7 @@ local function makeSourceNode(name, parent, path)
     return node
 end
 
-local sourceRootNode = makeSourceNode("Rayfield", nil, sourceModulePaths["src/init.luau"])
+local sourceRootNode = makeSourceNode("Astra", nil, sourceModulePaths["src/init.luau"])
 local sourceNodesByPath = {}
 sourceNodesByPath[sourceRootNode.__path] = sourceRootNode
 

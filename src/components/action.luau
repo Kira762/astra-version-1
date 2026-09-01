@@ -78,7 +78,7 @@ function Action.new(window, properties)
             local success, result = pcall(self.callback)
             if not success then
                 log.warn(
-                    `Rayfield encountered an error, with the callback for a {self.__type} component named '{self.name}':`
+                    `Astra encountered an error, with the callback for a {self.__type} component named '{self.name}':`
                 )
                 log.print(result)
             end

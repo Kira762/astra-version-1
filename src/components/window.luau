@@ -128,9 +128,9 @@ local function themeOverrides(value)
         if named then
             return require(named)
         end
-                log.warn("Rayfield: unknown theme '" .. value .. "', using default")
+                log.warn("Astra: unknown theme '" .. value .. "', using default")
     elseif value ~= nil then
-        log.warn("Rayfield: invalid theme (expected a built-in name or a theme table), using default")
+        log.warn("Astra: invalid theme (expected a built-in name or a theme table), using default")
     end
     return require(themes["default"])
 end
@@ -175,7 +175,7 @@ function Window.new(properties)
         local layout = resolveLayout(properties.sidebarLayout or properties.SidebarLayout)
 
     local self = setmetatable({
-        name = properties.name or properties.Name or "Rayfield Window",
+        name = properties.name or properties.Name or "Astra Window",
         subheading = properties.subtitle or properties.Subtitle,
         layout = layout,
         size = fitWindowSize(layout.mode),
@@ -183,7 +183,7 @@ function Window.new(properties)
         connections = {},
 
         icon = properties.icon or properties.Icon,
-        showName = properties.showName or properties.ShowName or "Rayfield",
+        showName = properties.showName or properties.ShowName "Astra",
         showIcon = properties.showIcon or properties.ShowIcon or constants.icons.rayfield,
                 showIconOnly = properties.showIconOnly or properties.ShowIconOnly or false,
                 profileText = properties.profile or properties.Profile,
@@ -220,7 +220,7 @@ function Window.new(properties)
         __newindex = function(_, flag, value)
             local control = self.controls[flag]
             if not control then
-                log.warn("Rayfield: no flag '" .. tostring(flag) .. "' to set")
+                log.warn("Astra: no flag '" .. tostring(flag) .. "' to set")
                 return
             end
             control:Set(value)
@@ -537,7 +537,7 @@ function Window.new(properties)
     })
 
     self.rfSettings = self:CreateTab({
-        name = "Rayfield Settings",
+        name = "Astra Settings",
         customOrder = 1000,
 
         neglectSelector = true,
@@ -756,7 +756,7 @@ function Window:_registerControl(control)
         end
         flag = flag .. n
         log.warn(
-            "Rayfield: duplicate config flag '"
+            "Astra: duplicate config flag '"
                 .. control.flag
                 .. "', saving this one as '"
                 .. flag
@@ -1710,7 +1710,7 @@ function Window:Show()
         self._autoLoaded = true
         local ok, err = pcall(self.Load, self)
         if not ok then
-            log.warn("Rayfield: Failed to load configuration - " .. tostring(err))
+            log.warn("Astra: Failed to load configuration - " .. tostring(err))
         end
     end
 
@@ -2206,7 +2206,7 @@ function Window:_runGuarded(element, fn, ...)
         end
 
         log.warn(
-            `Rayfield encountered an error, with the callback for a {element.__type} component named '{element.name}':`
+            `Astra encountered an error, with the callback for a {element.__type} component named '{element.name}':`
         )
         log.print(err)
 

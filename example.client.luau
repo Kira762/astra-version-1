@@ -24,7 +24,7 @@ local translations = {
 
 local window = Rayfield:CreateWindow({
     name = "Example",
-    subtitle = "Rayfield Gen2",
+    subtitle = "Astra Gen2",
     translations = translations,
     sidebarLayout = true,     configuration = {
         autoSave = true,

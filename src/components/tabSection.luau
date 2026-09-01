@@ -32,7 +32,7 @@ function TabSection.new(window, properties)
             if window.layout.mode ~= "sidebar" then
         if not window._warnedTabSection then
             window._warnedTabSection = true
-            log.warn("Rayfield: Window:CreateSection needs the sidebar layout; it does nothing on the top strip.")
+            log.warn("Astra: Window:CreateSection needs the sidebar layout; it does nothing on the top strip.")
         end
         self.inert = true
         return self

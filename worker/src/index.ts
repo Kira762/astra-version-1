@@ -88,14 +88,14 @@ export default {
 
 
 
-      const what = path === "/gen2-preview" ? "No Rayfield Gen2 preview build is published" : "Rayfield Gen2 is unavailable right now";
+      const what = path === "/gen2-preview" ? "No Astra Gen2 preview build is published" : "Astra Gen2 is unavailable right now";
       return new Response(`-- ${what}, try again shortly\n`, {
         status: 502,
         headers: {
           "content-type": "text/plain; charset=utf-8",
           "cache-control": "no-store",
 
-          "x-rayfield-upstream": String(upstream.status),
+          "x-astra-upstream": String(upstream.status),
         },
       });
     }
@@ -104,7 +104,7 @@ export default {
       headers: {
         "content-type": "text/plain; charset=utf-8",
         "cache-control": `public, max-age=${EDGE_TTL}`,
-        "x-rayfield-source": channel.source,
+        "x-astra-source": channel.source,
       },
     });
 

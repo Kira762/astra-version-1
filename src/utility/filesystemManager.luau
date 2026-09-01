@@ -1,7 +1,7 @@
 local filesystem = require(script.Parent.filesystem)
 local path = require(script.Parent.path)
 
-local DEFAULT_ROOT_PATH = "Rayfield"
+local DEFAULT_ROOT_PATH = "Astra"
 
 local fileSystemManager = {}
 fileSystemManager.__index = fileSystemManager

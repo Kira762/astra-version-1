@@ -73,7 +73,7 @@ function locale.register(tables: TranslationTables?)
                 if type(source) == "string" and type(translated) == "string" then
                     target[source] = translated
                 else
-                    log.warn(`Rayfield: skipping a '{id}' translation, entries must be string to string.`)
+                    log.warn(`Astra: skipping a '{id}' translation, entries must be string to string.`)
                 end
             end
         end
