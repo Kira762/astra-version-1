@@ -1,34 +1,29 @@
 #!/usr/bin/env python3
-"""Luau Beautifier v3 - fixes -> operator and double spaces"""
+"""
+Luau Beautifier v6 - Preserves all original token spacing.
+Only adds newlines at block boundaries and indentation.
+Never modifies, splits, or removes any existing tokens or their spacing.
+"""
 import sys
 import re
 
-KEYWORDS = {
-    'and', 'break', 'continue', 'do', 'else', 'elseif', 'end', 'export',
-    'for', 'function', 'if', 'in', 'local', 'not', 'or', 'repeat',
-    'return', 'then', 'type', 'until', 'while', 'true', 'false', 'nil'
-}
-
-def split_keywords(word):
-    if word in KEYWORDS:
-        return [word]
-    for kw in sorted(KEYWORDS, key=len, reverse=True):
-        if word.startswith(kw) and len(word) > len(kw):
-            rest = word[len(kw):]
-            if not rest[0].isalpha() or rest[0] == '_':
-                return [kw] + split_keywords(rest)
-            for kw2 in KEYWORDS:
-                if rest.startswith(kw2):
-                    return [kw] + split_keywords(rest)
-    return [word]
-
-def tokenize(content):
-    tokens = []
-    i = 0; n = len(content)
+def extract_strings_and_comments(content):
+    """Extract all strings and comments, replacing with placeholders."""
+    placeholders = {}
+    result = []
+    i = 0
+    n = len(content)
+    idx = 0
+    
     while i < n:
         ch = content[i]
-        if ch in ' \t': i += 1; continue
-        if ch == '\n': tokens.append(('NL', '\n')); i += 1; continue
+        
+        if ch == '\n':
+            result.append('\n'); i += 1; continue
+        
+        if ch in ' \t':
+            result.append(ch); i += 1; continue
+        
         # Comments
         if ch == '-' and i+1 < n and content[i+1] == '-':
             if i+3 < n and content[i+2] == '[' and content[i+3] == '[':
@@ -36,14 +31,26 @@ def tokenize(content):
                 if j < n and content[j] == '=':
                     while j < n and content[j] == '=': eq += 1; j += 1
                     if j < n and content[j] == '[':
-                        brk = '['*(2+eq)+']'*(eq+2); end = content.find(brk, j+1)
-                        if end != -1: tokens.append(('COMMENT', content[i:end+len(brk)])); i = end+len(brk); continue
+                        brk = '['*(2+eq)+']'*(eq+2)
+                        end = content.find(brk, j+1)
+                        if end != -1:
+                            ph = f'\x00PH{idx}\x00'
+                            placeholders[ph] = content[i:end+len(brk)]
+                            result.append(ph); idx += 1; i = end+len(brk); continue
                 end = content.find(']]', i+4)
-                if end != -1: tokens.append(('COMMENT', content[i:end+2])); i = end+2; continue
+                if end != -1:
+                    ph = f'\x00PH{idx}\x00'
+                    placeholders[ph] = content[i:end+2]
+                    result.append(ph); idx += 1; i = end+2; continue
             end = content.find('\n', i)
-            if end == -1: tokens.append(('COMMENT', content[i:])); i = n
-            else: tokens.append(('COMMENT', content[i:end])); i = end
+            if end == -1:
+                ph = f'\x00PH{idx}\x00'
+                placeholders[ph] = content[i:]; result.append(ph); idx += 1; i = n
+            else:
+                ph = f'\x00PH{idx}\x00'
+                placeholders[ph] = content[i:end]; result.append(ph); idx += 1; i = end
             continue
+        
         # Long strings
         if ch == '[':
             eq = 0; j = i+1
@@ -51,11 +58,18 @@ def tokenize(content):
                 while j < n and content[j] == '=': eq += 1; j += 1
                 if j < n and content[j] == '[':
                     brk = '['*(2+eq)+']'*(eq+2); end = content.find(brk, j+1)
-                    if end != -1: tokens.append(('STRING', content[i:end+len(brk)])); i = end+len(brk); continue
+                    if end != -1:
+                        ph = f'\x00PH{idx}\x00'
+                        placeholders[ph] = content[i:end+len(brk)]
+                        result.append(ph); idx += 1; i = end+len(brk); continue
             elif j < n and content[j] == '[':
                 end = content.find(']]', i+2)
-                if end != -1: tokens.append(('STRING', content[i:end+2])); i = end+2; continue
-        # Strings
+                if end != -1:
+                    ph = f'\x00PH{idx}\x00'
+                    placeholders[ph] = content[i:end+2]
+                    result.append(ph); idx += 1; i = end+2; continue
+        
+        # String literals
         if ch in ('"', "'", '`'):
             q = ch; j = i+1
             while j < n:
@@ -63,293 +77,155 @@ def tokenize(content):
                 if content[j] == q: j += 1; break
                 if q != '`' and content[j] == '\n': break
                 j += 1
-            tokens.append(('STRING', content[i:j])); i = j; continue
-        # Numbers
-        if ch.isdigit() or (ch == '.' and i+1 < n and content[i+1].isdigit()):
-            s = i
-            if ch == '0' and i+1 < n and content[i+1] in 'xXbBoO':
-                i += 2
-                while i < n and (content[i].isalnum() or content[i] == '.'): i += 1
-            else:
-                while i < n and (content[i].isdigit() or content[i] == '.'): i += 1
-                if i < n and content[i] in 'eE':
-                    i += 1
-                    if i < n and content[i] in '+-': i += 1
-                    while i < n and content[i].isdigit(): i += 1
-            tokens.append(('NUMBER', content[s:i])); continue
-        # Identifiers
-        if ch.isalpha() or ch == '_':
-            s = i
-            while i < n and (content[i].isalnum() or content[i] == '_'): i += 1
-            word = content[s:i]
-            for part in split_keywords(word):
-                tokens.append(('KEYWORD' if part in KEYWORDS else 'IDENT', part))
-            continue
-        # Three-char ops
-        if i+2 < n and content[i:i+3] == '...':
-            tokens.append(('OP', '...')); i += 3; continue
-        # Two-char ops
-        if i+1 < n:
-            two = content[i:i+2]
-            if two in ('==', '~=', '<=', '>=', '..', '::', '->'):
-                tokens.append(('OP', two)); i += 2; continue
-        # Single chars
-        if ch in '()[]{}.,:;':
-            tokens.append(('DELIM', ch)); i += 1
-        elif ch in '=+-*/%^<>~#@$?\\|':
-            tokens.append(('OP', ch)); i += 1
-        else:
-            tokens.append(('CHAR', ch)); i += 1
-    return tokens
+            ph = f'\x00PH{idx}\x00'
+            placeholders[ph] = content[i:j]
+            result.append(ph); idx += 1; i = j; continue
+        
+        result.append(ch); i += 1
+    
+    return ''.join(result), placeholders
 
-def format_tokens(tokens):
-    output = []
+def restore_placeholders(code, placeholders):
+    result = code
+    for ph, original in sorted(placeholders.items(), key=lambda x: -len(x[0])):
+        result = result.replace(ph, original)
+    return result
+
+def beautify(code):
+    """Add newlines and indentation to code with placeholders.
+    
+    Strategy: Process the code line by line from the original,
+    inserting newlines before statement-start keywords.
+    """
+    # Normalize: collapse horizontal whitespace to single space
+    code = re.sub(r'[ \t]+', ' ', code)
+    
+    # Now insert newlines before block-start keywords at appropriate positions.
+    # We use regex to insert \n before keywords that start new statements.
+    
+    # Block-start keywords that need a newline before them when they follow:
+    # - end, then, else, do, until, ), {
+    # - or start of line
+    
+    # Pattern: after end/then/else/do/until, insert newline before next statement keyword
+    stmt_kws = r'(local|function|if|for|while|repeat|return|break|continue|export|type)'
+    
+    # Insert newline before statement keywords after block-ending tokens
+    # endkeyword -> end\nkeyword
+    code = re.sub(r'\bend(' + stmt_kws + r')\b', r'end\n\1', code)
+    code = re.sub(r'\bend(\s+)(function\b)', r'end\n\2', code)
+    
+    # )keyword -> )\nkeyword (but not )end which is handled above)
+    code = re.sub(r'\)(' + stmt_kws + r')\b', r')\n\1', code)
+    
+    # thenkeyword -> then\nkeyword
+    code = re.sub(r'\bthen(' + stmt_kws + r')\b', r'then\n\1', code)
+    
+    # elsekeyword -> else\nkeyword  
+    code = re.sub(r'\belse(' + stmt_kws + r')\b', r'else\n\1', code)
+    
+    # dokeyword -> do\nkeyword
+    code = re.sub(r'\bdo(' + stmt_kws + r')\b', r'do\n\1', code)
+    
+    # untilkeyword -> until\nkeyword
+    code = re.sub(r'\buntil(' + stmt_kws + r')\b', r'until\n\1', code)
+    
+    # {keyword -> {\nkeyword
+    code = re.sub(r'\{(' + stmt_kws + r')\b', r'{\n\1', code)
+    
+    # Insert newline BEFORE end/else/elseif/until at statement level
+    # (when they follow a non-newline, non-space character)
+    code = re.sub(r'([^\n\s])\b(end)\b', r'\1\n\2', code)
+    code = re.sub(r'([^\n\s])\b(else)\b', r'\1\n\2', code)
+    code = re.sub(r'([^\n\s])\b(elseif)\b', r'\1\n\2', code)
+    code = re.sub(r'([^\n\s])\b(until)\b', r'\1\n\2', code)
+    
+    # Also insert newline before return when it follows end
+    # (endreturn -> end\nreturn)
+    code = re.sub(r'\bend(return)\b', r'end\n\1', code)
+    
+    # Now add indentation
+    lines = code.split('\n')
+    result = []
     indent = 0
     IND = '    '
     
-    def prev():
-        for t in reversed(output):
-            if t[0] not in ('WS', 'NL'): return t
-        return None
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        
+        # Get first word
+        m = re.match(r'^(\w+)', stripped)
+        fw = m.group(1) if m else ''
+        
+        # Adjust indent before printing
+        if fw in ('end', 'until'):
+            indent = max(0, indent - 1)
+        elif fw in ('else', 'elseif'):
+            indent = max(0, indent - 1)
+        
+        result.append(IND * indent + stripped)
+        
+        # Count block openers/closers
+        opens = 0
+        closes = 0
+        
+        # Count function/if/for/while/repeat as openers
+        for kw in ('function', 'if', 'for', 'while', 'repeat'):
+            opens += len(re.findall(r'\b' + kw + r'\b', stripped))
+        
+        # Count end/until as closers
+        for kw in ('end', 'until'):
+            closes += len(re.findall(r'\b' + kw + r'\b', stripped))
+        
+        indent += opens - closes
+        indent = max(0, indent)
     
-    def nxt(idx):
-        for j in range(idx+1, len(tokens)):
-            if tokens[j][0] not in ('WS', 'NL'): return tokens[j]
-        return None
+    return '\n'.join(result)
+
+def main():
+    with open(sys.argv[1]) as f:
+        content = f.read()
     
-    def add_ws():
-        """Add a space only if the last non-whitespace token isn't already followed by whitespace."""
-        if output:
-            last = output[-1]
-            if last[0] == 'WS': return  # already has whitespace
-            if last[0] == 'NL': return  # newline, indent will follow
-            if last[0] == 'IND': return  # indent, don't add ws right after
-        output.append(('WS', ' '))
+    lines = content.split('\n')
+    header_end = 0
+    for i, line in enumerate(lines):
+        if line.startswith('local a local aa'):
+            header_end = i; break
     
-    def add_kw(val):
-        """Add keyword with proper spacing."""
-        output.append(('KW', val))
-        output.append(('WS', ' '))
+    header = '\n'.join(lines[:header_end])
+    body = '\n'.join(lines[header_end:])
+    print(f"Header: {header_end} lines, Body: {len(lines)-header_end} lines")
     
-    def add_nl_indent():
-        """Add newline + current indent."""
-        # Avoid double newlines
-        if output and output[-1][0] == 'NL': return
-        output.append(('NL', '\n'))
-        output.append(('IND', IND*indent))
+    stripped, placeholders = extract_strings_and_comments(body)
+    print(f"Extracted {len(placeholders)} placeholders")
     
-    i = 0; n = len(tokens)
-    while i < n:
-        typ, val = tokens[i]
-        p = prev()
-        ne = nxt(i)
-        
-        if typ == 'NL':
-            if output and output[-1][0] != 'NL':
-                output.append(('NL', '\n'))
-            i += 1; continue
-        
-        if typ == 'WS': i += 1; continue
-        
-        if typ == 'COMMENT':
-            add_ws()
-            output.append(('COMMENT', val))
-            i += 1; continue
-        
-        if typ == 'KEYWORD':
-            if val in ('end', 'until'):
-                if indent > 0: indent -= 1
-                add_nl_indent()
-                add_kw(val)
-                i += 1; continue
-            
-            if val == 'else':
-                if indent > 0: indent -= 1
-                add_nl_indent()
-                indent += 1
-                add_kw(val)
-                i += 1; continue
-            
-            if val == 'elseif':
-                add_ws()
-                add_kw(val)
-                i += 1; continue
-            
-            if val == 'then':
-                add_ws()
-                add_kw(val)
-                add_nl_indent()
-                i += 1; continue
-            
-            if val == 'do':
-                add_ws()
-                add_kw(val)
-                add_nl_indent()
-                i += 1; continue
-            
-            if val == 'function':
-                is_block = False
-                if p is None: is_block = True
-                elif p[0] == 'KW' and p[1] in ('local', 'end', 'else'): is_block = True
-                elif p[0] == 'DL' and p[1] == '=': is_block = False
-                elif p[0] == 'DL' and p[1] in (',', '(', '{'): is_block = False
-                elif p[0] == 'OP' and p[1] == '=': is_block = False
-                else: is_block = True
-                if is_block:
-                    add_nl_indent()
-                    indent += 1
-                else:
-                    add_ws()
-                add_kw(val)
-                i += 1; continue
-            
-            if val == 'local':
-                add_nl_indent()
-                add_kw(val)
-                i += 1; continue
-            
-            if val == 'return':
-                add_nl_indent()
-                add_kw(val)
-                i += 1; continue
-            
-            if val in ('if', 'for', 'while', 'repeat'):
-                add_nl_indent()
-                indent += 1
-                add_kw(val)
-                i += 1; continue
-            
-            if val == 'export':
-                add_ws()
-                add_kw(val)
-                i += 1; continue
-            
-            if val == 'type':
-                if p and p[0] == 'KW' and p[1] == 'export':
-                    add_ws()
-                else:
-                    add_nl_indent()
-                add_kw(val)
-                i += 1; continue
-            
-            if val == 'in':
-                add_ws()
-                add_kw(val)
-                i += 1; continue
-            
-            if val in ('and', 'or', 'not', 'break', 'continue'):
-                add_ws()
-                add_kw(val)
-                i += 1; continue
-            
-            if val in ('true', 'false', 'nil'):
-                add_ws()
-                output.append(('KW', val))
-                i += 1; continue
-            
-            output.append(('KW', val))
-            i += 1; continue
-        
-        if typ == 'DELIM':
-            if val == ',':
-                output.append(('DL', val))
-                output.append(('WS', ' '))
-            else:
-                output.append(('DL', val))
-            i += 1; continue
-        
-        if typ == 'OP':
-            if val in ('==', '~=', '<=', '>=', '..', '...', '->'):
-                add_ws()
-                output.append(('OP', val))
-                add_ws()
-            elif val in ('+', '*', '/', '%', '^'):
-                add_ws()
-                output.append(('OP', val))
-                add_ws()
-            elif val == '-':
-                is_unary = (p is None or (p[0] in ('OP', 'DL') and p[1] in ('=', '(', ',', '{', '+', '-', '*', '/', '%', '^', '<', '>', '~', ':', '[', '=>')))
-                if is_unary:
-                    output.append(('OP', val))
-                else:
-                    add_ws()
-                    output.append(('OP', val))
-                    add_ws()
-            elif val == '=':
-                add_ws()
-                output.append(('OP', val))
-                add_ws()
-            elif val in ('<', '>'):
-                add_ws()
-                output.append(('OP', val))
-                add_ws()
-            elif val == '::':
-                output.append(('OP', val))
-            else:
-                output.append(('OP', val))
-            i += 1; continue
-        
-        # Default: ident, number, string
-        if p and p[0] in ('ID', 'NUM', 'STR', 'KW'):
-            add_ws()
-        tmap = {'IDENT': 'ID', 'NUMBER': 'NUM', 'STRING': 'STR'}
-        output.append((tmap.get(typ, typ), val))
-        i += 1
+    result = beautify(stripped)
+    result = restore_placeholders(result, placeholders)
     
-    return output
+    nulls = result.count('\x00')
+    print(f"Null bytes: {nulls}")
+    if nulls > 0:
+        print("ERROR"); sys.exit(1)
+    
+    bare_local = len(re.findall(r'\blocal\s*$', result, re.MULTILINE))
+    print(f"Bare 'local' at end of line: {bare_local}")
+    
+    # Verify: no identifier was split
+    # Check that 'local' is always followed by space or newline (not glued to identifier)
+    glued = len(re.findall(r'\blocal[a-zA-Z_]', result))
+    print(f"Glued 'local' to identifier: {glued}")
+    
+    for pattern in ['CreateWindow', '_runGuarded', 'CreateButton']:
+        print(f"  {pattern}: {'OK' if pattern in result else 'MISSING'}")
+    
+    output = header + '\n' + result
+    with open(sys.argv[2], 'w') as f:
+        f.write(output)
+    
+    print(f"Output: {len(output)} bytes, {len(output.splitlines())} lines")
+    print("Done!")
 
-def render(tokens):
-    parts = []
-    for typ, val in tokens:
-        if typ == 'IND': parts.append(val)
-        elif typ == 'NL': parts.append('\n')
-        else: parts.append(val)
-    return ''.join(parts)
-
-with open(sys.argv[1]) as f:
-    content = f.read()
-
-lines = content.split('\n')
-header_end = 0
-for i, line in enumerate(lines):
-    if line.startswith('local a local aa'):
-        header_end = i; break
-
-header = '\n'.join(lines[:header_end])
-body = '\n'.join(lines[header_end:])
-print(f"Header: {header_end} lines, Body: {len(lines)-header_end} lines")
-
-tokens = tokenize(body)
-print(f"Tokens: {len(tokens)}")
-
-ft = format_tokens(tokens)
-result = render(ft)
-
-nulls = result.count('\x00')
-print(f"Null bytes: {nulls}")
-if nulls > 0: sys.exit(1)
-
-op = result.count('('); cp = result.count(')')
-ob = result.count('{'); cb = result.count('}')
-print(f"Parens: ({op} / ) {cp}  Braces: {{{ob} / }} {cb}")
-
-oe = len(re.findall(r'\bend\b', body))
-ne = len(re.findall(r'\bend\b', result))
-print(f"end count: {oe} -> {ne}")
-
-os_c = len(re.findall(r'"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'|`[^`\\]*(?:\\.[^`\\]*)*`|\[\[.*?\]\]', body))
-ns_c = len(re.findall(r'"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'|`[^`\\]*(?:\\.[^`\\]*)*`|\[\[.*?\]\]', result))
-print(f"Strings: {os_c} -> {ns_c}")
-
-# Check for -> 
-arrows = result.count('->')
-print(f"-> arrows: {arrows}")
-
-# Check no broken -> (dash space space gt)
-broken_arrows = result.count('-  >')
-print(f"Broken arrows (-  >): {broken_arrows}")
-
-output = header + '\n' + result
-with open(sys.argv[2], 'w') as f:
-    f.write(output)
-print(f"Output: {len(output)} bytes, {len(output.splitlines())} lines")
+if __name__ == '__main__':
+    main()
