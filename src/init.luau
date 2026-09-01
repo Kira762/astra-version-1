@@ -2,6 +2,7 @@ local variables = require(script.utility.variables)
 local image = require(script.utility.image)
 local locale = require(script.utility.locale)
 local constants = require(script.utility.constants)
+local icons = require(script.utility.icons)
 local types = require(script.types)
 
 export type Theme = types.Theme
@@ -58,6 +59,10 @@ export type Astra = types.Astra
 type WindowModule = { new: (types.WindowProps) -> types.Window }
 
 local astra = {} :: Astra
+
+-- Public icon catalog backed by Haijo12/roblox-icons.
+-- Use astra.Icons.get(name, pack) for explicit pack selection.
+astra.Icons = icons
 
 local function createBanner()
     local ui = Instance.new("ScreenGui")

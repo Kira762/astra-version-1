@@ -334,8 +334,19 @@ export type Window = {
     Unload: (self: Window) -> (),
 }
 
+export type IconPack = "lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather"
+
+export type IconCatalog = {
+    get: (name: string, pack: IconPack?) -> string?,
+    getByPack: (pack: IconPack, name: string) -> string?,
+    list: (pack: IconPack?) -> { string },
+    packs: () -> { string },
+    count: (pack: IconPack?) -> number,
+}
+
 export type Astra = {
     CreateWindow: (self: Astra, props: WindowProps) -> Window,
+    Icons: IconCatalog,
 }
 
 return {}
