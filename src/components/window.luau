@@ -1629,6 +1629,11 @@ function Window:_applySettingsLayout(isSettings)
     if isSettings then
         if self.tabList then self.tabList.Visible = false end
         if self.sidebar then self.sidebar.Visible = false end
+        -- Expand elements to full width so settings covers the sidebar area
+        self.elements.Size = UDim2.new(1, 0, 1, -self.layout.chromeHeight)
+        self.elementsCorner.CornerRadius = UDim.new(0, 0)
+        self.elementsStroke.Transparency = 1
+        self.bottomFade.Size = UDim2.new(1, 0, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
         local tab = self.selectedTab
         if tab and tab.tabPage then
             tab.tabPage.Size = UDim2.new(1, 0, 1, 0)
@@ -1637,6 +1642,12 @@ function Window:_applySettingsLayout(isSettings)
     else
         if self.tabList then self.tabList.Visible = true end
         if self.sidebar then self.sidebar.Visible = true end
+        -- Restore elements to sidebar-adjusted width
+        local railWidth = layouts.railWidthFor(self.layout, self.size.X.Offset)
+        self.elements.Size = UDim2.new(1, -railWidth, 1, -self.layout.chromeHeight)
+        self.elementsCorner.CornerRadius = self.theme.CornerRoundness or UDim.new(0, 8)
+        self.elementsStroke.Transparency = 0
+        self.bottomFade.Size = UDim2.new(1, -railWidth, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
         local tab = self.selectedTab
         if tab and tab.tabPage then
             tab.tabPage.Size = UDim2.new(1, -35, 1, 0)
