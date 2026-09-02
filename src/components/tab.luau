@@ -159,10 +159,10 @@ function Tab:Select(noAnimation)
     end
 
     self.window.selectedTab = self
-    self.window:_jumpTo(self.tabPage)
     if self.window._applySettingsLayout then
         self.window:_applySettingsLayout(self == self.window.rfSettings)
     end
+    self.window:_jumpTo(self.tabPage)
 
                     local skipAnimation = noAnimation or not self.window:_interactive()
 

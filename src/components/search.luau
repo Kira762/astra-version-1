@@ -175,7 +175,11 @@ function search.close(window, config)
     end)
 
     if config.showTabs then
-        window.tabList.Visible = true
+        if window.layout.mode == "sidebar" and window._applySettingsLayout then
+            window:_applySettingsLayout(window.selectedTab == window.rfSettings)
+        else
+            window.tabList.Visible = true
+        end
         setTabsShown(window, true, swapInfo)
     end
 

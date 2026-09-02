@@ -209,6 +209,7 @@ function Window.new(properties)
         tabSections = {},
         tags = {},
         selectedTab = nil,
+        _settingsLayoutActive = false,
         theme = resolveTheme(properties.theme or properties.Theme),
 
         controls = {},
@@ -586,6 +587,23 @@ function Window.new(properties)
         linkedTab = self.rfSettings,
 
         callback = function()
+            if self.selectedTab == self.rfSettings then
+                local previousTab = self._previousTab
+                self._previousTab = nil
+                if previousTab and previousTab.window == self and previousTab.tabPage then
+                    previousTab:Select()
+                    return
+                end
+                for _, tab in self.tabs do
+                    if tab ~= self.rfSettings and not tab.neglectSelector then
+                        tab:Select()
+                        return
+                    end
+                end
+                return
+            end
+
+            self._previousTab = self.selectedTab
             self.rfSettings:Select()
         end,
     })
@@ -1166,7 +1184,16 @@ function Window:_applyRailWidth()
     if self.layout.mode ~= "sidebar" then
         return
     end
-    sidebar.applyWidth(self, layouts.railWidthFor(self.layout, self.size.X.Offset))
+
+    local railWidth = layouts.railWidthFor(self.layout, self.size.X.Offset)
+    sidebar.applyWidth(self, railWidth)
+
+    -- sidebar.applyWidth restores the normal column geometry. Re-apply the
+    -- settings state afterward so a viewport resize cannot collapse the
+    -- full-width Settings page back into the content column.
+    if self._settingsLayoutActive or self.selectedTab == self.rfSettings then
+        self:_applySettingsLayout(true)
+    end
 end
 
 function Window:_watchViewport()
@@ -1625,42 +1652,68 @@ function Window:_buildLockScrim(element)
 end
 
 function Window:_applySettingsLayout(isSettings)
-    if self.layout.mode ~= "sidebar" then return end
+    if self.layout.mode ~= "sidebar" then
+        return
+    end
+
+    isSettings = isSettings == true
+    self._settingsLayoutActive = isSettings
+
+    local railWidth = layouts.railWidthFor(self.layout, self.size.X.Offset)
+    local tab = self.selectedTab
+
     if isSettings then
-        if self.tabList then self.tabList.Visible = false end
-        if self.sidebar then self.sidebar.Visible = false end
-        -- Expand elements to full width so settings covers the sidebar area
+        -- Settings is a full-width page: hide the whole rail and let the page
+        -- consume the space that was previously reserved for it.
+        if self.tabList then
+            self.tabList.Visible = false
+        end
+        if self.sidebar then
+            self.sidebar.Visible = false
+        end
         self.elements.Size = UDim2.new(1, 0, 1, -self.layout.chromeHeight)
         self.elementsCorner.CornerRadius = UDim.new(0, 0)
         self.elementsStroke.Transparency = 1
         self.bottomFade.Size = UDim2.new(1, 0, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
-        local tab = self.selectedTab
         if tab and tab.tabPage then
             tab.tabPage.Size = UDim2.new(1, 0, 1, 0)
             tab.tabPage.Position = UDim2.new(0, 0, 0, 0)
         end
-    else
-        if self.tabList then self.tabList.Visible = true end
-        if self.sidebar then self.sidebar.Visible = true end
-        -- Restore elements to sidebar-adjusted width
-        local railWidth = layouts.railWidthFor(self.layout, self.size.X.Offset)
-        self.elements.Size = UDim2.new(1, -railWidth, 1, -self.layout.chromeHeight)
-        self.elementsCorner.CornerRadius = self.theme.CornerRoundness or UDim.new(0, 8)
-        self.elementsStroke.Transparency = 0
-        self.bottomFade.Size = UDim2.new(1, -railWidth, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
-        local tab = self.selectedTab
-        if tab and tab.tabPage then
-            tab.tabPage.Size = UDim2.new(1, -35, 1, 0)
-            tab.tabPage.Position = UDim2.new(0, 35, 0, 0)
-        end
+        return
+    end
+
+    -- Restore the normal sidebar/content split when leaving Settings.
+    local contentVisible = self.elements.Visible and not self.hidden and not self.minimised
+    if self.tabList then
+        self.tabList.Visible = contentVisible
+    end
+    if self.sidebar then
+        self.sidebar.Visible = contentVisible
+    end
+    self.elements.Size = UDim2.new(1, -railWidth, 1, -self.layout.chromeHeight)
+    self.elementsCorner.CornerRadius = self.theme.CornerRoundness or UDim.new(0, 8)
+    self.elementsStroke.Transparency = 0
+    self.bottomFade.Size = UDim2.new(1, -railWidth, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
+    if tab and tab.tabPage then
+        tab.tabPage.Size = UDim2.new(1, -35, 1, 0)
+        tab.tabPage.Position = UDim2.new(0, 35, 0, 0)
     end
 end
 
 function Window:_setContentVisible(visible)
     self.elements.Visible = visible
-    self.tabList.Visible = visible
-    if self.sidebar then
-        self.sidebar.Visible = visible
+    if not visible then
+        self.tabList.Visible = false
+        if self.sidebar then
+            self.sidebar.Visible = false
+        end
+        return
+    end
+
+    if self.layout.mode == "sidebar" then
+        self:_applySettingsLayout(self.selectedTab == self.rfSettings)
+    else
+        self.tabList.Visible = true
     end
 end
 
