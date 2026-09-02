@@ -290,6 +290,7 @@ function Window.new(properties)
         mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = true,
         layoutMode = layout.mode,
     }
+        self._layoutTransitioning = false
 
         self.screenGui = self:Create("ScreenGui", {
         Name = variables.httpService:GenerateGUID(false),
@@ -1706,6 +1707,32 @@ function Window:_setLayoutMode(mode)
     if not nextLayout or nextLayout.mode == self.layout.mode then
         return false
     end
+    if self._layoutTransitioning then
+        return false
+    end
+    self._layoutTransitioning = true
+    local transition = self._layoutTransitionOverlay
+    if not transition then
+        transition = self:Create("Frame", {
+            Name = "LayoutTransition",
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Size = UDim2.fromScale(1, 1),
+            ZIndex = 100,
+            Parent = self.main,
+        }, { BackgroundColor3 = "WindowColor" })
+        self._layoutTransitionOverlay = transition
+    end
+    transition.Visible = true
+    transition.BackgroundTransparency = 1
+    local transitionInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    variables.tweenService:Create(transition, transitionInfo, { BackgroundTransparency = 0 }):Play()
+    task.wait(0.12)
+    if self.unloaded then
+        self._layoutTransitioning = false
+        return false
+    end
     if self._searching then
         search.close(self, { showTabs = true, jumpTo = self.selectedTab and self.selectedTab.tabPage })
     end
@@ -1766,6 +1793,13 @@ function Window:_setLayoutMode(mode)
         self:_jumpTo(self.selectedTab.tabPage)
         self.selectedTab:_applyVisual("selected")
     end
+    variables.tweenService:Create(transition, transitionInfo, { BackgroundTransparency = 1 }):Play()
+    task.delay(0.18, function()
+        if not self.unloaded and self._layoutTransitionOverlay == transition then
+            transition.Visible = false
+        end
+    end)
+    self._layoutTransitioning = false
     return previousMode ~= nextLayout.mode
 end
 
