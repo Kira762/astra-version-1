@@ -512,7 +512,7 @@ about:CreateButton({
 
 about:CreateSection({ name = "Environment" })
 
-local environment = about:CreateGroup()
+local environment = about:CreateGroup({ direction = "column" })
 
 environment:CreateStat({
     name = "Version",
