@@ -1097,7 +1097,7 @@ i.searchPill.Visible=true d(i,true,ak)i.searchInput:CaptureFocus()af.tweenServic
 ImageTransparency=am}):Play()end function aj.close(i,j)if not i._searching then return end j=j or{}i._searching=false i.
 searchInput.Text=''i.searchInput:ReleaseFocus()i.searchEmpty.Visible=false h(i)local k=if j.jumpTo==nil then i.
 selectedTab and i.selectedTab.tabPage else j.jumpTo if k then i:_jumpTo(k)end d(i,false,ak)task.delay(ak.Time,function()
-if not i._searching then i.searchPill.Visible=false end end)if j.showTabs then i.tabList.Visible=true e(i,true,ak)end af
+if not i._searching then i.searchPill.Visible=false end end)if j.showTabs then if i.layout.mode=='sidebar' and i._applySettingsLayout then i:_applySettingsLayout(i.selectedTab==i.rfSettings)else i.tabList.Visible=true end e(i,true,ak)end af
 .tweenService:Create(i.searchAction.iconLabel,ak,{ImageTransparency=al}):Play()end function aj.toggle(i)if i._searching
 then aj.close(i,{showTabs=true})else aj.open(i)end end function aj.railWidth(i,j)if i.searchPill then i.searchPill.Size=
 UDim2.new(1,-(j+30),0,35)end end function aj.build(i)i._searching=false i.searchPage=i:Create('ScrollingFrame',{Name=
@@ -1416,7 +1416,7 @@ return end local f=ak.states[c.window.layout.mode][d]if not f then return end ak
 _spinGradients(c)if c.neglectSelector then return end local d=TweenInfo.new(0.7,Enum.EasingStyle.Quint,Enum.
 EasingDirection.Out)for e,f in{c.topbarItemGradient,c.topbarItemStrokeGradient}do f.Rotation=-270 ag.tweenService:
 Create(f,d,{Rotation=90}):Play()end end function ae.Select(c,d)if c.window._searching then aj.close(c.window,{showTabs=
-true,jumpTo=false})end c.window.selectedTab=c c.window:_jumpTo(c.tabPage)if c.window.layout and c.window.layout.mode=='sidebar'then if c==c.window.rfSettings then if c.window.tabList then c.window.tabList.Visible=false end;if c.window.sidebar then c.window.sidebar.Visible=false end;if c.tabPage then c.tabPage.Size=UDim2.new(1,0,1,0);c.tabPage.Position=UDim2.new(0,0,0,0)end else if c.window.tabList then c.window.tabList.Visible=true end;if c.window.sidebar then c.window.sidebar.Visible=true end;if c.tabPage then c.tabPage.Size=UDim2.new(1,-35,1,0);c.tabPage.Position=UDim2.new(0,35,0,0)end end end local e=d or not c.window:_interactive()if not
+true,jumpTo=false})end c.window.selectedTab=c if c.window._applySettingsLayout then c.window:_applySettingsLayout(c==c.window.rfSettings)end c.window:_jumpTo(c.tabPage)local e=d or not c.window:_interactive()if not
 c.neglectSelector and not e then c:_applyVisual('selected',am)end for f,g in c.window.tabs do if g~=c.window.selectedTab
 then g:Deselect(e)end end if c~=c.window.rfSettings and c.window.settingsAction and not e then ag.tweenService:Create(c.
 window.settingsAction.iconLabel,TweenInfo.new(0.25,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{ImageTransparency=
@@ -1754,7 +1754,7 @@ end local K=z(I.sidebarLayout or I.SidebarLayout)local P=I.iconPack or I.IconPac
 subheading=I.subtitle or I.Subtitle,layout=K,size=w(K.mode),instances={},connections={},iconPack=P,icon=__ASTRA_ROBLOX_ICONS_V1.resolve(I.icon or I.Icon,P),showName=I
 .showName or I.ShowName or'Astra',showIcon=__ASTRA_ROBLOX_ICONS_V1.resolve(I.showIcon or I.ShowIcon or ai.icons.astra,P),showIconOnly=I.showIconOnly
 or I.ShowIconOnly or false,profileText=I.profile or I.Profile,themeProperties={},localeProperties={},tabs={},tabSections
-={},tags={},selectedTab=nil,theme=H(I.theme or I.Theme),controls={},configuration=(function()local L=I.configuration or
+={},tags={},selectedTab=nil,_settingsLayoutActive=false,theme=H(I.theme or I.Theme),controls={},configuration=(function()local L=I.configuration or
 I.Configuration if not L then return{}end return{autoSave=L.autoSave or L.AutoSave,autoLoad=L.autoLoad or L.AutoLoad,
 fileName=L.fileName or L.FileName,customFolder=L.customFolder or L.CustomFolder}end)()},h)L.Flags=setmetatable({},{
 __index=function(M,N)local O=L.controls[N]return O and O.value end,__newindex=function(M,N,O)local P=L.controls[N]if not
@@ -1909,7 +1909,7 @@ _clampToScreen(I)I.main.Position=I:_clampedPosition(I.main.Position)end function
 return end local J=w(I.layout.mode)local K=J~=I.size I.size=J I:_applyRailWidth()if I.hidden or I.minimised or I.
 animating or I._revealing then I._pendingResize=I._pendingResize or K return end if not K and not I._pendingResize then
 return end I._pendingResize=false I.main.Size=J I:_clampToScreen()I:_syncDragBar()end function h._applyRailWidth(I)if I.
-layout.mode~='sidebar'then return end e.applyWidth(I,b.railWidthFor(I.layout,I.size.X.Offset))end function h.
+layout.mode~='sidebar'then return end local J=b.railWidthFor(I.layout,I.size.X.Offset)e.applyWidth(I,J)if I._settingsLayoutActive or I.selectedTab==I.rfSettings then I:_applySettingsLayout(true)end end function h.
 _watchViewport(I)local J,K:RBXScriptConnection?=false local function L()if J then return end J=true task.defer(function(
 )J=false I:_applyWindowSize()end)end local function M()if K then I:Disconnect(K)K=nil end local N=f.workspace.
 CurrentCamera if N then K=I:Connect(N:GetPropertyChangedSignal'ViewportSize',L)end L()end I:Connect(f.workspace:
@@ -1979,8 +1979,7 @@ _descriptionBefore J._descriptionBefore=nil end f.tweenService:Create(O.titleLab
 0.7}):Play()end function h._buildLockScrim(I,J)J.lockScrim=I:Create('TextButton',{Name='ElementLock',Active=true,
 AutoButtonColor=false,Size=UDim2.fromScale(1,1),BorderSizePixel=0,Text='',TextTransparency=1,ZIndex=ai.zIndex.
 elementLock,Visible=false,BackgroundTransparency=1,Parent=J.main},{BackgroundColor3={'WindowColor',C}})I:Create(
-'UICorner',{Parent=J.lockScrim},{CornerRadius='ElementCornerRadius'})end function h._setContentVisible(I,J)I.elements.
-Visible=J I.tabList.Visible=J if I.sidebar then I.sidebar.Visible=J end end function h._fadeSurfaces(I,J,K)local L={[I.
+'UICorner',{Parent=J.lockScrim},{CornerRadius='ElementCornerRadius'})end function h._applySettingsLayout(I,J)if I.layout.mode~='sidebar'then return end J=J==true I._settingsLayoutActive=J local K=b.railWidthFor(I.layout,I.size.X.Offset)local L=I.selectedTab if J then if I.tabList then I.tabList.Visible=false end if I.sidebar then I.sidebar.Visible=false end I.elements.Size=UDim2.new(1,0,1,-I.layout.chromeHeight)I.elementsCorner.CornerRadius=UDim.new(0,0)I.elementsStroke.Transparency=1 I.bottomFade.Size=UDim2.new(1,0,I.layout.fadeSize.Y.Scale,I.layout.fadeSize.Y.Offset)if L and L.tabPage then L.tabPage.Size=UDim2.new(1,0,1,0)L.tabPage.Position=UDim2.new(0,0,0,0)end return end local M=I.elements.Visible and not I.hidden and not I.minimised if I.tabList then I.tabList.Visible=M end if I.sidebar then I.sidebar.Visible=M end I.elements.Size=UDim2.new(1,-K,1,-I.layout.chromeHeight)I.elementsCorner.CornerRadius=I.theme.CornerRoundness or UDim.new(0,8)I.elementsStroke.Transparency=0 I.bottomFade.Size=UDim2.new(1,-K,I.layout.fadeSize.Y.Scale,I.layout.fadeSize.Y.Offset)if L and L.tabPage then L.tabPage.Size=UDim2.new(1,-35,1,0)L.tabPage.Position=UDim2.new(0,35,0,0)end end function h._setContentVisible(I,J)I.elements.Visible=J if not J then I.tabList.Visible=false if I.sidebar then I.sidebar.Visible=false end return end if I.layout.mode=='sidebar'then I:_applySettingsLayout(I.selectedTab==I.rfSettings)else I.tabList.Visible=true end end function h._fadeSurfaces(I,J,K)local L={[I.
 windowShadow]={Transparency=if J then 0.6 else 1},[I.windowStroke]={Transparency=if J then 0.95 else 1},[I.bottomFade]={
 BackgroundTransparency=if J then 0 else 1}}if I.elementsStroke then L[I.elements]={BackgroundTransparency=if J then I.
 layout.cardTransparency else 1}L[I.elementsStroke]={Transparency=if J then 0 else 1}end for M,N in L do if K then f.
