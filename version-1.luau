@@ -1425,7 +1425,7 @@ _clampToScreen(I)I.main.Position=I:_clampedPosition(I.main.Position)end function
 return end local J=w(I.layout.mode)local K=J~=I.size I.size=J I:_applyRailWidth()if I.hidden or I.minimised or I.
 animating or I._revealing then I._pendingResize=I._pendingResize or K return end if not K and not I._pendingResize then
 return end I._pendingResize=false I.main.Size=J I:_clampToScreen()I:_syncDragBar()end function h._applyRailWidth(I)if I.
-layout.mode~='sidebar'then return end e.applyWidth(I,b.railWidthFor(I.layout,I.size.X.Offset))end function h.
+layout.mode~='sidebar'then return end e.applyWidth(I,b.railWidthFor(I.layout,I.size.X.Offset))if I._settingsLayoutActive then I:_applySettingsLayout(true)end end function h.
 _watchViewport(I)local J,K:RBXScriptConnection?=false local function L()if J then return end J=true task.defer(function(
 )J=false I:_applyWindowSize()end)end local function M()if K then I:Disconnect(K)K=nil end local N=f.workspace.
 CurrentCamera if N then K=I:Connect(N:GetPropertyChangedSignal'ViewportSize',L)end L()end I:Connect(f.workspace:
@@ -1498,8 +1498,7 @@ _descriptionBefore J._descriptionBefore=nil end f.tweenService:Create(O.titleLab
 0.7}):Play()end function h._buildLockScrim(I,J)J.lockScrim=I:Create('TextButton',{Name='ElementLock',Active=true,
 AutoButtonColor=false,Size=UDim2.fromScale(1,1),BorderSizePixel=0,Text='',TextTransparency=1,ZIndex=ai.zIndex.
 elementLock,Visible=false,BackgroundTransparency=1,Parent=J.main},{BackgroundColor3={'WindowColor',C}})I:Create(
-'UICorner',{Parent=J.lockScrim},{CornerRadius='ElementCornerRadius'})end function h._setContentVisible(I,J)I.elements.
-Visible=J I.tabList.Visible=J if I.sidebar then I.sidebar.Visible=J end end function h._fadeSurfaces(I,J,K)local L={[I.
+'UICorner',{Parent=J.lockScrim},{CornerRadius='ElementCornerRadius'})end function h._applySettingsLayout(I,J)if I.layout.mode~='sidebar'then return end J=J==true I._settingsLayoutActive=J local K=b.railWidthFor(I.layout,I.size.X.Offset)local L=I.selectedTab if J then if I.tabList then I.tabList.Visible=false end if I.sidebar then I.sidebar.Visible=false end I.elements.Size=UDim2.new(1,0,1,-I.layout.chromeHeight)if I.elementsCorner then I.elementsCorner.CornerRadius=UDim.new(0,0)end if I.elementsStroke then I.elementsStroke.Transparency=1 end I.bottomFade.Size=UDim2.new(1,0,I.layout.fadeSize.Y.Scale,I.layout.fadeSize.Y.Offset)if L and L.tabPage then L.tabPage.Size=UDim2.new(1,0,1,0)L.tabPage.Position=UDim2.new(0,0,0,0)end return end local M=I.elements.Visible and not I.hidden and not I.minimised if I.tabList then I.tabList.Visible=M end if I.sidebar then I.sidebar.Visible=M end I.elements.Size=UDim2.new(1,-K,1,-I.layout.chromeHeight)if I.elementsCorner then I.elementsCorner.CornerRadius=I.theme.CornerRoundness or UDim.new(0,8)end if I.elementsStroke then I.elementsStroke.Transparency=0 end I.bottomFade.Size=UDim2.new(1,-K,I.layout.fadeSize.Y.Scale,I.layout.fadeSize.Y.Offset)if L and L.tabPage then L.tabPage.Size=UDim2.new(1,-35,1,0)L.tabPage.Position=UDim2.new(0,35,0,0)end end function h._setContentVisible(I,J)I.elements.Visible=J if not J then I.tabList.Visible=false if I.sidebar then I.sidebar.Visible=false end return end if I.layout.mode=='sidebar'then I:_applySettingsLayout(I.selectedTab==I.rfSettings)else I.tabList.Visible=true end end function h._fadeSurfaces(I,J,K)local L={[I.
 windowShadow]={Transparency=if J then 0.6 else 1},[I.windowStroke]={Transparency=if J then 0.95 else 1},[I.bottomFade]={
 BackgroundTransparency=if J then 0 else 1}}if I.elementsStroke then L[I.elements]={BackgroundTransparency=if J then I.
 layout.cardTransparency else 1}L[I.elementsStroke]={Transparency=if J then 0 else 1}end for M,N in L do if K then f.
