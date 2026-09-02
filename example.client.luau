@@ -402,7 +402,7 @@ local advancedProgress = advanced:CreateProgress({
 
 advanced:CreateButton({
     name = "Run Placeholder Task",
-    icon = "play-circle",
+    icon = "circle-play",
     description = "Simulates a task and advances the progress indicator.",
     callback = function()
         advancedProgress:Set(math.min(100, advancedProgress.value + 8))
@@ -438,7 +438,7 @@ local activityConsole = activity:CreateConsole({
 
 activity:CreateButton({
     name = "Add Activity Event",
-    icon = "plus-circle",
+    icon = "circle-plus",
     callback = function()
         activityConsole:Append(string.format("[%s] Placeholder event received", os.date("%H:%M:%S")))
     end,
@@ -523,7 +523,7 @@ environment:CreateStat({
 environment:CreateStat({
     name = "Icon Pack",
     value = "Lucide",
-    icon = "icons",
+    icon = "library",
 })
 
 environment:CreateStat({
