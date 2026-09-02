@@ -1345,8 +1345,7 @@ I._liveAnimating and not I.unloaded do local M=f.tweenService:Create(I.windowGra
 0.4 else-0.2,0),Rotation=(if K then 220 else 280)})I._liveTween=M M:Play()M.Completed:Wait()K=not K end if I.
 _liveGeneration==J then I._liveAnimating=false I._liveTween=nil end end)end function h.ChangeTheme(I,J)local K=if
 typeof(J)=='table'then J else H(J)for L,M in K do I.theme[L]=B(L,M)end if typeof(J)=='table'then F(I.theme,K)end for L,M
-in I.themeProperties do for N,O in M do local P=if typeof(O)=='table'then O[2](I.theme[O[1] ])else I.theme[O]if typeof(P
-)=='Color3'or typeof(P)=='number'then f.tweenService:Create(L,TweenInfo.new(0.5,Enum.EasingStyle.Quint,Enum.
+in I.themeProperties do for N,O in M do local P=if typeof(O)=='table'then O[2](I.theme[O[1] ])else I.theme[O]if L[N]==P then continue end if typeof(P)=='Color3'or typeof(P)=='number'then f.tweenService:Create(L,TweenInfo.new(0.5,Enum.EasingStyle.Quint,Enum.
 EasingDirection.Out),{[N]=P}):Play()else L[N]=P end end end if I.hidden then I._themeRefreshPending=true else I:
 _refreshElementThemes()end I:_syncLiveAnimation()end function h._refreshElementThemes(I)for J,K in I.tabs do for L,M in
 K.elements do if M._refreshTheme then M:_refreshTheme()end end end end function h.CreateTab(I,J)assert(not I.unloaded,
@@ -1450,7 +1449,7 @@ return end K=true if I.screenGui and I.screenGui.IgnoreGuiInset then M=f.guiServ
 AbsolutePosition+I.main.AbsoluteSize*I.main.AnchorPoint-J:GetMouseLocation()end)I:Connect(J.InputEnded,function(P)local
 Q=P.UserInputType.Name if Q=='MouseButton1'or Q=='Touch'then K=false end end)I:Connect(J.WindowFocusReleased,function()K
 =false end)I:Connect(f.runService.RenderStepped,function()if not K then return end if not I:_interactive()then K=false
-return end I.main.Position=N()if I.drag and I.drag.drag then local P=I.main.Position I.drag.drag.Position=UDim2.new(P.X.
+return end local R=N()if I.main.Position==R then return end I.main.Position=R if I.drag and I.drag.drag then local P=I.main.Position I.drag.drag.Position=UDim2.new(P.X.
 Scale,P.X.Offset,P.Y.Scale,P.Y.Offset+(I.main.Size.Y.Offset/2+15))end end)end function h._buildSettingsUI(I)I.rfSettings
 :CreateSection{name='General'}I.rfSettings:CreateKeybind{name='Toggle Keybind',icon=ai.icons.search,value=I.settings.
 toggleKeybind,isMenuToggle=true,onChanged=function(J)I.settings.toggleKeybind=J I:SaveSettings()end}I.rfSettings:
@@ -1605,8 +1604,7 @@ fromOffset(0,q),BorderSizePixel=0,TextTransparency=1,ZIndex=L or 1,Parent=M})I:C
 CornerRadius='ElementCornerRadius'})return M,N,O end function h.StyleElementPanel(I,J)I:Create('UIGradient',{Rotation=
 270,Parent=J},{Color='ElementGradient'})I:Create('UICorner',{Parent=J},{CornerRadius='ElementCornerRadius'})local K=I:
 Create('UIStroke',{Color=Color3.fromRGB(255,255,255),Transparency=1,Parent=J})I:Create('UIGradient',{Rotation=270,Parent
-=K},{Color='ElementStrokeGradient'})return K end function h._reveal(I,J,K,L,M)if not J then return end if L then f.
-tweenService:Create(J,M or i,K):Play()else for N,O in K do J[N]=O end end end function h._revealCommon(I,J,K)I:_reveal(J
+=K},{Color='ElementStrokeGradient'})return K end function h._reveal(I,J,K,L,M)if not J then return end local N=false for O,P in K do if J[O]~=P then N=true break end end if not N then return end if L then f.tweenService:Create(J,M or i,K):Play()else for O,P in K do J[O]=P end end end function h._revealCommon(I,J,K)I:_reveal(J
 .stroke,{Transparency=I.theme.ElementStrokeTransparency},K)I:_reveal(J.title,{TextTransparency=0},K)I:_reveal(J.main,{
 BackgroundTransparency=I.theme.ElementTransparency or 0},K)if J.iconLabel then I:_reveal(J.iconLabel,{ImageTransparency=
 0},K)end if J.descriptor then I:_reveal(J.descriptor.titleLabel,{TextTransparency=0.7},K)end end function h._hideCommon(

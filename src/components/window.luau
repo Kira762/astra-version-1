@@ -21,6 +21,7 @@ local Window = {}
 Window.__index = Window
 
 local revealInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local themeTweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 local collapsedSize = UDim2.fromOffset(185, 50)
 local collapsedIconSize = UDim2.fromOffset(50, 50)
@@ -681,14 +682,11 @@ function Window:ChangeTheme(theme)
         for property, value in properties do
             local targetValue = if typeof(value) == "table" then value[2](self.theme[value[1]]) else self.theme[value]
 
+            if instance[property] == targetValue then
+                continue
+            end
             if typeof(targetValue) == "Color3" or typeof(targetValue) == "number" then
-                variables.tweenService
-                    :Create(
-                        instance,
-                        TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-                        { [property] = targetValue }
-                    )
-                    :Play()
+                variables.tweenService:Create(instance, themeTweenInfo, { [property] = targetValue }):Play()
             else
                 instance[property] = targetValue
             end
@@ -1358,8 +1356,11 @@ function Window:_bindTopbarDrag()
             return
         end
 
-        self.main.Position = getTarget()
-
+        local target = getTarget()
+        if self.main.Position == target then
+            return
+        end
+        self.main.Position = target
         if self.drag and self.drag.drag then
             local mainPosition = self.main.Position
             self.drag.drag.Position = UDim2.new(
@@ -2408,6 +2409,16 @@ end
 
 function Window:_reveal(instance, props, animate, info)
     if not instance then
+        return
+    end
+    local changed = false
+    for property, value in props do
+        if instance[property] ~= value then
+            changed = true
+            break
+        end
+    end
+    if not changed then
         return
     end
     if animate then
