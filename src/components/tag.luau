@@ -36,7 +36,7 @@ function Tag.new(window, properties)
     })
 
     self.window:Create("UICorner", {
-        CornerRadius = UDim.new(1, 0),
+        CornerRadius = UDim.new(0, 14),
 
         Parent = self.main,
     })
