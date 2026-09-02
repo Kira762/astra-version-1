@@ -1845,8 +1845,7 @@ function h._setTabSectionsShown(I,J,K)for L,M in I.tabSections do M:_setShown(J,
 _setTabSectionsVisible(I,J)for K,L in I.tabSections do L:_setVisible(J)end end function h.CreateTag(I,J)assert(not I.
 unloaded,'Cannot create a tag on an unloaded window.')local K=ac(ab.Parent.tag).new(I,J)table.insert(I.tags,K)return K
 end function h._registerControl(I,J)if not J.flag or J.flag==''or J.forgetState then return end local K=J.flag if I.
-controls[K]then local L=2 while I.controls[K..L]do L+=1 end K=K..L ak.warn("Astra: duplicate config flag '"..J.flag..
-"', saving this one as '"..K.."'. Set a unique flag to keep it stable across sessions.")end J.flag=K I.controls[K]=J
+controls[K]then local L=2 while I.controls[K..L]do L+=1 end K=K..Lend J.flag=K I.controls[K]=J
 return K end function h._restoreLate(I,J)if not I._loadedConfig or not J.flag or J.forgetState then return end local K=I
 ._loading I._loading=true ah.applyTo(J,I._loadedConfig[J.flag])I._loading=K end function h._persist(I,J)if J.flag and
 not J.forgetState and I.configuration.autoSave and not I._loading then task.spawn(I.Save,I)end end function h.

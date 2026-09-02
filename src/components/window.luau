@@ -788,13 +788,6 @@ function Window:_registerControl(control)
             n += 1
         end
         flag = flag .. n
-        log.warn(
-            "Astra: duplicate config flag '"
-                .. control.flag
-                .. "', saving this one as '"
-                .. flag
-                .. "'. Set a unique flag to keep it stable across sessions."
-        )
     end
 
     control.flag = flag
