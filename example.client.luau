@@ -516,19 +516,20 @@ local environment = about:CreateGroup()
 
 environment:CreateStat({
     name = "Version",
-    value = "1.0.0",
+    value = 100,
+    prefix = "v",
+    suffix = ".0.0",
     icon = "tag",
 })
-
-environment:CreateStat({
+environment:CreateText({
     name = "Icon Pack",
-    value = "Lucide",
+    text = "Lucide",
     icon = "library",
 })
-
 environment:CreateStat({
     name = "Status",
-    value = "Ready",
+    value = 1,
+    suffix = " ready",
     icon = "circle-check",
 })
 
