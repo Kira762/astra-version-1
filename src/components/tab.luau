@@ -96,37 +96,48 @@ function Tab.new(window, properties)
         Parent = self.tabPage,
     })
 
-    if not self.neglectSelector then
-        table.insert(
-            self.connections,
-            self.window:Connect(self.topbarItemInteract.MouseButton1Click, function()
-                hapticEngine.click()
-                self:Select()
-            end)
-        )
+    self:_bindSelector()
 
-        table.insert(
-            self.connections,
-            self.window:Connect(self.topbarItemInteract.MouseEnter, function()
-                if not self.window:_interactive() then
-                    return                 end
-                if self.window.selectedTab ~= self then
-                    self:_applyVisual("hover", hoverTweenInfo)
-                    self:_spinGradients()                 end
-            end)
-        )
+    return self
+end
 
-        table.insert(
-            self.connections,
-            self.window:Connect(self.topbarItemInteract.MouseLeave, function()
-                if self.window.selectedTab ~= self then
-                    self:_applyVisual("unselected", hoverTweenInfo)
-                end
-            end)
-        )
+function Tab:_bindSelector()
+    if self.neglectSelector or not self.topbarItemInteract then
+        return
     end
+    table.insert(self.connections, self.window:Connect(self.topbarItemInteract.MouseButton1Click, function()
+        hapticEngine.click()
+        self:Select()
+    end))
+    table.insert(self.connections, self.window:Connect(self.topbarItemInteract.MouseEnter, function()
+        if not self.window:_interactive() then
+            return
+        end
+        if self.window.selectedTab ~= self then
+            self:_applyVisual("hover", hoverTweenInfo)
+            self:_spinGradients()
+        end
+    end))
+    table.insert(self.connections, self.window:Connect(self.topbarItemInteract.MouseLeave, function()
+        if self.window.selectedTab ~= self then
+            self:_applyVisual("unselected", hoverTweenInfo)
+        end
+    end))
+end
 
-        return self
+function Tab:_rebuildSelector()
+    if self.neglectSelector then
+        return
+    end
+    for _, connection in self.connections do
+        self.window:Disconnect(connection)
+    end
+    table.clear(self.connections)
+    if self.topbarItem then
+        self.window:DestroySubtree(self.topbarItem)
+    end
+    tabSelector.build(self, self.window.layout)
+    self:_bindSelector()
 end
 
 function Tab:_applyVisual(stateName, tweenInfo)

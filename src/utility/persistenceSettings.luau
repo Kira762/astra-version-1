@@ -14,6 +14,7 @@ type SettingsWindow = {
         welcomeToast: boolean,
         haptics: boolean,
         showProfile: boolean,
+        layoutMode: string,
     },
 }
 
@@ -23,7 +24,8 @@ type DecodedSettings = {
     keepOnScreen: unknown?,
     welcomeToast: unknown?,
     haptics: unknown?,
-    showProfile: unknown?,
+        showProfile: unknown?,
+        layoutMode: unknown?,
 }
 
 function persistenceSettings.getSettingsPath(): (string, string)
@@ -43,6 +45,7 @@ function persistenceSettings.saveSettings(window: SettingsWindow): boolean
         welcomeToast = window.settings.welcomeToast,
         haptics = window.settings.haptics,
         showProfile = window.settings.showProfile,
+        layoutMode = window.settings.layoutMode,
     }
 
     local ok, encoded = pcall(variables.httpService.JSONEncode, variables.httpService, data)
@@ -129,6 +132,9 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
 
     if type(settings.showProfile) == "boolean" then
         window.settings.showProfile = settings.showProfile
+    end
+    if settings.layoutMode == "top" or settings.layoutMode == "sidebar" then
+        window.settings.layoutMode = settings.layoutMode
     end
 
     return true

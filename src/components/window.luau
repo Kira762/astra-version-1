@@ -47,6 +47,36 @@ local function fitWindowSize(mode): UDim2
     return windowSizing.fit(camera and camera.ViewportSize, mode)
 end
 
+local function buildTopTabList(window)
+    window.tabList = window:Create("ScrollingFrame", {
+        Name = "Tabs",
+        Active = true,
+        Size = UDim2.new(1, 0, 0, window.layout.tabStripHeight),
+        Position = UDim2.new(0.5, 0, 0, window.layout.tabStripTop),
+        AnchorPoint = Vector2.new(0.5, 0),
+        BackgroundTransparency = 1,
+        AutomaticCanvasSize = Enum.AutomaticSize.X,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 0,
+        ScrollBarImageTransparency = 1,
+        ScrollingDirection = Enum.ScrollingDirection.X,
+        Parent = window.main,
+    })
+    window.tabListLayout = window:Create("UIListLayout", {
+        Padding = UDim.new(0, 7),
+        FillDirection = Enum.FillDirection.Horizontal,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = window.tabList,
+    })
+    window:Create("UIPadding", {
+        PaddingLeft = UDim.new(0, 22),
+        PaddingRight = UDim.new(0, 10),
+        Parent = window.tabList,
+    })
+end
+
 local cornerNames = { "TopLeftRadius", "TopRightRadius", "BottomLeftRadius", "BottomRightRadius" }
 
 local perCornerSupported = (function()
@@ -257,7 +287,9 @@ function Window.new(properties)
 
             self.settings = {
         toggleKeybind = Enum.KeyCode.K,
-        mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = true,     }
+        mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = true,
+        layoutMode = layout.mode,
+    }
 
         self.screenGui = self:Create("ScreenGui", {
         Name = variables.httpService:GenerateGUID(false),
@@ -496,40 +528,8 @@ function Window.new(properties)
             if self.layout.mode == "sidebar" then
         sidebar.build(self, self.layout)
         sidebar.applyWidth(self, layouts.railWidthFor(self.layout, self.size.X.Offset))
-    else
-        self.tabList = self:Create("ScrollingFrame", {
-            Name = "Tabs",
-            Active = true,
-            Size = UDim2.new(1, 0, 0, self.layout.tabStripHeight),
-            Position = UDim2.new(0.5, 0, 0, self.layout.tabStripTop),
-            AnchorPoint = Vector2.new(0.5, 0),
-
-            BackgroundTransparency = 1,
-            AutomaticCanvasSize = Enum.AutomaticSize.X,
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            ScrollBarThickness = 0,
-            ScrollBarImageTransparency = 1,
-            ScrollingDirection = Enum.ScrollingDirection.X,
-
-            Parent = self.main,
-        })
-
-        self.tabListLayout = self:Create("UIListLayout", {
-            Padding = UDim.new(0, 7),
-            FillDirection = Enum.FillDirection.Horizontal,
-            VerticalAlignment = Enum.VerticalAlignment.Center,
-            HorizontalAlignment = Enum.HorizontalAlignment.Left,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-
-            Parent = self.tabList,
-        })
-
-        self:Create("UIPadding", {
-            PaddingLeft = UDim.new(0, 22),
-            PaddingRight = UDim.new(0, 10),
-
-            Parent = self.tabList,
-        })
+        else
+        buildTopTabList(self)
     end
 
         self.actionContainer = self:Create("Frame", {
@@ -621,6 +621,9 @@ function Window.new(properties)
     self._collapsedShown = false
 
         self:LoadSettings()
+    if self.settings.layoutMode and self.settings.layoutMode ~= self.layout.mode then
+        self:_setLayoutMode(self.settings.layoutMode)
+    end
     if self.layout.mode == "sidebar" then
         sidebar.reflowProfile(self)
         sidebar.setSubtitle(self, self.profileText)
@@ -1417,6 +1420,56 @@ function Window:_buildSettingsUI()
         end,
     })
 
+    self.rfSettings:CreateSection({ name = "Layout" })
+
+    local layoutNames = {
+        top = "Default Topbar",
+        sidebar = "Sidebar (Responsive)",
+    }
+    local selectedLayout = self.layout.mode
+    local layoutDropdown = self.rfSettings:CreateDropdown({
+        name = "Bar Layout",
+        description = "Choose the default Topbar or a Sidebar that automatically collapses on narrow screens.",
+        options = { layoutNames.top, layoutNames.sidebar },
+        value = layoutNames[selectedLayout],
+        callback = function(value)
+            for mode, label in layoutNames do
+                if value == label then
+                    selectedLayout = mode
+                    break
+                end
+            end
+        end,
+    })
+    self.rfSettings:CreateButton({
+        name = "Save Bar Layout",
+        callback = function()
+            local label = layoutNames[selectedLayout]
+            if selectedLayout == self.layout.mode then
+                self:Toast({ title = locale.resolve("This bar layout is already active") })
+                return
+            end
+            self:Popup({
+                title = "Apply bar layout?",
+                content = "Are you sure you want to change the layout to " .. label .. "?",
+                options = {
+                    { text = "Cancel" },
+                    {
+                        text = "Apply",
+                        style = "primary",
+                        callback = function()
+                            if self:_setLayoutMode(selectedLayout) then
+                                self.settings.layoutMode = selectedLayout
+                                self:SaveSettings()
+                                layoutDropdown:Set(label, true)
+                            end
+                        end,
+                    },
+                },
+            })
+        end,
+    })
+
     self.rfSettings:CreateSection({ name = "Window" })
 
     self.rfSettings:CreateToggle({
@@ -1643,6 +1696,77 @@ function Window:_buildLockScrim(element)
     self:Create("UICorner", {
         Parent = element.lockScrim,
     }, { CornerRadius = "ElementCornerRadius" })
+end
+
+function Window:_setLayoutMode(mode)
+    if self.unloaded then
+        return false
+    end
+    local nextLayout = layouts.get(mode)
+    if not nextLayout or nextLayout.mode == self.layout.mode then
+        return false
+    end
+    if self._searching then
+        search.close(self, { showTabs = true, jumpTo = self.selectedTab and self.selectedTab.tabPage })
+    end
+    local previousMode = self.layout.mode
+    self.layout = nextLayout
+    self.settings.layoutMode = nextLayout.mode
+    if self.sidebar then
+        self:DestroySubtree(self.sidebar)
+        self.sidebar = nil
+    elseif self.tabList then
+        self:DestroySubtree(self.tabList)
+    end
+    if nextLayout.mode == "sidebar" then
+        sidebar.build(self, nextLayout)
+        if not self.elementsCorner then
+            self.elementsCorner = self:_roundCorners(self.elements, nextLayout.cardCorners)
+            self.elementsStroke = self:Create("UIStroke", {
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                Transparency = 1,
+                Parent = self.elements,
+            }, { Color = "SurfaceStroke" })
+            self:Create("UIGradient", {
+                Rotation = nextLayout.cardStrokeRotation,
+                Transparency = nextLayout.cardStrokeTransparency,
+                Parent = self.elementsStroke,
+            })
+        end
+        sidebar.applyWidth(self, layouts.railWidthFor(nextLayout, self.size.X.Offset))
+    else
+        buildTopTabList(self)
+        if self.elementsCorner then
+            self.elementsCorner.CornerRadius = UDim.new(0, 0)
+        end
+        if self.elementsStroke then
+            self.elementsStroke.Transparency = 1
+        end
+        self.elements.Size = UDim2.new(1, 0, 1, -nextLayout.chromeHeight)
+        self.bottomFade.Size = UDim2.new(1, 0, nextLayout.fadeSize.Y.Scale, nextLayout.fadeSize.Y.Offset)
+        search.railWidth(self, 0)
+    end
+    self.elementsLayout.FillDirection = nextLayout.pageDirection
+    for _, tab in self.tabs do
+        if not tab.neglectSelector then
+            tab:_rebuildSelector()
+        end
+        if tab.tabPage then
+            if nextLayout.mode == "sidebar" then
+                tab.tabPage.Size = UDim2.new(1, -35, 1, 0)
+                tab.tabPage.Position = UDim2.new(0, 35, 0, 0)
+            else
+                tab.tabPage.Size = UDim2.new(1, -20, 1, 0)
+                tab.tabPage.Position = UDim2.new(0.5, 0, 0, 68)
+            end
+        end
+    end
+    self:_applySettingsLayout(self.selectedTab == self.rfSettings)
+    if self.selectedTab then
+        self:_jumpTo(self.selectedTab.tabPage)
+        self.selectedTab:_applyVisual("selected")
+    end
+    return previousMode ~= nextLayout.mode
 end
 
 function Window:_applySettingsLayout(isSettings)
