@@ -133,7 +133,10 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
     if type(settings.showProfile) == "boolean" then
         window.settings.showProfile = settings.showProfile
     end
-    if settings.layoutMode == "top" or settings.layoutMode == "sidebar" then
+    if settings.layoutMode == "top"
+        or settings.layoutMode == "sidebar"
+        or settings.layoutMode == "collapsedSidebar"
+    then
         window.settings.layoutMode = settings.layoutMode
     end
 

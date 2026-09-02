@@ -40,6 +40,7 @@ export type Layout = {
     cardStrokeRotation: number?,
     cardStrokeTransparency: NumberSequence?,
     cardCorners: { string }?,
+    forceCollapsed: boolean?,
 }
 
 layouts.top = {
@@ -105,9 +106,14 @@ layouts.sidebar = {
         fadeCorners = { "BottomRightRadius" },
 } :: Layout
 
+local collapsedSidebar = table.clone(layouts.sidebar)
+collapsedSidebar.forceCollapsed = true
+
 function layouts.get(mode: unknown): Layout?
     if mode == "sidebar" then
         return layouts.sidebar
+    elseif mode == "collapsedSidebar" then
+        return collapsedSidebar
     elseif mode == "top" then
         return layouts.top
     end
@@ -119,7 +125,7 @@ function layouts.railWidthFor(layout: Layout, windowWidth: number): number
         return 0
     end
     local full = layout.railWidth :: number
-    if windowWidth < (layout.railCollapseBelow :: number) then
+    if layout.forceCollapsed or windowWidth < (layout.railCollapseBelow :: number) then
         return layout.railCollapsedWidth :: number
     end
     return full

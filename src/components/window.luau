@@ -622,7 +622,9 @@ function Window.new(properties)
     self._collapsedShown = false
 
         self:LoadSettings()
-    if self.settings.layoutMode and self.settings.layoutMode ~= self.layout.mode then
+    if self.settings.layoutMode == "collapsedSidebar"
+        or (self.settings.layoutMode and self.settings.layoutMode ~= self.layout.mode)
+    then
         self:_setLayoutMode(self.settings.layoutMode)
     end
     if self.layout.mode == "sidebar" then
@@ -1426,12 +1428,13 @@ function Window:_buildSettingsUI()
     local layoutNames = {
         top = "Default Topbar",
         sidebar = "Sidebar (Responsive)",
+        collapsedSidebar = "Collapsed Sidebar",
     }
-    local selectedLayout = self.layout.mode
+    local selectedLayout = self.settings.layoutMode or self.layout.mode
     local layoutDropdown = self.rfSettings:CreateDropdown({
         name = "Bar Layout",
-        description = "Choose the default Topbar or a Sidebar that automatically collapses on narrow screens.",
-        options = { layoutNames.top, layoutNames.sidebar },
+        description = "Choose Default Topbar, responsive Sidebar, or an automatic compact Collapsed Sidebar for desktop and mobile.",
+        options = { layoutNames.top, layoutNames.sidebar, layoutNames.collapsedSidebar },
         value = layoutNames[selectedLayout],
         callback = function(value)
             for mode, label in layoutNames do
@@ -1446,7 +1449,7 @@ function Window:_buildSettingsUI()
         name = "Save Bar Layout",
         callback = function()
             local label = layoutNames[selectedLayout]
-            if selectedLayout == self.layout.mode then
+            if selectedLayout == (self.settings.layoutMode or self.layout.mode) then
                 self:Toast({ title = locale.resolve("This bar layout is already active") })
                 return
             end
@@ -1704,7 +1707,8 @@ function Window:_setLayoutMode(mode)
         return false
     end
     local nextLayout = layouts.get(mode)
-    if not nextLayout or nextLayout.mode == self.layout.mode then
+    local currentMode = self.settings.layoutMode or self.layout.mode
+    if not nextLayout or mode == currentMode then
         return false
     end
     if self._layoutTransitioning then
@@ -1736,9 +1740,9 @@ function Window:_setLayoutMode(mode)
     if self._searching then
         search.close(self, { showTabs = true, jumpTo = self.selectedTab and self.selectedTab.tabPage })
     end
-    local previousMode = self.layout.mode
+    local previousMode = self.settings.layoutMode or self.layout.mode
     self.layout = nextLayout
-    self.settings.layoutMode = nextLayout.mode
+    self.settings.layoutMode = mode
     if self.sidebar then
         self:DestroySubtree(self.sidebar)
         self.sidebar = nil
@@ -1800,9 +1804,8 @@ function Window:_setLayoutMode(mode)
         end
     end)
     self._layoutTransitioning = false
-    return previousMode ~= nextLayout.mode
+        return previousMode ~= mode
 end
-
 function Window:_applySettingsLayout(isSettings)
     if self.layout.mode ~= "sidebar" then
         return
