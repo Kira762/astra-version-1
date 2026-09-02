@@ -1650,6 +1650,9 @@ function Window:_applySettingsLayout(isSettings)
     end
 
     isSettings = isSettings == true
+    if self.settingsAction then
+        self.settingsAction.iconLabel.Image = isSettings and constants.icons.close or constants.icons.settings
+    end
     self._settingsLayoutActive = isSettings
 
     local railWidth = layouts.railWidthFor(self.layout, self.size.X.Offset)
