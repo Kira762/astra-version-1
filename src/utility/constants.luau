@@ -14,9 +14,7 @@ constants.icons = {
     check = 125626312718314,
     dot = 91452555903853,
     colorpicker = 91452555903853,
-    banner = 111263549366178,
     config = 125823673784681,
-    astra = 80387863064905,
 }
 
 constants.accent = {
