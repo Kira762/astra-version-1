@@ -334,4 +334,222 @@ utility:CreateButton({
     end,
 })
 
+local advanced = window:CreateTab({ name = "Advanced", icon = "sliders-horizontal" })
+
+advanced:CreateSection({ name = "Runtime Controls" })
+
+advanced:CreateToggle({
+    name = "Performance Mode",
+    icon = "gauge",
+    description = "Prefer lower visual overhead while keeping the interface responsive.",
+    value = false,
+})
+
+advanced:CreateToggle({
+    name = "Auto Refresh",
+    icon = "refresh-cw",
+    description = "Refresh placeholder data automatically every few seconds.",
+    value = true,
+})
+
+advanced:CreateDropdown({
+    name = "Refresh Interval",
+    icon = "timer",
+    options = { "5 seconds", "15 seconds", "30 seconds", "1 minute" },
+    value = "15 seconds",
+})
+
+advanced:CreateSlider({
+    name = "Update Frequency",
+    icon = "activity",
+    description = "Adjust how often the example would poll for new data.",
+    range = { 1, 60 },
+    value = 15,
+    increment = 1,
+    suffix = " sec",
+})
+
+advanced:CreateSection({ name = "Developer Tools" })
+
+advanced:CreateInput({
+    name = "Workspace Name",
+    icon = "folder-open",
+    description = "A placeholder input for a project or workspace identifier.",
+    placeholder = "example-workspace",
+})
+
+advanced:CreateKeybind({
+    name = "Toggle Developer Panel",
+    icon = "terminal",
+    value = Enum.KeyCode.F3,
+})
+
+advanced:CreateColorPicker({
+    name = "Accent Preview",
+    icon = "palette",
+    color = Color3.fromRGB(96, 205, 255),
+    alpha = 0.9,
+})
+
+advanced:CreateSection({ name = "Execution" })
+
+local advancedProgress = advanced:CreateProgress({
+    name = "Task Progress",
+    icon = "loader-circle",
+    range = { 0, 100 },
+    value = 68,
+})
+
+advanced:CreateButton({
+    name = "Run Placeholder Task",
+    icon = "play-circle",
+    description = "Simulates a task and advances the progress indicator.",
+    callback = function()
+        advancedProgress:Set(math.min(100, advancedProgress.value + 8))
+    end,
+})
+
+advanced:CreateButton({
+    name = "Reset Task",
+    icon = "rotate-ccw",
+    callback = function()
+        advancedProgress:Set(0)
+    end,
+})
+
+local activity = window:CreateTab({ name = "Activity", icon = "activity" })
+
+activity:CreateSection({ name = "Recent Activity" })
+
+activity:CreateText({
+    name = "Today",
+    icon = "calendar-days",
+    text = "Your placeholder activity feed can show events, status changes, and recent actions here.",
+})
+
+local activityConsole = activity:CreateConsole({
+    name = "Event Stream",
+    icon = "radio-tower",
+    text = "[system] Waiting for activity...",
+    height = 150,
+    follow = true,
+    maxLines = 80,
+})
+
+activity:CreateButton({
+    name = "Add Activity Event",
+    icon = "plus-circle",
+    callback = function()
+        activityConsole:Append(string.format("[%s] Placeholder event received", os.date("%H:%M:%S")))
+    end,
+})
+
+activity:CreateButton({
+    name = "Clear Activity",
+    icon = "trash-2",
+    callback = function()
+        activityConsole:Clear()
+    end,
+})
+
+activity:CreateSection({ name = "Filters" })
+
+activity:CreateToggle({
+    name = "Show System Events",
+    icon = "server",
+    value = true,
+})
+
+activity:CreateToggle({
+    name = "Show User Events",
+    icon = "user-round",
+    value = true,
+})
+
+activity:CreateDropdown({
+    name = "Activity Range",
+    icon = "calendar-range",
+    options = { "Today", "This week", "This month", "All time" },
+    value = "Today",
+})
+
+local about = window:CreateTab({ name = "About", icon = "info" })
+
+about:CreateSection({ name = "Astra Example" })
+
+about:CreateText({
+    name = "Component Showcase",
+    icon = "sparkles",
+    text = "A detailed placeholder window demonstrating tabs, actions, forms, progress, statistics, notifications, groups, tags, and console output with the Lucide icon pack.",
+})
+
+about:CreateDivider({ text = "Resources" })
+
+about:CreateButton({
+    name = "View Documentation",
+    icon = "book-open",
+    description = "Placeholder action for opening the project documentation.",
+    callback = function()
+        window:Toast({
+            title = "Documentation",
+            subtitle = "This is a placeholder action.",
+            icon = "book-open",
+        })
+    end,
+})
+
+about:CreateButton({
+    name = "Check for Updates",
+    icon = "cloud-download",
+    callback = function()
+        window:Notify({
+            title = "You are up to date",
+            content = "The example is running the latest placeholder build.",
+            icon = "circle-check",
+        })
+    end,
+})
+
+about:CreateSection({ name = "Environment" })
+
+local environment = about:CreateGroup()
+
+environment:CreateStat({
+    name = "Version",
+    value = "1.0.0",
+    icon = "tag",
+})
+
+environment:CreateStat({
+    name = "Icon Pack",
+    value = "Lucide",
+    icon = "icons",
+})
+
+environment:CreateStat({
+    name = "Status",
+    value = "Ready",
+    icon = "circle-check",
+})
+
+about:CreateSection({ name = "Tags" })
+
+window:CreateTag({
+    text = "Lucide",
+    icon = "sparkles",
+    color = Color3.fromRGB(156, 125, 255),
+})
+
+window:CreateTag({
+    text = "Sidebar",
+    icon = "panel-left",
+    color = Color3.fromRGB(96, 205, 255),
+})
+
+window:CreateTag({
+    text = "Demo",
+    icon = "badge-check",
+    color = Color3.fromRGB(80, 210, 160),
+})
+
 window:Navigate("Home")
