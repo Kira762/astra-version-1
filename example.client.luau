@@ -1,4 +1,10 @@
-local Astra = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"))()
+local bundleSource = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
+local bundleLoader, bundleError = loadstring(bundleSource)
+assert(type(bundleLoader) == "function", "Astra bundle failed to compile: " .. tostring(bundleError))
+
+local Astra = bundleLoader()
+assert(type(Astra) == "table", "Astra bundle did not return its API table")
+assert(Astra.Icons and Astra.Icons.Lucide, "Astra bundle is missing the Lucide icon pack")
 
 local AstraLucidePack = Astra.Icons.Lucide
 
