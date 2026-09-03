@@ -1807,13 +1807,12 @@ function Window:_setLayoutMode(mode)
         return previousMode ~= mode
 end
 function Window:_applySettingsLayout(isSettings)
-    if self.layout.mode ~= "sidebar" then
-        return
-    end
-
     isSettings = isSettings == true
     if self.settingsAction then
         image.assign(self.settingsAction.iconLabel, "Image", isSettings and constants.icons.close or constants.icons.settings)
+    end
+    if self.layout.mode ~= "sidebar" then
+        return
     end
     self._settingsLayoutActive = isSettings
 
