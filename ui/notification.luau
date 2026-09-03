@@ -31,7 +31,7 @@ function Notification.new(window, properties)
         window = assert(window, "Missing argument #1 (Window expected)"),
         title = properties.title or properties.Title or "Notification",
         content = properties.content or properties.Content or "",
-        icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
+        icon = window:ResolveIcon(properties.icon or properties.Icon),
         _hovered = false,
         _dismissed = false,
     }, Notification)
