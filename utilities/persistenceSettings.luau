@@ -14,6 +14,7 @@ type SettingsWindow = {
         welcomeToast: boolean,
         haptics: boolean,
         showProfile: boolean,
+        antiWindowDuplicate: boolean,
         layoutMode: string,
     },
 }
@@ -25,6 +26,7 @@ type DecodedSettings = {
     welcomeToast: unknown?,
     haptics: unknown?,
         showProfile: unknown?,
+        antiWindowDuplicate: unknown?,
         layoutMode: unknown?,
 }
 
@@ -45,6 +47,7 @@ function persistenceSettings.saveSettings(window: SettingsWindow): boolean
         welcomeToast = window.settings.welcomeToast,
         haptics = window.settings.haptics,
         showProfile = window.settings.showProfile,
+        antiWindowDuplicate = window.settings.antiWindowDuplicate,
         layoutMode = window.settings.layoutMode,
     }
 
@@ -132,6 +135,9 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
 
     if type(settings.showProfile) == "boolean" then
         window.settings.showProfile = settings.showProfile
+    end
+    if type(settings.antiWindowDuplicate) == "boolean" then
+        window.settings.antiWindowDuplicate = settings.antiWindowDuplicate
     end
     if settings.layoutMode == "top"
         or settings.layoutMode == "sidebar"

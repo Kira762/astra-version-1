@@ -288,6 +288,7 @@ function Window.new(properties)
             self.settings = {
         toggleKeybind = Enum.KeyCode.K,
         mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = true,
+        antiWindowDuplicate = true,
         layoutMode = layout.mode,
     }
         self._layoutTransitioning = false
@@ -1419,6 +1420,16 @@ function Window:_buildSettingsUI()
         callback = function(state)
             self.settings.haptics = state
             hapticEngine.setEnabled(state)
+            self:SaveSettings()
+        end,
+    })
+
+    self.rfSettings:CreateToggle({
+        name = "Prevent duplicate windows",
+        description = "Prevents Astra from creating another window while this window is active.",
+        value = self.settings.antiWindowDuplicate,
+        callback = function(state)
+            self.settings.antiWindowDuplicate = state
             self:SaveSettings()
         end,
     })

@@ -59,12 +59,23 @@ export type Astra = types.Astra
 type WindowModule = { new: (types.WindowProps) -> types.Window }
 
 local astra = {} :: Astra
+local activeWindow: types.Window? = nil
 
 -- Public icon catalog.
 -- Use astra.Icons.get(name, pack) for explicit pack selection.
 astra.Icons = icons
 
 function astra:CreateWindow(properties: types.WindowProps): types.Window
+    local existing = activeWindow
+    if existing then
+        local state = existing :: any
+        if state.unloaded then
+            activeWindow = nil
+        elseif state.settings and state.settings.antiWindowDuplicate ~= false then
+            return existing
+        end
+    end
+
     local made, result = pcall(function()
         return (require(script.Parent.ui.window) :: WindowModule).new(properties)
     end)
@@ -73,6 +84,7 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
     end
 
     local built = result :: types.Window
+    activeWindow = built
     if variables.secureMode then
         task.defer(function()
             image.preload(function(failed, failedRoles)
