@@ -12298,6 +12298,10 @@ function Window:_buildSettingsUI()
                                 selectedLayout = requestedLayout
                                 self.settings.layoutMode = requestedLayout
                                 self:SaveSettings()
+                                self:Notify({
+                                    title = "Bar layout changed",
+                                    content = "Switched to the " .. layoutNames[requestedLayout] .. " layout.",
+                                })
                                 if layoutDropdown then
                                     layoutDropdown:Set(layoutNames[requestedLayout], true)
                                 end
@@ -12555,23 +12559,14 @@ function Window:_setLayoutMode(mode)
         return false
     end
     self._layoutTransitioning = true
-    local transition = self._layoutTransitionOverlay
-    if not transition then
-        transition = self:Create("Frame", {
-            Name = "LayoutTransition",
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.fromScale(1, 1),
-            ZIndex = 100,
-            Parent = self.main,
-        }, { BackgroundColor3 = { "WindowColor", firstColor } })
-        self._layoutTransitionOverlay = transition
-    end
-    transition.Visible = true
-    transition.BackgroundTransparency = 1
     local transitionInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    variables.tweenService:Create(transition, transitionInfo, { BackgroundTransparency = 0 }):Play()
+    self:_fadeSurfaces(false, transitionInfo)
+    self:_fadeSelectedElementsOut()
+    for _, tab in self.tabs do
+        if not tab.neglectSelector and tab.topbarItem then
+            tab:_applyVisual("hidden", transitionInfo)
+        end
+    end
     task.wait(0.12)
     if self.unloaded then
         self._layoutTransitioning = false
@@ -12639,10 +12634,11 @@ function Window:_setLayoutMode(mode)
         self:_jumpTo(self.selectedTab.tabPage)
         self.selectedTab:_applyVisual("selected")
     end
-    variables.tweenService:Create(transition, transitionInfo, { BackgroundTransparency = 1 }):Play()
-    task.delay(0.18, function()
-        if not self.unloaded and self._layoutTransitionOverlay == transition then
-            transition.Visible = false
+    self:_fadeSurfaces(true, transitionInfo)
+    self:_setTabSectionsShown(true, transitionInfo)
+    task.spawn(function()
+        if not self.unloaded then
+            self:_revealElements(0.02, 0.5)
         end
     end)
     self._layoutTransitioning = false
