@@ -4,9 +4,9 @@ assert(type(bundleLoader) == "function", "Astra bundle failed to compile: " .. t
 
 local Astra = bundleLoader()
 assert(type(Astra) == "table", "Astra bundle did not return its API table")
-assert(Astra.Icons and Astra.Icons.Lucide, "Astra bundle is missing the Lucide icon pack")
+assert(Astra.Icons and Astra.Icons.lucide, "Astra bundle is missing the lucide icon pack")
 
-local AstraLucidePack = Astra.Icons.Lucide
+local AstraLucidePack = Astra.Icons.lucide
 
 local window = Astra:CreateWindow({
     name = "Astra",
