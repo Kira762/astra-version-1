@@ -1809,7 +1809,7 @@ end
 function Window:_applySettingsLayout(isSettings)
     isSettings = isSettings == true
     if self.settingsAction then
-        image.assign(self.settingsAction.iconLabel, "Image", isSettings and constants.icons.close or constants.icons.settings)
+        image.assign(self.settingsAction.iconLabel, "Image", constants.icons.settings)
     end
     if self.layout.mode ~= "sidebar" then
         return
