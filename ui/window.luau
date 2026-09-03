@@ -939,11 +939,15 @@ function Window:Close()
     self.hidden = true
     self.collapsedInteract.Visible = false
 
-    local fadeInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local closeInfo = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+    local fadeInfo = TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+    local closeInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 
     self:_fadeSurfaces(false, fadeInfo)
     self:_fadeSelectedElementsOut()
+    variables.tweenService:Create(self.drag.dragCosmetic, fadeInfo, {
+        Size = UDim2.fromOffset(0, 4),
+        BackgroundTransparency = 1,
+    }):Play()
     for _, tab in pairs(self.tabs) do
         if not tab.neglectSelector and tab.topbarItem then
             tab:_applyVisual("hidden", fadeInfo)
@@ -956,6 +960,7 @@ function Window:Close()
     })
     closeTween.Completed:Connect(function()
         if not self.unloaded then
+            self.drag.drag.Visible = false
             self:Unload()
         end
     end)

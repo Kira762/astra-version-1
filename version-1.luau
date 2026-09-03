@@ -11094,7 +11094,7 @@ function Window.new(properties)
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0.5, 0),
                 Size = UDim2.fromOffset((self.size.X.Offset - 50), 0),
-        BackgroundTransparency = 1,         Visible = false,
+        BackgroundTransparency = 1,         Visible = false, 
         Parent = self.screenGui,
     })
 
@@ -11106,7 +11106,7 @@ function Window.new(properties)
     }, { CornerRadius = "CornerRoundness" })
 
     self.windowStroke = self:Create("UIStroke", {
-                Transparency = 1,
+                Transparency = 1, 
         Parent = self.main,
     }, { Color = "SurfaceStroke" })
 
@@ -11125,7 +11125,7 @@ function Window.new(properties)
         Size = self.layout.fadeSize,
         ZIndex = constants.zIndex.bottomFade,
 
-                BackgroundTransparency = 1,
+                BackgroundTransparency = 1, 
         Parent = self.main,
     })
 
@@ -11197,7 +11197,7 @@ function Window.new(properties)
 
     if self.name then
         self.title = self:Create("TextLabel", {
-                        Text = locale.t(self.name),
+                        Text = locale.t(self.name), 
             FontFace = variables.brandFont(Enum.FontWeight.Medium),
 
             Size = UDim2.fromOffset(50, 20),
@@ -11208,7 +11208,7 @@ function Window.new(properties)
             TextXAlignment = Enum.TextXAlignment.Left,
             TextWrapped = true,
 
-                        TextTransparency = 1,
+                        TextTransparency = 1, 
             Parent = self.titleContainer,
         }, { FontFace = "Font", TextColor3 = "TitlingColor" })
     end
@@ -11220,14 +11220,14 @@ function Window.new(properties)
             BackgroundTransparency = 1,
             Size = UDim2.fromOffset(32, 32),
 
-                        ImageTransparency = 1,
+                        ImageTransparency = 1, 
             Parent = self.topContainer,
         }, { ImageColor3 = "TitlingColor" })
     end
 
     if self.subheading then
         self.subtitle = self:Create("TextLabel", {
-                        Text = locale.t(self.subheading),
+                        Text = locale.t(self.subheading), 
             Size = UDim2.fromOffset(50, 12),
             AutomaticSize = Enum.AutomaticSize.X,
             BackgroundTransparency = 1,
@@ -11235,7 +11235,7 @@ function Window.new(properties)
             TextXAlignment = Enum.TextXAlignment.Left,
             TextWrapped = true,
 
-                        TextTransparency = 1,
+                        TextTransparency = 1, 
             Parent = self.titleContainer,
         }, { TextColor3 = "TitlingColor", FontFace = "Font" })
     end
@@ -11281,7 +11281,7 @@ function Window.new(properties)
         self.elementsStroke = self:Create("UIStroke", {
             ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 
-                        Transparency = 1,
+                        Transparency = 1, 
             Parent = self.elements,
         }, { Color = "SurfaceStroke" })
 
@@ -11720,11 +11720,15 @@ function Window:Close()
     self.hidden = true
     self.collapsedInteract.Visible = false
 
-    local fadeInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local closeInfo = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+    local fadeInfo = TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+    local closeInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 
     self:_fadeSurfaces(false, fadeInfo)
     self:_fadeSelectedElementsOut()
+    variables.tweenService:Create(self.drag.dragCosmetic, fadeInfo, {
+        Size = UDim2.fromOffset(0, 4),
+        BackgroundTransparency = 1,
+    }):Play()
     for _, tab in pairs(self.tabs) do
         if not tab.neglectSelector and tab.topbarItem then
             tab:_applyVisual("hidden", fadeInfo)
@@ -11737,6 +11741,7 @@ function Window:Close()
     })
     closeTween.Completed:Connect(function()
         if not self.unloaded then
+            self.drag.drag.Visible = false
             self:Unload()
         end
     end)
@@ -27511,7 +27516,9 @@ local function fitHorizontal(profile: Profile, availableX: number, availableY: n
 end
 
 function windowSizing.fit(viewport: Vector2?, mode: layouts.Mode?): UDim2
-    local profile = windowSizing.profile(mode)
+    -- Every bar layout shares the same outer window geometry. Layout-specific
+    -- differences are applied inside the window by the layout modules.
+    local profile = profiles.sidebar
 
     if not viewport or viewport.X < minPlausibleViewport or viewport.Y < minPlausibleViewport then
         return UDim2.fromOffset(profile.defaultSize.X, profile.defaultSize.Y)

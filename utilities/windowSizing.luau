@@ -101,7 +101,9 @@ local function fitHorizontal(profile: Profile, availableX: number, availableY: n
 end
 
 function windowSizing.fit(viewport: Vector2?, mode: layouts.Mode?): UDim2
-    local profile = windowSizing.profile(mode)
+    -- Every bar layout shares the same outer window geometry. Layout-specific
+    -- differences are applied inside the window by the layout modules.
+    local profile = profiles.sidebar
 
     if not viewport or viewport.X < minPlausibleViewport or viewport.Y < minPlausibleViewport then
         return UDim2.fromOffset(profile.defaultSize.X, profile.defaultSize.Y)
