@@ -1448,45 +1448,46 @@ function Window:_buildSettingsUI()
         options = { layoutNames.top, layoutNames.sidebar, layoutNames.collapsedSidebar },
         value = layoutNames[selectedLayout],
         callback = function(value)
+            local requestedLayout
             for mode, label in layoutNames do
                 if value == label then
-                    selectedLayout = mode
+                    requestedLayout = mode
                     break
                 end
             end
-        end,
-    })
-    self.rfSettings:CreateButton({
-        name = "Save Bar Layout",
-        callback = function()
-            local label = layoutNames[selectedLayout]
-            local currentLayout = self.settings.layoutMode or self.layout.mode
-            if selectedLayout == currentLayout then
-                self:Popup({
-                    title = "Bar layout",
-                    content = "The " .. label .. " layout is already active.",
-                    options = { { text = "Okay", style = "primary" } },
-                })
+            if not requestedLayout then
                 return
             end
+
+            local currentLayout = self.settings.layoutMode or self.layout.mode
+            if requestedLayout == currentLayout then
+                self:Notify({
+                    title = "Bar layout",
+                    content = "The " .. value .. " layout is already active.",
+                })
+                layoutDropdown:Set(layoutNames[currentLayout], true)
+                return
+            end
+
+            layoutDropdown:Set(layoutNames[currentLayout], true)
             self:Popup({
                 title = "Apply bar layout?",
-                content = "Are you sure you want to change the layout to " .. label .. "?",
+                content = "Are you sure you want to change the layout to " .. value .. "?",
                 options = {
                     { text = "Cancel" },
                     {
                         text = "Apply",
                         style = "primary",
                         callback = function()
-                            if self:_setLayoutMode(selectedLayout) then
-                                self.settings.layoutMode = selectedLayout
+                            if self:_setLayoutMode(requestedLayout) then
+                                selectedLayout = requestedLayout
+                                self.settings.layoutMode = requestedLayout
                                 self:SaveSettings()
-                                layoutDropdown:Set(label, true)
+                                layoutDropdown:Set(layoutNames[requestedLayout], true)
                             else
-                                self:Popup({
-                                    title = "Layout not changed",
+                                self:Notify({
+                                    title = "Bar layout",
                                     content = "The selected bar layout could not be applied right now.",
-                                    options = { { text = "Okay", style = "primary" } },
                                 })
                             end
                         end,
@@ -1803,6 +1804,8 @@ function Window:_setLayoutMode(mode)
     for _, tab in self.tabs do
         if not tab.neglectSelector then
             tab:_rebuildSelector()
+            tab.topbarItem.Visible = self.elements.Visible and not self.hidden and not self.minimised
+            tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected")
         end
         if tab.tabPage then
             if nextLayout.mode == "sidebar" then
