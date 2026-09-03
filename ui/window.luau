@@ -2084,204 +2084,83 @@ function Window:Show()
 end
 
 function Window:_quickRestore()
-        local target = self:_clampedPosition(self._restorePosition or UDim2.new(0.5, 0, 0.5, 0))
+    local target = self:_clampedPosition(self._restorePosition or UDim2.new(0.5, 0, 0.5, 0))
     self._restorePosition = target
+    local openInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-    local growInfo = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
-    local cornerInfo = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
-    local fadeInfo = TweenInfo.new(0.28, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+    -- Restore descendants immediately; animate only the shell geometry.
+    self.main.ClipsDescendants = true
+    self.topbar.Visible = true
+    self:_setContentVisible(true)
+    self:_setTabSectionsVisible(true)
+    self:_setTabSectionsShown(true)
+    for _, tab in pairs(self.tabs) do
+        if not tab.neglectSelector and tab.topbarItem then
+            tab.topbarItem.Visible = true
+            tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected")
+        end
+        for _, element in ipairs(tab.elements) do
+            element:_setShown(true, false)
+        end
+    end
+    self:_fadeSurfaces(true)
 
-                chrome.setCollapsedShown(self, false, TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out))
-    local restore = variables.tweenService:Create(self.main, growInfo, { Size = self.size, Position = target })
+    local restore = variables.tweenService:Create(self.main, openInfo, { Size = self.size, Position = target })
     restore.Completed:Connect(function()
         if self.hidden or self.unloaded then
             return
         end
-
-                        self._collapsedShown = false
+        self.main.ClipsDescendants = false
+        self._collapsedShown = false
+        self:_syncDragBar()
+        self.drag.drag.Visible = true
         setTopToastPosition(self, true)
     end)
     restore:Play()
-    variables.tweenService:Create(self.windowCorner, cornerInfo, { CornerRadius = self.theme.CornerRoundness }):Play()
-
-            task.delay(0.22, function()
-        self.topbar.Visible = true
-        self:_setContentVisible(true)
-
-        self:_fadeSurfaces(true, fadeInfo)
-
-        if self.topbarIcon then
-            variables.tweenService:Create(self.topbarIcon, fadeInfo, { ImageTransparency = 0 }):Play()
-        end
-        if self.title then
-            variables.tweenService:Create(self.title, fadeInfo, { TextTransparency = 0 }):Play()
-        end
-        if self.subtitle then
-            variables.tweenService:Create(self.subtitle, fadeInfo, { TextTransparency = 0.7 }):Play()
-        end
-
-        for _, action in ipairs(self.actionContainer:GetChildren()) do
-            if action:IsA("Frame") then
-                variables.tweenService:Create(action.ImageLabel, fadeInfo, { ImageTransparency = 0.6 }):Play()
-            end
-        end
-
-                        if self.settingsAction and self.selectedTab == self.rfSettings then
-            variables.tweenService:Create(self.settingsAction.iconLabel, fadeInfo, { ImageTransparency = 0.2 }):Play()
-        end
-
-        for _, tag in self.tags do
-            tag:_setShown(true, fadeInfo)
-        end
-
-        for _, tab in pairs(self.tabs) do
-            if not tab.neglectSelector and tab.topbarItem then
-                tab.topbarItem.Visible = true
-                tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected", fadeInfo)
-            end
-        end
-        self:_setTabSectionsVisible(true)
-        self:_setTabSectionsShown(true, fadeInfo)
-
-        self:_revealElements(0.035, 0.4)
-    end)
-
-                task.delay(0.22, function()
-        self.drag.drag.Position =
-            UDim2.new(target.X.Scale, target.X.Offset, target.Y.Scale, target.Y.Offset + self.size.Y.Offset / 2 + 15)
-        self.drag.dragCosmetic.Size = UDim2.fromOffset(0, 4)
-        self.drag.dragCosmetic.BackgroundTransparency = 1
-        self.drag.drag.Visible = true
-        variables.tweenService
-            :Create(self.drag.dragCosmetic, growInfo, { Size = UDim2.fromOffset(100, 4), BackgroundTransparency = 0.7 })
-            :Play()
-    end)
-
-    task.delay(0.6, function()
-        self.animating = false
-        self._revealing = false
-    end)
+    variables.tweenService:Create(self.windowCorner, openInfo, { CornerRadius = self.theme.CornerRoundness }):Play()
 end
-
 function Window:_firstShow()
     self.drag.drag.Visible = false
     self.main.Visible = true
-    variables.tweenService
-        :Create(
-            self.main,
-            TweenInfo.new(1, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut),
-            { BackgroundTransparency = 0, Size = self.size }
-        )
-        :Play()
-
-    -- Let the shell expand before enabling the heavier content tree. This keeps
-    -- the first frame responsive and makes the reveal feel like one sequence.
-    task.wait(0.12)
+    self.main.ClipsDescendants = true
     self:_setContentVisible(true)
-    task.wait(0.16)
-    self:_fadeSurfaces(true, TweenInfo.new(0.65, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out))
-    task.wait(0.1)
-
-    if self.icon then
-        variables.tweenService
-            :Create(
-                self.topbarIcon,
-                TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
-                { ImageTransparency = 0 }
-            )
-            :Play()
-    end
-    if self.title then
-        variables.tweenService
-            :Create(
-                self.title,
-                TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
-                { TextTransparency = 0 }
-            )
-            :Play()
-    end
-    task.wait(0.08)
-    if self.subtitle then
-        variables.tweenService
-            :Create(
-                self.subtitle,
-                TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
-                { TextTransparency = 0.7 }
-            )
-            :Play()
-    end
-
-    for _, action in ipairs(self.actionContainer:GetChildren()) do
-        if action:IsA("Frame") then
-            task.wait(0.015)
-            variables.tweenService
-                :Create(
-                    action.ImageLabel,
-                    TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
-                    { ImageTransparency = 0.6 }
-                )
-                :Play()
+    self:_setTabSectionsVisible(true)
+    self:_setTabSectionsShown(true)
+    for _, tab in pairs(self.tabs) do
+        if not tab.neglectSelector and tab.topbarItem then
+            tab.topbarItem.Visible = true
+            tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected")
+        end
+        for _, element in ipairs(tab.elements) do
+            element:_setShown(true, false)
         end
     end
+    self:_fadeSurfaces(true)
 
-    for _, tag in self.tags do
-        tag:_setShown(true, TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out))
-    end
-
-    task.wait(0.08)
-
-    task.spawn(function()
-        local info = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-
-                        self:_setTabSectionsVisible(true)
-        self:_setTabSectionsShown(true, info)
-
-        local staggered = 0
-        for _, tab in pairs(self.tabs) do
-            if not tab.neglectSelector then
-                tab.topbarItem.Visible = true
-                tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected", info)
-                tab:_spinGradients()
-
-                staggered += 1
-                if staggered <= maxStaggeredTabs then
-                    task.wait(tabStagger)
-                end
-            end
+    local openInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local openTween = variables.tweenService:Create(self.main, openInfo, { Size = self.size })
+    openTween.Completed:Connect(function()
+        if self.unloaded then
+            return
         end
+        self.main.ClipsDescendants = false
+        self:_syncDragBar()
+        self.drag.drag.Visible = true
+        self.animating = false
+        self._revealing = false
     end)
+    openTween:Play()
+    variables.tweenService:Create(self.windowCorner, openInfo, { CornerRadius = self.theme.CornerRoundness }):Play()
 
-    self:_revealElements(0.03, 2)
-
-    task.wait(0.18)
-
-    self:_syncDragBar()
-    self.drag.drag.Visible = true
-    variables.tweenService
-        :Create(
-            self.drag.dragCosmetic,
-            TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
-            { BackgroundTransparency = 0.7 }
-        )
-        :Play()
-    variables.tweenService
-        :Create(
-            self.drag.dragCosmetic,
-            TweenInfo.new(1, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
-            { Size = UDim2.fromOffset(100, 4) }
-        )
-        :Play()
-
-    self.animating = false
-    self._revealing = false
-
-            local localPlayer = variables.localPlayer
+    local localPlayer = variables.localPlayer
     if localPlayer and self.settings.welcomeToast and chrome.isNewUser() then
         self:Toast({
             title = localPlayer.DisplayName,
             subtitle = locale.resolve("Signed in as"),
-            subtitleAbove = true,             avatar = localPlayer.UserId,
-            minWidth = 220,         })
+            subtitleAbove = true,
+            avatar = localPlayer.UserId,
+            minWidth = 220,
+        })
     end
 end
 
