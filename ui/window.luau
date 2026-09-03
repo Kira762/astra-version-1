@@ -2087,9 +2087,9 @@ function Window:_firstShow()
         :Play()
 
     self:_setContentVisible(true)
-    task.wait(0.12)
+    task.wait(0.18)
     self:_fadeSurfaces(true, TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out))
-    task.wait(0.04)
+    task.wait(0.08)
 
     if self.icon then
         variables.tweenService
@@ -2109,7 +2109,7 @@ function Window:_firstShow()
             )
             :Play()
     end
-    task.wait(0.025)
+    task.wait(0.05)
     if self.subtitle then
         variables.tweenService
             :Create(
@@ -2122,7 +2122,7 @@ function Window:_firstShow()
 
     for _, action in ipairs(self.actionContainer:GetChildren()) do
         if action:IsA("Frame") then
-            task.wait(0.008)
+            task.wait(0.015)
             variables.tweenService
                 :Create(
                     action.ImageLabel,
@@ -2137,7 +2137,7 @@ function Window:_firstShow()
         tag:_setShown(true, TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out))
     end
 
-    task.wait(0.04)
+    task.wait(0.08)
 
     task.spawn(function()
         local info = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
@@ -2162,7 +2162,7 @@ function Window:_firstShow()
 
     self:_revealElements(0.03, 2)
 
-    task.wait(0.12)
+    task.wait(0.18)
 
     self:_syncDragBar()
     self.drag.drag.Visible = true
