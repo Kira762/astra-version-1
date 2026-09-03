@@ -1,9 +1,9 @@
-local variables = require(script.utilities.variables)
-local image = require(script.utilities.image)
-local locale = require(script.utilities.locale)
-local constants = require(script.utilities.constants)
-local icons = require(script.utilities.icons)
-local types = require(script.Types)
+local variables = require(script.Parent.utilities.variables)
+local image = require(script.Parent.utilities.image)
+local locale = require(script.Parent.utilities.locale)
+local constants = require(script.Parent.utilities.constants)
+local icons = require(script.Parent.utilities.icons)
+local types = require(script.Parent.Types)
 
 export type Theme = types.Theme
 export type Translator = types.Translator
@@ -66,7 +66,7 @@ astra.Icons = icons
 
 function astra:CreateWindow(properties: types.WindowProps): types.Window
     local made, result = pcall(function()
-        return (require(script.ui.window) :: WindowModule).new(properties)
+        return (require(script.Parent.ui.window) :: WindowModule).new(properties)
     end)
     if not made then
         error(result, 0)
