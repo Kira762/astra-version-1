@@ -1747,7 +1747,7 @@ function Window:_setLayoutMode(mode)
             Size = UDim2.fromScale(1, 1),
             ZIndex = 100,
             Parent = self.main,
-        }, { BackgroundColor3 = "WindowColor" })
+        }, { BackgroundColor3 = { "WindowColor", firstColor } })
         self._layoutTransitionOverlay = transition
     end
     transition.Visible = true
