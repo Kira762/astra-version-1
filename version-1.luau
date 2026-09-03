@@ -28441,7 +28441,8 @@ end
 
 
 -- Standalone loader contract: return the public MainModule API to loadstring callers.
-local MainModule = RealObjectRoot:FindFirstChild("MainModule")
+local AstraRoot = RealObjectRoot:FindFirstChild("Astra")
+local MainModule = if AstraRoot then AstraRoot:FindFirstChild("MainModule") else nil
 if MainModule then
     return LoadScript(MainModule)
 end
