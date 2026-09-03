@@ -6,12 +6,10 @@ local Astra = bundleLoader()
 assert(type(Astra) == "table", "Astra bundle did not return its API table")
 assert(Astra.Icons and Astra.Icons.lucide, "Astra bundle is missing the lucide icon pack")
 
-local AstraLucidePack = Astra.Icons.lucide
-
 local window = Astra:CreateWindow({
     name = "Astra",
     subtitle = "Example UI - Lucide Icons",
-    iconPack = AstraLucidePack,
+    iconPack = "lucide",
     sidebarLayout = true,
     configuration = {
         autoSave = true,
