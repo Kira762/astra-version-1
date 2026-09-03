@@ -288,6 +288,7 @@ function Window.new(properties)
             self.settings = {
         toggleKeybind = Enum.KeyCode.K,
         mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = true,
+        showProfile = true,
         antiWindowDuplicate = true,
         layoutMode = layout.mode,
     }
@@ -1466,6 +1467,19 @@ function Window:_buildSettingsUI()
         callback = function(state)
             self.settings.haptics = state
             hapticEngine.setEnabled(state)
+            self:SaveSettings()
+        end,
+    })
+
+    self.rfSettings:CreateToggle({
+        name = "Show profile in sidebar",
+        description = "Shows your account profile at the bottom of the Sidebar layout.",
+        value = self.settings.showProfile,
+        callback = function(state)
+            self.settings.showProfile = state == true
+            if self.layout.mode == "sidebar" then
+                sidebar.reflowProfile(self)
+            end
             self:SaveSettings()
         end,
     })
