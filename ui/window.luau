@@ -1843,6 +1843,9 @@ function Window:_applySettingsLayout(isSettings)
         image.assign(self.settingsAction.iconLabel, "Image", constants.icons.settings)
     end
     if self.layout.mode ~= "sidebar" then
+        if self.tabList then
+            self.tabList.Visible = not isSettings and self.elements.Visible and not self.hidden and not self.minimised
+        end
         return
     end
     self._settingsLayoutActive = isSettings
@@ -1901,7 +1904,7 @@ function Window:_setContentVisible(visible)
     if self.layout.mode == "sidebar" then
         self:_applySettingsLayout(self.selectedTab == self.rfSettings)
     else
-        self.tabList.Visible = true
+        self:_applySettingsLayout(self.selectedTab == self.rfSettings)
     end
 end
 
