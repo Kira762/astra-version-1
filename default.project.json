@@ -1,0 +1,16 @@
+{
+  "name": "Astra UI Library",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Astra": {
+        "$path": "library_entrypoint.luau"
+      },
+      "assets": { "$path": "assets" },
+      "ui": { "$path": "ui" },
+      "themes": { "$path": "themes" },
+      "utilities": { "$path": "utilities" },
+      "Types": { "$path": "Types.luau" }
+    }
+  }
+}

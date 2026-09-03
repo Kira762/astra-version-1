@@ -5,12 +5,12 @@ local ImportGlobals
 
 -- Holds direct closure data (defining this before the DOM tree for line debugging etc)
 local ClosureBindings = {
-    [2] = function()local wax,script,require=ImportGlobals(2)local ImportGlobals return (function(...)local variables = require(script.utility.variables)
-local image = require(script.utility.image)
-local locale = require(script.utility.locale)
-local constants = require(script.utility.constants)
-local icons = require(script.utility.icons)
-local types = require(script.types)
+    [2] = function()local wax,script,require=ImportGlobals(2)local ImportGlobals return (function(...)local variables = require(script.utilities.variables)
+local image = require(script.utilities.image)
+local locale = require(script.utilities.locale)
+local constants = require(script.utilities.constants)
+local icons = require(script.utilities.icons)
+local types = require(script.Types)
 
 export type Theme = types.Theme
 export type Translator = types.Translator
@@ -99,7 +99,7 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
     end
 
             local made, result = pcall(function()
-        return (require(script.components.window) :: WindowModule).new(properties)
+        return (require(script.ui.window) :: WindowModule).new(properties)
     end)
     if not made then
         error(result, 0)
@@ -143,11 +143,673 @@ end
 return astra
 
 end)() end,
-    [5] = function()local wax,script,require=ImportGlobals(5)local ImportGlobals return (function(...)local Action = {}
+    [3] = function()local wax,script,require=ImportGlobals(3)local ImportGlobals return (function(...)export type Theme = string | { [string]: any }
+
+export type Translator = (source: string, localeId: string) -> string?
+
+export type Translations = { [string]: { [string]: string } }
+export type IconPack = "lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather"
+
+export type WindowConfiguration = {
+    autoSave: boolean?,
+    autoLoad: boolean?,
+    fileName: string?,
+    customFolder: string?,
+}
+
+export type WindowProps = {
+    name: string?,
+    subtitle: string?,
+    theme: Theme?,
+    icon: (string | number)?,
+    iconPack: IconPack?,
+    IconPack: IconPack?,
+    showName: string?,
+    showIcon: (string | number)?,
+    showIconOnly: boolean?,     sidebarLayout: boolean?,     profile: string?,     configuration: WindowConfiguration?,
+    fallbackFont: (Font | Enum.Font)?,     locale: string?,     translations: Translations?,     translator: Translator?, }
+
+export type TabProps = {
+    name: string?,
+    icon: (string | number)?,
+}
+
+export type TagProps = {
+    text: string?,
+    title: string?,
+    icon: (string | number)?,
+    color: Color3?,
+    order: number?,
+}
+
+export type SectionProps = {
+    name: string?,
+    icon: (string | number)?,
+}
+
+export type TextProps = {
+    name: string?,     text: string?,     icon: (string | number)?,
+}
+
+export type DividerProps = {
+    text: string?,     spacing: number?,     line: boolean?, }
+
+export type GroupProps = {
+    direction: string?, }
+
+export type ButtonProps = {
+    name: string?,
+    description: string?,
+    icon: (string | number)?,
+    callback: (() -> ())?,
+}
+
+export type ToggleProps = {
+    name: string?,
+    description: string?,
+    icon: (string | number)?,
+    flag: string?,
+    value: boolean?,
+    forgetState: boolean?,
+    callback: ((value: boolean) -> ())?,
+}
+
+export type SliderProps = {
+    name: string?,
+    description: string?,
+    icon: (string | number)?,
+    flag: string?,
+    range: { number }?,     increment: number?,
+    value: number?,
+    suffix: string?,
+    minimal: boolean?,     forgetState: boolean?,
+        callback: ((value: number, dragging: boolean) -> ())?,
+}
+
+export type DropdownProps = {
+    name: string?,
+    description: string?,
+    icon: (string | number)?,
+    flag: string?,
+    options: { string }?,
+    value: (string | { string })?,
+    multiSelect: boolean?,
+    placeholder: string?,
+    forgetState: boolean?,
+    callback: ((value: any) -> ())?,
+}
+
+export type InputProps = {
+    name: string?,
+    description: string?,
+    icon: (string | number)?,
+    flag: string?,
+    value: string?,
+    placeholder: string?,
+    numeric: boolean?,
+    clearOnFocus: boolean?,
+    forgetState: boolean?,
+    callback: ((value: string) -> ())?,
+}
+
+export type KeybindProps = {
+    name: string?,
+    description: string?,
+    icon: (string | number)?,
+    flag: string?,
+    value: (EnumItem | string)?,     forgetState: boolean?,
+    isMenuToggle: boolean?,     hold: boolean?,     holdThreshold: number?,     callback: ((value: EnumItem | boolean) -> ())?,     onChanged: ((key: EnumItem) -> ())?, }
+
+export type ColorPickerProps = {
+    name: string?,
+    description: string?,
+    icon: (string | number)?,
+    flag: string?,
+    color: Color3?,     alpha: number?,     forgetState: boolean?,
+    callback: ((value: Color3, alpha: number) -> ())?,
+}
+
+export type StatProps = {
+    name: string?,
+    description: string?,
+    icon: (string | number)?,
+    prefix: string?,
+    suffix: string?,
+    value: number?,
+    display: string?,     compact: boolean?,
+    changeMode: string?,     changeBaseline: string?,     numberEasing: boolean?,
+}
+
+export type ProgressProps = {
+    name: string?,
+    description: string?,
+    icon: (string | number)?,
+    range: { number }?,     value: number?,
+    steps: number?,     text: string?,     format: ((value: number, min: number, max: number) -> string)?,     showValue: boolean?,     indeterminate: boolean?, }
+
+export type ConsoleProps = {
+    name: string?,
+    description: string?,
+    text: string?,     height: number?,     follow: boolean?,     maxLines: number?, }
+
+export type NotifyProps = {
+    title: string?,
+    content: string?,
+    icon: (string | number)?,
+    duration: number?,
+}
+
+export type ToastProps = {
+    title: string?,
+    subtitle: string?,     subtitleAbove: boolean?,     icon: (string | number)?,     avatar: number?,     minWidth: number?,     duration: number?,
+    position: "Top" | "Bottom"?,
+}
+
+export type PopupBox = {
+    title: string?,
+    description: string?,
+    icon: (string | number)?,
+}
+
+export type PopupOption = {
+    text: string?,
+    style: string?,     callback: (() -> ())?,
+}
+
+export type PopupProps = {
+    title: string?,
+    subtitle: string?,
+    icon: (string | number)?,
+    content: string?,     boxes: { PopupBox }?,     options: { PopupOption }?,     dismissable: boolean?, }
+
+export type Moveable = {
+    MoveTo: (self: any, index: number) -> (),
+    MoveToTop: (self: any) -> (),
+    MoveToBottom: (self: any) -> (),
+    MoveUp: (self: any) -> (),
+    MoveDown: (self: any) -> (),
+}
+
+export type Lockable = {
+    Lock: (self: any, reason: string?) -> (),
+    Unlock: (self: any) -> (),
+    IsLocked: (self: any) -> boolean,
+}
+
+export type Button = Moveable & Lockable & {}
+
+export type Toggle = Moveable & Lockable & {
+    value: boolean,
+    Set: (self: Toggle, value: boolean, skipCallback: boolean?) -> (),
+}
+
+export type Slider = Moveable & Lockable & {
+    value: number,
+    Set: (self: Slider, value: number, skipCallback: boolean?) -> (),
+}
+
+export type Dropdown = Moveable & Lockable & {
+    value: { string },     Set: (self: Dropdown, value: string | { string }, skipCallback: boolean?) -> (),
+    Refresh: (self: Dropdown, options: { string }) -> (),
+    Add: (self: Dropdown, option: string) -> (),
+    Remove: (self: Dropdown, option: string) -> (),
+}
+
+export type Input = Moveable & Lockable & {
+    value: string,
+    Set: (self: Input, value: string, skipCallback: boolean?) -> (),
+}
+
+export type Keybind = Moveable & Lockable & {
+    value: EnumItem,
+    Set: (self: Keybind, value: EnumItem | string, skipChanged: boolean?) -> (),
+}
+
+export type ColorPicker = Moveable & Lockable & {
+    value: Color3,
+    alpha: number,
+    Set: (self: ColorPicker, value: Color3 | string, skipCallback: boolean?) -> (),
+    SetAlpha: (self: ColorPicker, alpha: number, skipCallback: boolean?) -> (),
+}
+
+export type Stat = Moveable & {
+    value: number,
+    Set: (self: Stat, value: number) -> (),
+    ResetBaseline: (self: Stat, value: number?) -> (),
+}
+
+export type Progress = Moveable & {
+    value: number,
+    Set: (self: Progress, value: number) -> (),
+    Get: (self: Progress) -> number,
+    GetPercentage: (self: Progress) -> number,     SetRange: (self: Progress, min: number, max: number) -> (),
+    SetText: (self: Progress, text: string?) -> (),     SetIndeterminate: (self: Progress, state: boolean) -> (),
+    Remove: (self: Progress) -> (),
+}
+
+export type Console = Moveable & {
+    Set: (self: Console, text: string) -> (),
+    Append: (self: Console, line: string) -> (),     Clear: (self: Console) -> (),
+    Get: (self: Console) -> string,
+    Copy: (self: Console) -> boolean,     SetHeight: (self: Console, height: number) -> (),
+    Remove: (self: Console) -> (),
+}
+
+export type Section = Moveable & {}
+
+export type TabSection = {
+    Remove: (self: TabSection) -> (),
+}
+
+export type Text = Moveable & {
+    name: string,     text: string,     Set: (self: Text, text: string) -> (),
+    SetTitle: (self: Text, title: string) -> (),
+}
+
+export type Divider = Moveable & {
+    text: string,     Set: (self: Divider, text: string?) -> (),
+}
+
+export type Tag = {
+    Set: (self: Tag, props: TagProps) -> (),
+    SetColor: (self: Tag, color: Color3) -> (),
+    SetText: (self: Tag, text: string?) -> (),
+    SetIcon: (self: Tag, icon: (string | number)?) -> (),
+    Remove: (self: Tag) -> (),
+}
+
+export type Popup = {
+    Close: (self: Popup) -> (),
+}
+
+export type Group = Moveable & {
+    CreateButton: (self: Group, props: ButtonProps) -> Button,
+    CreateToggle: (self: Group, props: ToggleProps) -> Toggle,
+    CreateSwitch: (self: Group, props: ToggleProps) -> Toggle,
+    CreateStat: (self: Group, props: StatProps) -> Stat,
+    CreateSlider: (self: Group, props: SliderProps) -> Slider,
+        CreateDropdown: (self: Group, props: DropdownProps) -> Dropdown?,
+    CreateSection: (self: Group, props: SectionProps) -> Section?,
+    CreateText: (self: Group, props: TextProps) -> Text?,
+    CreateDivider: (self: Group, props: DividerProps?) -> Divider?,
+    CreateGroup: (self: Group, props: GroupProps?) -> Group,
+}
+
+export type Tab = {
+    Select: (self: Tab, noAnimation: boolean?) -> (),
+    Deselect: (self: Tab, noAnimation: boolean?) -> (),
+    Remove: (self: Tab) -> (),
+    CreateButton: (self: Tab, props: ButtonProps) -> Button,
+    CreateToggle: (self: Tab, props: ToggleProps) -> Toggle,
+    CreateSwitch: (self: Tab, props: ToggleProps) -> Toggle,
+    CreateSlider: (self: Tab, props: SliderProps) -> Slider,
+    CreateDropdown: (self: Tab, props: DropdownProps) -> Dropdown,
+    CreateInput: (self: Tab, props: InputProps) -> Input,
+    CreateKeybind: (self: Tab, props: KeybindProps) -> Keybind,
+    CreateColorPicker: (self: Tab, props: ColorPickerProps) -> ColorPicker,
+    CreateStat: (self: Tab, props: StatProps) -> Stat,
+    CreateProgress: (self: Tab, props: ProgressProps) -> Progress,
+    CreateConsole: (self: Tab, props: ConsoleProps) -> Console,
+    CreateSection: (self: Tab, props: SectionProps) -> Section,
+    CreateText: (self: Tab, props: TextProps) -> Text,
+    CreateDivider: (self: Tab, props: DividerProps?) -> Divider,
+    CreateGroup: (self: Tab, props: GroupProps?) -> Group,
+}
+
+export type Window = {
+    unloaded: boolean,
+    iconPack: IconPack,
+    ResolveIcon: (self: Window, value: (string | number)?, pack: IconPack?) -> (string | number)?,
+    Flags: { [string]: any },
+    CreateTab: (self: Window, props: TabProps) -> Tab,
+        CreateSection: (self: Window, props: SectionProps) -> TabSection,
+    CreateTag: (self: Window, props: TagProps) -> Tag,
+    Notify: (self: Window, props: NotifyProps) -> (),
+    Toast: (self: Window, props: ToastProps) -> (),
+    Popup: (self: Window, props: PopupProps) -> Popup?,     Show: (self: Window) -> (),
+    Hide: (self: Window) -> (),
+    ToggleHide: (self: Window) -> (),
+    ToggleMinimise: (self: Window) -> (),
+    Navigate: (self: Window, tab: string | Tab) -> (),
+    ChangeTheme: (self: Window, theme: Theme) -> (),
+    SetLocale: (self: Window, localeId: string) -> (),
+    SetTranslator: (self: Window, translator: Translator?) -> (),
+    RegisterTranslations: (self: Window, translations: Translations) -> (),
+    Save: (self: Window, name: string?) -> boolean,
+    Load: (self: Window, name: string?) -> boolean,
+    ListConfigs: (self: Window) -> { string },
+    DeleteConfig: (self: Window, name: string) -> boolean,
+    GetPath: (self: Window) -> (string, string),
+    Get: (self: Window, flag: string) -> any,
+    Set: (self: Window, flag: string, value: any) -> boolean,
+    Unload: (self: Window) -> (),
+}
+
+export type IconCatalog = {
+    Lucide: IconPack,
+    Material: IconPack,
+    Tabler: IconPack,
+    Phosphor: IconPack,
+    Heroicons: IconPack,
+    Feather: IconPack,
+    get: (name: string, pack: IconPack?) -> string?,
+    getByPack: (pack: IconPack, name: string) -> string?,
+    list: (pack: IconPack?) -> { string },
+    packs: () -> { string },
+    count: (pack: IconPack?) -> number,
+    resolve: (value: (string | number)?, pack: IconPack?) -> (string | number)?,
+}
+
+export type Astra = {
+    CreateWindow: (self: Astra, props: WindowProps) -> Window,
+    Icons: IconCatalog,
+}
+
+return {}
+
+end)() end,
+    [6] = function()local wax,script,require=ImportGlobals(6)local ImportGlobals return (function(...)return {
+    WindowColor = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 16, 32)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(30, 22, 46)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(38, 28, 56)),
+    }),
+    ShadowColor = Color3.fromRGB(12, 6, 22),
+
+    ElementStroke = Color3.fromRGB(54, 42, 74),
+    ElementGradient = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 24, 48)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(36, 28, 54)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(36, 28, 54)),
+    }),
+    ElementStrokeGradient = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(72, 58, 104)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(88, 72, 124)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(72, 58, 104)),
+    }),
+    ElementStrokeHover = Color3.fromRGB(84, 68, 118),
+
+    TabBackground = ColorSequence.new(Color3.fromRGB(54, 42, 80), Color3.fromRGB(34, 26, 52)),
+    TabStroke = ColorSequence.new(Color3.fromRGB(88, 70, 128), Color3.fromRGB(54, 42, 80)),
+
+    SliderBackground = Color3.fromRGB(46, 36, 68),
+    SliderBackgroundHover = Color3.fromRGB(60, 48, 90),
+    SliderProgress = ColorSequence.new(Color3.fromRGB(170, 112, 248), Color3.fromRGB(138, 80, 224)),
+
+        AccentColor = Color3.fromRGB(168, 110, 246),
+    AccentStroke = Color3.fromRGB(200, 154, 255),
+
+    ToggleKnobOff = Color3.fromRGB(224, 214, 236),
+    StatBackground = Color3.fromRGB(24, 18, 38),
+
+    DropdownHighlight = Color3.fromRGB(168, 110, 246),
+
+    NeutralButton = Color3.fromRGB(46, 36, 68),
+    NeutralButtonHover = Color3.fromRGB(60, 48, 90),
+    NeutralButtonStroke = Color3.fromRGB(140, 116, 190),
+}
+
+end)() end,
+    [7] = function()local wax,script,require=ImportGlobals(7)local ImportGlobals return (function(...)return {
+    WindowColor = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 16, 34)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(20, 26, 50)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(28, 36, 66)),
+    }),
+    ShadowColor = Color3.fromRGB(6, 8, 20),
+
+    ElementStroke = Color3.fromRGB(44, 52, 82),
+    ElementGradient = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 32, 58)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(30, 38, 66)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 38, 66)),
+    }),
+    ElementStrokeGradient = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(56, 66, 104)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(70, 82, 124)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(56, 66, 104)),
+    }),
+    ElementStrokeHover = Color3.fromRGB(64, 76, 116),
+
+    TabBackground = ColorSequence.new(Color3.fromRGB(48, 58, 92), Color3.fromRGB(30, 38, 64)),
+    TabStroke = ColorSequence.new(Color3.fromRGB(78, 92, 140), Color3.fromRGB(48, 58, 92)),
+
+    SliderBackground = Color3.fromRGB(40, 48, 78),
+    SliderBackgroundHover = Color3.fromRGB(54, 64, 100),
+    SliderProgress = ColorSequence.new(Color3.fromRGB(64, 132, 248), Color3.fromRGB(42, 104, 224)),
+
+        AccentColor = Color3.fromRGB(48, 120, 240),
+    AccentStroke = Color3.fromRGB(96, 164, 255),
+
+    ToggleKnobOff = Color3.fromRGB(196, 206, 232),
+    StatBackground = Color3.fromRGB(20, 26, 48),
+
+    DropdownHighlight = Color3.fromRGB(48, 120, 240),
+
+    NeutralButton = Color3.fromRGB(40, 48, 78),
+    NeutralButtonHover = Color3.fromRGB(54, 64, 100),
+    NeutralButtonStroke = Color3.fromRGB(120, 138, 195), }
+
+end)() end,
+    [8] = function()local wax,script,require=ImportGlobals(8)local ImportGlobals return (function(...)local variables = require(script.Parent.Parent.utilities.variables)
+
+return {
+    CornerRoundness = UDim.new(0, 20),
+    WindowColor = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 10)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(25, 25, 25)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 35)),
+    }),
+    ShadowColor = Color3.fromRGB(20, 20, 20),
+
+    ElementStroke = Color3.fromRGB(35, 35, 35),
+        ElementGradient = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(35, 35, 35)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 35)),
+    }),
+            ElementStrokeGradient = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(48, 48, 48)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(58, 58, 58)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(48, 48, 48)),
+    }),
+    TabColor = Color3.fromRGB(255, 255, 255),
+    TabBackground = ColorSequence.new(Color3.fromRGB(50, 50, 50), Color3.fromRGB(35, 35, 35)),
+    TabStroke = ColorSequence.new(Color3.fromRGB(95, 95, 95), Color3.fromRGB(50, 50, 50)),
+    SliderBackground = Color3.fromRGB(47, 47, 47),
+    SliderBackgroundHover = Color3.fromRGB(60, 60, 60),
+    SliderProgress = ColorSequence.new(Color3.fromRGB(0, 170, 127), Color3.fromRGB(0, 134, 98)),
+    SliderStroke = Color3.fromRGB(255, 255, 255),
+    ActionColor = Color3.fromRGB(255, 255, 255),
+    TitleFont = variables.brandFont(Enum.FontWeight.SemiBold),
+    Font = variables.brandFont(Enum.FontWeight.Medium),
+    ContentColor = Color3.fromRGB(255, 255, 255),
+
+    LiveAnimation = false,
+    DarkToggleOverlay = true,
+    ElementTransparency = 0,
+    ElementStrokeTransparency = 0,
+    ElementStrokeHoverTransparency = 0,
+    ElementStrokeHover = Color3.fromRGB(50, 50, 50),
+    ElementCornerRadius = UDim.new(0, 12),
+    ElementTextHoverColor = Color3.fromRGB(255, 255, 255),
+    TitlingColor = Color3.fromRGB(255, 255, 255),
+
+    DropdownHighlight = Color3.fromRGB(255, 255, 255),
+
+        AccentColor = Color3.fromRGB(23, 153, 110),
+    AccentStroke = Color3.fromRGB(32, 201, 144),
+    AccentGlow = 0.4,
+    StatBackground = Color3.fromRGB(25, 25, 25),
+    SliderHandle = Color3.fromRGB(255, 255, 255),
+    PillCornerRadius = UDim.new(1, 0),
+        ToggleTrack = Color3.fromRGB(0, 0, 0),
+    ToggleTrackTransparency = 0.9,
+    ToggleKnobOff = Color3.fromRGB(255, 255, 255),
+    ToggleKnobOffTransparency = 0.8,
+
+        FieldBackground = Color3.fromRGB(255, 255, 255),
+    FieldTransparency = 0.9,
+    FieldGlow = Color3.fromRGB(255, 255, 255),
+
+    PlaceholderColor = Color3.fromRGB(178, 178, 178),     SurfaceStroke = Color3.fromRGB(255, 255, 255),
+        NeutralButton = Color3.fromRGB(38, 38, 38),
+    NeutralButtonHover = Color3.fromRGB(54, 54, 54),
+    NeutralButtonStroke = Color3.fromRGB(255, 255, 255),
+
+    ErrorColor = Color3.fromRGB(185, 50, 50),
+    ErrorStrokeColor = Color3.fromRGB(240, 75, 75),
+}
+
+end)() end,
+    [9] = function()local wax,script,require=ImportGlobals(9)local ImportGlobals return (function(...)return {
+    WindowColor = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 18, 16)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(32, 27, 23)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 33, 28)),
+    }),
+    ShadowColor = Color3.fromRGB(16, 12, 8),
+
+    ElementStroke = Color3.fromRGB(54, 46, 40),
+    ElementGradient = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 27, 23)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(38, 32, 27)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(38, 32, 27)),
+    }),
+    ElementStrokeGradient = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(72, 62, 52)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(88, 76, 64)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(72, 62, 52)),
+    }),
+    ElementStrokeHover = Color3.fromRGB(84, 72, 60),
+
+    TabBackground = ColorSequence.new(Color3.fromRGB(56, 47, 40), Color3.fromRGB(36, 30, 26)),
+    TabStroke = ColorSequence.new(Color3.fromRGB(92, 78, 66), Color3.fromRGB(56, 47, 40)),
+
+    SliderBackground = Color3.fromRGB(48, 40, 34),
+    SliderBackgroundHover = Color3.fromRGB(62, 52, 44),
+    SliderProgress = ColorSequence.new(Color3.fromRGB(244, 152, 44), Color3.fromRGB(220, 110, 24)),
+
+        AccentColor = Color3.fromRGB(240, 142, 40),
+    AccentStroke = Color3.fromRGB(255, 182, 92),
+
+    ToggleKnobOff = Color3.fromRGB(232, 224, 214),
+    StatBackground = Color3.fromRGB(26, 21, 18),
+
+    DropdownHighlight = Color3.fromRGB(240, 142, 40),
+
+    NeutralButton = Color3.fromRGB(48, 40, 34),
+    NeutralButtonHover = Color3.fromRGB(64, 54, 46),
+    NeutralButtonStroke = Color3.fromRGB(150, 128, 104),
+}
+
+end)() end,
+    [10] = function()local wax,script,require=ImportGlobals(10)local ImportGlobals return (function(...)local variables = require(script.Parent.Parent.utilities.variables)
+
+return {
+    WindowColor = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(246, 249, 251)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(236, 241, 245)),
+    }),
+        ShadowColor = Color3.fromRGB(116, 124, 132),
+
+    LiveAnimation = false,
+
+        ElementTransparency = 0,
+    ElementStroke = Color3.fromRGB(218, 224, 228),
+    ElementGradient = ColorSequence.new(Color3.fromRGB(255, 255, 255)),
+    ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(224, 230, 234), Color3.fromRGB(232, 238, 242)),
+    ElementStrokeTransparency = 0.1,
+    ElementStrokeHoverTransparency = 0,
+    ElementStrokeHover = Color3.fromRGB(0, 176, 208),     DarkToggleOverlay = false,
+        TabColor = Color3.fromRGB(38, 42, 46),
+    TabBackground = ColorSequence.new(Color3.fromRGB(0, 176, 208), Color3.fromRGB(0, 150, 184)),
+    TabStroke = ColorSequence.new(Color3.fromRGB(80, 206, 230), Color3.fromRGB(0, 160, 196)),
+
+    SliderBackground = Color3.fromRGB(224, 230, 234),
+    SliderBackgroundHover = Color3.fromRGB(212, 220, 224),
+    SliderProgress = ColorSequence.new(Color3.fromRGB(0, 182, 214), Color3.fromRGB(0, 146, 182)),
+    SliderStroke = Color3.fromRGB(200, 206, 210),
+
+        AccentColor = Color3.fromRGB(0, 176, 208),
+    AccentStroke = Color3.fromRGB(96, 210, 232),
+    AccentGlow = 0.85,
+    StatBackground = Color3.fromRGB(255, 255, 255),
+    SliderHandle = Color3.fromRGB(60, 66, 72),
+        ToggleTrack = Color3.fromRGB(198, 204, 210),
+    ToggleTrackTransparency = 0,
+    ToggleKnobOffTransparency = 0.05,
+
+        FieldBackground = Color3.fromRGB(224, 230, 234),
+    FieldTransparency = 0,
+    FieldGlow = Color3.fromRGB(148, 154, 160),
+
+    PlaceholderColor = Color3.fromRGB(138, 144, 150),
+    SurfaceStroke = Color3.fromRGB(204, 210, 214),
+
+        NeutralButton = Color3.fromRGB(224, 230, 234),
+    NeutralButtonHover = Color3.fromRGB(212, 220, 224),
+    NeutralButtonStroke = Color3.fromRGB(242, 246, 248),
+    ActionColor = Color3.fromRGB(68, 74, 80),     TitlingColor = Color3.fromRGB(26, 30, 34),
+    TitleFont = variables.brandFont(Enum.FontWeight.SemiBold),
+    Font = variables.brandFont(Enum.FontWeight.Medium),
+    ContentColor = Color3.fromRGB(42, 46, 52),
+    ElementTextHoverColor = Color3.fromRGB(18, 22, 26),
+
+    DropdownHighlight = Color3.fromRGB(0, 176, 208),
+
+    ErrorColor = Color3.fromRGB(200, 60, 55),
+    ErrorStrokeColor = Color3.fromRGB(240, 80, 70),
+}
+
+end)() end,
+    [11] = function()local wax,script,require=ImportGlobals(11)local ImportGlobals return (function(...)return {
+    WindowColor = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 18, 22)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(36, 26, 31)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(44, 32, 38)),
+    }),
+    ShadowColor = Color3.fromRGB(18, 10, 14),
+
+    ElementStroke = Color3.fromRGB(58, 44, 50),
+    ElementGradient = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 25, 29)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(40, 30, 34)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 30, 34)),
+    }),
+    ElementStrokeGradient = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(76, 58, 66)),
+        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(92, 70, 80)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(76, 58, 66)),
+    }),
+    ElementStrokeHover = Color3.fromRGB(88, 66, 74),
+
+    TabBackground = ColorSequence.new(Color3.fromRGB(62, 46, 53), Color3.fromRGB(38, 29, 33)),
+    TabStroke = ColorSequence.new(Color3.fromRGB(102, 78, 88), Color3.fromRGB(62, 46, 53)),
+
+    SliderBackground = Color3.fromRGB(50, 38, 44),
+    SliderBackgroundHover = Color3.fromRGB(64, 50, 56),
+    SliderProgress = ColorSequence.new(Color3.fromRGB(244, 88, 140), Color3.fromRGB(220, 60, 116)),
+
+        AccentColor = Color3.fromRGB(240, 82, 138),
+    AccentStroke = Color3.fromRGB(255, 134, 178),
+
+    ToggleKnobOff = Color3.fromRGB(236, 220, 226),
+    StatBackground = Color3.fromRGB(28, 20, 24),
+
+    DropdownHighlight = Color3.fromRGB(240, 82, 138),
+
+    NeutralButton = Color3.fromRGB(50, 38, 44),
+    NeutralButtonHover = Color3.fromRGB(64, 50, 56),
+    NeutralButtonStroke = Color3.fromRGB(170, 122, 140),
+}
+
+end)() end,
+    [13] = function()local wax,script,require=ImportGlobals(13)local ImportGlobals return (function(...)local Action = {}
 Action.__index = Action
 Action.__type = "Action"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local log = require(utility.log)
@@ -251,11 +913,11 @@ end
 return Action
 
 end)() end,
-    [6] = function()local wax,script,require=ImportGlobals(6)local ImportGlobals return (function(...)local Button = {}
+    [14] = function()local wax,script,require=ImportGlobals(14)local ImportGlobals return (function(...)local Button = {}
 Button.__index = Button
 Button.__type = "Button"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local functions = require(utility.functions)
@@ -508,7 +1170,7 @@ lockable(Button)
 return Button
 
 end)() end,
-    [7] = function()local wax,script,require=ImportGlobals(7)local ImportGlobals return (function(...)local utility = script.Parent.Parent.utility
+    [15] = function()local wax,script,require=ImportGlobals(15)local ImportGlobals return (function(...)local utility = script.Parent.Parent.utilities
 local variables = require(utility.variables)
 local filesystem = require(utility.filesystem)
 local constants = require(utility.constants)
@@ -723,11 +1385,11 @@ end
 return chrome
 
 end)() end,
-    [8] = function()local wax,script,require=ImportGlobals(8)local ImportGlobals return (function(...)local ColorPicker = {}
+    [16] = function()local wax,script,require=ImportGlobals(16)local ImportGlobals return (function(...)local ColorPicker = {}
 ColorPicker.__index = ColorPicker
 ColorPicker.__type = "ColorPicker"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local functions = require(utility.functions)
@@ -1849,11 +2511,11 @@ lockable(ColorPicker)
 return ColorPicker
 
 end)() end,
-    [9] = function()local wax,script,require=ImportGlobals(9)local ImportGlobals return (function(...)local Console = {}
+    [17] = function()local wax,script,require=ImportGlobals(17)local ImportGlobals return (function(...)local Console = {}
 Console.__index = Console
 Console.__type = "Console"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local moveable = require(utility.moveable)
 local locale = require(utility.locale)
@@ -2182,11 +2844,11 @@ moveable(Console)
 return Console
 
 end)() end,
-    [10] = function()local wax,script,require=ImportGlobals(10)local ImportGlobals return (function(...)local Descriptor = {}
+    [18] = function()local wax,script,require=ImportGlobals(18)local ImportGlobals return (function(...)local Descriptor = {}
 Descriptor.__index = Descriptor
 Descriptor.__type = "Descriptor"
 
-local locale = require(script.Parent.Parent.utility.locale)
+local locale = require(script.Parent.Parent.utilities.locale)
 
 function Descriptor.new(tab, properties)
     properties = if typeof(properties) == "table" then properties else {}
@@ -2238,12 +2900,12 @@ end
 return Descriptor
 
 end)() end,
-    [11] = function()local wax,script,require=ImportGlobals(11)local ImportGlobals return (function(...)local Divider = {}
+    [19] = function()local wax,script,require=ImportGlobals(19)local ImportGlobals return (function(...)local Divider = {}
 Divider.__index = Divider
 Divider.__type = "Divider"
 
-local moveable = require(script.Parent.Parent.utility.moveable)
-local locale = require(script.Parent.Parent.utility.locale)
+local moveable = require(script.Parent.Parent.utilities.moveable)
+local locale = require(script.Parent.Parent.utilities.locale)
 
 local lineThickness = 1
 local defaultSpacing = 12
@@ -2382,11 +3044,11 @@ moveable(Divider)
 return Divider
 
 end)() end,
-    [12] = function()local wax,script,require=ImportGlobals(12)local ImportGlobals return (function(...)local Drag = {}
+    [20] = function()local wax,script,require=ImportGlobals(20)local ImportGlobals return (function(...)local Drag = {}
 Drag.__index = Drag
 Drag.__type = "Drag"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local constants = require(utility.constants)
@@ -2587,11 +3249,11 @@ end
 return Drag
 
 end)() end,
-    [13] = function()local wax,script,require=ImportGlobals(13)local ImportGlobals return (function(...)local Dropdown = {}
+    [21] = function()local wax,script,require=ImportGlobals(21)local ImportGlobals return (function(...)local Dropdown = {}
 Dropdown.__index = Dropdown
 Dropdown.__type = "Dropdown"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local functions = require(utility.functions)
@@ -3900,13 +4562,13 @@ lockable(Dropdown)
 return Dropdown
 
 end)() end,
-    [14] = function()local wax,script,require=ImportGlobals(14)local ImportGlobals return (function(...)local Group = {}
+    [22] = function()local wax,script,require=ImportGlobals(22)local ImportGlobals return (function(...)local Group = {}
 Group.__index = Group
 Group.__type = "Group"
 
-local moveable = require(script.Parent.Parent.utility.moveable)
-local log = require(script.Parent.Parent.utility.log)
-local assignOrder = require(script.Parent.Parent.utility.ordering)
+local moveable = require(script.Parent.Parent.utilities.moveable)
+local log = require(script.Parent.Parent.utilities.log)
+local assignOrder = require(script.Parent.Parent.utilities.ordering)
 
 local elementPadding = 8
 
@@ -4100,11 +4762,11 @@ moveable(Group)
 return Group
 
 end)() end,
-    [15] = function()local wax,script,require=ImportGlobals(15)local ImportGlobals return (function(...)local Input = {}
+    [23] = function()local wax,script,require=ImportGlobals(23)local ImportGlobals return (function(...)local Input = {}
 Input.__index = Input
 Input.__type = "Input"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local functions = require(utility.functions)
@@ -4360,11 +5022,11 @@ lockable(Input)
 return Input
 
 end)() end,
-    [16] = function()local wax,script,require=ImportGlobals(16)local ImportGlobals return (function(...)local Keybind = {}
+    [24] = function()local wax,script,require=ImportGlobals(24)local ImportGlobals return (function(...)local Keybind = {}
 Keybind.__index = Keybind
 Keybind.__type = "Keybind"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local functions = require(utility.functions)
@@ -4818,11 +5480,11 @@ lockable(Keybind)
 return Keybind
 
 end)() end,
-    [17] = function()local wax,script,require=ImportGlobals(17)local ImportGlobals return (function(...)local Notification = {}
+    [25] = function()local wax,script,require=ImportGlobals(25)local ImportGlobals return (function(...)local Notification = {}
 Notification.__index = Notification
 Notification.__type = "Notification"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local functions = require(utility.functions)
@@ -5123,11 +5785,11 @@ end
 return Notification
 
 end)() end,
-    [18] = function()local wax,script,require=ImportGlobals(18)local ImportGlobals return (function(...)local Popup = {}
+    [26] = function()local wax,script,require=ImportGlobals(26)local ImportGlobals return (function(...)local Popup = {}
 Popup.__index = Popup
 Popup.__type = "Popup"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 local variables = require(utility.variables)
 local functions = require(utility.functions)
 local constants = require(utility.constants)
@@ -5840,11 +6502,11 @@ end
 return Popup
 
 end)() end,
-    [19] = function()local wax,script,require=ImportGlobals(19)local ImportGlobals return (function(...)local Progress = {}
+    [27] = function()local wax,script,require=ImportGlobals(27)local ImportGlobals return (function(...)local Progress = {}
 Progress.__index = Progress
 Progress.__type = "Progress"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local functions = require(utility.functions)
@@ -6289,7 +6951,7 @@ moveable(Progress)
 return Progress
 
 end)() end,
-    [20] = function()local wax,script,require=ImportGlobals(20)local ImportGlobals return (function(...)local utility = script.Parent.Parent.utility
+    [28] = function()local wax,script,require=ImportGlobals(28)local ImportGlobals return (function(...)local utility = script.Parent.Parent.utilities
 local variables = require(utility.variables)
 local constants = require(utility.constants)
 local locale = require(utility.locale)
@@ -6633,12 +7295,12 @@ end
 return search
 
 end)() end,
-    [21] = function()local wax,script,require=ImportGlobals(21)local ImportGlobals return (function(...)local Section = {}
+    [29] = function()local wax,script,require=ImportGlobals(29)local ImportGlobals return (function(...)local Section = {}
 Section.__index = Section
 Section.__type = "Section"
 
-local moveable = require(script.Parent.Parent.utility.moveable)
-local locale = require(script.Parent.Parent.utility.locale)
+local moveable = require(script.Parent.Parent.utilities.moveable)
+local locale = require(script.Parent.Parent.utilities.locale)
 
 function Section.new(tab, properties)
     properties = if typeof(properties) == "table" then properties else {}
@@ -6719,7 +7381,7 @@ moveable(Section)
 return Section
 
 end)() end,
-    [22] = function()local wax,script,require=ImportGlobals(22)local ImportGlobals return (function(...)local utility = script.Parent.Parent.utility
+    [30] = function()local wax,script,require=ImportGlobals(30)local ImportGlobals return (function(...)local utility = script.Parent.Parent.utilities
 local variables = require(utility.variables)
 local image = require(utility.image)
 local locale = require(utility.locale)
@@ -6986,11 +7648,11 @@ end
 return sidebar
 
 end)() end,
-    [23] = function()local wax,script,require=ImportGlobals(23)local ImportGlobals return (function(...)local Slider = {}
+    [31] = function()local wax,script,require=ImportGlobals(31)local ImportGlobals return (function(...)local Slider = {}
 Slider.__index = Slider
 Slider.__type = "Slider"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local functions = require(utility.functions)
@@ -7550,11 +8212,11 @@ lockable(Slider)
 return Slider
 
 end)() end,
-    [24] = function()local wax,script,require=ImportGlobals(24)local ImportGlobals return (function(...)local Statistic = {}
+    [32] = function()local wax,script,require=ImportGlobals(32)local ImportGlobals return (function(...)local Statistic = {}
 Statistic.__index = Statistic
 Statistic.__type = "Statistic"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local functions = require(utility.functions)
@@ -8167,11 +8829,11 @@ moveable(Statistic)
 return Statistic
 
 end)() end,
-    [25] = function()local wax,script,require=ImportGlobals(25)local ImportGlobals return (function(...)local Tab = {}
+    [33] = function()local wax,script,require=ImportGlobals(33)local ImportGlobals return (function(...)local Tab = {}
 Tab.__index = Tab
 Tab.__type = "Tab"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local assignOrder = require(utility.ordering)
@@ -8501,12 +9163,12 @@ end
 return Tab
 
 end)() end,
-    [26] = function()local wax,script,require=ImportGlobals(26)local ImportGlobals return (function(...)local TabSection = {}
+    [34] = function()local wax,script,require=ImportGlobals(34)local ImportGlobals return (function(...)local TabSection = {}
 TabSection.__index = TabSection
 TabSection.__type = "TabSection"
 
-local locale = require(script.Parent.Parent.utility.locale)
-local log = require(script.Parent.Parent.utility.log)
+local locale = require(script.Parent.Parent.utilities.locale)
+local log = require(script.Parent.Parent.utilities.log)
 
 local sectionInset = 20
 
@@ -8630,7 +9292,7 @@ end
 return TabSection
 
 end)() end,
-    [27] = function()local wax,script,require=ImportGlobals(27)local ImportGlobals return (function(...)local utility = script.Parent.Parent.utility
+    [35] = function()local wax,script,require=ImportGlobals(35)local ImportGlobals return (function(...)local utility = script.Parent.Parent.utilities
 local variables = require(utility.variables)
 local functions = require(utility.functions)
 local locale = require(utility.locale)
@@ -8925,11 +9587,11 @@ end
 return tabSelector
 
 end)() end,
-    [28] = function()local wax,script,require=ImportGlobals(28)local ImportGlobals return (function(...)local Tag = {}
+    [36] = function()local wax,script,require=ImportGlobals(36)local ImportGlobals return (function(...)local Tag = {}
 Tag.__index = Tag
 Tag.__type = "Tag"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local functions = require(utility.functions)
@@ -9088,12 +9750,12 @@ end
 return Tag
 
 end)() end,
-    [29] = function()local wax,script,require=ImportGlobals(29)local ImportGlobals return (function(...)local Text = {}
+    [37] = function()local wax,script,require=ImportGlobals(37)local ImportGlobals return (function(...)local Text = {}
 Text.__index = Text
 Text.__type = "Text"
 
-local moveable = require(script.Parent.Parent.utility.moveable)
-local locale = require(script.Parent.Parent.utility.locale)
+local moveable = require(script.Parent.Parent.utilities.moveable)
+local locale = require(script.Parent.Parent.utilities.locale)
 
 local titleSize = 16
 local bodySize = 14
@@ -9241,11 +9903,11 @@ moveable(Text)
 return Text
 
 end)() end,
-    [30] = function()local wax,script,require=ImportGlobals(30)local ImportGlobals return (function(...)local Toast = {}
+    [38] = function()local wax,script,require=ImportGlobals(38)local ImportGlobals return (function(...)local Toast = {}
 Toast.__index = Toast
 Toast.__type = "Toast"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 local variables = require(utility.variables)
 local functions = require(utility.functions)
 local constants = require(utility.constants)
@@ -9609,11 +10271,11 @@ end
 return Toast
 
 end)() end,
-    [31] = function()local wax,script,require=ImportGlobals(31)local ImportGlobals return (function(...)local Toggle = {}
+    [39] = function()local wax,script,require=ImportGlobals(39)local ImportGlobals return (function(...)local Toggle = {}
 Toggle.__index = Toggle
 Toggle.__type = "Toggle"
 
-local utility = script.Parent.Parent.utility
+local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local functions = require(utility.functions)
@@ -10085,7 +10747,7 @@ end
 return Toggle
 
 end)() end,
-    [32] = function()local wax,script,require=ImportGlobals(32)local ImportGlobals return (function(...)local utility = script.Parent.Parent.utility
+    [40] = function()local wax,script,require=ImportGlobals(40)local ImportGlobals return (function(...)local utility = script.Parent.Parent.utilities
 local image = require(utility.image)
 local icons = require(utility.icons)
 local functions = require(utility.functions)
@@ -12858,668 +13520,6 @@ function Window:Unload()
 end
 
 return Window
-
-end)() end,
-    [34] = function()local wax,script,require=ImportGlobals(34)local ImportGlobals return (function(...)return {
-    WindowColor = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 16, 32)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(30, 22, 46)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(38, 28, 56)),
-    }),
-    ShadowColor = Color3.fromRGB(12, 6, 22),
-
-    ElementStroke = Color3.fromRGB(54, 42, 74),
-    ElementGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 24, 48)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(36, 28, 54)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(36, 28, 54)),
-    }),
-    ElementStrokeGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(72, 58, 104)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(88, 72, 124)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(72, 58, 104)),
-    }),
-    ElementStrokeHover = Color3.fromRGB(84, 68, 118),
-
-    TabBackground = ColorSequence.new(Color3.fromRGB(54, 42, 80), Color3.fromRGB(34, 26, 52)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(88, 70, 128), Color3.fromRGB(54, 42, 80)),
-
-    SliderBackground = Color3.fromRGB(46, 36, 68),
-    SliderBackgroundHover = Color3.fromRGB(60, 48, 90),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(170, 112, 248), Color3.fromRGB(138, 80, 224)),
-
-        AccentColor = Color3.fromRGB(168, 110, 246),
-    AccentStroke = Color3.fromRGB(200, 154, 255),
-
-    ToggleKnobOff = Color3.fromRGB(224, 214, 236),
-    StatBackground = Color3.fromRGB(24, 18, 38),
-
-    DropdownHighlight = Color3.fromRGB(168, 110, 246),
-
-    NeutralButton = Color3.fromRGB(46, 36, 68),
-    NeutralButtonHover = Color3.fromRGB(60, 48, 90),
-    NeutralButtonStroke = Color3.fromRGB(140, 116, 190),
-}
-
-end)() end,
-    [35] = function()local wax,script,require=ImportGlobals(35)local ImportGlobals return (function(...)return {
-    WindowColor = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 16, 34)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(20, 26, 50)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(28, 36, 66)),
-    }),
-    ShadowColor = Color3.fromRGB(6, 8, 20),
-
-    ElementStroke = Color3.fromRGB(44, 52, 82),
-    ElementGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 32, 58)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(30, 38, 66)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 38, 66)),
-    }),
-    ElementStrokeGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(56, 66, 104)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(70, 82, 124)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(56, 66, 104)),
-    }),
-    ElementStrokeHover = Color3.fromRGB(64, 76, 116),
-
-    TabBackground = ColorSequence.new(Color3.fromRGB(48, 58, 92), Color3.fromRGB(30, 38, 64)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(78, 92, 140), Color3.fromRGB(48, 58, 92)),
-
-    SliderBackground = Color3.fromRGB(40, 48, 78),
-    SliderBackgroundHover = Color3.fromRGB(54, 64, 100),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(64, 132, 248), Color3.fromRGB(42, 104, 224)),
-
-        AccentColor = Color3.fromRGB(48, 120, 240),
-    AccentStroke = Color3.fromRGB(96, 164, 255),
-
-    ToggleKnobOff = Color3.fromRGB(196, 206, 232),
-    StatBackground = Color3.fromRGB(20, 26, 48),
-
-    DropdownHighlight = Color3.fromRGB(48, 120, 240),
-
-    NeutralButton = Color3.fromRGB(40, 48, 78),
-    NeutralButtonHover = Color3.fromRGB(54, 64, 100),
-    NeutralButtonStroke = Color3.fromRGB(120, 138, 195), }
-
-end)() end,
-    [36] = function()local wax,script,require=ImportGlobals(36)local ImportGlobals return (function(...)local variables = require(script.Parent.Parent.utility.variables)
-
-return {
-    CornerRoundness = UDim.new(0, 20),
-    WindowColor = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 10)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(25, 25, 25)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 35)),
-    }),
-    ShadowColor = Color3.fromRGB(20, 20, 20),
-
-    ElementStroke = Color3.fromRGB(35, 35, 35),
-        ElementGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(35, 35, 35)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 35)),
-    }),
-            ElementStrokeGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(48, 48, 48)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(58, 58, 58)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(48, 48, 48)),
-    }),
-    TabColor = Color3.fromRGB(255, 255, 255),
-    TabBackground = ColorSequence.new(Color3.fromRGB(50, 50, 50), Color3.fromRGB(35, 35, 35)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(95, 95, 95), Color3.fromRGB(50, 50, 50)),
-    SliderBackground = Color3.fromRGB(47, 47, 47),
-    SliderBackgroundHover = Color3.fromRGB(60, 60, 60),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(0, 170, 127), Color3.fromRGB(0, 134, 98)),
-    SliderStroke = Color3.fromRGB(255, 255, 255),
-    ActionColor = Color3.fromRGB(255, 255, 255),
-    TitleFont = variables.brandFont(Enum.FontWeight.SemiBold),
-    Font = variables.brandFont(Enum.FontWeight.Medium),
-    ContentColor = Color3.fromRGB(255, 255, 255),
-
-    LiveAnimation = false,
-    DarkToggleOverlay = true,
-    ElementTransparency = 0,
-    ElementStrokeTransparency = 0,
-    ElementStrokeHoverTransparency = 0,
-    ElementStrokeHover = Color3.fromRGB(50, 50, 50),
-    ElementCornerRadius = UDim.new(0, 12),
-    ElementTextHoverColor = Color3.fromRGB(255, 255, 255),
-    TitlingColor = Color3.fromRGB(255, 255, 255),
-
-    DropdownHighlight = Color3.fromRGB(255, 255, 255),
-
-        AccentColor = Color3.fromRGB(23, 153, 110),
-    AccentStroke = Color3.fromRGB(32, 201, 144),
-    AccentGlow = 0.4,
-    StatBackground = Color3.fromRGB(25, 25, 25),
-    SliderHandle = Color3.fromRGB(255, 255, 255),
-    PillCornerRadius = UDim.new(1, 0),
-        ToggleTrack = Color3.fromRGB(0, 0, 0),
-    ToggleTrackTransparency = 0.9,
-    ToggleKnobOff = Color3.fromRGB(255, 255, 255),
-    ToggleKnobOffTransparency = 0.8,
-
-        FieldBackground = Color3.fromRGB(255, 255, 255),
-    FieldTransparency = 0.9,
-    FieldGlow = Color3.fromRGB(255, 255, 255),
-
-    PlaceholderColor = Color3.fromRGB(178, 178, 178),     SurfaceStroke = Color3.fromRGB(255, 255, 255),
-        NeutralButton = Color3.fromRGB(38, 38, 38),
-    NeutralButtonHover = Color3.fromRGB(54, 54, 54),
-    NeutralButtonStroke = Color3.fromRGB(255, 255, 255),
-
-    ErrorColor = Color3.fromRGB(185, 50, 50),
-    ErrorStrokeColor = Color3.fromRGB(240, 75, 75),
-}
-
-end)() end,
-    [37] = function()local wax,script,require=ImportGlobals(37)local ImportGlobals return (function(...)return {
-    WindowColor = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 18, 16)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(32, 27, 23)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 33, 28)),
-    }),
-    ShadowColor = Color3.fromRGB(16, 12, 8),
-
-    ElementStroke = Color3.fromRGB(54, 46, 40),
-    ElementGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 27, 23)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(38, 32, 27)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(38, 32, 27)),
-    }),
-    ElementStrokeGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(72, 62, 52)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(88, 76, 64)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(72, 62, 52)),
-    }),
-    ElementStrokeHover = Color3.fromRGB(84, 72, 60),
-
-    TabBackground = ColorSequence.new(Color3.fromRGB(56, 47, 40), Color3.fromRGB(36, 30, 26)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(92, 78, 66), Color3.fromRGB(56, 47, 40)),
-
-    SliderBackground = Color3.fromRGB(48, 40, 34),
-    SliderBackgroundHover = Color3.fromRGB(62, 52, 44),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(244, 152, 44), Color3.fromRGB(220, 110, 24)),
-
-        AccentColor = Color3.fromRGB(240, 142, 40),
-    AccentStroke = Color3.fromRGB(255, 182, 92),
-
-    ToggleKnobOff = Color3.fromRGB(232, 224, 214),
-    StatBackground = Color3.fromRGB(26, 21, 18),
-
-    DropdownHighlight = Color3.fromRGB(240, 142, 40),
-
-    NeutralButton = Color3.fromRGB(48, 40, 34),
-    NeutralButtonHover = Color3.fromRGB(64, 54, 46),
-    NeutralButtonStroke = Color3.fromRGB(150, 128, 104),
-}
-
-end)() end,
-    [38] = function()local wax,script,require=ImportGlobals(38)local ImportGlobals return (function(...)local variables = require(script.Parent.Parent.utility.variables)
-
-return {
-    WindowColor = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(246, 249, 251)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(236, 241, 245)),
-    }),
-        ShadowColor = Color3.fromRGB(116, 124, 132),
-
-    LiveAnimation = false,
-
-        ElementTransparency = 0,
-    ElementStroke = Color3.fromRGB(218, 224, 228),
-    ElementGradient = ColorSequence.new(Color3.fromRGB(255, 255, 255)),
-    ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(224, 230, 234), Color3.fromRGB(232, 238, 242)),
-    ElementStrokeTransparency = 0.1,
-    ElementStrokeHoverTransparency = 0,
-    ElementStrokeHover = Color3.fromRGB(0, 176, 208),     DarkToggleOverlay = false,
-        TabColor = Color3.fromRGB(38, 42, 46),
-    TabBackground = ColorSequence.new(Color3.fromRGB(0, 176, 208), Color3.fromRGB(0, 150, 184)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(80, 206, 230), Color3.fromRGB(0, 160, 196)),
-
-    SliderBackground = Color3.fromRGB(224, 230, 234),
-    SliderBackgroundHover = Color3.fromRGB(212, 220, 224),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(0, 182, 214), Color3.fromRGB(0, 146, 182)),
-    SliderStroke = Color3.fromRGB(200, 206, 210),
-
-        AccentColor = Color3.fromRGB(0, 176, 208),
-    AccentStroke = Color3.fromRGB(96, 210, 232),
-    AccentGlow = 0.85,
-    StatBackground = Color3.fromRGB(255, 255, 255),
-    SliderHandle = Color3.fromRGB(60, 66, 72),
-        ToggleTrack = Color3.fromRGB(198, 204, 210),
-    ToggleTrackTransparency = 0,
-    ToggleKnobOffTransparency = 0.05,
-
-        FieldBackground = Color3.fromRGB(224, 230, 234),
-    FieldTransparency = 0,
-    FieldGlow = Color3.fromRGB(148, 154, 160),
-
-    PlaceholderColor = Color3.fromRGB(138, 144, 150),
-    SurfaceStroke = Color3.fromRGB(204, 210, 214),
-
-        NeutralButton = Color3.fromRGB(224, 230, 234),
-    NeutralButtonHover = Color3.fromRGB(212, 220, 224),
-    NeutralButtonStroke = Color3.fromRGB(242, 246, 248),
-    ActionColor = Color3.fromRGB(68, 74, 80),     TitlingColor = Color3.fromRGB(26, 30, 34),
-    TitleFont = variables.brandFont(Enum.FontWeight.SemiBold),
-    Font = variables.brandFont(Enum.FontWeight.Medium),
-    ContentColor = Color3.fromRGB(42, 46, 52),
-    ElementTextHoverColor = Color3.fromRGB(18, 22, 26),
-
-    DropdownHighlight = Color3.fromRGB(0, 176, 208),
-
-    ErrorColor = Color3.fromRGB(200, 60, 55),
-    ErrorStrokeColor = Color3.fromRGB(240, 80, 70),
-}
-
-end)() end,
-    [39] = function()local wax,script,require=ImportGlobals(39)local ImportGlobals return (function(...)return {
-    WindowColor = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 18, 22)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(36, 26, 31)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(44, 32, 38)),
-    }),
-    ShadowColor = Color3.fromRGB(18, 10, 14),
-
-    ElementStroke = Color3.fromRGB(58, 44, 50),
-    ElementGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 25, 29)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(40, 30, 34)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 30, 34)),
-    }),
-    ElementStrokeGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(76, 58, 66)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(92, 70, 80)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(76, 58, 66)),
-    }),
-    ElementStrokeHover = Color3.fromRGB(88, 66, 74),
-
-    TabBackground = ColorSequence.new(Color3.fromRGB(62, 46, 53), Color3.fromRGB(38, 29, 33)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(102, 78, 88), Color3.fromRGB(62, 46, 53)),
-
-    SliderBackground = Color3.fromRGB(50, 38, 44),
-    SliderBackgroundHover = Color3.fromRGB(64, 50, 56),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(244, 88, 140), Color3.fromRGB(220, 60, 116)),
-
-        AccentColor = Color3.fromRGB(240, 82, 138),
-    AccentStroke = Color3.fromRGB(255, 134, 178),
-
-    ToggleKnobOff = Color3.fromRGB(236, 220, 226),
-    StatBackground = Color3.fromRGB(28, 20, 24),
-
-    DropdownHighlight = Color3.fromRGB(240, 82, 138),
-
-    NeutralButton = Color3.fromRGB(50, 38, 44),
-    NeutralButtonHover = Color3.fromRGB(64, 50, 56),
-    NeutralButtonStroke = Color3.fromRGB(170, 122, 140),
-}
-
-end)() end,
-    [40] = function()local wax,script,require=ImportGlobals(40)local ImportGlobals return (function(...)export type Theme = string | { [string]: any }
-
-export type Translator = (source: string, localeId: string) -> string?
-
-export type Translations = { [string]: { [string]: string } }
-export type IconPack = "lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather"
-
-export type WindowConfiguration = {
-    autoSave: boolean?,
-    autoLoad: boolean?,
-    fileName: string?,
-    customFolder: string?,
-}
-
-export type WindowProps = {
-    name: string?,
-    subtitle: string?,
-    theme: Theme?,
-    icon: (string | number)?,
-    iconPack: IconPack?,
-    IconPack: IconPack?,
-    showName: string?,
-    showIcon: (string | number)?,
-    showIconOnly: boolean?,     sidebarLayout: boolean?,     profile: string?,     configuration: WindowConfiguration?,
-    fallbackFont: (Font | Enum.Font)?,     locale: string?,     translations: Translations?,     translator: Translator?, }
-
-export type TabProps = {
-    name: string?,
-    icon: (string | number)?,
-}
-
-export type TagProps = {
-    text: string?,
-    title: string?,
-    icon: (string | number)?,
-    color: Color3?,
-    order: number?,
-}
-
-export type SectionProps = {
-    name: string?,
-    icon: (string | number)?,
-}
-
-export type TextProps = {
-    name: string?,     text: string?,     icon: (string | number)?,
-}
-
-export type DividerProps = {
-    text: string?,     spacing: number?,     line: boolean?, }
-
-export type GroupProps = {
-    direction: string?, }
-
-export type ButtonProps = {
-    name: string?,
-    description: string?,
-    icon: (string | number)?,
-    callback: (() -> ())?,
-}
-
-export type ToggleProps = {
-    name: string?,
-    description: string?,
-    icon: (string | number)?,
-    flag: string?,
-    value: boolean?,
-    forgetState: boolean?,
-    callback: ((value: boolean) -> ())?,
-}
-
-export type SliderProps = {
-    name: string?,
-    description: string?,
-    icon: (string | number)?,
-    flag: string?,
-    range: { number }?,     increment: number?,
-    value: number?,
-    suffix: string?,
-    minimal: boolean?,     forgetState: boolean?,
-        callback: ((value: number, dragging: boolean) -> ())?,
-}
-
-export type DropdownProps = {
-    name: string?,
-    description: string?,
-    icon: (string | number)?,
-    flag: string?,
-    options: { string }?,
-    value: (string | { string })?,
-    multiSelect: boolean?,
-    placeholder: string?,
-    forgetState: boolean?,
-    callback: ((value: any) -> ())?,
-}
-
-export type InputProps = {
-    name: string?,
-    description: string?,
-    icon: (string | number)?,
-    flag: string?,
-    value: string?,
-    placeholder: string?,
-    numeric: boolean?,
-    clearOnFocus: boolean?,
-    forgetState: boolean?,
-    callback: ((value: string) -> ())?,
-}
-
-export type KeybindProps = {
-    name: string?,
-    description: string?,
-    icon: (string | number)?,
-    flag: string?,
-    value: (EnumItem | string)?,     forgetState: boolean?,
-    isMenuToggle: boolean?,     hold: boolean?,     holdThreshold: number?,     callback: ((value: EnumItem | boolean) -> ())?,     onChanged: ((key: EnumItem) -> ())?, }
-
-export type ColorPickerProps = {
-    name: string?,
-    description: string?,
-    icon: (string | number)?,
-    flag: string?,
-    color: Color3?,     alpha: number?,     forgetState: boolean?,
-    callback: ((value: Color3, alpha: number) -> ())?,
-}
-
-export type StatProps = {
-    name: string?,
-    description: string?,
-    icon: (string | number)?,
-    prefix: string?,
-    suffix: string?,
-    value: number?,
-    display: string?,     compact: boolean?,
-    changeMode: string?,     changeBaseline: string?,     numberEasing: boolean?,
-}
-
-export type ProgressProps = {
-    name: string?,
-    description: string?,
-    icon: (string | number)?,
-    range: { number }?,     value: number?,
-    steps: number?,     text: string?,     format: ((value: number, min: number, max: number) -> string)?,     showValue: boolean?,     indeterminate: boolean?, }
-
-export type ConsoleProps = {
-    name: string?,
-    description: string?,
-    text: string?,     height: number?,     follow: boolean?,     maxLines: number?, }
-
-export type NotifyProps = {
-    title: string?,
-    content: string?,
-    icon: (string | number)?,
-    duration: number?,
-}
-
-export type ToastProps = {
-    title: string?,
-    subtitle: string?,     subtitleAbove: boolean?,     icon: (string | number)?,     avatar: number?,     minWidth: number?,     duration: number?,
-    position: "Top" | "Bottom"?,
-}
-
-export type PopupBox = {
-    title: string?,
-    description: string?,
-    icon: (string | number)?,
-}
-
-export type PopupOption = {
-    text: string?,
-    style: string?,     callback: (() -> ())?,
-}
-
-export type PopupProps = {
-    title: string?,
-    subtitle: string?,
-    icon: (string | number)?,
-    content: string?,     boxes: { PopupBox }?,     options: { PopupOption }?,     dismissable: boolean?, }
-
-export type Moveable = {
-    MoveTo: (self: any, index: number) -> (),
-    MoveToTop: (self: any) -> (),
-    MoveToBottom: (self: any) -> (),
-    MoveUp: (self: any) -> (),
-    MoveDown: (self: any) -> (),
-}
-
-export type Lockable = {
-    Lock: (self: any, reason: string?) -> (),
-    Unlock: (self: any) -> (),
-    IsLocked: (self: any) -> boolean,
-}
-
-export type Button = Moveable & Lockable & {}
-
-export type Toggle = Moveable & Lockable & {
-    value: boolean,
-    Set: (self: Toggle, value: boolean, skipCallback: boolean?) -> (),
-}
-
-export type Slider = Moveable & Lockable & {
-    value: number,
-    Set: (self: Slider, value: number, skipCallback: boolean?) -> (),
-}
-
-export type Dropdown = Moveable & Lockable & {
-    value: { string },     Set: (self: Dropdown, value: string | { string }, skipCallback: boolean?) -> (),
-    Refresh: (self: Dropdown, options: { string }) -> (),
-    Add: (self: Dropdown, option: string) -> (),
-    Remove: (self: Dropdown, option: string) -> (),
-}
-
-export type Input = Moveable & Lockable & {
-    value: string,
-    Set: (self: Input, value: string, skipCallback: boolean?) -> (),
-}
-
-export type Keybind = Moveable & Lockable & {
-    value: EnumItem,
-    Set: (self: Keybind, value: EnumItem | string, skipChanged: boolean?) -> (),
-}
-
-export type ColorPicker = Moveable & Lockable & {
-    value: Color3,
-    alpha: number,
-    Set: (self: ColorPicker, value: Color3 | string, skipCallback: boolean?) -> (),
-    SetAlpha: (self: ColorPicker, alpha: number, skipCallback: boolean?) -> (),
-}
-
-export type Stat = Moveable & {
-    value: number,
-    Set: (self: Stat, value: number) -> (),
-    ResetBaseline: (self: Stat, value: number?) -> (),
-}
-
-export type Progress = Moveable & {
-    value: number,
-    Set: (self: Progress, value: number) -> (),
-    Get: (self: Progress) -> number,
-    GetPercentage: (self: Progress) -> number,     SetRange: (self: Progress, min: number, max: number) -> (),
-    SetText: (self: Progress, text: string?) -> (),     SetIndeterminate: (self: Progress, state: boolean) -> (),
-    Remove: (self: Progress) -> (),
-}
-
-export type Console = Moveable & {
-    Set: (self: Console, text: string) -> (),
-    Append: (self: Console, line: string) -> (),     Clear: (self: Console) -> (),
-    Get: (self: Console) -> string,
-    Copy: (self: Console) -> boolean,     SetHeight: (self: Console, height: number) -> (),
-    Remove: (self: Console) -> (),
-}
-
-export type Section = Moveable & {}
-
-export type TabSection = {
-    Remove: (self: TabSection) -> (),
-}
-
-export type Text = Moveable & {
-    name: string,     text: string,     Set: (self: Text, text: string) -> (),
-    SetTitle: (self: Text, title: string) -> (),
-}
-
-export type Divider = Moveable & {
-    text: string,     Set: (self: Divider, text: string?) -> (),
-}
-
-export type Tag = {
-    Set: (self: Tag, props: TagProps) -> (),
-    SetColor: (self: Tag, color: Color3) -> (),
-    SetText: (self: Tag, text: string?) -> (),
-    SetIcon: (self: Tag, icon: (string | number)?) -> (),
-    Remove: (self: Tag) -> (),
-}
-
-export type Popup = {
-    Close: (self: Popup) -> (),
-}
-
-export type Group = Moveable & {
-    CreateButton: (self: Group, props: ButtonProps) -> Button,
-    CreateToggle: (self: Group, props: ToggleProps) -> Toggle,
-    CreateSwitch: (self: Group, props: ToggleProps) -> Toggle,
-    CreateStat: (self: Group, props: StatProps) -> Stat,
-    CreateSlider: (self: Group, props: SliderProps) -> Slider,
-        CreateDropdown: (self: Group, props: DropdownProps) -> Dropdown?,
-    CreateSection: (self: Group, props: SectionProps) -> Section?,
-    CreateText: (self: Group, props: TextProps) -> Text?,
-    CreateDivider: (self: Group, props: DividerProps?) -> Divider?,
-    CreateGroup: (self: Group, props: GroupProps?) -> Group,
-}
-
-export type Tab = {
-    Select: (self: Tab, noAnimation: boolean?) -> (),
-    Deselect: (self: Tab, noAnimation: boolean?) -> (),
-    Remove: (self: Tab) -> (),
-    CreateButton: (self: Tab, props: ButtonProps) -> Button,
-    CreateToggle: (self: Tab, props: ToggleProps) -> Toggle,
-    CreateSwitch: (self: Tab, props: ToggleProps) -> Toggle,
-    CreateSlider: (self: Tab, props: SliderProps) -> Slider,
-    CreateDropdown: (self: Tab, props: DropdownProps) -> Dropdown,
-    CreateInput: (self: Tab, props: InputProps) -> Input,
-    CreateKeybind: (self: Tab, props: KeybindProps) -> Keybind,
-    CreateColorPicker: (self: Tab, props: ColorPickerProps) -> ColorPicker,
-    CreateStat: (self: Tab, props: StatProps) -> Stat,
-    CreateProgress: (self: Tab, props: ProgressProps) -> Progress,
-    CreateConsole: (self: Tab, props: ConsoleProps) -> Console,
-    CreateSection: (self: Tab, props: SectionProps) -> Section,
-    CreateText: (self: Tab, props: TextProps) -> Text,
-    CreateDivider: (self: Tab, props: DividerProps?) -> Divider,
-    CreateGroup: (self: Tab, props: GroupProps?) -> Group,
-}
-
-export type Window = {
-    unloaded: boolean,
-    iconPack: IconPack,
-    ResolveIcon: (self: Window, value: (string | number)?, pack: IconPack?) -> (string | number)?,
-    Flags: { [string]: any },
-    CreateTab: (self: Window, props: TabProps) -> Tab,
-        CreateSection: (self: Window, props: SectionProps) -> TabSection,
-    CreateTag: (self: Window, props: TagProps) -> Tag,
-    Notify: (self: Window, props: NotifyProps) -> (),
-    Toast: (self: Window, props: ToastProps) -> (),
-    Popup: (self: Window, props: PopupProps) -> Popup?,     Show: (self: Window) -> (),
-    Hide: (self: Window) -> (),
-    ToggleHide: (self: Window) -> (),
-    ToggleMinimise: (self: Window) -> (),
-    Navigate: (self: Window, tab: string | Tab) -> (),
-    ChangeTheme: (self: Window, theme: Theme) -> (),
-    SetLocale: (self: Window, localeId: string) -> (),
-    SetTranslator: (self: Window, translator: Translator?) -> (),
-    RegisterTranslations: (self: Window, translations: Translations) -> (),
-    Save: (self: Window, name: string?) -> boolean,
-    Load: (self: Window, name: string?) -> boolean,
-    ListConfigs: (self: Window) -> { string },
-    DeleteConfig: (self: Window, name: string) -> boolean,
-    GetPath: (self: Window) -> (string, string),
-    Get: (self: Window, flag: string) -> any,
-    Set: (self: Window, flag: string, value: any) -> boolean,
-    Unload: (self: Window) -> (),
-}
-
-export type IconCatalog = {
-    Lucide: IconPack,
-    Material: IconPack,
-    Tabler: IconPack,
-    Phosphor: IconPack,
-    Heroicons: IconPack,
-    Feather: IconPack,
-    get: (name: string, pack: IconPack?) -> string?,
-    getByPack: (pack: IconPack, name: string) -> string?,
-    list: (pack: IconPack?) -> { string },
-    packs: () -> { string },
-    count: (pack: IconPack?) -> number,
-    resolve: (value: (string | number)?, pack: IconPack?) -> (string | number)?,
-}
-
-export type Astra = {
-    CreateWindow: (self: Astra, props: WindowProps) -> Window,
-    Icons: IconCatalog,
-}
-
-return {}
 
 end)() end,
     [42] = function()local wax,script,require=ImportGlobals(42)local ImportGlobals return (function(...)local variables = require(script.Parent.variables)
@@ -27313,250 +27313,236 @@ local ObjectTree = {
         },
         {
             {
-                33,
+                12,
                 1,
                 {
-                    "themes"
+                    "ui"
                 },
                 {
                     {
-                        34,
+                        35,
                         2,
                         {
-                            "amethyst"
+                            "tabSelector"
                         }
                     },
                     {
-                        38,
+                        13,
                         2,
                         {
-                            "frost"
+                            "action"
+                        }
+                    },
+                    {
+                        17,
+                        2,
+                        {
+                            "console"
+                        }
+                    },
+                    {
+                        26,
+                        2,
+                        {
+                            "popup"
                         }
                     },
                     {
                         39,
                         2,
                         {
-                            "rose"
+                            "toggle"
                         }
                     },
                     {
-                        35,
+                        40,
                         2,
                         {
-                            "cobalt"
+                            "window"
                         }
                     },
                     {
-                        37,
+                        38,
                         2,
                         {
-                            "ember"
+                            "toast"
+                        }
+                    },
+                    {
+                        18,
+                        2,
+                        {
+                            "descriptor"
+                        }
+                    },
+                    {
+                        27,
+                        2,
+                        {
+                            "progress"
+                        }
+                    },
+                    {
+                        19,
+                        2,
+                        {
+                            "divider"
+                        }
+                    },
+                    {
+                        30,
+                        2,
+                        {
+                            "sidebar"
+                        }
+                    },
+                    {
+                        22,
+                        2,
+                        {
+                            "group"
+                        }
+                    },
+                    {
+                        32,
+                        2,
+                        {
+                            "stat"
                         }
                     },
                     {
                         36,
                         2,
                         {
-                            "default"
+                            "tag"
+                        }
+                    },
+                    {
+                        20,
+                        2,
+                        {
+                            "drag"
+                        }
+                    },
+                    {
+                        23,
+                        2,
+                        {
+                            "input"
+                        }
+                    },
+                    {
+                        34,
+                        2,
+                        {
+                            "tabSection"
+                        }
+                    },
+                    {
+                        37,
+                        2,
+                        {
+                            "text"
+                        }
+                    },
+                    {
+                        14,
+                        2,
+                        {
+                            "button"
+                        }
+                    },
+                    {
+                        21,
+                        2,
+                        {
+                            "dropdown"
+                        }
+                    },
+                    {
+                        28,
+                        2,
+                        {
+                            "search"
+                        }
+                    },
+                    {
+                        29,
+                        2,
+                        {
+                            "section"
+                        }
+                    },
+                    {
+                        31,
+                        2,
+                        {
+                            "slider"
+                        }
+                    },
+                    {
+                        24,
+                        2,
+                        {
+                            "keybind"
+                        }
+                    },
+                    {
+                        15,
+                        2,
+                        {
+                            "chrome"
+                        }
+                    },
+                    {
+                        25,
+                        2,
+                        {
+                            "notification"
+                        }
+                    },
+                    {
+                        33,
+                        2,
+                        {
+                            "tab"
+                        }
+                    },
+                    {
+                        16,
+                        2,
+                        {
+                            "colorpicker"
                         }
                     }
+                }
+            },
+            {
+                3,
+                2,
+                {
+                    "Types"
+                }
+            },
+            {
+                4,
+                1,
+                {
+                    "assets"
                 }
             },
             {
                 41,
                 1,
                 {
-                    "utility"
+                    "utilities"
                 },
                 {
-                    {
-                        66,
-                        2,
-                        {
-                            "persistencePaths"
-                        }
-                    },
-                    {
-                        54,
-                        2,
-                        {
-                            "imageCache"
-                        }
-                    },
-                    {
-                        69,
-                        2,
-                        {
-                            "runtime"
-                        }
-                    },
-                    {
-                        61,
-                        2,
-                        {
-                            "odometer"
-                        }
-                    },
-                    {
-                        65,
-                        2,
-                        {
-                            "persistenceConfig"
-                        }
-                    },
-                    {
-                        64,
-                        2,
-                        {
-                            "persistence"
-                        }
-                    },
-                    {
-                        59,
-                        2,
-                        {
-                            "moveable"
-                        }
-                    },
-                    {
-                        70,
-                        2,
-                        {
-                            "services"
-                        }
-                    },
-                    {
-                        48,
-                        2,
-                        {
-                            "filesystemManager"
-                        }
-                    },
-                    {
-                        53,
-                        2,
-                        {
-                            "image"
-                        }
-                    },
-                    {
-                        73,
-                        2,
-                        {
-                            "windowSizing"
-                        }
-                    },
                     {
                         58,
                         2,
                         {
                             "log"
-                        }
-                    },
-                    {
-                        68,
-                        2,
-                        {
-                            "persistenceWrite"
-                        }
-                    },
-                    {
-                        62,
-                        2,
-                        {
-                            "ordering"
-                        }
-                    },
-                    {
-                        50,
-                        2,
-                        {
-                            "fontManager"
-                        }
-                    },
-                    {
-                        49,
-                        2,
-                        {
-                            "flagNames"
-                        }
-                    },
-                    {
-                        51,
-                        2,
-                        {
-                            "functions"
-                        }
-                    },
-                    {
-                        67,
-                        2,
-                        {
-                            "persistenceSettings"
-                        }
-                    },
-                    {
-                        72,
-                        2,
-                        {
-                            "variables"
-                        }
-                    },
-                    {
-                        56,
-                        2,
-                        {
-                            "locale"
-                        }
-                    },
-                    {
-                        43,
-                        2,
-                        {
-                            "assetResolver"
-                        }
-                    },
-                    {
-                        57,
-                        2,
-                        {
-                            "lockable"
-                        }
-                    },
-                    {
-                        71,
-                        2,
-                        {
-                            "textMetrics"
-                        }
-                    },
-                    {
-                        60,
-                        2,
-                        {
-                            "network"
-                        }
-                    },
-                    {
-                        46,
-                        2,
-                        {
-                            "enums"
-                        }
-                    },
-                    {
-                        45,
-                        2,
-                        {
-                            "constants"
-                        }
-                    },
-                    {
-                        44,
-                        2,
-                        {
-                            "colors"
                         }
                     },
                     {
@@ -27567,17 +27553,38 @@ local ObjectTree = {
                         }
                     },
                     {
-                        63,
+                        73,
                         2,
                         {
-                            "path"
+                            "windowSizing"
                         }
                     },
                     {
-                        55,
+                        51,
                         2,
                         {
-                            "layouts"
+                            "functions"
+                        }
+                    },
+                    {
+                        66,
+                        2,
+                        {
+                            "persistencePaths"
+                        }
+                    },
+                    {
+                        71,
+                        2,
+                        {
+                            "textMetrics"
+                        }
+                    },
+                    {
+                        45,
+                        2,
+                        {
+                            "constants"
                         }
                     },
                     {
@@ -27588,229 +27595,222 @@ local ObjectTree = {
                         }
                     },
                     {
+                        72,
+                        2,
+                        {
+                            "variables"
+                        }
+                    },
+                    {
+                        65,
+                        2,
+                        {
+                            "persistenceConfig"
+                        }
+                    },
+                    {
+                        67,
+                        2,
+                        {
+                            "persistenceSettings"
+                        }
+                    },
+                    {
+                        70,
+                        2,
+                        {
+                            "services"
+                        }
+                    },
+                    {
+                        43,
+                        2,
+                        {
+                            "assetResolver"
+                        }
+                    },
+                    {
+                        61,
+                        2,
+                        {
+                            "odometer"
+                        }
+                    },
+                    {
+                        44,
+                        2,
+                        {
+                            "colors"
+                        }
+                    },
+                    {
+                        64,
+                        2,
+                        {
+                            "persistence"
+                        }
+                    },
+                    {
+                        63,
+                        2,
+                        {
+                            "path"
+                        }
+                    },
+                    {
                         47,
                         2,
                         {
                             "filesystem"
                         }
+                    },
+                    {
+                        60,
+                        2,
+                        {
+                            "network"
+                        }
+                    },
+                    {
+                        59,
+                        2,
+                        {
+                            "moveable"
+                        }
+                    },
+                    {
+                        69,
+                        2,
+                        {
+                            "runtime"
+                        }
+                    },
+                    {
+                        46,
+                        2,
+                        {
+                            "enums"
+                        }
+                    },
+                    {
+                        48,
+                        2,
+                        {
+                            "filesystemManager"
+                        }
+                    },
+                    {
+                        49,
+                        2,
+                        {
+                            "flagNames"
+                        }
+                    },
+                    {
+                        62,
+                        2,
+                        {
+                            "ordering"
+                        }
+                    },
+                    {
+                        57,
+                        2,
+                        {
+                            "lockable"
+                        }
+                    },
+                    {
+                        56,
+                        2,
+                        {
+                            "locale"
+                        }
+                    },
+                    {
+                        68,
+                        2,
+                        {
+                            "persistenceWrite"
+                        }
+                    },
+                    {
+                        50,
+                        2,
+                        {
+                            "fontManager"
+                        }
+                    },
+                    {
+                        55,
+                        2,
+                        {
+                            "layouts"
+                        }
+                    },
+                    {
+                        53,
+                        2,
+                        {
+                            "image"
+                        }
+                    },
+                    {
+                        54,
+                        2,
+                        {
+                            "imageCache"
+                        }
                     }
                 }
             },
             {
-                40,
-                2,
-                {
-                    "types"
-                }
-            },
-            {
-                3,
+                5,
                 1,
                 {
-                    "assets"
-                }
-            },
-            {
-                4,
-                1,
-                {
-                    "components"
+                    "themes"
                 },
                 {
                     {
-                        22,
+                        8,
                         2,
                         {
-                            "sidebar"
-                        }
-                    },
-                    {
-                        25,
-                        2,
-                        {
-                            "tab"
-                        }
-                    },
-                    {
-                        9,
-                        2,
-                        {
-                            "console"
-                        }
-                    },
-                    {
-                        10,
-                        2,
-                        {
-                            "descriptor"
-                        }
-                    },
-                    {
-                        13,
-                        2,
-                        {
-                            "dropdown"
-                        }
-                    },
-                    {
-                        5,
-                        2,
-                        {
-                            "action"
-                        }
-                    },
-                    {
-                        16,
-                        2,
-                        {
-                            "keybind"
-                        }
-                    },
-                    {
-                        21,
-                        2,
-                        {
-                            "section"
-                        }
-                    },
-                    {
-                        17,
-                        2,
-                        {
-                            "notification"
-                        }
-                    },
-                    {
-                        32,
-                        2,
-                        {
-                            "window"
+                            "default"
                         }
                     },
                     {
                         7,
                         2,
                         {
-                            "chrome"
-                        }
-                    },
-                    {
-                        19,
-                        2,
-                        {
-                            "progress"
-                        }
-                    },
-                    {
-                        30,
-                        2,
-                        {
-                            "toast"
-                        }
-                    },
-                    {
-                        20,
-                        2,
-                        {
-                            "search"
-                        }
-                    },
-                    {
-                        28,
-                        2,
-                        {
-                            "tag"
-                        }
-                    },
-                    {
-                        27,
-                        2,
-                        {
-                            "tabSelector"
-                        }
-                    },
-                    {
-                        12,
-                        2,
-                        {
-                            "drag"
-                        }
-                    },
-                    {
-                        31,
-                        2,
-                        {
-                            "toggle"
-                        }
-                    },
-                    {
-                        11,
-                        2,
-                        {
-                            "divider"
-                        }
-                    },
-                    {
-                        24,
-                        2,
-                        {
-                            "stat"
-                        }
-                    },
-                    {
-                        23,
-                        2,
-                        {
-                            "slider"
-                        }
-                    },
-                    {
-                        29,
-                        2,
-                        {
-                            "text"
-                        }
-                    },
-                    {
-                        26,
-                        2,
-                        {
-                            "tabSection"
-                        }
-                    },
-                    {
-                        18,
-                        2,
-                        {
-                            "popup"
+                            "cobalt"
                         }
                     },
                     {
                         6,
                         2,
                         {
-                            "button"
+                            "amethyst"
                         }
                     },
                     {
-                        8,
+                        11,
                         2,
                         {
-                            "colorpicker"
+                            "rose"
                         }
                     },
                     {
-                        15,
+                        9,
                         2,
                         {
-                            "input"
+                            "ember"
                         }
                     },
                     {
-                        14,
+                        10,
                         2,
                         {
-                            "group"
+                            "frost"
                         }
                     }
                 }
@@ -27829,41 +27829,41 @@ local ObjectTree = {
 -- Line offsets for debugging (only included when minifyTables is false)
 local LineOffsets = {
     [2] = 8,
-    [5] = 146,
-    [6] = 254,
-    [7] = 511,
-    [8] = 726,
-    [9] = 1852,
-    [10] = 2185,
-    [11] = 2241,
-    [12] = 2385,
-    [13] = 2590,
-    [14] = 3903,
-    [15] = 4103,
-    [16] = 4363,
-    [17] = 4821,
-    [18] = 5126,
-    [19] = 5843,
-    [20] = 6292,
-    [21] = 6636,
-    [22] = 6722,
-    [23] = 6989,
-    [24] = 7553,
-    [25] = 8170,
-    [26] = 8504,
-    [27] = 8633,
-    [28] = 8928,
-    [29] = 9091,
-    [30] = 9244,
-    [31] = 9612,
-    [32] = 10088,
-    [34] = 12863,
-    [35] = 12905,
-    [36] = 12946,
-    [37] = 13017,
-    [38] = 13059,
-    [39] = 13118,
-    [40] = 13160,
+    [3] = 146,
+    [6] = 511,
+    [7] = 553,
+    [8] = 594,
+    [9] = 665,
+    [10] = 707,
+    [11] = 766,
+    [13] = 808,
+    [14] = 916,
+    [15] = 1173,
+    [16] = 1388,
+    [17] = 2514,
+    [18] = 2847,
+    [19] = 2903,
+    [20] = 3047,
+    [21] = 3252,
+    [22] = 4565,
+    [23] = 4765,
+    [24] = 5025,
+    [25] = 5483,
+    [26] = 5788,
+    [27] = 6505,
+    [28] = 6954,
+    [29] = 7298,
+    [30] = 7384,
+    [31] = 7651,
+    [32] = 8215,
+    [33] = 8832,
+    [34] = 9166,
+    [35] = 9295,
+    [36] = 9590,
+    [37] = 9753,
+    [38] = 9906,
+    [39] = 10274,
+    [40] = 10750,
     [42] = 13525,
     [43] = 13622,
     [44] = 13792,

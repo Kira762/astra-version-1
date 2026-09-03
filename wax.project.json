@@ -1,0 +1,12 @@
+{
+  "name": "Astra",
+  "tree": {
+    "$className": "Folder",
+    "MainModule": { "$path": "library_entrypoint.luau" },
+    "assets": { "$path": "assets" },
+    "ui": { "$path": "ui" },
+    "themes": { "$path": "themes" },
+    "utilities": { "$path": "utilities" },
+    "Types": { "$path": "Types.luau" }
+  }
+}
