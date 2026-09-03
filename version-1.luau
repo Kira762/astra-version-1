@@ -7411,6 +7411,14 @@ local nameTransparency = 0
 local subtitleTransparency = 0.7
 local avatarPlateTransparency = 0.95
 
+local function maskedProfileName(name)
+    name = tostring(name or "")
+    if name == "" then
+        return "****"
+    end
+    return string.sub(name, 1, math.min(3, #name)) .. "****"
+end
+
 local settleInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 local function profileVisible(window)
@@ -7465,7 +7473,7 @@ local function buildProfile(window, layout)
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
 
-                BackgroundTransparency = 1,         ImageTransparency = 1,
+                BackgroundTransparency = 1,         ImageTransparency = 1, 
         Parent = window.profileContainer,
     })
 
@@ -7495,14 +7503,14 @@ local function buildProfile(window, layout)
     })
 
     window.profileName = window:Create("TextLabel", {
-        Text = player.DisplayName,
+        Text = maskedProfileName(player.DisplayName),
         Size = UDim2.fromOffset(50, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
         TextSize = 16,
         TextXAlignment = Enum.TextXAlignment.Left,
 
-                TextTransparency = 1,
+                TextTransparency = 1, 
         Parent = window.profileLabels,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 
@@ -7516,7 +7524,7 @@ local function buildProfile(window, layout)
         LayoutOrder = 1,
         Visible = false,
 
-                TextTransparency = 1,
+                TextTransparency = 1, 
         Parent = window.profileLabels,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 end
@@ -7529,7 +7537,7 @@ function sidebar.build(window, layout)
         Size = UDim2.new(0, layout.railWidth, 1, -layout.chromeHeight),
         BackgroundTransparency = 1,
 
-        Visible = false,
+        Visible = false, 
         Parent = window.main,
     })
 

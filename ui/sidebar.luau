@@ -11,6 +11,14 @@ local nameTransparency = 0
 local subtitleTransparency = 0.7
 local avatarPlateTransparency = 0.95
 
+local function maskedProfileName(name)
+    name = tostring(name or "")
+    if name == "" then
+        return "****"
+    end
+    return string.sub(name, 1, math.min(3, #name)) .. "****"
+end
+
 local settleInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 local function profileVisible(window)
@@ -95,7 +103,7 @@ local function buildProfile(window, layout)
     })
 
     window.profileName = window:Create("TextLabel", {
-        Text = player.DisplayName,
+        Text = maskedProfileName(player.DisplayName),
         Size = UDim2.fromOffset(50, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
