@@ -28438,3 +28438,11 @@ end
 for _, ScriptRef in next, ScriptsToRun do
     Defer(LoadScript, ScriptRef)
 end
+
+
+-- Standalone loader contract: return the public MainModule API to loadstring callers.
+local MainModule = RealObjectRoot:FindFirstChild("MainModule")
+if MainModule then
+    return LoadScript(MainModule)
+end
+error("Astra bundle is missing its MainModule", 0)
