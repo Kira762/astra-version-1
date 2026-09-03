@@ -27,16 +27,25 @@ home:CreateSection({ name = "Buttons" })
 home:CreateButton({
     name = "Click Me",
     icon = "play",
+    callback = function()
+        window:Toast({ title = "Button clicked", subtitle = "Click Me is working." })
+    end,
 })
 
 home:CreateButton({
     name = "With Icon",
     icon = "settings",
+    callback = function()
+        window:Toast({ title = "Button clicked", subtitle = "The icon button is working." })
+    end,
 })
 
 home:CreateButton({
     name = "With Description",
     description = "This button has a description below it.",
+    callback = function()
+        window:Toast({ title = "Button clicked", subtitle = "The described button is working." })
+    end,
 })
 
 home:CreateSection({ name = "Toggles" })
