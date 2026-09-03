@@ -83,8 +83,15 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
         local state = existing :: any
         if state.unloaded then
             activeWindow = nil
-        elseif state.settings and state.settings.antiWindowDuplicate ~= false then
-            return existing
+            if shared[activeWindowKey] == existing then
+                shared[activeWindowKey] = nil
+            end
+        elseif not state.settings or state.settings.antiWindowDuplicate ~= false then
+            state:Unload()
+            activeWindow = nil
+            if shared[activeWindowKey] == existing then
+                shared[activeWindowKey] = nil
+            end
         end
     end
 
