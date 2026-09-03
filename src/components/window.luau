@@ -1813,7 +1813,7 @@ function Window:_applySettingsLayout(isSettings)
 
     isSettings = isSettings == true
     if self.settingsAction then
-        self.settingsAction.iconLabel.Image = isSettings and constants.icons.close or constants.icons.settings
+        image.assign(self.settingsAction.iconLabel, "Image", isSettings and constants.icons.close or constants.icons.settings)
     end
     self._settingsLayoutActive = isSettings
 
