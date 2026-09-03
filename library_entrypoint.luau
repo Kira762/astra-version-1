@@ -3,6 +3,7 @@ local image = require(script.Parent.utilities.image)
 local locale = require(script.Parent.utilities.locale)
 local constants = require(script.Parent.utilities.constants)
 local icons = require(script.Parent.utilities.icons)
+local persistenceSettings = require(script.Parent.utilities.persistenceSettings)
 local types = require(script.Parent.Types)
 
 export type Theme = types.Theme
@@ -86,11 +87,17 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
             if shared[activeWindowKey] == existing then
                 shared[activeWindowKey] = nil
             end
-        elseif not state.settings or state.settings.antiWindowDuplicate ~= false then
-            state:Unload()
-            activeWindow = nil
-            if shared[activeWindowKey] == existing then
-                shared[activeWindowKey] = nil
+        else
+            local savedPreference = true
+            pcall(function()
+                savedPreference = persistenceSettings.getAntiWindowDuplicate()
+            end)
+            if savedPreference and (not state.settings or state.settings.antiWindowDuplicate ~= false) then
+                state:Unload()
+                activeWindow = nil
+                if shared[activeWindowKey] == existing then
+                    shared[activeWindowKey] = nil
+                end
             end
         end
     end

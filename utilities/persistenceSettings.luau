@@ -84,21 +84,36 @@ local function decodeFile(fullPath: string): (DecodedSettings?, string?)
         return nil, contents
     end
 
-    return parsed :: DecodedSettings, contents
+        return parsed :: DecodedSettings, contents
+end
+
+local function readSavedSettings(): DecodedSettings?
+    local dir, fullPath = persistenceSettings.getSettingsPath()
+    local settings = decodeFile(fullPath)
+    if settings then
+        return settings
+    end
+
+    local parked, parkedRaw = decodeFile(atomic.tempPathFor(fullPath))
+    if parked and parkedRaw then
+        pcall(atomic.write, dir, fullPath, parkedRaw)
+        return parked
+    end
+
+    return nil
+end
+
+function persistenceSettings.getAntiWindowDuplicate(): boolean
+    local settings = readSavedSettings()
+    if settings and type(settings.antiWindowDuplicate) == "boolean" then
+        return settings.antiWindowDuplicate
+    end
+    return true
 end
 
 function persistenceSettings.loadSettings(window: SettingsWindow): boolean
-    local dir, fullPath = persistenceSettings.getSettingsPath()
+    local settings = readSavedSettings()
 
-    local settings = decodeFile(fullPath)
-
-        if not settings then
-        local parked, parkedRaw = decodeFile(atomic.tempPathFor(fullPath))
-        if parked and parkedRaw then
-            settings = parked
-                        pcall(atomic.write, dir, fullPath, parkedRaw)
-        end
-    end
 
     if not settings then
         return false
