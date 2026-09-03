@@ -12230,11 +12230,15 @@ function Window:_buildSettingsUI()
                     title = "Bar layout",
                     content = "The " .. value .. " layout is already active.",
                 })
-                layoutDropdown:Set(layoutNames[currentLayout], true)
+                if layoutDropdown then
+                    layoutDropdown:Set(layoutNames[currentLayout], true)
+                end
                 return
             end
 
-            layoutDropdown:Set(layoutNames[currentLayout], true)
+            if layoutDropdown then
+                layoutDropdown:Set(layoutNames[currentLayout], true)
+            end
             self:Popup({
                 title = "Apply bar layout?",
                 content = "Are you sure you want to change the layout to " .. value .. "?",
@@ -12248,7 +12252,9 @@ function Window:_buildSettingsUI()
                                 selectedLayout = requestedLayout
                                 self.settings.layoutMode = requestedLayout
                                 self:SaveSettings()
-                                layoutDropdown:Set(layoutNames[requestedLayout], true)
+                                if layoutDropdown then
+                                    layoutDropdown:Set(layoutNames[requestedLayout], true)
+                                end
                             else
                                 self:Notify({
                                     title = "Bar layout",
