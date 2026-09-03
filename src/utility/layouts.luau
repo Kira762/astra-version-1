@@ -103,7 +103,7 @@ layouts.sidebar = {
         NumberSequenceKeypoint.new(0.377, 0),
         NumberSequenceKeypoint.new(1, 1),
     }),
-        fadeCorners = { "BottomRightRadius" },
+        fadeCorners = { "BottomLeftRadius", "BottomRightRadius" },
 } :: Layout
 
 local collapsedSidebar = table.clone(layouts.sidebar)

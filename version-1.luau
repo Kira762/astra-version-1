@@ -2003,7 +2003,7 @@ topbarHeight=af,chromeHeight=af,railWidth=219,railCollapsedWidth=64,railCollapse
 34,pageDirection=Enum.FillDirection.Vertical,cardTransparency=0.98,cardStrokeRotation=55,cardCorners={'TopLeftRadius',
 'BottomRightRadius'},cardStrokeTransparency=NumberSequence.new{NumberSequenceKeypoint.new(0,0.9),NumberSequenceKeypoint.new(0.128,0.95),NumberSequenceKeypoint.new(0.414,0.985),NumberSequenceKeypoint.new(1,1)},fadeSize=UDim2.new(1,0,0,55),
 fadeTransparency=NumberSequence.new{NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(0.377,0),
-NumberSequenceKeypoint.new(1,1)},fadeCorners={'BottomRightRadius'}}::Layout local collapsedSidebar=table.clone(ae.sidebar)collapsedSidebar.forceCollapsed=true function ae.get(aj:unknown):Layout?if aj==
+NumberSequenceKeypoint.new(1,1)},fadeCorners={'BottomLeftRadius','BottomRightRadius'}}::Layout local collapsedSidebar=table.clone(ae.sidebar)collapsedSidebar.forceCollapsed=true function ae.get(aj:unknown):Layout?if aj==
 'sidebar'then return ae.sidebar elseif aj=='collapsedSidebar'then return collapsedSidebar elseif aj=='top'then return ae.top end return nil end function ae.railWidthFor(aj:Layout
 ,ak:number):number if aj.mode~='sidebar'then return 0 end local al=aj.railWidth::number if aj.forceCollapsed or ak<(aj.railCollapseBelow::
 number)then return aj.railCollapsedWidth::number end return al end return ae end)()end,[53]=function()local aa,ab,ac=a(
