@@ -592,7 +592,7 @@ function Window.new(properties)
         order = 2,
 
         callback = function()
-            self:ToggleMinimise()
+            self:ToggleHide()
         end,
     })
 
