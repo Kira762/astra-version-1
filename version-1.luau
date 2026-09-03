@@ -12920,10 +12920,13 @@ function Window:_firstShow()
         )
         :Play()
 
+    -- Let the shell expand before enabling the heavier content tree. This keeps
+    -- the first frame responsive and makes the reveal feel like one sequence.
+    task.wait(0.12)
     self:_setContentVisible(true)
-    task.wait(0.18)
-    self:_fadeSurfaces(true, TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out))
-    task.wait(0.08)
+    task.wait(0.16)
+    self:_fadeSurfaces(true, TweenInfo.new(0.65, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out))
+    task.wait(0.1)
 
     if self.icon then
         variables.tweenService
@@ -12943,7 +12946,7 @@ function Window:_firstShow()
             )
             :Play()
     end
-    task.wait(0.05)
+    task.wait(0.08)
     if self.subtitle then
         variables.tweenService
             :Create(
