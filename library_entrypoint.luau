@@ -105,13 +105,9 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
         end)
     end
 
-    task.spawn(function()
-        task.wait(0.5)
-        task.wait(0.5)
-                        if not built.unloaded then
-            built:Show()
-        end
-    end)
+    if not built.unloaded then
+        built:Show()
+    end
 
     return built
 end
