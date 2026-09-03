@@ -7419,6 +7419,14 @@ local function maskedProfileName(name)
     return string.sub(name, 1, math.min(3, #name)) .. "****"
 end
 
+function sidebar.refreshProfileName(window)
+    if not window.profileName or not variables.localPlayer then
+        return
+    end
+    local name = variables.localPlayer.Name
+    window.profileName.Text = if window.settings.showFullUsername then name else maskedProfileName(name)
+end
+
 local settleInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 local function profileVisible(window)
@@ -7503,7 +7511,7 @@ local function buildProfile(window, layout)
     })
 
     window.profileName = window:Create("TextLabel", {
-        Text = maskedProfileName(player.Name),
+        Text = if window.settings.showFullUsername then player.Name else maskedProfileName(player.Name),
         Size = UDim2.fromOffset(50, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
@@ -11062,6 +11070,7 @@ function Window.new(properties)
         toggleKeybind = Enum.KeyCode.K,
         mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = true,
         showProfile = true,
+        showFullUsername = false,
         antiWindowDuplicate = true,
         layoutMode = layout.mode,
     }
@@ -12253,6 +12262,17 @@ function Window:_buildSettingsUI()
             if self.layout.mode == "sidebar" then
                 sidebar.reflowProfile(self)
             end
+            self:SaveSettings()
+        end,
+    })
+
+    self.rfSettings:CreateToggle({
+        name = "Reveal full username",
+        description = "Shows your full Roblox username in the sidebar instead of the masked version.",
+        value = self.settings.showFullUsername,
+        callback = function(state)
+            self.settings.showFullUsername = state == true
+            sidebar.refreshProfileName(self)
             self:SaveSettings()
         end,
     })
@@ -26928,6 +26948,7 @@ type SettingsWindow = {
         welcomeToast: boolean,
         haptics: boolean,
         showProfile: boolean,
+        showFullUsername: boolean,
         antiWindowDuplicate: boolean,
         layoutMode: string,
     },
@@ -26938,8 +26959,9 @@ type DecodedSettings = {
     mouseOverride: unknown?,
     keepOnScreen: unknown?,
     welcomeToast: unknown?,
-    haptics: unknown?,
+        haptics: unknown?,
         showProfile: unknown?,
+        showFullUsername: unknown?,
         antiWindowDuplicate: unknown?,
         layoutMode: unknown?,
 }
@@ -26961,6 +26983,7 @@ function persistenceSettings.saveSettings(window: SettingsWindow): boolean
         welcomeToast = window.settings.welcomeToast,
         haptics = window.settings.haptics,
         showProfile = window.settings.showProfile,
+        showFullUsername = window.settings.showFullUsername,
         antiWindowDuplicate = window.settings.antiWindowDuplicate,
         layoutMode = window.settings.layoutMode,
     }
@@ -27064,6 +27087,9 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
 
     if type(settings.showProfile) == "boolean" then
         window.settings.showProfile = settings.showProfile
+    end
+    if type(settings.showFullUsername) == "boolean" then
+        window.settings.showFullUsername = settings.showFullUsername
     end
     if type(settings.antiWindowDuplicate) == "boolean" then
         window.settings.antiWindowDuplicate = settings.antiWindowDuplicate

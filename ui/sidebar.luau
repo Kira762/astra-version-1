@@ -19,6 +19,14 @@ local function maskedProfileName(name)
     return string.sub(name, 1, math.min(3, #name)) .. "****"
 end
 
+function sidebar.refreshProfileName(window)
+    if not window.profileName or not variables.localPlayer then
+        return
+    end
+    local name = variables.localPlayer.Name
+    window.profileName.Text = if window.settings.showFullUsername then name else maskedProfileName(name)
+end
+
 local settleInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 local function profileVisible(window)
@@ -103,7 +111,7 @@ local function buildProfile(window, layout)
     })
 
     window.profileName = window:Create("TextLabel", {
-        Text = maskedProfileName(player.Name),
+        Text = if window.settings.showFullUsername then player.Name else maskedProfileName(player.Name),
         Size = UDim2.fromOffset(50, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,

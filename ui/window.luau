@@ -289,6 +289,7 @@ function Window.new(properties)
         toggleKeybind = Enum.KeyCode.K,
         mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = true,
         showProfile = true,
+        showFullUsername = false,
         antiWindowDuplicate = true,
         layoutMode = layout.mode,
     }
@@ -1480,6 +1481,17 @@ function Window:_buildSettingsUI()
             if self.layout.mode == "sidebar" then
                 sidebar.reflowProfile(self)
             end
+            self:SaveSettings()
+        end,
+    })
+
+    self.rfSettings:CreateToggle({
+        name = "Reveal full username",
+        description = "Shows your full Roblox username in the sidebar instead of the masked version.",
+        value = self.settings.showFullUsername,
+        callback = function(state)
+            self.settings.showFullUsername = state == true
+            sidebar.refreshProfileName(self)
             self:SaveSettings()
         end,
     })
