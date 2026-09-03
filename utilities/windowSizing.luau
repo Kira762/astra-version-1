@@ -25,8 +25,8 @@ local minPlausibleViewport = 200
 
 local profiles = {
     top = {
-        defaultSize = Vector2.new(475, 500),
-        minSize = Vector2.new(300, 285),
+        defaultSize = Vector2.new(685, 450),
+        minSize = Vector2.new(560, 350),
 
                                                 maxOccupancyX = 0.86,
         topbarClearance = 36,
