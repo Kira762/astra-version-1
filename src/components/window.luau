@@ -597,7 +597,7 @@ function Window.new(properties)
                     return
                 end
                 for _, tab in self.tabs do
-                    if tab ~= self.rfSettings and not tab.neglectSelector then
+                    if tab ~= self.rfSettings and tab.window == self and tab.tabPage then
                         tab:Select()
                         return
                     end
