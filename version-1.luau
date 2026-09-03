@@ -11334,7 +11334,20 @@ function Window.new(properties)
         order = 1,
 
         callback = function()
-            self:ToggleHide()
+            self:Popup({
+                title = "Close window?",
+                content = "Are you sure you want to close this window?",
+                options = {
+                    { text = "Cancel" },
+                    {
+                        text = "Close",
+                        style = "primary",
+                        callback = function()
+                            self:Unload()
+                        end,
+                    },
+                },
+            })
         end,
     })
 
