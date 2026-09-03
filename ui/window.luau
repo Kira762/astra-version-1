@@ -229,7 +229,7 @@ function Window.new(properties)
 
         iconPack = iconPack,
         icon = icons.resolve(properties.icon or properties.Icon, iconPack),
-        showName = properties.showName or properties.ShowName "Astra",
+        showName = properties.showName or properties.ShowName or "Astra",
         showIcon = icons.resolve(properties.showIcon or properties.ShowIcon, iconPack),
                 showIconOnly = properties.showIconOnly or properties.ShowIconOnly or false,
                 profileText = nil,
