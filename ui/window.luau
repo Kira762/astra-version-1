@@ -1810,7 +1810,7 @@ function Window:_setLayoutMode(mode)
                 tab.tabPage.Position = UDim2.new(0, 35, 0, 0)
             else
                 tab.tabPage.Size = UDim2.new(1, -20, 1, 0)
-                tab.tabPage.Position = UDim2.new(0.5, 0, 0, 68)
+                tab.tabPage.Position = UDim2.new(0, 0, 0, 0)
             end
         end
     end

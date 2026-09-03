@@ -42,6 +42,20 @@ end
 local selectTweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local hoverTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
+local function pageSize(layout)
+    if layout.mode == "sidebar" then
+        return UDim2.new(1, -35, 1, 0)
+    end
+    return UDim2.new(1, -20, 1, 0)
+end
+
+local function pagePosition(layout)
+    if layout.mode == "sidebar" then
+        return UDim2.new(0, 35, 0, 0)
+    end
+    return UDim2.new(0, 0, 0, 0)
+end
+
 function Tab.new(window, properties)
     properties = if typeof(properties) == "table" then properties else {}
 
@@ -64,9 +78,8 @@ function Tab.new(window, properties)
 
         self.tabPage = self.window:Create("ScrollingFrame", {
         Name = self.name,
-        Size = UDim2.new(1, -20, 1, 0),
-        Position = UDim2.new(0.5, 0, 0, 68),
-        AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = pageSize(self.window.layout),
+        Position = pagePosition(self.window.layout),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         AutomaticCanvasSize = Enum.AutomaticSize.Y,

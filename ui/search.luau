@@ -206,8 +206,7 @@ function search.build(window)
         window.searchPage = window:Create("ScrollingFrame", {
         Name = "Search",
         Size = UDim2.new(1, -20, 1, 0),
-        Position = UDim2.new(0.5, 0, 0, 68),
-        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0, 0, 0, 0),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         AutomaticCanvasSize = Enum.AutomaticSize.Y,

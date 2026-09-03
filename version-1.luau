@@ -7177,8 +7177,7 @@ function search.build(window)
         window.searchPage = window:Create("ScrollingFrame", {
         Name = "Search",
         Size = UDim2.new(1, -20, 1, 0),
-        Position = UDim2.new(0.5, 0, 0, 68),
-        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0, 0, 0, 0),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -8913,9 +8912,8 @@ function Tab.new(window, properties)
 
         self.tabPage = self.window:Create("ScrollingFrame", {
         Name = self.name,
-        Size = UDim2.new(1, -20, 1, 0),
-        Position = UDim2.new(0.5, 0, 0, 68),
-        AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = if self.window.layout.mode == "sidebar" then UDim2.new(1, -35, 1, 0) else UDim2.new(1, -20, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -12566,7 +12564,7 @@ function Window:_setLayoutMode(mode)
                 tab.tabPage.Position = UDim2.new(0, 35, 0, 0)
             else
                 tab.tabPage.Size = UDim2.new(1, -20, 1, 0)
-                tab.tabPage.Position = UDim2.new(0.5, 0, 0, 68)
+                tab.tabPage.Position = UDim2.new(0, 0, 0, 0)
             end
         end
     end
