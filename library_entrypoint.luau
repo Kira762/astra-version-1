@@ -60,13 +60,25 @@ type WindowModule = { new: (types.WindowProps) -> types.Window }
 
 local astra = {} :: Astra
 local activeWindow: types.Window? = nil
+local activeWindowKey = "__ASTRA_ACTIVE_WINDOW_V1"
+
+local function sharedEnvironment(): { [string]: any }
+    local fallback = _G :: any
+    local ok, environment = pcall(function()
+        return (getgenv :: any)()
+    end)
+    return if ok and type(environment) == "table" then environment else fallback
+end
+
+local shared = sharedEnvironment()
 
 -- Public icon catalog.
 -- Use astra.Icons.get(name, pack) for explicit pack selection.
 astra.Icons = icons
 
 function astra:CreateWindow(properties: types.WindowProps): types.Window
-    local existing = activeWindow
+    local existing = activeWindow or shared[activeWindowKey]
+    activeWindow = existing
     if existing then
         local state = existing :: any
         if state.unloaded then
@@ -85,6 +97,7 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
 
     local built = result :: types.Window
     activeWindow = built
+    shared[activeWindowKey] = built
     if variables.secureMode then
         task.defer(function()
             image.preload(function(failed, failedRoles)
