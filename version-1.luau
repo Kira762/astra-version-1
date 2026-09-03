@@ -10874,6 +10874,13 @@ local function resolveLayout(value)
     return if value then layouts.sidebar else layouts.top
 end
 
+local function layoutModeFor(layout)
+    if layout.mode == "sidebar" and layout.forceCollapsed then
+        return "collapsedSidebar"
+    end
+    return layout.mode
+end
+
 local gradientKeys = {
     WindowColor = true,
     ElementGradient = true,
@@ -12590,7 +12597,7 @@ function Window:_setLayoutMode(mode)
         return false
     end
     local nextLayout = layouts.get(mode)
-    local currentMode = self.settings.layoutMode or self.layout.mode
+    local currentMode = layoutModeFor(self.layout)
     if not nextLayout or mode == currentMode then
         return false
     end
@@ -12614,7 +12621,7 @@ function Window:_setLayoutMode(mode)
     if self._searching then
         search.close(self, { showTabs = true, jumpTo = self.selectedTab and self.selectedTab.tabPage })
     end
-    local previousMode = self.settings.layoutMode or self.layout.mode
+    local previousMode = layoutModeFor(self.layout)
     self.layout = nextLayout
     self.settings.layoutMode = mode
     if self.sidebar then
