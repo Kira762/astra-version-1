@@ -67,7 +67,7 @@ type WindowModule = { new: (types.WindowProps) -> types.Window }
 
 local astra = {} :: Astra
 
--- Public icon catalog backed by Haijo12/sisys_ididh.
+-- Public icon catalog.
 -- Use astra.Icons.get(name, pack) for explicit pack selection.
 astra.Icons = icons
 
@@ -75,19 +75,20 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
     local window: types.Window?         local queuedNotify: (() -> ())?
 
     if variables.secureMode then
-                                image.preload(function(failed)
+        image.preload(function(failed, failedRoles)
             if failed <= 0 then
                 return
             end
+            local roleText = if #failedRoles > 0
+                then table.concat(failedRoles, ", ")
+                else "optional window icon"
             local function notify()
                 if not window or window.unloaded then
                     return
                 end
                 window:Notify({
-                    title = locale.resolve("Secure mode"),
-                    content = if failed == 1
-                        then locale.resolve("An asset couldn't be cached and won't appear.")
-                        else locale.resolve("Some assets couldn't be cached and won't appear."),
+                    title = locale.resolve("Optional icon warning"),
+                    content = locale.resolve("Failed to load: ") .. roleText,
                 })
             end
             if window then
@@ -13808,24 +13809,14 @@ end
 return colors
 
 end)() end,
-    [45] = function()local wax,script,require=ImportGlobals(45)local ImportGlobals return (function(...)local constants = {}
+    [45] = function()local wax,script,require=ImportGlobals(45)local ImportGlobals return (function(...)local windowIcons = require(script.Parent.windowIcons)
+local constants = {}
 
 constants.fontAsset = "rbxassetid://12187375716"
 
 constants.pillResizeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-constants.icons = {
-    close = 83277910885129,
-    minimise = 108115485663409,
-    maximise = 88738500661569,
-    settings = 129180860773723,
-    search = 100604009889706,
-    chevron = 88479147175134,
-    check = 125626312718314,
-    dot = 91452555903853,
-    colorpicker = 91452555903853,
-    config = 125823673784681,
-}
+constants.icons = windowIcons.ids
 
 constants.accent = {
     on = Color3.fromRGB(23, 153, 110),
@@ -25355,11 +25346,11 @@ end
 
 function image.preload(onSettled: PreloadCallback?): (boolean, number)
     settled = false
-    return imageCache.preload(function(failed)
-                        settled = true
+    return imageCache.preload(function(failed, failedRoles)
+        settled = true
         table.clear(image.pending)
         if onSettled then
-            onSettled(failed)
+            onSettled(failed, failedRoles)
         end
     end)
 end
@@ -25476,9 +25467,10 @@ end)() end,
 local path = require(script.Parent.path)
 local variables = require(script.Parent.variables)
 local constants = require(script.Parent.constants)
+local windowIcons = require(script.Parent.windowIcons)
 
 export type RewriteMap = { [number]: string }
-export type CacheSettledCallback = (failed: number) -> ()
+export type CacheSettledCallback = (failed: number, failedRoles: { string }) -> ()
 export type PreloadCallback = CacheSettledCallback
 export type AvatarCallback = (uri: string) -> ()
 export type OnCachedCallback = (id: number) -> ()
@@ -25503,8 +25495,8 @@ local thumbEndpoint =
     "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=%dx%d&format=Png&isCircular=false"
 
 local manifest: { [number]: string } = {}
-for _, id in constants.icons do
-    local iconId = id :: number
+local iconManifest = windowIcons.manifest()
+for iconId in iconManifest do
     manifest[iconId] = assetBase .. tostring(iconId) .. ".png"
 end
 local manifestSize = 0
@@ -25661,7 +25653,7 @@ function imageCache.preload(onSettled: PreloadCallback?): (boolean, number)
     local env = getfenv()
     if type(env.getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
         if onSettled then
-                        task.defer(onSettled, manifestSize)
+            task.defer(onSettled, manifestSize, windowIcons.roleList())
         end
         return false, manifestSize
     end
@@ -25673,12 +25665,15 @@ function imageCache.preload(onSettled: PreloadCallback?): (boolean, number)
             return
         end
         local failed = 0
+        local failedRoles = {}
         for id in manifest do
             if not rewrites[id] then
                 failed += 1
+                table.insert(failedRoles, windowIcons.roleForId(id))
             end
         end
-        onSettled(failed)
+        table.sort(failedRoles)
+        onSettled(failed, failedRoles)
     end
 
     local pending, missing = 0, 0
@@ -27180,7 +27175,72 @@ end
 return variables
 
 end)() end,
-    [73] = function()local wax,script,require=ImportGlobals(73)local ImportGlobals return (function(...)local layouts = require(script.Parent.layouts)
+    [73] = function()local wax,script,require=ImportGlobals(73)local ImportGlobals return (function(...)-- Central registry for built-in window icons.
+-- Change an icon ID here and every consumer plus the preload manifest follows it.
+
+local windowIcons = {}
+
+windowIcons.ids = {
+    close = 83277910885129,
+    minimise = 108115485663409,
+    maximise = 88738500661569,
+    settings = 129180860773723,
+    search = 100604009889706,
+    chevron = 88479147175134,
+    check = 125626312718314,
+    dot = 91452555903853,
+    colorpicker = 91452555903853,
+    config = 125823673784681,
+}
+
+windowIcons.roles = {
+    close = "close",
+    minimise = "minimise",
+    maximise = "maximise",
+    settings = "settings",
+    search = "search",
+    chevron = "chevron",
+    check = "check",
+    dot = "dot",
+    colorpicker = "colorpicker",
+    config = "config",
+}
+
+function windowIcons.manifest()
+    local manifest: { [number]: { roles: { string } } } = {}
+    for name, id in windowIcons.ids do
+        local entry = manifest[id]
+        if not entry then
+            entry = { roles = {} }
+            manifest[id] = entry
+        end
+        table.insert(entry.roles, windowIcons.roles[name] or name)
+    end
+    return manifest
+end
+
+function windowIcons.roleForId(id: number): string
+    local entry = windowIcons.manifest()[id]
+    if not entry or #entry.roles == 0 then
+        return "window icon"
+    end
+    return table.concat(entry.roles, "/")
+end
+
+function windowIcons.roleList(): { string }
+    local roles = {}
+    for name in windowIcons.ids do
+        table.insert(roles, windowIcons.roles[name] or name)
+    end
+    table.sort(roles)
+    return roles
+end
+
+return windowIcons
+
+
+end)() end,
+    [74] = function()local wax,script,require=ImportGlobals(74)local ImportGlobals return (function(...)local layouts = require(script.Parent.layouts)
 
 local windowSizing = {}
 
@@ -27313,211 +27373,6 @@ local ObjectTree = {
         },
         {
             {
-                12,
-                1,
-                {
-                    "ui"
-                },
-                {
-                    {
-                        35,
-                        2,
-                        {
-                            "tabSelector"
-                        }
-                    },
-                    {
-                        13,
-                        2,
-                        {
-                            "action"
-                        }
-                    },
-                    {
-                        17,
-                        2,
-                        {
-                            "console"
-                        }
-                    },
-                    {
-                        26,
-                        2,
-                        {
-                            "popup"
-                        }
-                    },
-                    {
-                        39,
-                        2,
-                        {
-                            "toggle"
-                        }
-                    },
-                    {
-                        40,
-                        2,
-                        {
-                            "window"
-                        }
-                    },
-                    {
-                        38,
-                        2,
-                        {
-                            "toast"
-                        }
-                    },
-                    {
-                        18,
-                        2,
-                        {
-                            "descriptor"
-                        }
-                    },
-                    {
-                        27,
-                        2,
-                        {
-                            "progress"
-                        }
-                    },
-                    {
-                        19,
-                        2,
-                        {
-                            "divider"
-                        }
-                    },
-                    {
-                        30,
-                        2,
-                        {
-                            "sidebar"
-                        }
-                    },
-                    {
-                        22,
-                        2,
-                        {
-                            "group"
-                        }
-                    },
-                    {
-                        32,
-                        2,
-                        {
-                            "stat"
-                        }
-                    },
-                    {
-                        36,
-                        2,
-                        {
-                            "tag"
-                        }
-                    },
-                    {
-                        20,
-                        2,
-                        {
-                            "drag"
-                        }
-                    },
-                    {
-                        23,
-                        2,
-                        {
-                            "input"
-                        }
-                    },
-                    {
-                        34,
-                        2,
-                        {
-                            "tabSection"
-                        }
-                    },
-                    {
-                        37,
-                        2,
-                        {
-                            "text"
-                        }
-                    },
-                    {
-                        14,
-                        2,
-                        {
-                            "button"
-                        }
-                    },
-                    {
-                        21,
-                        2,
-                        {
-                            "dropdown"
-                        }
-                    },
-                    {
-                        28,
-                        2,
-                        {
-                            "search"
-                        }
-                    },
-                    {
-                        29,
-                        2,
-                        {
-                            "section"
-                        }
-                    },
-                    {
-                        31,
-                        2,
-                        {
-                            "slider"
-                        }
-                    },
-                    {
-                        24,
-                        2,
-                        {
-                            "keybind"
-                        }
-                    },
-                    {
-                        15,
-                        2,
-                        {
-                            "chrome"
-                        }
-                    },
-                    {
-                        25,
-                        2,
-                        {
-                            "notification"
-                        }
-                    },
-                    {
-                        33,
-                        2,
-                        {
-                            "tab"
-                        }
-                    },
-                    {
-                        16,
-                        2,
-                        {
-                            "colorpicker"
-                        }
-                    }
-                }
-            },
-            {
                 3,
                 2,
                 {
@@ -27532,6 +27387,269 @@ local ObjectTree = {
                 }
             },
             {
+                12,
+                1,
+                {
+                    "ui"
+                },
+                {
+                    {
+                        32,
+                        2,
+                        {
+                            "stat"
+                        }
+                    },
+                    {
+                        31,
+                        2,
+                        {
+                            "slider"
+                        }
+                    },
+                    {
+                        34,
+                        2,
+                        {
+                            "tabSection"
+                        }
+                    },
+                    {
+                        39,
+                        2,
+                        {
+                            "toggle"
+                        }
+                    },
+                    {
+                        25,
+                        2,
+                        {
+                            "notification"
+                        }
+                    },
+                    {
+                        38,
+                        2,
+                        {
+                            "toast"
+                        }
+                    },
+                    {
+                        40,
+                        2,
+                        {
+                            "window"
+                        }
+                    },
+                    {
+                        24,
+                        2,
+                        {
+                            "keybind"
+                        }
+                    },
+                    {
+                        37,
+                        2,
+                        {
+                            "text"
+                        }
+                    },
+                    {
+                        19,
+                        2,
+                        {
+                            "divider"
+                        }
+                    },
+                    {
+                        16,
+                        2,
+                        {
+                            "colorpicker"
+                        }
+                    },
+                    {
+                        22,
+                        2,
+                        {
+                            "group"
+                        }
+                    },
+                    {
+                        35,
+                        2,
+                        {
+                            "tabSelector"
+                        }
+                    },
+                    {
+                        21,
+                        2,
+                        {
+                            "dropdown"
+                        }
+                    },
+                    {
+                        33,
+                        2,
+                        {
+                            "tab"
+                        }
+                    },
+                    {
+                        36,
+                        2,
+                        {
+                            "tag"
+                        }
+                    },
+                    {
+                        14,
+                        2,
+                        {
+                            "button"
+                        }
+                    },
+                    {
+                        20,
+                        2,
+                        {
+                            "drag"
+                        }
+                    },
+                    {
+                        29,
+                        2,
+                        {
+                            "section"
+                        }
+                    },
+                    {
+                        26,
+                        2,
+                        {
+                            "popup"
+                        }
+                    },
+                    {
+                        30,
+                        2,
+                        {
+                            "sidebar"
+                        }
+                    },
+                    {
+                        28,
+                        2,
+                        {
+                            "search"
+                        }
+                    },
+                    {
+                        18,
+                        2,
+                        {
+                            "descriptor"
+                        }
+                    },
+                    {
+                        17,
+                        2,
+                        {
+                            "console"
+                        }
+                    },
+                    {
+                        15,
+                        2,
+                        {
+                            "chrome"
+                        }
+                    },
+                    {
+                        27,
+                        2,
+                        {
+                            "progress"
+                        }
+                    },
+                    {
+                        13,
+                        2,
+                        {
+                            "action"
+                        }
+                    },
+                    {
+                        23,
+                        2,
+                        {
+                            "input"
+                        }
+                    }
+                }
+            },
+            {
+                5,
+                1,
+                {
+                    "themes"
+                },
+                {
+                    {
+                        6,
+                        2,
+                        {
+                            "amethyst"
+                        }
+                    },
+                    {
+                        9,
+                        2,
+                        {
+                            "ember"
+                        }
+                    },
+                    {
+                        11,
+                        2,
+                        {
+                            "rose"
+                        }
+                    },
+                    {
+                        8,
+                        2,
+                        {
+                            "default"
+                        }
+                    },
+                    {
+                        10,
+                        2,
+                        {
+                            "frost"
+                        }
+                    },
+                    {
+                        7,
+                        2,
+                        {
+                            "cobalt"
+                        }
+                    }
+                }
+            },
+            {
+                2,
+                2,
+                {
+                    "MainModule"
+                }
+            },
+            {
                 41,
                 1,
                 {
@@ -27539,31 +27657,10 @@ local ObjectTree = {
                 },
                 {
                     {
-                        58,
+                        69,
                         2,
                         {
-                            "log"
-                        }
-                    },
-                    {
-                        42,
-                        2,
-                        {
-                            "HapticEngine"
-                        }
-                    },
-                    {
-                        73,
-                        2,
-                        {
-                            "windowSizing"
-                        }
-                    },
-                    {
-                        51,
-                        2,
-                        {
-                            "functions"
+                            "runtime"
                         }
                     },
                     {
@@ -27574,94 +27671,10 @@ local ObjectTree = {
                         }
                     },
                     {
-                        71,
-                        2,
-                        {
-                            "textMetrics"
-                        }
-                    },
-                    {
-                        45,
-                        2,
-                        {
-                            "constants"
-                        }
-                    },
-                    {
-                        52,
-                        2,
-                        {
-                            "icons"
-                        }
-                    },
-                    {
-                        72,
-                        2,
-                        {
-                            "variables"
-                        }
-                    },
-                    {
-                        65,
-                        2,
-                        {
-                            "persistenceConfig"
-                        }
-                    },
-                    {
                         67,
                         2,
                         {
                             "persistenceSettings"
-                        }
-                    },
-                    {
-                        70,
-                        2,
-                        {
-                            "services"
-                        }
-                    },
-                    {
-                        43,
-                        2,
-                        {
-                            "assetResolver"
-                        }
-                    },
-                    {
-                        61,
-                        2,
-                        {
-                            "odometer"
-                        }
-                    },
-                    {
-                        44,
-                        2,
-                        {
-                            "colors"
-                        }
-                    },
-                    {
-                        64,
-                        2,
-                        {
-                            "persistence"
-                        }
-                    },
-                    {
-                        63,
-                        2,
-                        {
-                            "path"
-                        }
-                    },
-                    {
-                        47,
-                        2,
-                        {
-                            "filesystem"
                         }
                     },
                     {
@@ -27672,27 +27685,6 @@ local ObjectTree = {
                         }
                     },
                     {
-                        59,
-                        2,
-                        {
-                            "moveable"
-                        }
-                    },
-                    {
-                        69,
-                        2,
-                        {
-                            "runtime"
-                        }
-                    },
-                    {
-                        46,
-                        2,
-                        {
-                            "enums"
-                        }
-                    },
-                    {
                         48,
                         2,
                         {
@@ -27700,10 +27692,38 @@ local ObjectTree = {
                         }
                     },
                     {
-                        49,
+                        72,
                         2,
                         {
-                            "flagNames"
+                            "variables"
+                        }
+                    },
+                    {
+                        63,
+                        2,
+                        {
+                            "path"
+                        }
+                    },
+                    {
+                        54,
+                        2,
+                        {
+                            "imageCache"
+                        }
+                    },
+                    {
+                        43,
+                        2,
+                        {
+                            "assetResolver"
+                        }
+                    },
+                    {
+                        71,
+                        2,
+                        {
+                            "textMetrics"
                         }
                     },
                     {
@@ -27714,10 +27734,101 @@ local ObjectTree = {
                         }
                     },
                     {
+                        61,
+                        2,
+                        {
+                            "odometer"
+                        }
+                    },
+                    {
+                        65,
+                        2,
+                        {
+                            "persistenceConfig"
+                        }
+                    },
+                    {
+                        49,
+                        2,
+                        {
+                            "flagNames"
+                        }
+                    },
+                    {
+                        42,
+                        2,
+                        {
+                            "HapticEngine"
+                        }
+                    },
+                    {
                         57,
                         2,
                         {
                             "lockable"
+                        }
+                    },
+                    {
+                        73,
+                        2,
+                        {
+                            "windowIcons"
+                        }
+                    },
+                    {
+                        47,
+                        2,
+                        {
+                            "filesystem"
+                        }
+                    },
+                    {
+                        46,
+                        2,
+                        {
+                            "enums"
+                        }
+                    },
+                    {
+                        64,
+                        2,
+                        {
+                            "persistence"
+                        }
+                    },
+                    {
+                        74,
+                        2,
+                        {
+                            "windowSizing"
+                        }
+                    },
+                    {
+                        44,
+                        2,
+                        {
+                            "colors"
+                        }
+                    },
+                    {
+                        51,
+                        2,
+                        {
+                            "functions"
+                        }
+                    },
+                    {
+                        68,
+                        2,
+                        {
+                            "persistenceWrite"
+                        }
+                    },
+                    {
+                        45,
+                        2,
+                        {
+                            "constants"
                         }
                     },
                     {
@@ -27728,10 +27839,31 @@ local ObjectTree = {
                         }
                     },
                     {
-                        68,
+                        70,
                         2,
                         {
-                            "persistenceWrite"
+                            "services"
+                        }
+                    },
+                    {
+                        53,
+                        2,
+                        {
+                            "image"
+                        }
+                    },
+                    {
+                        58,
+                        2,
+                        {
+                            "log"
+                        }
+                    },
+                    {
+                        52,
+                        2,
+                        {
+                            "icons"
                         }
                     },
                     {
@@ -27749,77 +27881,12 @@ local ObjectTree = {
                         }
                     },
                     {
-                        53,
+                        59,
                         2,
                         {
-                            "image"
-                        }
-                    },
-                    {
-                        54,
-                        2,
-                        {
-                            "imageCache"
+                            "moveable"
                         }
                     }
-                }
-            },
-            {
-                5,
-                1,
-                {
-                    "themes"
-                },
-                {
-                    {
-                        8,
-                        2,
-                        {
-                            "default"
-                        }
-                    },
-                    {
-                        7,
-                        2,
-                        {
-                            "cobalt"
-                        }
-                    },
-                    {
-                        6,
-                        2,
-                        {
-                            "amethyst"
-                        }
-                    },
-                    {
-                        11,
-                        2,
-                        {
-                            "rose"
-                        }
-                    },
-                    {
-                        9,
-                        2,
-                        {
-                            "ember"
-                        }
-                    },
-                    {
-                        10,
-                        2,
-                        {
-                            "frost"
-                        }
-                    }
-                }
-            },
-            {
-                2,
-                2,
-                {
-                    "MainModule"
                 }
             }
         }
@@ -27829,73 +27896,74 @@ local ObjectTree = {
 -- Line offsets for debugging (only included when minifyTables is false)
 local LineOffsets = {
     [2] = 8,
-    [3] = 146,
-    [6] = 511,
-    [7] = 553,
-    [8] = 594,
-    [9] = 665,
-    [10] = 707,
-    [11] = 766,
-    [13] = 808,
-    [14] = 916,
-    [15] = 1173,
-    [16] = 1388,
-    [17] = 2514,
-    [18] = 2847,
-    [19] = 2903,
-    [20] = 3047,
-    [21] = 3252,
-    [22] = 4565,
-    [23] = 4765,
-    [24] = 5025,
-    [25] = 5483,
-    [26] = 5788,
-    [27] = 6505,
-    [28] = 6954,
-    [29] = 7298,
-    [30] = 7384,
-    [31] = 7651,
-    [32] = 8215,
-    [33] = 8832,
-    [34] = 9166,
-    [35] = 9295,
-    [36] = 9590,
-    [37] = 9753,
-    [38] = 9906,
-    [39] = 10274,
-    [40] = 10750,
-    [42] = 13525,
-    [43] = 13622,
-    [44] = 13792,
-    [45] = 13811,
-    [46] = 13871,
-    [47] = 13900,
-    [48] = 14150,
-    [49] = 14198,
-    [50] = 14229,
-    [51] = 14674,
-    [52] = 14690,
-    [53] = 25317,
-    [54] = 25475,
-    [55] = 25774,
-    [56] = 25910,
-    [57] = 26008,
-    [58] = 26029,
-    [59] = 26074,
-    [60] = 26109,
-    [61] = 26126,
-    [62] = 26431,
-    [63] = 26446,
-    [64] = 26496,
-    [65] = 26514,
-    [66] = 26755,
-    [67] = 26798,
-    [68] = 26946,
-    [69] = 26973,
-    [70] = 27033,
-    [71] = 27043,
-    [72] = 27120,
-    [73] = 27183
+    [3] = 147,
+    [6] = 512,
+    [7] = 554,
+    [8] = 595,
+    [9] = 666,
+    [10] = 708,
+    [11] = 767,
+    [13] = 809,
+    [14] = 917,
+    [15] = 1174,
+    [16] = 1389,
+    [17] = 2515,
+    [18] = 2848,
+    [19] = 2904,
+    [20] = 3048,
+    [21] = 3253,
+    [22] = 4566,
+    [23] = 4766,
+    [24] = 5026,
+    [25] = 5484,
+    [26] = 5789,
+    [27] = 6506,
+    [28] = 6955,
+    [29] = 7299,
+    [30] = 7385,
+    [31] = 7652,
+    [32] = 8216,
+    [33] = 8833,
+    [34] = 9167,
+    [35] = 9296,
+    [36] = 9591,
+    [37] = 9754,
+    [38] = 9907,
+    [39] = 10275,
+    [40] = 10751,
+    [42] = 13526,
+    [43] = 13623,
+    [44] = 13793,
+    [45] = 13812,
+    [46] = 13862,
+    [47] = 13891,
+    [48] = 14141,
+    [49] = 14189,
+    [50] = 14220,
+    [51] = 14665,
+    [52] = 14681,
+    [53] = 25308,
+    [54] = 25466,
+    [55] = 25769,
+    [56] = 25905,
+    [57] = 26003,
+    [58] = 26024,
+    [59] = 26069,
+    [60] = 26104,
+    [61] = 26121,
+    [62] = 26426,
+    [63] = 26441,
+    [64] = 26491,
+    [65] = 26509,
+    [66] = 26750,
+    [67] = 26793,
+    [68] = 26941,
+    [69] = 26968,
+    [70] = 27028,
+    [71] = 27038,
+    [72] = 27115,
+    [73] = 27178,
+    [74] = 27243
 }
 
 -- Misc AOT variable imports

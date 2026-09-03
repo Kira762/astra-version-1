@@ -2,9 +2,10 @@ local filesystem = require(script.Parent.filesystem)
 local path = require(script.Parent.path)
 local variables = require(script.Parent.variables)
 local constants = require(script.Parent.constants)
+local windowIcons = require(script.Parent.windowIcons)
 
 export type RewriteMap = { [number]: string }
-export type CacheSettledCallback = (failed: number) -> ()
+export type CacheSettledCallback = (failed: number, failedRoles: { string }) -> ()
 export type PreloadCallback = CacheSettledCallback
 export type AvatarCallback = (uri: string) -> ()
 export type OnCachedCallback = (id: number) -> ()
@@ -29,8 +30,8 @@ local thumbEndpoint =
     "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=%dx%d&format=Png&isCircular=false"
 
 local manifest: { [number]: string } = {}
-for _, id in constants.icons do
-    local iconId = id :: number
+local iconManifest = windowIcons.manifest()
+for iconId in iconManifest do
     manifest[iconId] = assetBase .. tostring(iconId) .. ".png"
 end
 local manifestSize = 0
@@ -187,7 +188,7 @@ function imageCache.preload(onSettled: PreloadCallback?): (boolean, number)
     local env = getfenv()
     if type(env.getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
         if onSettled then
-                        task.defer(onSettled, manifestSize)
+            task.defer(onSettled, manifestSize, windowIcons.roleList())
         end
         return false, manifestSize
     end
@@ -199,12 +200,15 @@ function imageCache.preload(onSettled: PreloadCallback?): (boolean, number)
             return
         end
         local failed = 0
+        local failedRoles = {}
         for id in manifest do
             if not rewrites[id] then
                 failed += 1
+                table.insert(failedRoles, windowIcons.roleForId(id))
             end
         end
-        onSettled(failed)
+        table.sort(failedRoles)
+        onSettled(failed, failedRoles)
     end
 
     local pending, missing = 0, 0

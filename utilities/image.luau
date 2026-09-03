@@ -39,11 +39,11 @@ end
 
 function image.preload(onSettled: PreloadCallback?): (boolean, number)
     settled = false
-    return imageCache.preload(function(failed)
-                        settled = true
+    return imageCache.preload(function(failed, failedRoles)
+        settled = true
         table.clear(image.pending)
         if onSettled then
-            onSettled(failed)
+            onSettled(failed, failedRoles)
         end
     end)
 end

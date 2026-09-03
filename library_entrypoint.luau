@@ -60,7 +60,7 @@ type WindowModule = { new: (types.WindowProps) -> types.Window }
 
 local astra = {} :: Astra
 
--- Public icon catalog backed by Haijo12/sisys_ididh.
+-- Public icon catalog.
 -- Use astra.Icons.get(name, pack) for explicit pack selection.
 astra.Icons = icons
 
@@ -68,19 +68,20 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
     local window: types.Window?         local queuedNotify: (() -> ())?
 
     if variables.secureMode then
-                                image.preload(function(failed)
+        image.preload(function(failed, failedRoles)
             if failed <= 0 then
                 return
             end
+            local roleText = if #failedRoles > 0
+                then table.concat(failedRoles, ", ")
+                else "optional window icon"
             local function notify()
                 if not window or window.unloaded then
                     return
                 end
                 window:Notify({
-                    title = locale.resolve("Secure mode"),
-                    content = if failed == 1
-                        then locale.resolve("An asset couldn't be cached and won't appear.")
-                        else locale.resolve("Some assets couldn't be cached and won't appear."),
+                    title = locale.resolve("Optional icon warning"),
+                    content = locale.resolve("Failed to load: ") .. roleText,
                 })
             end
             if window then
