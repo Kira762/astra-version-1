@@ -65,34 +65,7 @@ local astra = {} :: Astra
 astra.Icons = icons
 
 function astra:CreateWindow(properties: types.WindowProps): types.Window
-    local window: types.Window?         local queuedNotify: (() -> ())?
-
-    if variables.secureMode then
-        image.preload(function(failed, failedRoles)
-            if failed <= 0 then
-                return
-            end
-            local roleText = if #failedRoles > 0
-                then table.concat(failedRoles, ", ")
-                else "optional window icon"
-            local function notify()
-                if not window or window.unloaded then
-                    return
-                end
-                window:Notify({
-                    title = locale.resolve("Optional icon warning"),
-                    content = locale.resolve("Failed to load: ") .. roleText,
-                })
-            end
-            if window then
-                notify()
-            else
-                queuedNotify = notify
-            end
-        end)
-    end
-
-            local made, result = pcall(function()
+    local made, result = pcall(function()
         return (require(script.ui.window) :: WindowModule).new(properties)
     end)
     if not made then
@@ -100,13 +73,22 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
     end
 
     local built = result :: types.Window
-    window = built
-
-    if queuedNotify then
-        task.spawn(queuedNotify)
-        queuedNotify = nil
+    if variables.secureMode then
+        task.defer(function()
+            image.preload(function(failed, failedRoles)
+                if failed <= 0 or built.unloaded then
+                    return
+                end
+                local roleText = if #failedRoles > 0
+                    then table.concat(failedRoles, ", ")
+                    else "optional window icon"
+                built:Notify({
+                    title = locale.resolve("Optional icon warning"),
+                    content = locale.resolve("Failed to load: ") .. roleText,
+                })
+            end)
+        end)
     end
-
     if variables.secureMode then
                         task.spawn(function()
             local body = variables.fontManager:loadFont(constants.fontAsset, Enum.FontWeight.Medium)
