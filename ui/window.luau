@@ -2114,6 +2114,8 @@ function Window:_quickRestore()
         self._collapsedShown = false
         self:_syncDragBar()
         self.drag.drag.Visible = true
+        self.animating = false
+        self._revealing = false
         setTopToastPosition(self, true)
     end)
     restore:Play()
