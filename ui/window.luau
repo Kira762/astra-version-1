@@ -1460,8 +1460,13 @@ function Window:_buildSettingsUI()
         name = "Save Bar Layout",
         callback = function()
             local label = layoutNames[selectedLayout]
-            if selectedLayout == (self.settings.layoutMode or self.layout.mode) then
-                self:Toast({ title = locale.resolve("This bar layout is already active") })
+            local currentLayout = self.settings.layoutMode or self.layout.mode
+            if selectedLayout == currentLayout then
+                self:Popup({
+                    title = "Bar layout",
+                    content = "The " .. label .. " layout is already active.",
+                    options = { { text = "Okay", style = "primary" } },
+                })
                 return
             end
             self:Popup({
@@ -1477,6 +1482,12 @@ function Window:_buildSettingsUI()
                                 self.settings.layoutMode = selectedLayout
                                 self:SaveSettings()
                                 layoutDropdown:Set(label, true)
+                            else
+                                self:Popup({
+                                    title = "Layout not changed",
+                                    content = "The selected bar layout could not be applied right now.",
+                                    options = { { text = "Okay", style = "primary" } },
+                                })
                             end
                         end,
                     },

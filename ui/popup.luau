@@ -64,7 +64,7 @@ function Popup.new(window, properties)
         title = properties.title or properties.Title or "Popup",
         subtitle = properties.subtitle or properties.Subtitle,
         content = properties.content or properties.Content,
-        icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
+        icon = window:ResolveIcon(properties.icon or properties.Icon),
         boxes = properties.boxes or properties.Boxes,
         options = properties.options or properties.Options,
                 dismissable = if properties.dismissable ~= nil
