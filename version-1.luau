@@ -11343,7 +11343,7 @@ function Window.new(properties)
                         text = "Close",
                         style = "primary",
                         callback = function()
-                            self:Unload()
+                            self:Close()
                         end,
                     },
                 },
@@ -11691,6 +11691,39 @@ function Window:Popup(properties)
         return
     end
     return require(script.Parent.popup).new(self, properties)
+end
+
+function Window:Close()
+    if self.animating or self.unloaded then
+        return
+    end
+
+    self.animating = true
+    self.hidden = true
+    self.collapsedInteract.Visible = false
+
+    local fadeInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local closeInfo = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+
+    self:_fadeSurfaces(false, fadeInfo)
+    self:_fadeSelectedElementsOut()
+    for _, tab in pairs(self.tabs) do
+        if not tab.neglectSelector and tab.topbarItem then
+            tab:_applyVisual("hidden", fadeInfo)
+        end
+    end
+    self:_setTabSectionsShown(false, fadeInfo)
+
+    local closeTween = variables.tweenService:Create(self.main, closeInfo, {
+        Size = UDim2.fromOffset(0, 0),
+    })
+    closeTween.Completed:Connect(function()
+        if not self.unloaded then
+            self:Unload()
+        end
+    end)
+    closeTween:Play()
+    variables.tweenService:Create(self.windowCorner, closeInfo, { CornerRadius = UDim.new(1, 0) }):Play()
 end
 
 function Window:Hide()
