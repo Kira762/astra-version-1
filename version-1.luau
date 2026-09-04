@@ -11872,7 +11872,8 @@ function Window:ToggleMinimise()
 
     if self.minimised then
         self.minimised = false
-        image.assign(self.minimiseAction.iconLabel, "Image", constants.icons.minimise)
+        self.drag.drag.Visible = false
+        image.assign(self.minimiseAction.iconLabel, "Image", constants.icons.minimise) 
         variables.tweenService:Create(self.main, sizeInfo, { Size = self.size }):Play()
         self:_fadeSurfaces(true, fadeInfo)
 
@@ -11909,7 +11910,8 @@ function Window:ToggleMinimise()
         end)
     else
         self.minimised = true
-        image.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(constants.icons.maximise))
+        self.drag.drag.Visible = true
+        image.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(constants.icons.maximise)) 
                         self:_fadeSelectedElementsOut()
         for _, tab in pairs(self.tabs) do
             if not tab.neglectSelector and tab.topbarItem then
@@ -12902,7 +12904,7 @@ function Window:_quickRestore()
         self.main.ClipsDescendants = false
         self._collapsedShown = false
         self:_syncDragBar()
-        self.drag.drag.Visible = true
+        self.drag.drag.Visible = false
         self.animating = false
         self._revealing = false
         setTopToastPosition(self, true)
@@ -12938,7 +12940,7 @@ function Window:_firstShow()
         end
         self.main.ClipsDescendants = false
         self:_syncDragBar()
-        self.drag.drag.Visible = true
+        self.drag.drag.Visible = false
         self.animating = false
         self._revealing = false
     end)
