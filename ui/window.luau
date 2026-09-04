@@ -2097,6 +2097,7 @@ function Window:_quickRestore()
 
     -- Restore descendants immediately; animate only the shell geometry.
     self.main.ClipsDescendants = true
+    self.main.BackgroundTransparency = 0
     self.topbar.Visible = true
     self:_setContentVisible(true)
     self:_setTabSectionsVisible(true)
@@ -2132,6 +2133,7 @@ function Window:_firstShow()
     self.drag.drag.Visible = false
     self.main.Visible = true
     self.main.ClipsDescendants = true
+    self.main.BackgroundTransparency = 1
     self:_setContentVisible(true)
     self:_setTabSectionsVisible(true)
     self:_setTabSectionsShown(true)
@@ -2144,10 +2146,11 @@ function Window:_firstShow()
             element:_setShown(true, false)
         end
     end
-    self:_fadeSurfaces(true)
-
     local openInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local openTween = variables.tweenService:Create(self.main, openInfo, { Size = self.size })
+    local openTween = variables.tweenService:Create(self.main, openInfo, {
+        BackgroundTransparency = 0,
+        Size = self.size,
+    })
     openTween.Completed:Connect(function()
         if self.unloaded then
             return
