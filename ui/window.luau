@@ -1013,11 +1013,14 @@ function Window:Hide()
     local cornerInfo = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
     local faceInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
+            self._hideTransitionId = (self._hideTransitionId or 0) + 1
+    local hideTransitionId = self._hideTransitionId
+
             variables.tweenService
         :Create(self.drag.dragCosmetic, fadeInfo, { Size = UDim2.fromOffset(0, 4), BackgroundTransparency = 1 })
         :Play()
     task.delay(0.18, function()
-        if not self.hidden then
+        if not self.hidden or self._hideTransitionId ~= hideTransitionId then
             return
         end
         self.drag.drag.Visible = false
@@ -1056,7 +1059,7 @@ function Window:Hide()
 
             local collapse = variables.tweenService:Create(self.main, moveInfo, { Size = size, Position = home })
     collapse.Completed:Connect(function()
-                        if self.unloaded or not self.hidden then
+                        if self.unloaded or not self.hidden or self._hideTransitionId ~= hideTransitionId then
             return
         end
 
@@ -1070,7 +1073,7 @@ function Window:Hide()
     variables.tweenService:Create(self.windowCorner, cornerInfo, { CornerRadius = UDim.new(1, 0) }):Play()
 
             task.delay(0.18, function()
-        if not self.hidden then
+        if not self.hidden or self._hideTransitionId ~= hideTransitionId then
             return
         end
         self.topbar.Visible = false
@@ -1107,12 +1110,14 @@ function Window:ToggleMinimise()
     local sizeInfo = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
     local fadeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
+    self._hideTransitionId = (self._hideTransitionId or 0) + 1
+
     if self.minimised then
         self.minimised = false
         self.drag.drag.Visible = false
         image.assign(self.minimiseAction.iconLabel, "Image", constants.icons.minimise) 
         variables.tweenService:Create(self.main, sizeInfo, { Size = self.size }):Play()
-        self:_fadeSurfaces(true, fadeInfo)
+        self:_fadeSurfaces(true, fadeInfo)	chrome.setCollapsedShown(self, false, fadeInfo)
 
         variables.tweenService
             :Create(self.drag.drag, sizeInfo, {
@@ -1169,7 +1174,7 @@ function Window:ToggleMinimise()
             self:_setTabSectionsVisible(false)
         end)
 
-        self:_fadeSurfaces(false, fadeInfo)
+        self:_fadeSurfaces(false, fadeInfo)	chrome.setCollapsedShown(self, true, fadeInfo)
         variables.tweenService
             :Create(self.main, sizeInfo, { Size = UDim2.fromOffset(self.size.X.Offset, self.layout.topbarHeight) })
             :Play()

@@ -207,6 +207,11 @@ function chrome.isNewUser()
 end
 
 function chrome.setCollapsedShown(window, shown, tweenInfo)
+    local hideTransitionId = window._hideTransitionId
+    if hideTransitionId and hideTransitionId ~= window._hideTransitionId then
+        return
+    end
+
     local targets = {
         [window.collapsedIcon] = { ImageTransparency = if shown then 0 else 1 },
     }
@@ -218,7 +223,16 @@ function chrome.setCollapsedShown(window, shown, tweenInfo)
 
     for instance, props in targets do
         if tweenInfo then
-            variables.tweenService:Create(instance, tweenInfo, props):Play()
+            local tween = variables.tweenService:Create(instance, tweenInfo, props)
+            tween.Completed:Connect(function(ok)
+                if not ok or window._hideTransitionId ~= hideTransitionId then
+                    return
+                end
+                for property, value in props do
+                    instance[property] = value
+                end
+            end)
+            tween:Play()
         else
             for property, value in props do
                 instance[property] = value
