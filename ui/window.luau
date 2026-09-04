@@ -180,11 +180,11 @@ local function resolveTheme(value)
     for key, override in overrides do
         resolved[key] = coerceThemeValue(key, override)
     end
-        if typeof(value) == "table" then
+    if typeof(value) == "table" then
         deriveStrokes(resolved, overrides)
     end
 
-                local userTable = if typeof(value) == "table" then value else nil
+    local userTable = if typeof(value) == "table" then value else nil
     if not (userTable and (userTable.Font or userTable.font)) then
         resolved.Font = variables.brandFont(Enum.FontWeight.Medium)
     end
@@ -1930,20 +1930,14 @@ function Window:_setLayoutMode(mode)
         search.railWidth(self, 0)
     end
     self.elementsLayout.FillDirection = nextLayout.pageDirection
+
+    -- Defer the full page-geometry reconciliation to the transitioning task
+    -- so every layout rebuild writes a single, self-consistent snapshot.
     for _, tab in self.tabs do
         if not tab.neglectSelector then
             tab:_rebuildSelector()
             tab.topbarItem.Visible = self.elements.Visible and not self.hidden and not self.minimised
             tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected")
-        end
-        if tab.tabPage then
-            if nextLayout.mode == "sidebar" then
-                tab.tabPage.Size = UDim2.new(1, -35, 1, 0)
-                tab.tabPage.Position = UDim2.new(0, 35, 0, 0)
-            else
-                tab.tabPage.Size = UDim2.new(1, -20, 1, 0)
-                tab.tabPage.Position = UDim2.new(0, 0, 0, 0)
-            end
         end
     end
     self:_applySettingsLayout(self.selectedTab == self.rfSettings)
@@ -1959,7 +1953,7 @@ function Window:_setLayoutMode(mode)
         end
     end)
     self._layoutTransitioning = false
-        return previousMode ~= mode
+    return previousMode ~= mode
 end
 function Window:_applySettingsLayout(isSettings)
     isSettings = isSettings == true
