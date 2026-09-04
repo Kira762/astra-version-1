@@ -11910,7 +11910,7 @@ function Window:ToggleMinimise()
         end)
     else
         self.minimised = true
-        self.drag.drag.Visible = true
+        self.drag.drag.Visible = false
         image.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(constants.icons.maximise)) 
                         self:_fadeSelectedElementsOut()
         for _, tab in pairs(self.tabs) do
@@ -11949,6 +11949,10 @@ function Window:ToggleMinimise()
             :Play()
 
         task.delay(0.5, function()
+            if self.minimised and not self.hidden then
+                self:_syncDragBar()
+                self.drag.drag.Visible = true
+            end
             self.animating = false
         end)
     end
@@ -12896,6 +12900,17 @@ function Window:_quickRestore()
     end
     self:_fadeSurfaces(true)
 
+    self.topbarIcon.ImageTransparency = 0
+    self.title.TextTransparency = 0
+    if self.subtitle then
+        self.subtitle.TextTransparency = 0.7
+    end
+    for _, action in ipairs(self.actionContainer:GetChildren()) do
+        if action:IsA("Frame") and action.ImageLabel then
+            action.ImageLabel.ImageTransparency = 0.6
+        end
+    end
+
     local restore = variables.tweenService:Create(self.main, openInfo, { Size = self.size, Position = target })
     restore.Completed:Connect(function()
         if self.hidden or self.unloaded then
@@ -12930,6 +12945,17 @@ function Window:_firstShow()
         end
     end
     local openInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    self.topbarIcon.ImageTransparency = 0
+    self.title.TextTransparency = 0
+    if self.subtitle then
+        self.subtitle.TextTransparency = 0.7
+    end
+    for _, action in ipairs(self.actionContainer:GetChildren()) do
+        if action:IsA("Frame") and action.ImageLabel then
+            action.ImageLabel.ImageTransparency = 0.6
+        end
+    end
+
     local openTween = variables.tweenService:Create(self.main, openInfo, {
         BackgroundTransparency = 0,
         Size = self.size,
