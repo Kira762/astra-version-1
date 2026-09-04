@@ -26294,18 +26294,20 @@ local odometer = {}
 odometer.__index = odometer
 
 local stripLength = 20
+local measureParams = Instance.new("GetTextBoundsParams")
 
 local function measure(font, size, text)
-    local params = Instance.new("GetTextBoundsParams")
-    params.Text = text
-    params.Font = font
-    params.Size = size
-    params.Width = math.huge
-    local ok, bounds = pcall(TextService.GetTextBoundsAsync, TextService, params)
+    measureParams.Text = text
+    measureParams.Font = font
+    measureParams.Size = size
+    measureParams.Width = math.huge
+    local ok, bounds = pcall(TextService.GetTextBoundsAsync, TextService, measureParams)
     return if ok then bounds else Vector2.new(size * 0.6, size)
 end
 
 local metricsCache = {}
+local metricsCacheCount = 0
+local metricsCacheCap = 64
 local function digitMetrics(font, size)
         local key = tostring(font.Family)
         .. "|"
@@ -26328,7 +26330,12 @@ local function digitMetrics(font, size)
         end
     end
     cached = { advance = advance, maxWidth = maxWidth }
+    if metricsCacheCount >= metricsCacheCap then
+        metricsCache = {}
+        metricsCacheCount = 0
+    end
     metricsCache[key] = cached
+    metricsCacheCount += 1
     return cached
 end
 
@@ -26590,7 +26597,6 @@ function odometer:reveal(target, animate, info)
 end
 
 return odometer
-
 end)() end,
     [62] = function()local wax,script,require=ImportGlobals(62)local ImportGlobals return (function(...)type OrderedElement = {
     main: GuiObject,
@@ -27238,7 +27244,12 @@ local textMetrics = {}
 
 local widthCache: { [string]: number } = {}
 local widthCacheCount = 0
-local widthCacheCap = 1024
+local widthCacheCap = 1024 
+local heightCache: { [string]: number } = {}
+local heightCacheCount = 0
+local heightCacheCap = 1024
+local widthParams = Instance.new("GetTextBoundsParams")
+local heightParams = Instance.new("GetTextBoundsParams")
 local function getTextBounds(params: GetTextBoundsParams): unknown
     local ok, bounds = pcall(function()
         return textService:GetTextBoundsAsync(params)
@@ -27272,13 +27283,12 @@ function textMetrics.textWidth(font: Font, size: number, text: any): number
         return cached
     end
 
-    local params = Instance.new("GetTextBoundsParams")
-    params.Text = text
-    params.Font = font
-    params.Size = size
-    params.Width = math.huge
+    widthParams.Text = text
+    widthParams.Font = font
+    widthParams.Size = size
+    widthParams.Width = math.huge
 
-    local measuredWidth = boundAxis(getTextBounds(params), "X")
+    local measuredWidth = boundAxis(getTextBounds(widthParams), "X")
     if not measuredWidth then
                                 local length = utf8.len(text) or #text
         return math.ceil(size * 0.55 * length)
@@ -27295,18 +27305,44 @@ function textMetrics.textWidth(font: Font, size: number, text: any): number
 end
 
 function textMetrics.textHeight(font: Font, size: number, text: any, width: number): number
-    local params = Instance.new("GetTextBoundsParams")
-    params.Text = tostring(text)
-    params.Font = font
-    params.Size = size
-    params.Width = width
+    text = tostring(text)
+    local key = tostring(font.Family)
+        .. "|"
+        .. tostring(font.Weight)
+        .. "|"
+        .. tostring(font.Style)
+        .. "|"
+        .. tostring(size)
+        .. "|"
+        .. tostring(width)
+        .. "|"
+        .. text
+    local cached = heightCache[key]
+    if cached then
+        return cached
+    end
 
-    local measuredHeight = boundAxis(getTextBounds(params), "Y")
-    return if measuredHeight then math.ceil(measuredHeight) else size
+    heightParams.Text = text
+    heightParams.Font = font
+    heightParams.Size = size
+    heightParams.Width = width
+
+    local measuredHeight = boundAxis(getTextBounds(heightParams), "Y")
+    if not measuredHeight then
+        return size
+    end
+
+    local height = math.ceil(measuredHeight)
+    if heightCacheCount >= heightCacheCap then
+        heightCache = {}
+        heightCacheCount = 0
+    end
+    heightCache[key] = height
+    heightCacheCount += 1
+    return height
 end
 
 return textMetrics
-
 end)() end,
     [72] = function()local wax,script,require=ImportGlobals(72)local ImportGlobals return (function(...)local runtime = require(script.Parent.runtime)
 local constants = require(script.Parent.constants)

@@ -5,18 +5,20 @@ local odometer = {}
 odometer.__index = odometer
 
 local stripLength = 20
+local measureParams = Instance.new("GetTextBoundsParams")
 
 local function measure(font, size, text)
-    local params = Instance.new("GetTextBoundsParams")
-    params.Text = text
-    params.Font = font
-    params.Size = size
-    params.Width = math.huge
-    local ok, bounds = pcall(TextService.GetTextBoundsAsync, TextService, params)
+    measureParams.Text = text
+    measureParams.Font = font
+    measureParams.Size = size
+    measureParams.Width = math.huge
+    local ok, bounds = pcall(TextService.GetTextBoundsAsync, TextService, measureParams)
     return if ok then bounds else Vector2.new(size * 0.6, size)
 end
 
 local metricsCache = {}
+local metricsCacheCount = 0
+local metricsCacheCap = 64
 local function digitMetrics(font, size)
         local key = tostring(font.Family)
         .. "|"
@@ -39,7 +41,12 @@ local function digitMetrics(font, size)
         end
     end
     cached = { advance = advance, maxWidth = maxWidth }
+    if metricsCacheCount >= metricsCacheCap then
+        metricsCache = {}
+        metricsCacheCount = 0
+    end
     metricsCache[key] = cached
+    metricsCacheCount += 1
     return cached
 end
 

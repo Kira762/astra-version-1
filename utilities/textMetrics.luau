@@ -6,6 +6,11 @@ local textMetrics = {}
 local widthCache: { [string]: number } = {}
 local widthCacheCount = 0
 local widthCacheCap = 1024 
+local heightCache: { [string]: number } = {}
+local heightCacheCount = 0
+local heightCacheCap = 1024
+local widthParams = Instance.new("GetTextBoundsParams")
+local heightParams = Instance.new("GetTextBoundsParams")
 local function getTextBounds(params: GetTextBoundsParams): unknown
     local ok, bounds = pcall(function()
         return textService:GetTextBoundsAsync(params)
@@ -39,13 +44,12 @@ function textMetrics.textWidth(font: Font, size: number, text: any): number
         return cached
     end
 
-    local params = Instance.new("GetTextBoundsParams")
-    params.Text = text
-    params.Font = font
-    params.Size = size
-    params.Width = math.huge
+    widthParams.Text = text
+    widthParams.Font = font
+    widthParams.Size = size
+    widthParams.Width = math.huge
 
-    local measuredWidth = boundAxis(getTextBounds(params), "X")
+    local measuredWidth = boundAxis(getTextBounds(widthParams), "X")
     if not measuredWidth then
                                 local length = utf8.len(text) or #text
         return math.ceil(size * 0.55 * length)
@@ -62,14 +66,41 @@ function textMetrics.textWidth(font: Font, size: number, text: any): number
 end
 
 function textMetrics.textHeight(font: Font, size: number, text: any, width: number): number
-    local params = Instance.new("GetTextBoundsParams")
-    params.Text = tostring(text)
-    params.Font = font
-    params.Size = size
-    params.Width = width
+    text = tostring(text)
+    local key = tostring(font.Family)
+        .. "|"
+        .. tostring(font.Weight)
+        .. "|"
+        .. tostring(font.Style)
+        .. "|"
+        .. tostring(size)
+        .. "|"
+        .. tostring(width)
+        .. "|"
+        .. text
+    local cached = heightCache[key]
+    if cached then
+        return cached
+    end
 
-    local measuredHeight = boundAxis(getTextBounds(params), "Y")
-    return if measuredHeight then math.ceil(measuredHeight) else size
+    heightParams.Text = text
+    heightParams.Font = font
+    heightParams.Size = size
+    heightParams.Width = width
+
+    local measuredHeight = boundAxis(getTextBounds(heightParams), "Y")
+    if not measuredHeight then
+        return size
+    end
+
+    local height = math.ceil(measuredHeight)
+    if heightCacheCount >= heightCacheCap then
+        heightCache = {}
+        heightCacheCount = 0
+    end
+    heightCache[key] = height
+    heightCacheCount += 1
+    return height
 end
 
 return textMetrics
