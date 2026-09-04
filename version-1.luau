@@ -5869,12 +5869,12 @@ local boxIconGap = 10
 local boxTitleSize = 15
 local boxDescSize = 14
 local boxGap = 8
-local boxWidthInset = 10
+local boxWidthInset = 10 
 local buttonHeight = 40
 local buttonGap = 8
 local buttonCorner = UDim.new(1, 0) local buttonTextSize = 16
 
-local backdropShown = 0.5
+local backdropShown = 0.5 
 local stack = {}
 
 local consumedEscape = nil
@@ -5918,7 +5918,7 @@ function Popup.new(window, properties)
 
     self:_build()
             pruneStack()
-    table.insert(stack, self)
+    table.insert(stack, self) 
     task.spawn(function()
         self:_show()
     end)
@@ -5953,7 +5953,7 @@ function Popup:_build()
         Size = UDim2.fromScale(1, 1),
         Active = true,
 
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 1, 
         Parent = self.screenGui,
     })
     self:_fade(self.backdrop, "BackgroundTransparency", backdropShown)
@@ -5966,7 +5966,7 @@ function Popup:_build()
         AutomaticSize = Enum.AutomaticSize.Y,
         Active = true,         BorderSizePixel = 0,
 
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 1, 
         Parent = self.screenGui,
     })
     self:_fade(self.card, "BackgroundTransparency", 0)
@@ -5983,7 +5983,7 @@ function Popup:_build()
     }, { CornerRadius = "CornerRoundness" })
 
     self.cardStroke = window:Create("UIStroke", {
-        Transparency = 1,
+        Transparency = 1, 
         Parent = self.card,
     }, { Color = "SurfaceStroke" })
     self:_fade(self.cardStroke, "Transparency", 0.95)
@@ -6080,7 +6080,7 @@ function Popup:_buildHeader(hasIcon, headerHeight)
                 BorderSizePixel = 0,
                 LayoutOrder = 1,
 
-                ImageTransparency = 1,
+                ImageTransparency = 1, 
                 Parent = header,
             }, { ImageColor3 = "TitlingColor" }),
             "ImageTransparency",
@@ -6115,7 +6115,7 @@ function Popup:_buildHeader(hasIcon, headerHeight)
             TextWrapped = true,
             LayoutOrder = 1,
 
-            TextTransparency = 1,
+            TextTransparency = 1, 
             Parent = textColumn,
         }, { TextColor3 = "TitlingColor", FontFace = "Font" }),
         "TextTransparency",
@@ -6133,7 +6133,7 @@ function Popup:_buildHeader(hasIcon, headerHeight)
                 TextWrapped = true,
                 LayoutOrder = 2,
 
-                TextTransparency = 1,
+                TextTransparency = 1, 
                 Parent = textColumn,
             }, { TextColor3 = "TitlingColor", FontFace = "Font" }),
             "TextTransparency",
@@ -6162,7 +6162,7 @@ function Popup:_buildContent()
         ScrollingDirection = Enum.ScrollingDirection.Y,
         LayoutOrder = 2,
 
-        ScrollBarImageTransparency = 1,
+        ScrollBarImageTransparency = 1, 
         Parent = self.card,
     })
     self:_fade(content, "ScrollBarImageTransparency", 0.8)
@@ -6199,7 +6199,7 @@ function Popup:_buildContent()
                 TextYAlignment = Enum.TextYAlignment.Top,
                 TextWrapped = true,
 
-                TextTransparency = 1,
+                TextTransparency = 1, 
                 Parent = content,
             }, { TextColor3 = "ContentColor", FontFace = "Font" }),
             "TextTransparency",
@@ -6223,7 +6223,7 @@ function Popup:_buildBox(parent, box, order)
         Size = UDim2.new(1, -boxWidthInset, 0, frameH),
         LayoutOrder = order,
 
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 1, 
         Parent = parent,
     })
     self:_fade(frame, "BackgroundTransparency", 0)
@@ -6259,7 +6259,7 @@ function Popup:_buildBox(parent, box, order)
                 BorderSizePixel = 0,
                 LayoutOrder = 1,
 
-                ImageTransparency = 1,
+                ImageTransparency = 1, 
                 Parent = frame,
             }, { ImageColor3 = "ContentColor" }),
             "ImageTransparency",
@@ -6293,7 +6293,7 @@ function Popup:_buildBox(parent, box, order)
             TextWrapped = true,
             LayoutOrder = 1,
 
-            TextTransparency = 1,
+            TextTransparency = 1, 
             Parent = textColumn,
         }, { TextColor3 = "ContentColor", FontFace = "TitleFont" }),
         "TextTransparency",
@@ -6313,7 +6313,7 @@ function Popup:_buildBox(parent, box, order)
                 TextWrapped = true,
                 LayoutOrder = 2,
 
-                TextTransparency = 1,
+                TextTransparency = 1, 
                 Parent = textColumn,
             }, { TextColor3 = "ContentColor", FontFace = "Font" }),
             "TextTransparency",
@@ -6375,7 +6375,7 @@ function Popup:_buildButton(parent, option, order)
         Size = UDim2.new(0, 0, 0, buttonHeight),
         LayoutOrder = order,
 
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 1, 
         Parent = parent,
     })
     self:_fade(button, "BackgroundTransparency", 0)
@@ -6385,7 +6385,7 @@ function Popup:_buildButton(parent, option, order)
 
     local stroke = window:Create("UIStroke", {
         Color = edgeColor,
-        Transparency = 1,
+        Transparency = 1, 
         Parent = button,
     })
     self:_fade(stroke, "Transparency", strokeShown)
@@ -6400,7 +6400,7 @@ function Popup:_buildButton(parent, option, order)
             TextTruncate = Enum.TextTruncate.AtEnd,
 
                         TextColor3 = functions.contrastText(restColor),
-            TextTransparency = 1,
+            TextTransparency = 1, 
             Parent = button,
         }, { FontFace = "Font" }),
         "TextTransparency",
@@ -6538,19 +6538,34 @@ function Popup:Close()
         return
     end
 
-    variables.tweenService:Create(self.card, fadeShort, { Position = UDim2.new(0.5, 0, 0.5, 10) }):Play()
+    if self._closeConnection then
+        self._closeConnection:Disconnect()
+        self._closeConnection = nil
+    end
+
+    local closeTween = variables.tweenService:Create(
+        self.card,
+        fadeShort,
+        { Position = UDim2.new(0.5, 0, 0.5, 10) }
+    )
+    self._closeConnection = closeTween.Completed:Connect(function(state)
+        local connection = self._closeConnection
+        self._closeConnection = nil
+        if connection then
+            connection:Disconnect()
+        end
+        if state == Enum.PlaybackState.Completed and self._closed and self.screenGui.Parent then
+            self.window:DestroySubtree(self.screenGui)
+        end
+    end)
+    closeTween:Play()
 
     for _, entry in self._reveal do
         variables.tweenService:Create(entry.instance, fadeShort, { [entry.prop] = 1 }):Play()
     end
-
-    task.delay(fadeShort.Time, function()
-        self.window:DestroySubtree(self.screenGui)
-    end)
 end
 
 return Popup
-
 end)() end,
     [27] = function()local wax,script,require=ImportGlobals(27)local ImportGlobals return (function(...)local Progress = {}
 Progress.__index = Progress

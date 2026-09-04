@@ -701,15 +701,31 @@ function Popup:Close()
         return
     end
 
-    variables.tweenService:Create(self.card, fadeShort, { Position = UDim2.new(0.5, 0, 0.5, 10) }):Play()
+    if self._closeConnection then
+        self._closeConnection:Disconnect()
+        self._closeConnection = nil
+    end
+
+    local closeTween = variables.tweenService:Create(
+        self.card,
+        fadeShort,
+        { Position = UDim2.new(0.5, 0, 0.5, 10) }
+    )
+    self._closeConnection = closeTween.Completed:Connect(function(state)
+        local connection = self._closeConnection
+        self._closeConnection = nil
+        if connection then
+            connection:Disconnect()
+        end
+        if state == Enum.PlaybackState.Completed and self._closed and self.screenGui.Parent then
+            self.window:DestroySubtree(self.screenGui)
+        end
+    end)
+    closeTween:Play()
 
     for _, entry in self._reveal do
         variables.tweenService:Create(entry.instance, fadeShort, { [entry.prop] = 1 }):Play()
     end
-
-    task.delay(fadeShort.Time, function()
-        self.window:DestroySubtree(self.screenGui)
-    end)
 end
 
 return Popup
