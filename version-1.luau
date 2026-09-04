@@ -12842,6 +12842,7 @@ function Window:Show()
     end
     self.animating = true
     self._revealing = true
+    self.drag.drag.Visible = false
 
                 if self.configuration.autoLoad and not self._autoLoaded then
         self._autoLoaded = true
@@ -12859,7 +12860,7 @@ function Window:Show()
         self:_refreshElementThemes()
     end
 
-    self.collapsedInteract.Visible = false
+    self.collapsedInteract.Visible = false 
     if self._freeMouse then
         self._freeMouse()
     end
