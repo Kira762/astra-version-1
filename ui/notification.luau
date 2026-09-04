@@ -287,17 +287,22 @@ function Notification:_dismiss()
 
         variables.tweenService:Create(self.body, shrinkInfo, { Size = UDim2.new(1, -90, 1, 0) }):Play()
     local collapse = variables.tweenService:Create(self.main, shrinkInfo, { Size = UDim2.new(1, 0, 0, 0) })
+    local dismissConnection
+    dismissConnection = collapse.Completed:Connect(function(state)
+        if dismissConnection then
+            dismissConnection:Disconnect()
+            dismissConnection = nil
+        end
+        if state ~= Enum.PlaybackState.Completed or not self._dismissed or not self.main.Parent then
+            return
+        end
+
+        for _, connection in self._connections do
+            self.window:Disconnect(connection)
+        end
+        self.window:DestroySubtree(self.main)
+    end)
     collapse:Play()
-    collapse.Completed:Wait()
-
-    if not self.main.Parent then
-        return
-    end
-
-    for _, connection in self._connections do
-        self.window:Disconnect(connection)
-    end
-    self.window:DestroySubtree(self.main)
 end
 
 return Notification

@@ -5595,7 +5595,7 @@ function Notification.new(window, properties)
         Active = true,         BorderSizePixel = 0,
         ZIndex = constants.zIndex.notification,
 
-                BackgroundTransparency = 1,
+                BackgroundTransparency = 1, 
         Parent = self.main,
     })
 
@@ -5611,11 +5611,11 @@ function Notification.new(window, properties)
     }, { CornerRadius = "CornerRoundness" })
 
     self.stroke = self.window:Create("UIStroke", {
-        Transparency = 1,
+        Transparency = 1, 
         Parent = self.body,
     }, { Color = "SurfaceStroke" })
 
-    self.shadow = self.window:CreateGlow(self.body, "ShadowColor", 20, 1)
+    self.shadow = self.window:CreateGlow(self.body, "ShadowColor", 20, 1) 
         self.window:Create("UIPadding", {
         PaddingLeft = UDim.new(0, 20),
         PaddingRight = UDim.new(0, 20),
@@ -5642,7 +5642,7 @@ function Notification.new(window, properties)
             LayoutOrder = 1,
             ZIndex = constants.zIndex.notification,
 
-                        ImageTransparency = 1,
+                        ImageTransparency = 1, 
             Parent = self.body,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -5677,7 +5677,7 @@ function Notification.new(window, properties)
         LayoutOrder = 1,
         ZIndex = constants.zIndex.notification,
 
-                TextTransparency = 1,
+                TextTransparency = 1, 
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "TitleFont" })
 
@@ -5694,7 +5694,7 @@ function Notification.new(window, properties)
             LayoutOrder = 2,
             ZIndex = constants.zIndex.notification,
 
-                        TextTransparency = 1,
+                        TextTransparency = 1, 
             Parent = self.container,
         }, { TextColor3 = "ContentColor", FontFace = "Font" })
     end
@@ -5819,21 +5819,25 @@ function Notification:_dismiss()
 
         variables.tweenService:Create(self.body, shrinkInfo, { Size = UDim2.new(1, -90, 1, 0) }):Play()
     local collapse = variables.tweenService:Create(self.main, shrinkInfo, { Size = UDim2.new(1, 0, 0, 0) })
+    local dismissConnection
+    dismissConnection = collapse.Completed:Connect(function(state)
+        if dismissConnection then
+            dismissConnection:Disconnect()
+            dismissConnection = nil
+        end
+        if state ~= Enum.PlaybackState.Completed or not self._dismissed or not self.main.Parent then
+            return
+        end
+
+        for _, connection in self._connections do
+            self.window:Disconnect(connection)
+        end
+        self.window:DestroySubtree(self.main)
+    end)
     collapse:Play()
-    collapse.Completed:Wait()
-
-    if not self.main.Parent then
-        return
-    end
-
-    for _, connection in self._connections do
-        self.window:Disconnect(connection)
-    end
-    self.window:DestroySubtree(self.main)
 end
 
 return Notification
-
 end)() end,
     [26] = function()local wax,script,require=ImportGlobals(26)local ImportGlobals return (function(...)local Popup = {}
 Popup.__index = Popup
@@ -9993,7 +9997,7 @@ local constants = require(utility.constants)
 local image = require(utility.image)
 local hapticEngine = require(utility.HapticEngine)
 
-local slideInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local growInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local fadeLong = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local fadeShort = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local shrinkInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local slideInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local growInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local fadeLong = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local fadeShort = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local shrinkInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) 
 local iconSize = 24 local avatarSize = 32 local leftPadding = 18 local rightPadding = 18 local avatarLeftPadding = 10
 local avatarRightPadding = 28
 local iconGap = 12 local stackPadding = 8 local MIN_WIDTH, MAX_WIDTH = 140, 320
@@ -10073,7 +10077,7 @@ function Toast.new(window, properties, container)
         Active = true,         BorderSizePixel = 0,
         ZIndex = constants.zIndex.toast,
 
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 1, 
         Parent = self.main,
     })
 
@@ -10091,11 +10095,11 @@ function Toast.new(window, properties, container)
     })
 
     self.stroke = self.window:Create("UIStroke", {
-        Transparency = 1,
+        Transparency = 1, 
         Parent = self.body,
     }, { Color = "SurfaceStroke" })
 
-    self.shadow = self.window:CreateGlow(self.body, "ShadowColor", 20, 1)
+    self.shadow = self.window:CreateGlow(self.body, "ShadowColor", 20, 1) 
     self.window:Create("UIPadding", {
         PaddingLeft = UDim.new(0, self._leftPad),
         PaddingRight = UDim.new(0, self._rightPad),
@@ -10122,7 +10126,7 @@ function Toast.new(window, properties, container)
             LayoutOrder = 1,
             ZIndex = constants.zIndex.toastContent,
 
-            BackgroundTransparency = 1,             ImageTransparency = 1,
+            BackgroundTransparency = 1,             ImageTransparency = 1, 
             Parent = self.body,
         }, if hasAvatar then nil else { ImageColor3 = "ContentColor" })
 
@@ -10163,7 +10167,7 @@ function Toast.new(window, properties, container)
         LayoutOrder = if self.subtitleAbove then 2 else 1,
         ZIndex = constants.zIndex.toastContent,
 
-        TextTransparency = 1,
+        TextTransparency = 1, 
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "TitleFont" })
 
@@ -10178,7 +10182,7 @@ function Toast.new(window, properties, container)
             LayoutOrder = if self.subtitleAbove then 1 else 2,
             ZIndex = constants.zIndex.toastContent,
 
-            TextTransparency = 1,
+            TextTransparency = 1, 
             Parent = self.container,
         }, { TextColor3 = "ContentColor", FontFace = "Font" })
     end
@@ -10334,21 +10338,25 @@ function Toast:_dismiss()
     variables.tweenService:Create(self.body, shrinkInfo, { Size = UDim2.new(1, -60, 1, 0) }):Play()
     local collapse =
         variables.tweenService:Create(self.main, shrinkInfo, { Size = UDim2.new(0, self.main.Size.X.Offset, 0, 0) })
+    local dismissConnection
+    dismissConnection = collapse.Completed:Connect(function(state)
+        if dismissConnection then
+            dismissConnection:Disconnect()
+            dismissConnection = nil
+        end
+        if state ~= Enum.PlaybackState.Completed or not self._dismissed or not self.main.Parent then
+            return
+        end
+
+        for _, connection in self._connections do
+            self.window:Disconnect(connection)
+        end
+        self.window:DestroySubtree(self.main)
+    end)
     collapse:Play()
-    collapse.Completed:Wait()
-
-    if not self.main.Parent then
-        return
-    end
-
-    for _, connection in self._connections do
-        self.window:Disconnect(connection)
-    end
-    self.window:DestroySubtree(self.main)
 end
 
 return Toast
-
 end)() end,
     [39] = function()local wax,script,require=ImportGlobals(39)local ImportGlobals return (function(...)local Toggle = {}
 Toggle.__index = Toggle
