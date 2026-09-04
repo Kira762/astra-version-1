@@ -38,6 +38,9 @@ local maxVisibleOptions = 4
 local actionsHeight = 22
 local hintTween = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local hoverTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local panelTween = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local openTween = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local closeTween = TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
 local scrollbarShown = 0.4
 local searchTween = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
@@ -485,14 +488,14 @@ function Dropdown.new(tab, properties)
                 variables.tweenService
                     :Create(
                         frame,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                        hintTween,
                         { BackgroundTransparency = 0.9 }
                     )
                     :Play()
                 variables.tweenService
                     :Create(
                         title,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                        hintTween,
                         { TextTransparency = 0.15 }
                     )
                     :Play()
@@ -511,14 +514,14 @@ function Dropdown.new(tab, properties)
                 variables.tweenService
                     :Create(
                         frame,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                        hintTween,
                         { BackgroundTransparency = 0.95 }
                     )
                     :Play()
                 variables.tweenService
                     :Create(
                         title,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                        hintTween,
                         { TextTransparency = 0.3 }
                     )
                     :Play()
@@ -977,35 +980,35 @@ function Dropdown:_open()
     variables.tweenService
         :Create(
             self.main,
-            TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
+            openTween,
             { Size = UDim2.new(1, -20, 0, self:_openHeight()) }
         )
         :Play()
     variables.tweenService
         :Create(
             self.chevron,
-            TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
+            closeTween,
             { Rotation = 0 }
         )
         :Play()
     variables.tweenService
         :Create(
             self.panel,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            panelTween,
             { BackgroundTransparency = self.window.theme.ElementTransparency or 0 }
         )
         :Play()
     variables.tweenService
         :Create(
             self.panelStroke,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            panelTween,
             { Transparency = self.window.theme.ElementStrokeTransparency }
         )
         :Play()
     variables.tweenService
         :Create(
             self.searchIcon,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            panelTween,
             { ImageTransparency = 0.5 }
         )
         :Play()
@@ -1038,7 +1041,7 @@ function Dropdown:_bringIntoView()
 
             local target = math.min(at.Y + overflow + 8, top)
     variables.tweenService
-        :Create(page, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+        :Create(page, panelTween, {
             CanvasPosition = Vector2.new(at.X, target),
         })
         :Play()
@@ -1061,28 +1064,28 @@ function Dropdown:_close()
     variables.tweenService
         :Create(
             self.chevron,
-            TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
+            closeTween,
             { Rotation = 180 }
         )
         :Play()
     variables.tweenService
         :Create(
             self.panel,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            panelTween,
             { BackgroundTransparency = 1 }
         )
         :Play()
     variables.tweenService
         :Create(
             self.panelStroke,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            panelTween,
             { Transparency = 1 }
         )
         :Play()
     variables.tweenService
         :Create(
             self.searchIcon,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            panelTween,
             { ImageTransparency = 1 }
         )
         :Play()
@@ -1094,7 +1097,7 @@ function Dropdown:_close()
     variables.tweenService
         :Create(
             self.main,
-            TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
+            openTween,
             { Size = UDim2.new(1, -20, 0, 41) }
         )
         :Play()

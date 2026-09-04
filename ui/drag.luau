@@ -6,6 +6,8 @@ local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local constants = require(utility.constants)
+local dragCosmeticTween = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local dragHoverTween = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
 function Drag.new(window, properties)
     properties = if typeof(properties) == "table" then properties else {}
@@ -94,7 +96,7 @@ function Drag.new(window, properties)
             variables.tweenService
                 :Create(
                     self.dragCosmetic,
-                    TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                    dragHoverTween,
                     { BackgroundTransparency = 0.5, Size = UDim2.new(0, 120, 0, 4) }
                 )
                 :Play()
@@ -106,7 +108,7 @@ function Drag.new(window, properties)
             variables.tweenService
                 :Create(
                     self.dragCosmetic,
-                    TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                    dragHoverTween,
                     { BackgroundTransparency = 0.7, Size = UDim2.new(0, 100, 0, 4) }
                 )
                 :Play()
@@ -131,7 +133,7 @@ function Drag.new(window, properties)
         variables.tweenService
             :Create(
                 self.dragCosmetic,
-                TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                dragCosmeticTween,
                 { Size = UDim2.new(0, 100, 0, 4), BackgroundTransparency = 0.7 }
             )
             :Play()
@@ -175,7 +177,7 @@ function Drag.new(window, properties)
                 variables.tweenService
                     :Create(
                         self.dragCosmetic,
-                        TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                        dragCosmeticTween,
                         { Size = UDim2.new(0, 110, 0, 4), BackgroundTransparency = 0 }
                     )
                     :Play()

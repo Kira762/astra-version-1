@@ -10,6 +10,7 @@ local moveable = require(utility.moveable)
 local lockable = require(utility.lockable)
 local locale = require(utility.locale)
 local hapticEngine = require(utility.HapticEngine)
+local toggleStrokeTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 function Toggle.new(tab, properties)
     properties = if typeof(properties) == "table" then properties else {}
@@ -219,7 +220,7 @@ function Toggle:_buildFull()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                toggleStrokeTween,
                 { Transparency = 1 }
             )
             :Play()
@@ -245,7 +246,7 @@ function Toggle:_buildFull()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                toggleStrokeTween,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
@@ -340,7 +341,7 @@ function Toggle:_buildCompact()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                toggleStrokeTween,
                 { Transparency = 1 }
             )
             :Play()
@@ -352,7 +353,7 @@ function Toggle:_buildCompact()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                toggleStrokeTween,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()

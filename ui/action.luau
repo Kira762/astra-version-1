@@ -7,6 +7,7 @@ local utility = script.Parent.Parent.utilities
 local variables = require(utility.variables)
 local log = require(utility.log)
 local hapticEngine = require(utility.HapticEngine)
+local actionHoverTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 function Action.new(window, properties)
     properties = if typeof(properties) == "table" then properties else {}
@@ -66,7 +67,7 @@ function Action.new(window, properties)
         variables.tweenService
             :Create(
                 self.iconLabel,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                actionHoverTween,
                 { ImageTransparency = 0.6 }
             )
             :Play()
@@ -92,7 +93,7 @@ function Action.new(window, properties)
         variables.tweenService
             :Create(
                 self.iconLabel,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                actionHoverTween,
                 { ImageTransparency = 0.2 }
             )
             :Play()

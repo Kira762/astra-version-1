@@ -10,6 +10,7 @@ local moveable = require(utility.moveable)
 local lockable = require(utility.lockable)
 local locale = require(utility.locale)
 local hapticEngine = require(utility.HapticEngine)
+local clickStrokeTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 function Button.new(tab, properties)
     properties = if typeof(properties) == "table" then properties else {}
@@ -120,7 +121,7 @@ function Button:_buildFull()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                clickStrokeTween,
                 { Transparency = 1 }
             )
             :Play()
@@ -146,7 +147,7 @@ function Button:_buildFull()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                clickStrokeTween,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
@@ -215,7 +216,7 @@ function Button:_buildCompact()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                clickStrokeTween,
                 { Transparency = 1 }
             )
             :Play()
@@ -227,7 +228,7 @@ function Button:_buildCompact()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                clickStrokeTween,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()

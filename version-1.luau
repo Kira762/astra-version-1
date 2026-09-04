@@ -832,6 +832,7 @@ local utility = script.Parent.Parent.utilities
 local variables = require(utility.variables)
 local log = require(utility.log)
 local hapticEngine = require(utility.HapticEngine)
+local actionHoverTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 function Action.new(window, properties)
     properties = if typeof(properties) == "table" then properties else {}
@@ -864,7 +865,7 @@ function Action.new(window, properties)
         Position = UDim2.fromScale(0.5, 0.5),
         BackgroundTransparency = 1,
 
-                ImageTransparency = 1,
+                ImageTransparency = 1, 
         Parent = self.action,
     }, { ImageColor3 = "ActionColor" })
 
@@ -891,7 +892,7 @@ function Action.new(window, properties)
         variables.tweenService
             :Create(
                 self.iconLabel,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                actionHoverTween,
                 { ImageTransparency = 0.6 }
             )
             :Play()
@@ -917,7 +918,7 @@ function Action.new(window, properties)
         variables.tweenService
             :Create(
                 self.iconLabel,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                actionHoverTween,
                 { ImageTransparency = 0.2 }
             )
             :Play()
@@ -929,7 +930,6 @@ function Action.new(window, properties)
 end
 
 return Action
-
 end)() end,
     [14] = function()local wax,script,require=ImportGlobals(14)local ImportGlobals return (function(...)local Button = {}
 Button.__index = Button
@@ -943,6 +943,7 @@ local moveable = require(utility.moveable)
 local lockable = require(utility.lockable)
 local locale = require(utility.locale)
 local hapticEngine = require(utility.HapticEngine)
+local clickStrokeTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 function Button.new(tab, properties)
     properties = if typeof(properties) == "table" then properties else {}
@@ -953,7 +954,7 @@ function Button.new(tab, properties)
         name = properties.name or properties.Name or "Button",
         icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
         description = properties.description or properties.Description,
-        compact = tab.compact or false,
+        compact = tab.compact or false, 
         callback = properties.callback or properties.Callback or function() end,
     }, Button)
 
@@ -981,7 +982,7 @@ function Button:_buildFull()
         Name = self.name,
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 
-                BackgroundTransparency = 1,
+                BackgroundTransparency = 1, 
         Parent = self.tab.tabPage,
     }, { BackgroundTransparency = "ElementTransparency" })
 
@@ -1014,7 +1015,7 @@ function Button:_buildFull()
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
 
-                        ImageTransparency = 1,
+                        ImageTransparency = 1, 
             Parent = self.container,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -1031,7 +1032,7 @@ function Button:_buildFull()
         TextWrapped = true,
         LayoutOrder = 1,
 
-                TextTransparency = 1,
+                TextTransparency = 1, 
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
@@ -1053,7 +1054,7 @@ function Button:_buildFull()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                clickStrokeTween,
                 { Transparency = 1 }
             )
             :Play()
@@ -1079,7 +1080,7 @@ function Button:_buildFull()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                clickStrokeTween,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
@@ -1116,7 +1117,7 @@ function Button:_buildCompact()
             BackgroundTransparency = 1,
             LayoutOrder = 0,
 
-            ImageTransparency = 1,
+            ImageTransparency = 1, 
             Parent = self.interact,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -1132,7 +1133,7 @@ function Button:_buildCompact()
         TextTruncate = Enum.TextTruncate.AtEnd,
         LayoutOrder = 1,
 
-        TextTransparency = 1,
+        TextTransparency = 1, 
         Parent = self.interact,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
@@ -1148,7 +1149,7 @@ function Button:_buildCompact()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                clickStrokeTween,
                 { Transparency = 1 }
             )
             :Play()
@@ -1160,7 +1161,7 @@ function Button:_buildCompact()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                clickStrokeTween,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
@@ -1186,7 +1187,6 @@ moveable(Button)
 lockable(Button)
 
 return Button
-
 end)() end,
     [15] = function()local wax,script,require=ImportGlobals(15)local ImportGlobals return (function(...)local utility = script.Parent.Parent.utilities
 local variables = require(utility.variables)
@@ -3086,6 +3086,8 @@ local utility = script.Parent.Parent.utilities
 
 local variables = require(utility.variables)
 local constants = require(utility.constants)
+local dragCosmeticTween = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local dragHoverTween = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
 function Drag.new(window, properties)
     properties = if typeof(properties) == "table" then properties else {}
@@ -3174,7 +3176,7 @@ function Drag.new(window, properties)
             variables.tweenService
                 :Create(
                     self.dragCosmetic,
-                    TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                    dragHoverTween,
                     { BackgroundTransparency = 0.5, Size = UDim2.new(0, 120, 0, 4) }
                 )
                 :Play()
@@ -3186,7 +3188,7 @@ function Drag.new(window, properties)
             variables.tweenService
                 :Create(
                     self.dragCosmetic,
-                    TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                    dragHoverTween,
                     { BackgroundTransparency = 0.7, Size = UDim2.new(0, 100, 0, 4) }
                 )
                 :Play()
@@ -3211,7 +3213,7 @@ function Drag.new(window, properties)
         variables.tweenService
             :Create(
                 self.dragCosmetic,
-                TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                dragCosmeticTween,
                 { Size = UDim2.new(0, 100, 0, 4), BackgroundTransparency = 0.7 }
             )
             :Play()
@@ -3255,7 +3257,7 @@ function Drag.new(window, properties)
                 variables.tweenService
                     :Create(
                         self.dragCosmetic,
-                        TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                        dragCosmeticTween,
                         { Size = UDim2.new(0, 110, 0, 4), BackgroundTransparency = 0 }
                     )
                     :Play()
@@ -3327,7 +3329,7 @@ local searchExpandedHeight = 38
 
 local optionHeight = 38
 local optionGap = 5
-local listPadding = 2
+local listPadding = 2 
 local headerHeight = 41
 local headerGap = 6
 local cardPaddingTop = 7
@@ -3339,6 +3341,9 @@ local maxVisibleOptions = 4
 local actionsHeight = 22
 local hintTween = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local hoverTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local panelTween = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local openTween = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local closeTween = TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
 local scrollbarShown = 0.4
 local searchTween = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
@@ -3406,7 +3411,7 @@ function Dropdown.new(tab, properties)
         name = properties.name or properties.Name or "Dropdown",
         icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
         description = properties.description or properties.Description,
-        forgetState = properties.forgetState or properties.ForgetState or tab.forgetState,
+        forgetState = properties.forgetState or properties.ForgetState or tab.forgetState, 
         flag = properties.flag
             or properties.Flag
             or (
@@ -3456,7 +3461,7 @@ function Dropdown.new(tab, properties)
 
             self.stroke = self.window:StyleElementBody(self.top)
     self.hoverOverlay = self.window:CreateHoverOverlay(self.top)
-    self.flashTarget = self.top
+    self.flashTarget = self.top 
     self.container = self.window:Create("Frame", {
         BorderSizePixel = 0,
 
@@ -3484,7 +3489,7 @@ function Dropdown.new(tab, properties)
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
 
-                        ImageTransparency = 1,
+                        ImageTransparency = 1, 
             ZIndex = 5,
             Parent = self.container,
         }, { ImageColor3 = "ContentColor" })
@@ -3502,7 +3507,7 @@ function Dropdown.new(tab, properties)
         TextWrapped = true,
         LayoutOrder = 1,
 
-                TextTransparency = 1,
+                TextTransparency = 1, 
         ZIndex = 5,
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
@@ -3517,7 +3522,7 @@ function Dropdown.new(tab, properties)
         TextXAlignment = Enum.TextXAlignment.Right,
         TextWrapped = true,
 
-                TextTransparency = 1,
+                TextTransparency = 1, 
         ZIndex = 5,
         Parent = self.top,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
@@ -3531,7 +3536,7 @@ function Dropdown.new(tab, properties)
         Image = "rbxassetid://" .. tostring(chevronIcon),
         Rotation = 180,
 
-                ImageTransparency = 1,
+                ImageTransparency = 1, 
         ZIndex = 5,
         Parent = self.top,
     }, { ImageColor3 = "ContentColor" })
@@ -3558,7 +3563,7 @@ function Dropdown.new(tab, properties)
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         ZIndex = 1,
 
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 1, 
         Parent = self.main,
     })
 
@@ -3786,14 +3791,14 @@ function Dropdown.new(tab, properties)
                 variables.tweenService
                     :Create(
                         frame,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                        hintTween,
                         { BackgroundTransparency = 0.9 }
                     )
                     :Play()
                 variables.tweenService
                     :Create(
                         title,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                        hintTween,
                         { TextTransparency = 0.15 }
                     )
                     :Play()
@@ -3812,14 +3817,14 @@ function Dropdown.new(tab, properties)
                 variables.tweenService
                     :Create(
                         frame,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                        hintTween,
                         { BackgroundTransparency = 0.95 }
                     )
                     :Play()
                 variables.tweenService
                     :Create(
                         title,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                        hintTween,
                         { TextTransparency = 0.3 }
                     )
                     :Play()
@@ -3959,7 +3964,7 @@ function Dropdown:_buildSearch()
         Transparency = 1,         Parent = self.searchbar,
     })
 
-    self.searchShadow = self.window:CreateGlow(self.searchbar, Color3.fromRGB(255, 255, 255), 20, 1)
+    self.searchShadow = self.window:CreateGlow(self.searchbar, Color3.fromRGB(255, 255, 255), 20, 1) 
             self.searchToggle = self.window:Create("TextButton", {
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
@@ -3981,7 +3986,7 @@ function Dropdown:_buildSearch()
         ClearTextOnFocus = false,
         TextEditable = false,         Interactable = false,         ZIndex = 52,
 
-        TextTransparency = 1,
+        TextTransparency = 1, 
         Parent = self.searchbar,
     }, { TextColor3 = "ContentColor", FontFace = "Font", PlaceholderColor3 = "PlaceholderColor" })
 
@@ -3994,7 +3999,7 @@ function Dropdown:_buildSearch()
         AutoButtonColor = false,
         ZIndex = 53,
 
-        ImageTransparency = 1,
+        ImageTransparency = 1, 
         Parent = self.searchbar,
     }, { ImageColor3 = "ContentColor" })
 
@@ -4050,7 +4055,7 @@ function Dropdown:_collapseSearch()
     self.searchInput.TextEditable = false
     self.searchInput.Interactable = false
     self.searchInput:ReleaseFocus()
-    self.searchInput.Text = ""
+    self.searchInput.Text = "" 
     variables.tweenService
         :Create(
             self.searchbar,
@@ -4278,35 +4283,35 @@ function Dropdown:_open()
     variables.tweenService
         :Create(
             self.main,
-            TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
+            openTween,
             { Size = UDim2.new(1, -20, 0, self:_openHeight()) }
         )
         :Play()
     variables.tweenService
         :Create(
             self.chevron,
-            TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
+            closeTween,
             { Rotation = 0 }
         )
         :Play()
     variables.tweenService
         :Create(
             self.panel,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            panelTween,
             { BackgroundTransparency = self.window.theme.ElementTransparency or 0 }
         )
         :Play()
     variables.tweenService
         :Create(
             self.panelStroke,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            panelTween,
             { Transparency = self.window.theme.ElementStrokeTransparency }
         )
         :Play()
     variables.tweenService
         :Create(
             self.searchIcon,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            panelTween,
             { ImageTransparency = 0.5 }
         )
         :Play()
@@ -4339,7 +4344,7 @@ function Dropdown:_bringIntoView()
 
             local target = math.min(at.Y + overflow + 8, top)
     variables.tweenService
-        :Create(page, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+        :Create(page, panelTween, {
             CanvasPosition = Vector2.new(at.X, target),
         })
         :Play()
@@ -4362,28 +4367,28 @@ function Dropdown:_close()
     variables.tweenService
         :Create(
             self.chevron,
-            TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
+            closeTween,
             { Rotation = 180 }
         )
         :Play()
     variables.tweenService
         :Create(
             self.panel,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            panelTween,
             { BackgroundTransparency = 1 }
         )
         :Play()
     variables.tweenService
         :Create(
             self.panelStroke,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            panelTween,
             { Transparency = 1 }
         )
         :Play()
     variables.tweenService
         :Create(
             self.searchIcon,
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+            panelTween,
             { ImageTransparency = 1 }
         )
         :Play()
@@ -4395,7 +4400,7 @@ function Dropdown:_close()
     variables.tweenService
         :Create(
             self.main,
-            TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
+            openTween,
             { Size = UDim2.new(1, -20, 0, 41) }
         )
         :Play()
@@ -4610,7 +4615,6 @@ end
 lockable(Dropdown)
 
 return Dropdown
-
 end)() end,
     [22] = function()local wax,script,require=ImportGlobals(22)local ImportGlobals return (function(...)local Group = {}
 Group.__index = Group
@@ -8955,7 +8959,21 @@ local function teardownElements(window, elements)
 end
 
 local selectTweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local hoverTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local hoverTweenInfo = hoverTweenInfo
+
+local function pageSize(layout)
+    if layout.mode == "sidebar" then
+        return UDim2.new(1, -35, 1, 0)
+    end
+    return UDim2.new(1, -20, 1, 0)
+end
+
+local function pagePosition(layout)
+    if layout.mode == "sidebar" then
+        return UDim2.new(0, 35, 0, 0)
+    end
+    return UDim2.new(0, 0, 0, 0)
+end
 
 function Tab.new(window, properties)
     properties = if typeof(properties) == "table" then properties else {}
@@ -8979,8 +8997,8 @@ function Tab.new(window, properties)
 
         self.tabPage = self.window:Create("ScrollingFrame", {
         Name = self.name,
-        Size = if self.window.layout.mode == "sidebar" then UDim2.new(1, -35, 1, 0) else UDim2.new(1, -20, 1, 0),
-        Position = UDim2.new(0, 0, 0, 0),
+        Size = pageSize(self.window.layout),
+        Position = pagePosition(self.window.layout),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -9244,7 +9262,6 @@ function Tab:Remove()
 end
 
 return Tab
-
 end)() end,
     [34] = function()local wax,script,require=ImportGlobals(34)local ImportGlobals return (function(...)local TabSection = {}
 TabSection.__index = TabSection
@@ -10370,6 +10387,7 @@ local moveable = require(utility.moveable)
 local lockable = require(utility.lockable)
 local locale = require(utility.locale)
 local hapticEngine = require(utility.HapticEngine)
+local toggleStrokeTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 function Toggle.new(tab, properties)
     properties = if typeof(properties) == "table" then properties else {}
@@ -10380,7 +10398,7 @@ function Toggle.new(tab, properties)
         name = properties.name or properties.Name or "Switch",
         icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
         description = properties.description or properties.Description,
-        forgetState = properties.forgetState or properties.ForgetState or tab.forgetState,         compact = tab.compact or false,
+        forgetState = properties.forgetState or properties.ForgetState or tab.forgetState,         compact = tab.compact or false, 
         flag = properties.flag
             or properties.Flag
             or (
@@ -10416,7 +10434,7 @@ function Toggle:_buildSwitch(parent)
         BorderSizePixel = 0,
         Size = UDim2.fromOffset(50, 21),
 
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 1, 
         Parent = parent,
     }, { BackgroundColor3 = "ToggleTrack" })
 
@@ -10436,7 +10454,7 @@ function Toggle:_buildSwitch(parent)
         AnchorPoint = Vector2.new(0, 0.5),
         BackgroundColor3 = self.value and self.window.theme.AccentColor or self.window.theme.ToggleKnobOff,
 
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 1, 
         Parent = self.functionContainer,
     })
 
@@ -10459,7 +10477,7 @@ function Toggle:_buildSwitch(parent)
         AnchorPoint = Vector2.new(0, 0),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 1, 
         Parent = self.functionContainer,
     }, { Visible = "DarkToggleOverlay" })
 
@@ -10537,7 +10555,7 @@ function Toggle:_buildFull()
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
 
-            ImageTransparency = 1,
+            ImageTransparency = 1, 
             Parent = self.container,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -10553,7 +10571,7 @@ function Toggle:_buildFull()
         TextWrapped = true,
         LayoutOrder = 1,
 
-        TextTransparency = 1,
+        TextTransparency = 1, 
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
@@ -10579,7 +10597,7 @@ function Toggle:_buildFull()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                toggleStrokeTween,
                 { Transparency = 1 }
             )
             :Play()
@@ -10605,7 +10623,7 @@ function Toggle:_buildFull()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                toggleStrokeTween,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
@@ -10666,7 +10684,7 @@ function Toggle:_buildCompact()
             BackgroundTransparency = 1,
             LayoutOrder = 0,
 
-            ImageTransparency = 1,
+            ImageTransparency = 1, 
             Parent = self.container,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -10682,7 +10700,7 @@ function Toggle:_buildCompact()
         TextTruncate = Enum.TextTruncate.AtEnd,
         LayoutOrder = 1,
 
-        TextTransparency = 1,
+        TextTransparency = 1, 
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
@@ -10700,7 +10718,7 @@ function Toggle:_buildCompact()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                toggleStrokeTween,
                 { Transparency = 1 }
             )
             :Play()
@@ -10712,7 +10730,7 @@ function Toggle:_buildCompact()
         variables.tweenService
             :Create(
                 self.stroke,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                toggleStrokeTween,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
@@ -10832,7 +10850,6 @@ function Toggle:Set(value, skipCallback)
 end
 
 return Toggle
-
 end)() end,
     [40] = function()local wax,script,require=ImportGlobals(40)local ImportGlobals return (function(...)local utility = script.Parent.Parent.utilities
 local image = require(utility.image)

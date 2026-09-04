@@ -40,7 +40,7 @@ local function teardownElements(window, elements)
 end
 
 local selectTweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local hoverTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local hoverTweenInfo = hoverTweenInfo
 
 local function pageSize(layout)
     if layout.mode == "sidebar" then
