@@ -52,6 +52,8 @@ layouts.top = {
     tabStripTop = tabStripTop,
     tabStripHeight = tabStripHeight,
 
+    profileHeight = 48,
+
     pageDirection = Enum.FillDirection.Horizontal,
 
             fadeSize = UDim2.new(1, 0, -0.093, 100),

@@ -29,74 +29,134 @@ end
 
 local settleInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
+local profileBuildGeneration = 0
+
 local function profileVisible(window)
-    return window.layout.mode == "sidebar"
-        and window.profile ~= nil
+    return window.profile ~= nil
         and window.settings.showProfile
         and variables.localPlayer ~= nil
+end
+
+local function currentProfileBuildGeneration(window)
+    return window.profileBuildGeneration or 0
 end
 
 local function buildProfile(window, layout)
     local player = variables.localPlayer
     if not player then
-        return     end
+        window.profileBuildGeneration = 0
+        return
+    end
 
-    window.profile = window:Create("Frame", {
-        Name = "Profile",
-        AnchorPoint = Vector2.new(0.5, 1),
-        Position = UDim2.fromScale(0.5, 1),
-        Size = UDim2.new(1, 0, 0, layout.footerHeight),
-        BackgroundTransparency = 1,
+    profileBuildGeneration += 1
+    local generation = profileBuildGeneration
+    window.profileBuildGeneration = generation
 
-        Parent = window.sidebar,
-    })
+    local isSidebar = layout.mode == "sidebar"
+    local isCollapsed = layout.mode == "collapsedSidebar"
+    local isTop = layout.mode == "top"
 
-    window.profileContainer = window:Create("Frame", {
-        AnchorPoint = Vector2.new(0, 0.5),
-        Position = UDim2.new(0, layout.rowInset, 0.5, 0),
-        Size = UDim2.new(1, -layout.rowInset, 1, 0),
-        BackgroundTransparency = 1,
+    if isSidebar then
+        window.profile = window:Create("Frame", {
+            Name = "Profile",
+            AnchorPoint = Vector2.new(0.5, 1),
+            Position = UDim2.fromScale(0.5, 1),
+            Size = UDim2.new(1, 0, 0, layout.footerHeight),
+            BackgroundTransparency = 1,
+            Parent = window.sidebar,
+        })
 
-        Parent = window.profile,
-    })
+        window.profileContainer = window:Create("Frame", {
+            AnchorPoint = Vector2.new(0, 0.5),
+            Position = UDim2.new(0, layout.rowInset, 0.5, 0),
+            Size = UDim2.new(1, -layout.rowInset, 1, 0),
+            BackgroundTransparency = 1,
+            Parent = window.profile,
+        })
 
-    window.profileLayout = window:Create("UIListLayout", {
-        Padding = UDim.new(0, 10),
-        FillDirection = Enum.FillDirection.Horizontal,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        HorizontalAlignment = Enum.HorizontalAlignment.Left,
-        SortOrder = Enum.SortOrder.LayoutOrder,
+        window.profileLayout = window:Create("UIListLayout", {
+            Padding = UDim.new(0, 10),
+            FillDirection = Enum.FillDirection.Horizontal,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+            HorizontalAlignment = Enum.HorizontalAlignment.Left,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = window.profileContainer,
+        })
+    elseif isTop then
+        window.profile = window:Create("Frame", {
+            Name = "Profile",
+            AnchorPoint = Vector2.new(0, 1),
+            Position = UDim2.new(0, 0, 1, -0),
+            Size = UDim2.new(1, 0, 0, layout.profileHeight),
+            BackgroundTransparency = 1,
+            Parent = window.topbar,
+        })
 
-        Parent = window.profileContainer,
-    })
+        window.profileContainer = window:Create("Frame", {
+            Size = UDim2.new(1, -25, 1, -4),
+            Position = UDim2.new(0, 25, 0, 2),
+            BackgroundTransparency = 1,
+            Parent = window.profile,
+        })
 
-            window.profileAvatar = window:Create("ImageLabel", {
+        window.profileLayout = window:Create("UIListLayout", {
+            Padding = UDim.new(0, 12),
+            FillDirection = Enum.FillDirection.Horizontal,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+            HorizontalAlignment = Enum.HorizontalAlignment.Left,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = window.profileContainer,
+        })
+
+        window.profileSpacer = window:Create("Frame", {
+            Size = UDim2.new(1, 0, 0, 0),
+            LayoutOrder = 2,
+            BackgroundTransparency = 1,
+            Parent = window.profileContainer,
+        })
+    else
+        window.profile = window:Create("Frame", {
+            Name = "Profile",
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.new(1, -8, 1, -8),
+            BackgroundTransparency = 1,
+            Parent = window.sidebar,
+        })
+
+        window.profileContainer = window.profile
+        window.profileLayout = window:Create("UIListLayout", {
+            Padding = UDim.new(0, 0),
+            FillDirection = Enum.FillDirection.Horizontal,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+            HorizontalAlignment = Enum.HorizontalAlignment.Center,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = window.profileContainer,
+        })
+    end
+
+    local avatarSize = layout.avatarSize
+
+    window.profileAvatar = window:Create("ImageLabel", {
         Name = "Avatar",
-        Image = image.avatar(player.UserId, function(uri)
-            if window.profileAvatar and not window.unloaded then
-                image.assign(window.profileAvatar, "Image", uri)
-            end
-        end),
-        Size = UDim2.fromOffset(layout.avatarSize, layout.avatarSize),
+        Size = UDim2.fromOffset(avatarSize, avatarSize),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
-
-                BackgroundTransparency = 1,         ImageTransparency = 1, 
+        BackgroundTransparency = 1,
+        ImageTransparency = 1,
         Parent = window.profileContainer,
     })
 
     window:Create("UICorner", {
         CornerRadius = UDim.new(1, 0),
-
         Parent = window.profileAvatar,
     })
 
     window.profileLabels = window:Create("Frame", {
-        Size = UDim2.fromOffset(50, layout.avatarSize),
+        Size = UDim2.fromOffset(50, avatarSize),
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
-        LayoutOrder = 1,
-
+        LayoutOrder = isCollapsed and 0 or 1,
         Parent = window.profileContainer,
     })
 
@@ -106,7 +166,6 @@ local function buildProfile(window, layout)
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
-
         Parent = window.profileLabels,
     })
 
@@ -117,12 +176,11 @@ local function buildProfile(window, layout)
         BackgroundTransparency = 1,
         TextSize = 16,
         TextXAlignment = Enum.TextXAlignment.Left,
-
-                TextTransparency = 1, 
+        TextTransparency = 1,
         Parent = window.profileLabels,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 
-            window.profileSubtitle = window:Create("TextLabel", {
+    window.profileSubtitle = window:Create("TextLabel", {
         Text = "",
         Size = UDim2.fromOffset(50, 14),
         AutomaticSize = Enum.AutomaticSize.X,
@@ -131,56 +189,76 @@ local function buildProfile(window, layout)
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 1,
         Visible = false,
-
-                TextTransparency = 1, 
+        TextTransparency = 1,
         Parent = window.profileLabels,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
+
+    window.profileAvatar._profileGeneration = generation
+
+    local avatarUri = image.avatar(player.UserId, function(uri)
+        if window.unloaded then
+            return
+        end
+        local currentAvatar = window.profileAvatar
+        if not currentAvatar then
+            return
+        end
+        if currentAvatar._profileGeneration ~= generation then
+            return
+        end
+        image.assign(currentAvatar, "Image", uri)
+    end)
+
+    if avatarUri ~= "" then
+        image.assign(window.profileAvatar, "Image", avatarUri)
+    end
 end
 
 function sidebar.build(window, layout)
-    window.sidebar = window:Create("Frame", {
-        Name = "Sidebar",
-        AnchorPoint = Vector2.new(0, 1),
-        Position = UDim2.fromScale(0, 1),
-        Size = UDim2.new(0, layout.railWidth, 1, -layout.chromeHeight),
-        BackgroundTransparency = 1,
+    local isSidebar = layout.mode == "sidebar"
+    local isCollapsed = layout.mode == "collapsedSidebar"
 
-        Visible = false, 
-        Parent = window.main,
-    })
+    if isSidebar or isCollapsed then
+        window.sidebar = window:Create("Frame", {
+            Name = "Sidebar",
+            AnchorPoint = Vector2.new(0, 1),
+            Position = UDim2.fromScale(0, 1),
+            Size = UDim2.new(0, layout.railWidth, 1, -layout.chromeHeight),
+            BackgroundTransparency = 1,
+            Visible = false,
+            Parent = window.main,
+        })
 
-    window.tabList = window:Create("ScrollingFrame", {
-        Name = "Tabs",
-        Active = true,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        ScrollBarThickness = 0,
-        ScrollBarImageTransparency = 1,
-        ScrollingDirection = Enum.ScrollingDirection.Y,
-        ClipsDescendants = true,
+        window.tabList = window:Create("ScrollingFrame", {
+            Name = "Tabs",
+            Active = true,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ScrollBarThickness = 0,
+            ScrollBarImageTransparency = 1,
+            ScrollingDirection = Enum.ScrollingDirection.Y,
+            ClipsDescendants = true,
+            Parent = window.sidebar,
+        })
 
-        Parent = window.sidebar,
-    })
+        window:Create("UIPadding", {
+            PaddingTop = UDim.new(0, layout.railPadding),
+            PaddingBottom = UDim.new(0, layout.railPadding),
+            Parent = window.tabList,
+        })
 
-            window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, layout.railPadding),
-        PaddingBottom = UDim.new(0, layout.railPadding),
-
-        Parent = window.tabList,
-    })
-
-    window.tabListLayout = window:Create("UIListLayout", {
-        Padding = UDim.new(0, layout.rowSpacing),
-        FillDirection = Enum.FillDirection.Vertical,
-        VerticalAlignment = Enum.VerticalAlignment.Top,
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-
-        Parent = window.tabList,
-    })
+        window.tabListLayout = window:Create("UIListLayout", {
+            Padding = UDim.new(0, layout.rowSpacing),
+            FillDirection = Enum.FillDirection.Vertical,
+            VerticalAlignment = Enum.VerticalAlignment.Top,
+            HorizontalAlignment = Enum.HorizontalAlignment.Center,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = window.tabList,
+        })
+    end
 
     buildProfile(window, layout)
     sidebar.reflowProfile(window)
@@ -193,7 +271,26 @@ function sidebar.reflowProfile(window)
     if window.profile then
         window.profile.Visible = shown
     end
-    window.tabList.Size = UDim2.new(1, 0, 1, if shown then -layout.footerHeight else 0)
+
+    if layout.mode == "sidebar" then
+        window.tabList.Size = UDim2.new(1, 0, 1, if shown then -layout.footerHeight else 0)
+    elseif layout.mode == "top" then
+        window.profile.Size = UDim2.new(1, 0, 0, if shown then layout.profileHeight else 0)
+    end
+
+    if window.profileLabels and window.profileLabels.Visible ~= (layout.mode ~= "collapsedSidebar") then
+        window.profileLabels.Visible = layout.mode ~= "collapsedSidebar"
+    end
+
+    if window.profileContainer and layout.mode == "sidebar" then
+        local width = window.sidebar and window.sidebar.AbsoluteSize.X or layout.railWidth
+        local collapsed = width < (layout.railWidth :: number)
+        window.profileContainer.Position = UDim2.new(0, if collapsed then 0 else layout.rowInset, 0.5, 0)
+        window.profileContainer.Size = UDim2.new(1, if collapsed then 0 else -layout.rowInset, 1, 0)
+        window.profileLayout.HorizontalAlignment = if collapsed
+            then Enum.HorizontalAlignment.Center
+            else Enum.HorizontalAlignment.Left
+    end
 end
 
 function sidebar.applyWidth(window, width)
@@ -211,7 +308,7 @@ function sidebar.applyWidth(window, width)
         end
     end
 
-    if window.profileContainer then
+    if window.profileContainer and layout.mode == "sidebar" then
         window.profileContainer.Position = UDim2.new(0, if collapsed then 0 else layout.rowInset, 0.5, 0)
         window.profileContainer.Size = UDim2.new(1, if collapsed then 0 else -layout.rowInset, 1, 0)
         window.profileLayout.HorizontalAlignment = if collapsed
@@ -252,20 +349,14 @@ function sidebar.setProfileEnabled(window, enabled)
         return
     end
 
-    if enabled then
-        window.settings.showProfile = true
-        sidebar.reflowProfile(window)
-        sidebar.setProfileShown(window, true, settleInfo)
-        return
-    end
+    window.settings.showProfile = enabled
+    sidebar.reflowProfile(window)
 
+    if enabled then
+        sidebar.setProfileShown(window, true, settleInfo)
+    else
         sidebar.setProfileShown(window, false, settleInfo)
-    task.delay(settleInfo.Time, function()
-        if window.unloaded or window.settings.showProfile then
-            return         end
-        sidebar.reflowProfile(window)
-    end)
-    window.settings.showProfile = false
+    end
 end
 
 function sidebar.setSubtitle(window, text)

@@ -264,6 +264,8 @@ function Window.new(properties)
                 customFolder = cfg.customFolder or cfg.CustomFolder,
             }
         end)(),
+
+        profileBuildGeneration = 0,
     }, Window)
 
             self.Flags = setmetatable({}, {
@@ -539,8 +541,13 @@ function Window.new(properties)
             if self.layout.mode == "sidebar" then
         sidebar.build(self, self.layout)
         sidebar.applyWidth(self, layouts.railWidthFor(self.layout, self.size.X.Offset))
-        else
+    else
         buildTopTabList(self)
+        if self.layout.mode == "top" then
+            sidebar.build(self, self.layout)
+        elseif self.layout.mode == "collapsedSidebar" then
+            sidebar.build(self, self.layout)
+        end
     end
 
         self.actionContainer = self:Create("Frame", {
@@ -1508,14 +1515,13 @@ function Window:_buildSettingsUI()
     })
 
     self.rfSettings:CreateToggle({
-        name = "Show profile in sidebar",
-        description = "Shows your account profile at the bottom of the Sidebar layout.",
+        name = "Show profile",
+        description = "Shows your account profile in the active bar layout.",
         value = self.settings.showProfile,
         callback = function(state)
             self.settings.showProfile = state == true
-            if self.layout.mode == "sidebar" then
-                sidebar.reflowProfile(self)
-            end
+            sidebar.reflowProfile(self)
+            sidebar.setProfileShown(self, self.settings.showProfile, settleInfo)
             self:SaveSettings()
         end,
     })
@@ -1907,6 +1913,7 @@ function Window:_setLayoutMode(mode)
         sidebar.applyWidth(self, layouts.railWidthFor(nextLayout, self.size.X.Offset))
     else
         buildTopTabList(self)
+        sidebar.build(self, nextLayout)
         if self.elementsCorner then
             self.elementsCorner.CornerRadius = UDim.new(0, 0)
         end
