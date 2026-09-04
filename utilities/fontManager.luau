@@ -396,7 +396,14 @@ function fontManager.loadFont(
     local pendingKey = tostring(resolvedId) .. "|" .. cacheKey
     local waiting = pendingLoads[pendingKey]
     if waiting then
-        table.insert(waiting, coroutine.running())
+        if not coroutine.isyieldable() then
+            return self.defaultOptions.fallbackFont
+        end
+        local thread = coroutine.running()
+        if not thread then
+            return self.defaultOptions.fallbackFont
+        end
+        table.insert(waiting, thread)
         return coroutine.yield()
     end
     pendingLoads[pendingKey] = {}
@@ -408,7 +415,7 @@ function fontManager.loadFont(
     pendingLoads[pendingKey] = nil
     if waiting then
         for _, thread in waiting do
-            coroutine.resume(thread, loadedFont)
+            pcall(coroutine.resume, thread, loadedFont)
         end
     end
     return loadedFont

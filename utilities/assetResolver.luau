@@ -105,7 +105,14 @@ function assetResolver.getAssetContentFromUrl(
     if cacheKey ~= nil then
         local pending = pendingRequests[cacheKey]
         if pending then
-            table.insert(pending, coroutine.running())
+            if not coroutine.isyieldable() then
+                return nil
+            end
+            local thread = coroutine.running()
+            if not thread then
+                return nil
+            end
+            table.insert(pending, thread)
             return coroutine.yield()
         end
         pendingRequests[cacheKey] = {}
@@ -147,7 +154,7 @@ function assetResolver.getAssetContentFromUrl(
         pendingRequests[cacheKey] = nil
         if waiting then
             for _, thread in waiting do
-                coroutine.resume(thread, content)
+                pcall(coroutine.resume, thread, content)
             end
         end
     end

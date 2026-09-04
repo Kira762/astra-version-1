@@ -13885,7 +13885,14 @@ function assetResolver.getAssetContentFromUrl(
     if cacheKey ~= nil then
         local pending = pendingRequests[cacheKey]
         if pending then
-            table.insert(pending, coroutine.running())
+            if not coroutine.isyieldable() then
+                return nil
+            end
+            local thread = coroutine.running()
+            if not thread then
+                return nil
+            end
+            table.insert(pending, thread)
             return coroutine.yield()
         end
         pendingRequests[cacheKey] = {}
@@ -13927,7 +13934,7 @@ function assetResolver.getAssetContentFromUrl(
         pendingRequests[cacheKey] = nil
         if waiting then
             for _, thread in waiting do
-                coroutine.resume(thread, content)
+                pcall(coroutine.resume, thread, content)
             end
         end
     end
@@ -13946,7 +13953,6 @@ function assetResolver.getAssetContentFromId(self: AssetResolver, id: AssetId, f
 end
 
 return assetResolver
-
 end)() end,
     [44] = function()local wax,script,require=ImportGlobals(44)local ImportGlobals return (function(...)local colors = {}
 
@@ -14773,7 +14779,14 @@ function fontManager.loadFont(
     local pendingKey = tostring(resolvedId) .. "|" .. cacheKey
     local waiting = pendingLoads[pendingKey]
     if waiting then
-        table.insert(waiting, coroutine.running())
+        if not coroutine.isyieldable() then
+            return self.defaultOptions.fallbackFont
+        end
+        local thread = coroutine.running()
+        if not thread then
+            return self.defaultOptions.fallbackFont
+        end
+        table.insert(waiting, thread)
         return coroutine.yield()
     end
     pendingLoads[pendingKey] = {}
@@ -14785,7 +14798,7 @@ function fontManager.loadFont(
     pendingLoads[pendingKey] = nil
     if waiting then
         for _, thread in waiting do
-            coroutine.resume(thread, loadedFont)
+            pcall(coroutine.resume, thread, loadedFont)
         end
     end
     return loadedFont
@@ -14818,7 +14831,6 @@ function fontManager.getFontFromId(self: FontManager, id: number | string): Font
 end
 
 return fontManager
-
 end)() end,
     [51] = function()local wax,script,require=ImportGlobals(51)local ImportGlobals return (function(...)local functions = {}
 
