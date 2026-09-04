@@ -12856,6 +12856,8 @@ function Window:Show()
 
     self.hidden = false
     self.minimised = false
+    self._collapsedShown = false
+    chrome.setCollapsedShown(self, false)
 
         if self._themeRefreshPending then
         self._themeRefreshPending = false
