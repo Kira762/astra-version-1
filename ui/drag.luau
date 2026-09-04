@@ -113,11 +113,16 @@ function Drag.new(window, properties)
         end
     end)
 
-                local function releaseDrag()
+    local function releaseDrag()
         if not dragging then
             return
         end
         dragging = false
+
+        if self._dragConnection then
+            self.window:Disconnect(self._dragConnection)
+            self._dragConnection = nil
+        end
 
         if not self.window:_interactive() then
             return
@@ -137,6 +142,10 @@ function Drag.new(window, properties)
         variables.tweenService:Create(self.drag, settle, { Position = dragTarget }):Play()
     end
 
+    local mainRemaining = 1e-7
+    local barRemaining = 1e-60
+    local updateDrag
+
     self.window:Connect(self.dragInteract.InputBegan, function(input, processed)
         if processed then
             return
@@ -149,6 +158,11 @@ function Drag.new(window, properties)
             end
 
             dragging = true
+
+            if self._dragConnection then
+                self.window:Disconnect(self._dragConnection)
+                self._dragConnection = nil
+            end
 
                         if screenGui and screenGui.IgnoreGuiInset then
                 offset = variables.guiService:GetGuiInset()
@@ -166,6 +180,8 @@ function Drag.new(window, properties)
                     )
                     :Play()
             end
+
+            self._dragConnection = self.window:Connect(variables.runService.RenderStepped, updateDrag)
         end
     end)
 
@@ -178,15 +194,16 @@ function Drag.new(window, properties)
 
             self.window:Connect(variables.userInputService.WindowFocusReleased, releaseDrag)
 
-            local mainRemaining = 1e-7
-    local barRemaining = 1e-60
-
-    self.window:Connect(variables.runService.RenderStepped, function(dt)
+    updateDrag = function(dt)
         if not dragging then
+            if self._dragConnection then
+                self.window:Disconnect(self._dragConnection)
+                self._dragConnection = nil
+            end
             return
         end
 
-                        if not self.window:_interactive() then
+        if self.window.unloaded or not self.window:_interactive() then
             releaseDrag()
             return
         end
@@ -195,7 +212,7 @@ function Drag.new(window, properties)
 
         self.window.main.Position = self.window.main.Position:Lerp(mainTarget, 1 - mainRemaining ^ dt)
         self.drag.Position = self.drag.Position:Lerp(dragTarget, 1 - barRemaining ^ dt)
-    end)
+    end
 
     return self
 end

@@ -1211,7 +1211,7 @@ function chrome.buildCollapsedFace(window)
                 Image = window.showIcon,
         ZIndex = constants.zIndex.restoreContent,
 
-        ImageTransparency = 1,
+        ImageTransparency = 1, 
         Parent = window.main,
     }, { ImageColor3 = "TitlingColor" })
 
@@ -1252,7 +1252,7 @@ function chrome.buildCollapsedFace(window)
         LayoutOrder = 1,
         ZIndex = constants.zIndex.restoreContent,
 
-        TextTransparency = 1,
+        TextTransparency = 1, 
         Parent = textContainer,
     }, { TextColor3 = "TitlingColor" })
 
@@ -1267,7 +1267,7 @@ function chrome.buildCollapsedFace(window)
         LayoutOrder = 2,
         ZIndex = constants.zIndex.restoreContent,
 
-        TextTransparency = 1,
+        TextTransparency = 1, 
         Parent = textContainer,
     }, { TextColor3 = "TitlingColor" })
 
@@ -1290,12 +1290,41 @@ function chrome.bindCollapsedDrag(window)
     local uis = variables.userInputService
     local dragging, moved = false, false
     local grabOffset, grabMouse = Vector2.zero, Vector2.zero
+    local dragConnection
 
             local function insetOffset()
         if window.screenGui and window.screenGui.IgnoreGuiInset then
             return variables.guiService:GetGuiInset()
         end
         return Vector2.zero
+    end
+
+    local function stopDrag()
+        dragging = false
+        if dragConnection then
+            window:Disconnect(dragConnection)
+            dragConnection = nil
+        end
+    end
+
+    local function updateDrag()
+        if not dragging then
+            stopDrag()
+            return
+        end
+        if window.unloaded or not window.hidden or window.animating then
+            stopDrag()
+            return
+        end
+
+        local mouse = uis:GetMouseLocation()
+        if not moved and (mouse - grabMouse).Magnitude < dragThreshold then
+            return
+        end
+        moved = true
+
+        local target = mouse + grabOffset + insetOffset()
+        window.main.Position = UDim2.fromOffset(target.X, target.Y)
     end
 
     window:Connect(window.collapsedInteract.InputBegan, function(input, processed)
@@ -1308,6 +1337,11 @@ function chrome.bindCollapsedDrag(window)
         end
 
         dragging, moved = true, false
+        if dragConnection then
+            window:Disconnect(dragConnection)
+            dragConnection = nil
+        end
+        dragConnection = window:Connect(variables.runService.RenderStepped, updateDrag)
         grabMouse = uis:GetMouseLocation()
         grabOffset = window.main.AbsolutePosition + window.main.AbsoluteSize * window.main.AnchorPoint - grabMouse
     end)
@@ -1320,7 +1354,7 @@ function chrome.bindCollapsedDrag(window)
         if not dragging then
             return
         end
-        dragging = false
+        stopDrag()
 
         if moved then
             window._collapsedPosition = window.main.Position             return
@@ -1331,24 +1365,7 @@ function chrome.bindCollapsedDrag(window)
     end)
 
             window:Connect(uis.WindowFocusReleased, function()
-        dragging = false
-    end)
-
-    window:Connect(variables.runService.RenderStepped, function()
-        if not dragging then
-            return
-        end
-        if not window.hidden or window.animating then
-            dragging = false             return
-        end
-
-        local mouse = uis:GetMouseLocation()
-        if not moved and (mouse - grabMouse).Magnitude < dragThreshold then
-            return         end
-        moved = true
-
-        local target = mouse + grabOffset + insetOffset()
-        window.main.Position = UDim2.fromOffset(target.X, target.Y)
+        stopDrag()
     end)
 end
 
@@ -1401,7 +1418,6 @@ function chrome.setCollapsedShown(window, shown, tweenInfo)
 end
 
 return chrome
-
 end)() end,
     [16] = function()local wax,script,require=ImportGlobals(16)local ImportGlobals return (function(...)local ColorPicker = {}
 ColorPicker.__index = ColorPicker
@@ -3085,7 +3101,7 @@ function Drag.new(window, properties)
                         Position = UDim2.new(0.5, 0, 0.5, self.window.size.Y.Offset / 2 + 15),
         ZIndex = constants.zIndex.drag,
 
-                Visible = false,
+                Visible = false, 
         Parent = self.window.screenGui,
     })
 
@@ -3095,7 +3111,7 @@ function Drag.new(window, properties)
         Position = UDim2.fromScale(0.5, 0.3),
         ZIndex = constants.zIndex.drag,
 
-                BackgroundTransparency = 1,         Size = UDim2.fromOffset(0, 4),
+                BackgroundTransparency = 1,         Size = UDim2.fromOffset(0, 4), 
         Parent = self.drag,
     })
 
@@ -3177,11 +3193,16 @@ function Drag.new(window, properties)
         end
     end)
 
-                local function releaseDrag()
+    local function releaseDrag()
         if not dragging then
             return
         end
         dragging = false
+
+        if self._dragConnection then
+            self.window:Disconnect(self._dragConnection)
+            self._dragConnection = nil
+        end
 
         if not self.window:_interactive() then
             return
@@ -3201,6 +3222,10 @@ function Drag.new(window, properties)
         variables.tweenService:Create(self.drag, settle, { Position = dragTarget }):Play()
     end
 
+    local mainRemaining = 1e-7
+    local barRemaining = 1e-60
+    local updateDrag
+
     self.window:Connect(self.dragInteract.InputBegan, function(input, processed)
         if processed then
             return
@@ -3213,6 +3238,11 @@ function Drag.new(window, properties)
             end
 
             dragging = true
+
+            if self._dragConnection then
+                self.window:Disconnect(self._dragConnection)
+                self._dragConnection = nil
+            end
 
                         if screenGui and screenGui.IgnoreGuiInset then
                 offset = variables.guiService:GetGuiInset()
@@ -3230,6 +3260,8 @@ function Drag.new(window, properties)
                     )
                     :Play()
             end
+
+            self._dragConnection = self.window:Connect(variables.runService.RenderStepped, updateDrag)
         end
     end)
 
@@ -3242,15 +3274,16 @@ function Drag.new(window, properties)
 
             self.window:Connect(variables.userInputService.WindowFocusReleased, releaseDrag)
 
-            local mainRemaining = 1e-7
-    local barRemaining = 1e-60
-
-    self.window:Connect(variables.runService.RenderStepped, function(dt)
+    updateDrag = function(dt)
         if not dragging then
+            if self._dragConnection then
+                self.window:Disconnect(self._dragConnection)
+                self._dragConnection = nil
+            end
             return
         end
 
-                        if not self.window:_interactive() then
+        if self.window.unloaded or not self.window:_interactive() then
             releaseDrag()
             return
         end
@@ -3259,13 +3292,12 @@ function Drag.new(window, properties)
 
         self.window.main.Position = self.window.main.Position:Lerp(mainTarget, 1 - mainRemaining ^ dt)
         self.drag.Position = self.drag.Position:Lerp(dragTarget, 1 - barRemaining ^ dt)
-    end)
+    end
 
     return self
 end
 
 return Drag
-
 end)() end,
     [21] = function()local wax,script,require=ImportGlobals(21)local ImportGlobals return (function(...)local Dropdown = {}
 Dropdown.__index = Dropdown
@@ -11773,7 +11805,7 @@ function Window:Hide()
     self.animating = true
     self._revealing = true
     self.hidden = true
-    self.collapsedInteract.Visible = false
+    self.collapsedInteract.Visible = false 
                 if self.minimised then
         self.minimised = false
         image.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(constants.icons.minimise))     end
@@ -12133,6 +12165,7 @@ function Window:_bindTopbarDrag()
     local uis = variables.userInputService
     local dragging = false
     local relative = Vector2.zero
+    local dragConnection
 
             local offset = Vector2.zero
     if self.screenGui and self.screenGui.IgnoreGuiInset then
@@ -12153,6 +12186,40 @@ function Window:_bindTopbarDrag()
         end
 
         return UDim2.fromOffset(x, y)
+    end
+
+    local function stopDrag()
+        dragging = false
+        if dragConnection then
+            self:Disconnect(dragConnection)
+            dragConnection = nil
+        end
+    end
+
+    local function updateDrag()
+        if not dragging then
+            stopDrag()
+            return
+        end
+        if self.unloaded or not self:_interactive() then
+            stopDrag()
+            return
+        end
+
+        local target = getTarget()
+        if self.main.Position == target then
+            return
+        end
+        self.main.Position = target
+        if self.drag and self.drag.drag then
+            local mainPosition = self.main.Position
+            self.drag.drag.Position = UDim2.new(
+                mainPosition.X.Scale,
+                mainPosition.X.Offset,
+                mainPosition.Y.Scale,
+                mainPosition.Y.Offset + (self.main.Size.Y.Offset / 2 + 15)
+            )
+        end
     end
 
                 local function overInteractiveChild(x, y)
@@ -12184,6 +12251,11 @@ function Window:_bindTopbarDrag()
         end
 
         dragging = true
+        if dragConnection then
+            self:Disconnect(dragConnection)
+            dragConnection = nil
+        end
+        dragConnection = self:Connect(variables.runService.RenderStepped, updateDrag)
 
         if self.screenGui and self.screenGui.IgnoreGuiInset then
             offset = variables.guiService:GetGuiInset()
@@ -12195,38 +12267,12 @@ function Window:_bindTopbarDrag()
     self:Connect(uis.InputEnded, function(input)
         local inputType = input.UserInputType.Name
         if inputType == "MouseButton1" or inputType == "Touch" then
-            dragging = false
+            stopDrag()
         end
     end)
 
             self:Connect(uis.WindowFocusReleased, function()
-        dragging = false
-    end)
-
-    self:Connect(variables.runService.RenderStepped, function()
-        if not dragging then
-            return
-        end
-
-                        if not self:_interactive() then
-            dragging = false
-            return
-        end
-
-        local target = getTarget()
-        if self.main.Position == target then
-            return
-        end
-        self.main.Position = target
-        if self.drag and self.drag.drag then
-            local mainPosition = self.main.Position
-            self.drag.drag.Position = UDim2.new(
-                mainPosition.X.Scale,
-                mainPosition.X.Offset,
-                mainPosition.Y.Scale,
-                mainPosition.Y.Offset + (self.main.Size.Y.Offset / 2 + 15)
-            )
-        end
+        stopDrag()
     end)
 end
 
@@ -12604,7 +12650,7 @@ function Window:_buildLockScrim(element)
         ZIndex = constants.zIndex.elementLock,
         Visible = false,
 
-                        BackgroundTransparency = 1,
+                        BackgroundTransparency = 1, 
         Parent = element.main,
     }, { BackgroundColor3 = { "WindowColor", firstColor } })
 
@@ -13366,7 +13412,7 @@ function Window:_buildCompactRow(host, name, interactZIndex)
         ClipsDescendants = true,         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
 
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 1, 
         Parent = host.tabPage,
     }, { BackgroundTransparency = "ElementTransparency" })
 
@@ -13417,7 +13463,7 @@ function Window:StyleElementPanel(frame)
 
     local stroke = self:Create("UIStroke", {
         Color = Color3.fromRGB(255, 255, 255),
-        Transparency = 1,
+        Transparency = 1, 
         Parent = frame,
     })
 
@@ -13634,7 +13680,6 @@ function Window:Unload()
 end
 
 return Window
-
 end)() end,
     [42] = function()local wax,script,require=ImportGlobals(42)local ImportGlobals return (function(...)local variables = require(script.Parent.variables)
 

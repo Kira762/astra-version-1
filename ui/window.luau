@@ -1352,6 +1352,7 @@ function Window:_bindTopbarDrag()
     local uis = variables.userInputService
     local dragging = false
     local relative = Vector2.zero
+    local dragConnection
 
             local offset = Vector2.zero
     if self.screenGui and self.screenGui.IgnoreGuiInset then
@@ -1372,6 +1373,40 @@ function Window:_bindTopbarDrag()
         end
 
         return UDim2.fromOffset(x, y)
+    end
+
+    local function stopDrag()
+        dragging = false
+        if dragConnection then
+            self:Disconnect(dragConnection)
+            dragConnection = nil
+        end
+    end
+
+    local function updateDrag()
+        if not dragging then
+            stopDrag()
+            return
+        end
+        if self.unloaded or not self:_interactive() then
+            stopDrag()
+            return
+        end
+
+        local target = getTarget()
+        if self.main.Position == target then
+            return
+        end
+        self.main.Position = target
+        if self.drag and self.drag.drag then
+            local mainPosition = self.main.Position
+            self.drag.drag.Position = UDim2.new(
+                mainPosition.X.Scale,
+                mainPosition.X.Offset,
+                mainPosition.Y.Scale,
+                mainPosition.Y.Offset + (self.main.Size.Y.Offset / 2 + 15)
+            )
+        end
     end
 
                 local function overInteractiveChild(x, y)
@@ -1403,6 +1438,11 @@ function Window:_bindTopbarDrag()
         end
 
         dragging = true
+        if dragConnection then
+            self:Disconnect(dragConnection)
+            dragConnection = nil
+        end
+        dragConnection = self:Connect(variables.runService.RenderStepped, updateDrag)
 
         if self.screenGui and self.screenGui.IgnoreGuiInset then
             offset = variables.guiService:GetGuiInset()
@@ -1414,38 +1454,12 @@ function Window:_bindTopbarDrag()
     self:Connect(uis.InputEnded, function(input)
         local inputType = input.UserInputType.Name
         if inputType == "MouseButton1" or inputType == "Touch" then
-            dragging = false
+            stopDrag()
         end
     end)
 
             self:Connect(uis.WindowFocusReleased, function()
-        dragging = false
-    end)
-
-    self:Connect(variables.runService.RenderStepped, function()
-        if not dragging then
-            return
-        end
-
-                        if not self:_interactive() then
-            dragging = false
-            return
-        end
-
-        local target = getTarget()
-        if self.main.Position == target then
-            return
-        end
-        self.main.Position = target
-        if self.drag and self.drag.drag then
-            local mainPosition = self.main.Position
-            self.drag.drag.Position = UDim2.new(
-                mainPosition.X.Scale,
-                mainPosition.X.Offset,
-                mainPosition.Y.Scale,
-                mainPosition.Y.Offset + (self.main.Size.Y.Offset / 2 + 15)
-            )
-        end
+        stopDrag()
     end)
 end
 

@@ -100,12 +100,41 @@ function chrome.bindCollapsedDrag(window)
     local uis = variables.userInputService
     local dragging, moved = false, false
     local grabOffset, grabMouse = Vector2.zero, Vector2.zero
+    local dragConnection
 
             local function insetOffset()
         if window.screenGui and window.screenGui.IgnoreGuiInset then
             return variables.guiService:GetGuiInset()
         end
         return Vector2.zero
+    end
+
+    local function stopDrag()
+        dragging = false
+        if dragConnection then
+            window:Disconnect(dragConnection)
+            dragConnection = nil
+        end
+    end
+
+    local function updateDrag()
+        if not dragging then
+            stopDrag()
+            return
+        end
+        if window.unloaded or not window.hidden or window.animating then
+            stopDrag()
+            return
+        end
+
+        local mouse = uis:GetMouseLocation()
+        if not moved and (mouse - grabMouse).Magnitude < dragThreshold then
+            return
+        end
+        moved = true
+
+        local target = mouse + grabOffset + insetOffset()
+        window.main.Position = UDim2.fromOffset(target.X, target.Y)
     end
 
     window:Connect(window.collapsedInteract.InputBegan, function(input, processed)
@@ -118,6 +147,11 @@ function chrome.bindCollapsedDrag(window)
         end
 
         dragging, moved = true, false
+        if dragConnection then
+            window:Disconnect(dragConnection)
+            dragConnection = nil
+        end
+        dragConnection = window:Connect(variables.runService.RenderStepped, updateDrag)
         grabMouse = uis:GetMouseLocation()
         grabOffset = window.main.AbsolutePosition + window.main.AbsoluteSize * window.main.AnchorPoint - grabMouse
     end)
@@ -130,7 +164,7 @@ function chrome.bindCollapsedDrag(window)
         if not dragging then
             return
         end
-        dragging = false
+        stopDrag()
 
         if moved then
             window._collapsedPosition = window.main.Position             return
@@ -141,24 +175,7 @@ function chrome.bindCollapsedDrag(window)
     end)
 
             window:Connect(uis.WindowFocusReleased, function()
-        dragging = false
-    end)
-
-    window:Connect(variables.runService.RenderStepped, function()
-        if not dragging then
-            return
-        end
-        if not window.hidden or window.animating then
-            dragging = false             return
-        end
-
-        local mouse = uis:GetMouseLocation()
-        if not moved and (mouse - grabMouse).Magnitude < dragThreshold then
-            return         end
-        moved = true
-
-        local target = mouse + grabOffset + insetOffset()
-        window.main.Position = UDim2.fromOffset(target.X, target.Y)
+        stopDrag()
     end)
 end
 
