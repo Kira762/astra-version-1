@@ -1913,7 +1913,7 @@ function Window:_setLayoutMode(mode)
     self:_setTabSectionsShown(true, transitionInfo)
     task.spawn(function()
         if not self.unloaded and self._layoutTransitionId == transitionId then
-            self:_revealElements(0.02, 0.5)
+            self:_revealElements(0.02, 0.5, transitionId)
         end
     end)
     self._layoutTransitioning = false
@@ -2032,10 +2032,20 @@ function Window:_fadeSelectedElementsOut()
     end
 end
 
-function Window:_revealElements(perElementDelay, budget)
+function Window:_revealElements(perElementDelay, budget, transitionId)
+    local function isCurrent()
+        return not self.unloaded and (transitionId == nil or self._layoutTransitionId == transitionId)
+    end
+
+    if not isCurrent() then
+        return
+    end
     for _, tab in pairs(self.tabs) do
         if tab ~= self.selectedTab then
             for _, element in ipairs(tab.elements) do
+                if not isCurrent() then
+                    return
+                end
                 element:_setShown(true, false)
             end
         end
@@ -2053,6 +2063,9 @@ function Window:_revealElements(perElementDelay, budget)
     local maxStaggered = math.floor(budget / perElementDelay)
     local staggered = 0
     for _, element in ipairs(tab.elements) do
+        if not isCurrent() then
+            return
+        end
         local top = element.main.AbsolutePosition.Y
         local onScreen = (top + element.main.AbsoluteSize.Y) > viewTop and top < viewBottom
         if onScreen then
@@ -2060,6 +2073,9 @@ function Window:_revealElements(perElementDelay, budget)
             staggered += 1
             if staggered <= maxStaggered then
                 task.wait(perElementDelay)
+                if not isCurrent() then
+                    return
+                end
             end
         else
             element:_setShown(true, false)         end
