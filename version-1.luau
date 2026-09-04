@@ -12901,8 +12901,12 @@ function Window:_quickRestore()
     end
     self:_fadeSurfaces(true)
 
-    self.topbarIcon.ImageTransparency = 0
-    self.title.TextTransparency = 0
+    if self.topbarIcon then
+        self.topbarIcon.ImageTransparency = 0
+    end
+    if self.title then
+        self.title.TextTransparency = 0
+    end
     if self.subtitle then
         self.subtitle.TextTransparency = 0.7
     end
@@ -12946,8 +12950,12 @@ function Window:_firstShow()
         end
     end
     local openInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    self.topbarIcon.ImageTransparency = 0
-    self.title.TextTransparency = 0
+    if self.topbarIcon then
+        self.topbarIcon.ImageTransparency = 0
+    end
+    if self.title then
+        self.title.TextTransparency = 0
+    end
     if self.subtitle then
         self.subtitle.TextTransparency = 0.7
     end
