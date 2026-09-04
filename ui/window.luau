@@ -941,24 +941,33 @@ function Window:Close()
     if self.animating or self.unloaded then
         return
     end
-
     self.animating = true
     self.hidden = true
     self.collapsedInteract.Visible = false
+    self._closeTransitionId = (self._closeTransitionId or 0) + 1
+    local closeTransitionId = self._closeTransitionId
+    local currentSize = self.main.Size
+    local currentPosition = self.main.Position
+    local topPosition = UDim2.new(
+        currentPosition.X.Scale,
+        currentPosition.X.Offset,
+        currentPosition.Y.Scale - currentSize.Y.Scale / 2,
+        currentPosition.Y.Offset - currentSize.Y.Offset / 2
+    )
+    local closeInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 
-    local closeInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
-
-    -- Keep controls visually still while only the outer shell contracts.
+    -- Keep the top edge fixed while the shell collapses vertically.
     self.main.ClipsDescendants = true
+    self.main.AnchorPoint = Vector2.new(0.5, 0)
+    self.main.Position = topPosition
     self.drag.drag.Visible = false
     variables.tweenService:Create(self.windowShadow, closeInfo, { Transparency = 1 }):Play()
     variables.tweenService:Create(self.windowStroke, closeInfo, { Transparency = 1 }):Play()
-    
     local closeTween = variables.tweenService:Create(self.main, closeInfo, {
-        Size = UDim2.fromOffset(0, 0),
+        Size = UDim2.new(currentSize.X.Scale, currentSize.X.Offset, 0, 0),
     })
     closeTween.Completed:Connect(function()
-        if not self.unloaded then
+        if not self.unloaded and self._closeTransitionId == closeTransitionId then
             self.drag.drag.Visible = false
             self:Unload()
         end
@@ -2128,18 +2137,16 @@ function Window:Show()
     else
         self.hasShownOnce = true
         self.main.Visible = true
-        task.spawn(function()
-            if not self.unloaded then
-                self:_firstShow()
-            end
-        end)
+        if not self.unloaded then
+            self:_firstShow()
+        end
     end
 end
 
 function Window:_quickRestore()
     local target = self:_clampedPosition(self._restorePosition or UDim2.new(0.5, 0, 0.5, 0))
     self._restorePosition = target
-    local openInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local openInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
     -- Restore descendants immediately; animate only the shell geometry.
     self.main.ClipsDescendants = true
@@ -2207,7 +2214,7 @@ function Window:_firstShow()
             element:_setShown(true, false)
         end
     end
-    local openInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local openInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     if self.topbarIcon then
         self.topbarIcon.ImageTransparency = 0
     end
