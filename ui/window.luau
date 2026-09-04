@@ -1183,7 +1183,7 @@ function Window:_syncDragBar()
         return
     end
     local position = self.main.Position
-    local below = self.size.Y.Offset / 2 + 15
+    local below = if self.minimised then self.layout.topbarHeight / 2 + 15 else self.size.Y.Offset / 2 + 15
     bar.Position = UDim2.new(position.X.Scale, position.X.Offset, position.Y.Scale, position.Y.Offset + below)
 end
 
