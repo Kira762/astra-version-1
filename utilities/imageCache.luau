@@ -285,11 +285,10 @@ function imageCache.avatar(userId: unknown, onReady: AvatarCallback?): string
             pendingAvatars[userId] = nil
             if not uri then
                 failedAvatars[userId] = true
-                return
             end
             if callbacks then
                 for _, callback in callbacks do
-                                        pcall(callback, uri)
+                    pcall(callback, uri or "")
                 end
             end
         end)
