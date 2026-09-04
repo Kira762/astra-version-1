@@ -13873,7 +13873,7 @@ constants.zIndex = {
     elementLockContent = 65,
     bottomFade = 100,
             notification = 1500,
-    drag = 1000,
+    drag = 100003,
         toast = 2000,
     toastContent = 2001,
     restoreContent = 100001,
@@ -13882,7 +13882,7 @@ constants.zIndex = {
 
 constants.displayOrder = {
     window = 99999,
-
+    
         popup = 100001,
 }
 
