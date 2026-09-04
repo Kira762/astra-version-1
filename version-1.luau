@@ -11866,6 +11866,8 @@ function Window:ToggleMinimise()
     end
 
     self.animating = true
+    self.drag.drag.Visible = false
+    self.collapsedInteract.Visible = false
 
     local sizeInfo = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
     local fadeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
