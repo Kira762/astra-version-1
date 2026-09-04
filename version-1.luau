@@ -12324,7 +12324,7 @@ function Window:_buildSettingsUI()
                 return
             end
 
-            local currentLayout = self.settings.layoutMode or self.layout.mode
+            local currentLayout = layoutModeFor(self.layout)
             if requestedLayout == currentLayout then
                 self:Notify({
                     title = "Bar layout",
@@ -12360,6 +12360,10 @@ function Window:_buildSettingsUI()
                                     layoutDropdown:Set(layoutNames[requestedLayout], true)
                                 end
                             else
+                                selectedLayout = layoutModeFor(self.layout)
+                                if layoutDropdown and layoutNames[selectedLayout] then
+                                    layoutDropdown:Set(layoutNames[selectedLayout], true)
+                                end
                                 self:Notify({
                                     title = "Bar layout",
                                     content = "The selected bar layout could not be applied right now.",
@@ -12604,6 +12608,9 @@ function Window:_setLayoutMode(mode)
     if self.unloaded then
         return false
     end
+    if self.animating or self.minimised or (self.hidden and self.hasShownOnce) then
+        return false
+    end
     local nextLayout = layouts.get(mode)
     local currentMode = layoutModeFor(self.layout)
     if not nextLayout or mode == currentMode then
@@ -12815,7 +12822,10 @@ end
 
 function Window:_revealElements(perElementDelay, budget, transitionId)
     local function isCurrent()
-        return not self.unloaded and (transitionId == nil or self._layoutTransitionId == transitionId)
+        return not self.unloaded
+            and not self.hidden
+            and not self.minimised
+            and (transitionId == nil or self._layoutTransitionId == transitionId)
     end
 
     if not isCurrent() then
