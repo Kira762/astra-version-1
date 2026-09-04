@@ -1832,6 +1832,8 @@ function Window:_setLayoutMode(mode)
         return false
     end
     self._layoutTransitioning = true
+    self._layoutTransitionId = (self._layoutTransitionId or 0) + 1
+    local transitionId = self._layoutTransitionId
     local transitionInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     self:_fadeSurfaces(false, transitionInfo)
     self:_fadeSelectedElementsOut()
@@ -1910,7 +1912,7 @@ function Window:_setLayoutMode(mode)
     self:_fadeSurfaces(true, transitionInfo)
     self:_setTabSectionsShown(true, transitionInfo)
     task.spawn(function()
-        if not self.unloaded then
+        if not self.unloaded and self._layoutTransitionId == transitionId then
             self:_revealElements(0.02, 0.5)
         end
     end)
@@ -1919,6 +1921,7 @@ function Window:_setLayoutMode(mode)
 end
 function Window:_applySettingsLayout(isSettings)
     isSettings = isSettings == true
+    self._settingsLayoutActive = isSettings
     if self.settingsAction then
         image.assign(self.settingsAction.iconLabel, "Image", constants.icons.settings)
     end
@@ -1926,10 +1929,16 @@ function Window:_applySettingsLayout(isSettings)
         if self.tabList then
             self.tabList.Visible = not isSettings and self.elements.Visible and not self.hidden and not self.minimised
         end
+        self.elements.Size = UDim2.new(1, 0, 1, -self.layout.chromeHeight)
+        self.bottomFade.Size = UDim2.new(1, 0, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
+        if self.selectedTab and self.selectedTab.tabPage then
+            self.selectedTab.tabPage.Size = if isSettings
+                then UDim2.new(1, 0, 1, 0)
+                else UDim2.new(1, -20, 1, 0)
+            self.selectedTab.tabPage.Position = UDim2.new(0, 0, 0, 0)
+        end
         return
     end
-    self._settingsLayoutActive = isSettings
-
     local railWidth = layouts.railWidthFor(self.layout, self.size.X.Offset)
     local tab = self.selectedTab
 
