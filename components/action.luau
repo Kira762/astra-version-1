@@ -56,6 +56,9 @@ function Action.new(window, properties)
     })
 
                 local function settleIcon()
+        if self.window.unloaded then
+            return
+        end
         if not self.window:_settled() then
             return         end
         if self.linkedTab and self.window.selectedTab == self.linkedTab then

@@ -568,6 +568,9 @@ function Dropdown.new(tab, properties)
 
                 if not self.multiSelect then
                     task.wait(0.1)
+                    if self.window.unloaded or not self.main.Parent then
+                        return
+                    end
                     self:_close()
                 end
             end)

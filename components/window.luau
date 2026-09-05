@@ -945,7 +945,7 @@ function Window:Hide()
         :Create(self.drag.dragCosmetic, fadeInfo, { Size = UDim2.fromOffset(0, 4), BackgroundTransparency = 1 })
         :Play()
     task.delay(0.18, function()
-        if not self.hidden or self._hideTransitionId ~= hideTransitionId then
+        if self.unloaded or not self.hidden or self._hideTransitionId ~= hideTransitionId then
             return
         end
         self.drag.drag.Visible = false
@@ -998,7 +998,7 @@ function Window:Hide()
     variables.tweenService:Create(self.windowCorner, cornerInfo, { CornerRadius = UDim.new(1, 0) }):Play()
 
             task.delay(0.18, function()
-        if not self.hidden or self._hideTransitionId ~= hideTransitionId then
+        if self.unloaded or not self.hidden or self._hideTransitionId ~= hideTransitionId then
             return
         end
         self.topbar.Visible = false
@@ -1056,7 +1056,7 @@ function Window:ToggleMinimise()
             :Play()
 
                         task.delay(0.2, function()
-            if self.minimised or self.hidden then
+            if self.unloaded or self.minimised or self.hidden then
                 return             end
             self:_setContentVisible(true)
 
@@ -1088,7 +1088,7 @@ function Window:ToggleMinimise()
         self:_setTabSectionsShown(false, fadeInfo)
 
         task.delay(0.3, function()
-            if not self.minimised then
+            if self.unloaded or not self.minimised then
                 return             end
             self:_setContentVisible(false)
             for _, tab in pairs(self.tabs) do
@@ -1116,6 +1116,9 @@ function Window:ToggleMinimise()
             :Play()
 
         task.delay(0.5, function()
+            if self.unloaded then
+                return
+            end
             if self.minimised and not self.hidden then
                 self:_syncDragBar()
                 self.drag.drag.Visible = true
@@ -1736,7 +1739,7 @@ function Window:_setElementLocked(element, locked, reason)
         :Play()
     if not locked then
         task.delay(info.Time, function()
-            if not element.locked and element.lockScrim then
+            if not element.locked and element.lockScrim and element.lockScrim.Parent then
                 element.lockScrim.Visible = false             end
         end)
     end

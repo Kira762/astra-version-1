@@ -842,6 +842,9 @@ function Action.new(window, properties)
     })
 
                 local function settleIcon()
+        if self.window.unloaded then
+            return
+        end
         if not self.window:_settled() then
             return         end
         if self.linkedTab and self.window.selectedTab == self.linkedTab then
@@ -2346,7 +2349,7 @@ function Popup:_measureBoxes()
 end
 
 function Popup:_show()
-    if not self.screenGui.Parent then
+    if self._closed or not self.screenGui.Parent then
         return
     end
 
@@ -2551,7 +2554,7 @@ function search.open(window)
 
         setTabsShown(window, false, swapInfo)
     task.delay(swapInfo.Time, function()
-        if window._searching and window.layout.mode ~= "sidebar" then
+        if not window.unloaded and window._searching and window.layout.mode ~= "sidebar" then
             window.tabList.Visible = false
         end
     end)
@@ -2582,7 +2585,7 @@ function search.close(window, config)
 
     setPillShown(window, false, swapInfo)
     task.delay(swapInfo.Time, function()
-        if not window._searching then
+        if not window.unloaded and not window._searching then
             window.searchPill.Visible = false
         end
     end)
@@ -4753,7 +4756,7 @@ function Window:Hide()
         :Create(self.drag.dragCosmetic, fadeInfo, { Size = UDim2.fromOffset(0, 4), BackgroundTransparency = 1 })
         :Play()
     task.delay(0.18, function()
-        if not self.hidden or self._hideTransitionId ~= hideTransitionId then
+        if self.unloaded or not self.hidden or self._hideTransitionId ~= hideTransitionId then
             return
         end
         self.drag.drag.Visible = false
@@ -4806,7 +4809,7 @@ function Window:Hide()
     variables.tweenService:Create(self.windowCorner, cornerInfo, { CornerRadius = UDim.new(1, 0) }):Play()
 
             task.delay(0.18, function()
-        if not self.hidden or self._hideTransitionId ~= hideTransitionId then
+        if self.unloaded or not self.hidden or self._hideTransitionId ~= hideTransitionId then
             return
         end
         self.topbar.Visible = false
@@ -4864,7 +4867,7 @@ function Window:ToggleMinimise()
             :Play()
 
                         task.delay(0.2, function()
-            if self.minimised or self.hidden then
+            if self.unloaded or self.minimised or self.hidden then
                 return             end
             self:_setContentVisible(true)
 
@@ -4896,7 +4899,7 @@ function Window:ToggleMinimise()
         self:_setTabSectionsShown(false, fadeInfo)
 
         task.delay(0.3, function()
-            if not self.minimised then
+            if self.unloaded or not self.minimised then
                 return             end
             self:_setContentVisible(false)
             for _, tab in pairs(self.tabs) do
@@ -4924,6 +4927,9 @@ function Window:ToggleMinimise()
             :Play()
 
         task.delay(0.5, function()
+            if self.unloaded then
+                return
+            end
             if self.minimised and not self.hidden then
                 self:_syncDragBar()
                 self.drag.drag.Visible = true
@@ -5544,7 +5550,7 @@ function Window:_setElementLocked(element, locked, reason)
         :Play()
     if not locked then
         task.delay(info.Time, function()
-            if not element.locked and element.lockScrim then
+            if not element.locked and element.lockScrim and element.lockScrim.Parent then
                 element.lockScrim.Visible = false             end
         end)
     end
@@ -6748,6 +6754,10 @@ function Button:_buildFull()
 
         task.wait(0.11)
 
+        if self.window.unloaded then
+            return
+        end
+
         variables.tweenService
             :Create(
                 self.main,
@@ -6835,6 +6845,10 @@ function Button:_buildCompact()
         self:_runCallback()
 
         task.wait(0.11)
+
+        if self.window.unloaded then
+            return
+        end
 
         variables.tweenService
             :Create(
@@ -7859,7 +7873,7 @@ function ColorPicker:_close()
     variables.tweenService:Create(self.main, openInfo, { Size = UDim2.new(1, -20, 0, headerHeight) }):Play()
 
             task.delay(fadeInfo.Time, function()
-        if not self._isOpen then
+        if not self._isOpen and not self.window.unloaded then
             self:_setControlsVisible(false)
         end
     end)
@@ -9101,6 +9115,9 @@ function Dropdown.new(tab, properties)
 
                 if not self.multiSelect then
                     task.wait(0.1)
+                    if self.window.unloaded or not self.main.Parent then
+                        return
+                    end
                     self:_close()
                 end
             end)
@@ -10651,6 +10668,9 @@ function Keybind:_beginHold(input)
     task.delay(self.holdThreshold, function()
         if self._holdPress ~= press then
             return         end
+        if self.window.unloaded then
+            return
+        end
         self._holding = true
         self.window:_runGuarded(self, self.callback, true)
     end)
@@ -28700,90 +28720,90 @@ local LineOffsets = {
     [7] = 663,
     [8] = 539,
     [9] = 787,
-    [10] = 897,
-    [11] = 1144,
-    [12] = 1369,
-    [13] = 1680,
-    [14] = 2414,
-    [15] = 2758,
-    [16] = 3139,
-    [17] = 3435,
-    [18] = 3809,
-    [20] = 6612,
-    [21] = 6871,
-    [22] = 7998,
-    [23] = 8332,
-    [24] = 8389,
-    [25] = 8534,
-    [26] = 9851,
-    [27] = 10052,
-    [28] = 10313,
-    [29] = 10772,
-    [30] = 11222,
-    [31] = 11309,
-    [32] = 11874,
-    [33] = 12492,
-    [34] = 12840,
-    [35] = 12970,
-    [36] = 13134,
-    [37] = 13288,
-    [39] = 13806,
-    [40] = 13838,
-    [41] = 13866,
-    [42] = 13899,
-    [43] = 14008,
-    [44] = 14031,
-    [45] = 14089,
-    [46] = 13774,
-    [47] = 14196,
-    [48] = 14499,
-    [49] = 14545,
-    [50] = 14179,
-    [51] = 14625,
-    [52] = 14645,
-    [53] = 14677,
-    [54] = 14600,
-    [55] = 14810,
-    [56] = 14969,
-    [57] = 14786,
-    [58] = 15217,
-    [59] = 15514,
-    [60] = 16172,
-    [61] = 17958,
-    [62] = 19101,
-    [63] = 20623,
-    [64] = 15034,
-    [65] = 25869,
-    [66] = 25912,
-    [67] = 25954,
-    [68] = 26026,
-    [69] = 26069,
-    [70] = 26129,
-    [71] = 25763,
-    [72] = 26172,
-    [73] = 26270,
-    [74] = 26448,
-    [75] = 26499,
-    [76] = 26529,
-    [77] = 26780,
-    [78] = 26829,
-    [79] = 27282,
-    [80] = 27302,
-    [81] = 27441,
-    [82] = 27540,
-    [83] = 27562,
-    [84] = 27615,
-    [85] = 27651,
-    [86] = 27669,
-    [87] = 27982,
-    [88] = 27998,
-    [89] = 28049,
-    [90] = 28068,
-    [91] = 28310,
-    [92] = 28354,
-    [93] = 28530,
-    [94] = 28558,
-    [95] = 28569,
+    [10] = 900,
+    [11] = 1147,
+    [12] = 1372,
+    [13] = 1683,
+    [14] = 2417,
+    [15] = 2761,
+    [16] = 3142,
+    [17] = 3438,
+    [18] = 3812,
+    [20] = 6618,
+    [21] = 6885,
+    [22] = 8012,
+    [23] = 8346,
+    [24] = 8403,
+    [25] = 8548,
+    [26] = 9868,
+    [27] = 10069,
+    [28] = 10330,
+    [29] = 10792,
+    [30] = 11242,
+    [31] = 11329,
+    [32] = 11894,
+    [33] = 12512,
+    [34] = 12860,
+    [35] = 12990,
+    [36] = 13154,
+    [37] = 13308,
+    [39] = 13826,
+    [40] = 13858,
+    [41] = 13886,
+    [42] = 13919,
+    [43] = 14028,
+    [44] = 14051,
+    [45] = 14109,
+    [46] = 13794,
+    [47] = 14216,
+    [48] = 14519,
+    [49] = 14565,
+    [50] = 14199,
+    [51] = 14645,
+    [52] = 14665,
+    [53] = 14697,
+    [54] = 14620,
+    [55] = 14830,
+    [56] = 14989,
+    [57] = 14806,
+    [58] = 15237,
+    [59] = 15534,
+    [60] = 16192,
+    [61] = 17978,
+    [62] = 19121,
+    [63] = 20643,
+    [64] = 15054,
+    [65] = 25889,
+    [66] = 25932,
+    [67] = 25974,
+    [68] = 26046,
+    [69] = 26089,
+    [70] = 26149,
+    [71] = 25783,
+    [72] = 26192,
+    [73] = 26290,
+    [74] = 26468,
+    [75] = 26519,
+    [76] = 26549,
+    [77] = 26800,
+    [78] = 26849,
+    [79] = 27302,
+    [80] = 27322,
+    [81] = 27461,
+    [82] = 27560,
+    [83] = 27582,
+    [84] = 27635,
+    [85] = 27671,
+    [86] = 27689,
+    [87] = 28002,
+    [88] = 28018,
+    [89] = 28069,
+    [90] = 28088,
+    [91] = 28330,
+    [92] = 28374,
+    [93] = 28550,
+    [94] = 28578,
+    [95] = 28589,
 }
 
 -- Misc AOT variable imports

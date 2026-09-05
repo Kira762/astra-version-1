@@ -667,7 +667,7 @@ function Popup:_measureBoxes()
 end
 
 function Popup:_show()
-    if not self.screenGui.Parent then
+    if self._closed or not self.screenGui.Parent then
         return
     end
 

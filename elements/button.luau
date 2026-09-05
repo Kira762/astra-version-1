@@ -137,6 +137,10 @@ function Button:_buildFull()
 
         task.wait(0.11)
 
+        if self.window.unloaded then
+            return
+        end
+
         variables.tweenService
             :Create(
                 self.main,
@@ -224,6 +228,10 @@ function Button:_buildCompact()
         self:_runCallback()
 
         task.wait(0.11)
+
+        if self.window.unloaded then
+            return
+        end
 
         variables.tweenService
             :Create(

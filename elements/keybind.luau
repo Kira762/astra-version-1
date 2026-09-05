@@ -339,6 +339,9 @@ function Keybind:_beginHold(input)
     task.delay(self.holdThreshold, function()
         if self._holdPress ~= press then
             return         end
+        if self.window.unloaded then
+            return
+        end
         self._holding = true
         self.window:_runGuarded(self, self.callback, true)
     end)

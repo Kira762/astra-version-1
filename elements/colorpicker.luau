@@ -989,7 +989,7 @@ function ColorPicker:_close()
     variables.tweenService:Create(self.main, openInfo, { Size = UDim2.new(1, -20, 0, headerHeight) }):Play()
 
             task.delay(fadeInfo.Time, function()
-        if not self._isOpen then
+        if not self._isOpen and not self.window.unloaded then
             self:_setControlsVisible(false)
         end
     end)

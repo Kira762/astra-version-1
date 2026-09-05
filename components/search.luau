@@ -138,7 +138,7 @@ function search.open(window)
 
         setTabsShown(window, false, swapInfo)
     task.delay(swapInfo.Time, function()
-        if window._searching and window.layout.mode ~= "sidebar" then
+        if not window.unloaded and window._searching and window.layout.mode ~= "sidebar" then
             window.tabList.Visible = false
         end
     end)
@@ -169,7 +169,7 @@ function search.close(window, config)
 
     setPillShown(window, false, swapInfo)
     task.delay(swapInfo.Time, function()
-        if not window._searching then
+        if not window.unloaded and not window._searching then
             window.searchPill.Visible = false
         end
     end)
