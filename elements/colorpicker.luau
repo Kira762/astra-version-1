@@ -919,6 +919,10 @@ function ColorPicker:_renderInvisible(animate)
     end
 end
 
+function ColorPicker:_renderTooltip(state)
+    self._renderTooltipState = state
+end
+
 function ColorPicker:_fireCallback()
     self.window:_runGuarded(self, self.callback, self.value, self.alpha)
 end

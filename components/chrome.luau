@@ -77,7 +77,7 @@ function chrome.buildCollapsedFace(window)
         LayoutOrder = 2,
         ZIndex = constants.zIndex.restoreContent,
 
-        TextTransparency = 1, 
+        TextTransparency = 1,
         Parent = textContainer,
     }, { TextColor3 = "TitlingColor" })
 

@@ -23,7 +23,7 @@ function loader.load(name: string)
     end
     pending[name] = true
     local ok, result = pcall(function()
-        return require((script :: any).Parent[name])
+        return require((script :: any)[name])
     end)
     pending[name] = nil
     if not ok then

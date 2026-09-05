@@ -19,6 +19,4 @@ local core = {
 -- Pre-register the always-needed services so registry.get() can hand them
 -- out without re-requiring; these modules are already loaded by the time the
 -- library entrypoint pulls core in via the shared startup path.
-registry.register("state", state)
-
 return core
