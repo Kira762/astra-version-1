@@ -1,10 +1,9 @@
--- Central cache layer (cache/init.luau).
+-- cache/init.luau — folder module (init.luau semantics).
 --
--- Exposes the module cache plus the moved image cache, and registers the
--- persistence cache factory. Caches here must reduce repeated work without
--- creating stale-state bugs; each submodule documents its invalidation rules.
+-- Exists to anchor the `cache` folder as a single ModuleScript in the Rojo/Wax
+-- tree. Consumers require `cache.imageCache` and `cache.persistenceCache`
+-- directly; this surface only re-exports the module cache.
 
--- This file IS the `cache` ModuleScript (init.luau semantics).
 local moduleCache = require(script.moduleCache)
 
 local cache = {
