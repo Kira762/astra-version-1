@@ -189,8 +189,6 @@ function Window.new(properties)
                 customFolder = cfg.customFolder or cfg.CustomFolder,
             }
         end)(),
-
-        profileBuildGeneration = 0,
     }, Window)
 
             self.Flags = setmetatable({}, {

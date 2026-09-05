@@ -2803,20 +2803,14 @@ local function profileVisible(window)
         and variables.localPlayer ~= nil
 end
 
-local function currentProfileBuildGeneration(window)
-    return window.profileBuildGeneration or 0
-end
-
 local function buildProfile(window, layout)
     local player = variables.localPlayer
     if not player then
-        window.profileBuildGeneration = 0
         return
     end
 
     profileBuildGeneration += 1
     local generation = profileBuildGeneration
-    window.profileBuildGeneration = generation
 
     local isSidebar = layout.mode == "sidebar"
     local isCollapsed = layout.mode == "collapsedSidebar"
@@ -4000,8 +3994,6 @@ function Window.new(properties)
                 customFolder = cfg.customFolder or cfg.CustomFolder,
             }
         end)(),
-
-        profileBuildGeneration = 0,
     }, Window)
 
             self.Flags = setmetatable({}, {
@@ -13831,13 +13823,6 @@ end)() end,
 
 local appearance = {}
 
-appearance.keys = {
-    keepOnScreen = true,
-    showProfile = true,
-    showFullUsername = true,
-    layoutMode = true,
-}
-
 function appearance.validate(key: string, value: any): (boolean, any)
     if key == "keepOnScreen" or key == "showProfile" or key == "showFullUsername" then
         return type(value) == "boolean", value == true
@@ -13861,13 +13846,6 @@ end)() end,
 -- override, welcome toast, and the anti-duplicate-window guard.
 
 local behavior = {}
-
-behavior.keys = {
-    toggleKeybind = true,
-    mouseOverride = true,
-    welcomeToast = true,
-    antiWindowDuplicate = true,
-}
 
 function behavior.validate(key: string, value: any): (boolean, any)
     if key == "toggleKeybind" then
@@ -14032,10 +14010,6 @@ end)() end,
 -- them down.
 
 local performance = {}
-
-performance.keys = {
-    haptics = true,
-}
 
 function performance.validate(key: string, value: any): (boolean, any)
     if key == "haptics" then
@@ -28726,84 +28700,84 @@ local LineOffsets = {
     [13] = 1683,
     [14] = 2417,
     [15] = 2761,
-    [16] = 3142,
-    [17] = 3438,
-    [18] = 3812,
-    [20] = 6618,
-    [21] = 6885,
-    [22] = 8012,
-    [23] = 8346,
-    [24] = 8403,
-    [25] = 8548,
-    [26] = 9868,
-    [27] = 10069,
-    [28] = 10330,
-    [29] = 10792,
-    [30] = 11242,
-    [31] = 11329,
-    [32] = 11894,
-    [33] = 12512,
-    [34] = 12860,
-    [35] = 12990,
-    [36] = 13154,
-    [37] = 13308,
-    [39] = 13826,
-    [40] = 13858,
-    [41] = 13886,
-    [42] = 13919,
-    [43] = 14028,
-    [44] = 14051,
-    [45] = 14109,
-    [46] = 13794,
-    [47] = 14216,
-    [48] = 14519,
-    [49] = 14565,
-    [50] = 14199,
-    [51] = 14645,
-    [52] = 14665,
-    [53] = 14697,
-    [54] = 14620,
-    [55] = 14830,
-    [56] = 14989,
-    [57] = 14806,
-    [58] = 15237,
-    [59] = 15534,
-    [60] = 16192,
-    [61] = 17978,
-    [62] = 19121,
-    [63] = 20643,
-    [64] = 15054,
-    [65] = 25889,
-    [66] = 25932,
-    [67] = 25974,
-    [68] = 26046,
-    [69] = 26089,
-    [70] = 26149,
-    [71] = 25783,
-    [72] = 26192,
-    [73] = 26290,
-    [74] = 26468,
-    [75] = 26519,
-    [76] = 26549,
-    [77] = 26800,
-    [78] = 26849,
-    [79] = 27302,
-    [80] = 27322,
-    [81] = 27461,
-    [82] = 27560,
-    [83] = 27582,
-    [84] = 27635,
-    [85] = 27671,
-    [86] = 27689,
-    [87] = 28002,
-    [88] = 28018,
-    [89] = 28069,
-    [90] = 28088,
-    [91] = 28330,
-    [92] = 28374,
-    [93] = 28550,
-    [94] = 28578,
-    [95] = 28589,
+    [16] = 3136,
+    [17] = 3432,
+    [18] = 3806,
+    [20] = 6610,
+    [21] = 6877,
+    [22] = 8004,
+    [23] = 8338,
+    [24] = 8395,
+    [25] = 8540,
+    [26] = 9860,
+    [27] = 10061,
+    [28] = 10322,
+    [29] = 10784,
+    [30] = 11234,
+    [31] = 11321,
+    [32] = 11886,
+    [33] = 12504,
+    [34] = 12852,
+    [35] = 12982,
+    [36] = 13146,
+    [37] = 13300,
+    [39] = 13818,
+    [40] = 13843,
+    [41] = 13864,
+    [42] = 13897,
+    [43] = 14006,
+    [44] = 14025,
+    [45] = 14083,
+    [46] = 13786,
+    [47] = 14190,
+    [48] = 14493,
+    [49] = 14539,
+    [50] = 14173,
+    [51] = 14619,
+    [52] = 14639,
+    [53] = 14671,
+    [54] = 14594,
+    [55] = 14804,
+    [56] = 14963,
+    [57] = 14780,
+    [58] = 15211,
+    [59] = 15508,
+    [60] = 16166,
+    [61] = 17952,
+    [62] = 19095,
+    [63] = 20617,
+    [64] = 15028,
+    [65] = 25863,
+    [66] = 25906,
+    [67] = 25948,
+    [68] = 26020,
+    [69] = 26063,
+    [70] = 26123,
+    [71] = 25757,
+    [72] = 26166,
+    [73] = 26264,
+    [74] = 26442,
+    [75] = 26493,
+    [76] = 26523,
+    [77] = 26774,
+    [78] = 26823,
+    [79] = 27276,
+    [80] = 27296,
+    [81] = 27435,
+    [82] = 27534,
+    [83] = 27556,
+    [84] = 27609,
+    [85] = 27645,
+    [86] = 27663,
+    [87] = 27976,
+    [88] = 27992,
+    [89] = 28043,
+    [90] = 28062,
+    [91] = 28304,
+    [92] = 28348,
+    [93] = 28524,
+    [94] = 28552,
+    [95] = 28563,
 }
 
 -- Misc AOT variable imports

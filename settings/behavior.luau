@@ -5,13 +5,6 @@
 
 local behavior = {}
 
-behavior.keys = {
-    toggleKeybind = true,
-    mouseOverride = true,
-    welcomeToast = true,
-    antiWindowDuplicate = true,
-}
-
 function behavior.validate(key: string, value: any): (boolean, any)
     if key == "toggleKeybind" then
         return typeof(value) == "EnumItem", value

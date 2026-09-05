@@ -6,10 +6,6 @@
 
 local performance = {}
 
-performance.keys = {
-    haptics = true,
-}
-
 function performance.validate(key: string, value: any): (boolean, any)
     if key == "haptics" then
         return type(value) == "boolean", value == true

@@ -6,13 +6,6 @@
 
 local appearance = {}
 
-appearance.keys = {
-    keepOnScreen = true,
-    showProfile = true,
-    showFullUsername = true,
-    layoutMode = true,
-}
-
 function appearance.validate(key: string, value: any): (boolean, any)
     if key == "keepOnScreen" or key == "showProfile" or key == "showFullUsername" then
         return type(value) == "boolean", value == true

@@ -43,20 +43,14 @@ local function profileVisible(window)
         and variables.localPlayer ~= nil
 end
 
-local function currentProfileBuildGeneration(window)
-    return window.profileBuildGeneration or 0
-end
-
 local function buildProfile(window, layout)
     local player = variables.localPlayer
     if not player then
-        window.profileBuildGeneration = 0
         return
     end
 
     profileBuildGeneration += 1
     local generation = profileBuildGeneration
-    window.profileBuildGeneration = generation
 
     local isSidebar = layout.mode == "sidebar"
     local isCollapsed = layout.mode == "collapsedSidebar"
