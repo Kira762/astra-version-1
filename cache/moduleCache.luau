@@ -13,7 +13,6 @@
 local moduleCache = {}
 
 local singletons: { [string]: any } = {}
-local factories: { [string]: () -> any } = {}
 
 function moduleCache.singleton(name: string, factory: () -> any): any
     local existing = singletons[name]
@@ -37,7 +36,6 @@ end
 -- factories that are safe to re-run; the library itself never evicts.
 function moduleCache._forget(name: string)
     singletons[name] = nil
-    factories[name] = nil
 end
 
 return moduleCache

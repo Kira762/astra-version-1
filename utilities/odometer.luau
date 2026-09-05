@@ -5,9 +5,11 @@ local odometer = {}
 odometer.__index = odometer
 
 local stripLength = 20
-local measureParams = Instance.new("GetTextBoundsParams")
 
+-- Fresh params per measurement: GetTextBoundsAsync yields, so a shared params
+-- object would race with concurrent measure() calls.
 local function measure(font, size, text)
+    local measureParams = Instance.new("GetTextBoundsParams")
     measureParams.Text = text
     measureParams.Font = font
     measureParams.Size = size

@@ -17,7 +17,7 @@ function paths.getConfigPath(window: ConfigWindow, name: unknown?): (string?, st
         dir = path.join(dir, path.sanitizeFolder(window.configuration.customFolder))
     end
     if name ~= nil then
-                        local safe = path.sanitizeFile(name)
+        local safe = path.sanitizeFile(name)
         if safe == "" then
             return nil, nil
         end

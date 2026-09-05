@@ -14,7 +14,7 @@ function persistenceWrite.write(dir: string, fullPath: string, contents: string)
     filesystem.ensureDir(dir)
     filesystem.writefile(tempPath, contents)
 
-        if filesystem.readfile(tempPath) ~= contents then
+    if filesystem.readfile(tempPath) ~= contents then
         error("parked copy did not write cleanly")
     end
 

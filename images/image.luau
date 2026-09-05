@@ -49,8 +49,14 @@ function image.preload(onSettled: PreloadCallback?): (boolean, number)
 end
 
 function image.avatar(userId: number, onReady: AvatarCallback?): string
+    local uri = `rbxthumb://type=AvatarHeadShot&id={userId}&w=48&h=48`
     if not variables.secureMode then
-        return `rbxthumb://type=AvatarHeadShot&id={userId}&w=48&h=48`
+        -- The URI is immediately usable; still deliver the callback so
+        -- callers that only render on it do not stay blank.
+        if onReady then
+            task.defer(onReady, uri)
+        end
+        return uri
     end
 
     return imageCache.avatar(userId, onReady)
@@ -73,7 +79,7 @@ function image.assign(instance: Instance, property: string, value: unknown)
     else
         target[property] = image.resolve(value)
     end
-        if variables.secureMode and not settled then
+    if variables.secureMode and not settled then
         local id = idOf(value)
         if id and not image.rewrites[id] then
             local waiting = image.pending[id]

@@ -106,14 +106,6 @@ local function readSavedSettings(): DecodedSettings?
     return nil
 end
 
-function persistenceSettings.getAntiWindowDuplicate(): boolean
-    local settings = readSavedSettings()
-    if settings and type(settings.antiWindowDuplicate) == "boolean" then
-        return settings.antiWindowDuplicate
-    end
-    return true
-end
-
 function persistenceSettings.loadSettings(window: SettingsWindow): boolean
     local settings = readSavedSettings()
 

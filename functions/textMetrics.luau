@@ -5,12 +5,23 @@ local textMetrics = {}
 
 local widthCache: { [string]: number } = {}
 local widthCacheCount = 0
-local widthCacheCap = 1024 
+local widthCacheCap = 1024
 local heightCache: { [string]: number } = {}
 local heightCacheCount = 0
 local heightCacheCap = 1024
-local widthParams = Instance.new("GetTextBoundsParams")
-local heightParams = Instance.new("GetTextBoundsParams")
+
+-- A fresh params instance per measurement: GetTextBoundsAsync yields, so a
+-- shared params object would race with any concurrent textWidth/textHeight
+-- call and could measure another call's text.
+local function makeParams(text: string, font: Font, size: number, width: number): GetTextBoundsParams
+	local params = Instance.new("GetTextBoundsParams")
+	params.Text = text
+	params.Font = font
+	params.Size = size
+	params.Width = width
+	return params
+end
+
 local function getTextBounds(params: GetTextBoundsParams): unknown
     local ok, bounds = pcall(function()
         return textService:GetTextBoundsAsync(params)
@@ -30,7 +41,7 @@ end
 
 function textMetrics.textWidth(font: Font, size: number, text: any): number
     text = tostring(text)
-        local key = tostring(font.Family)
+    local key = tostring(font.Family)
         .. "|"
         .. tostring(font.Weight)
         .. "|"
@@ -44,14 +55,9 @@ function textMetrics.textWidth(font: Font, size: number, text: any): number
         return cached
     end
 
-    widthParams.Text = text
-    widthParams.Font = font
-    widthParams.Size = size
-    widthParams.Width = math.huge
-
-    local measuredWidth = boundAxis(getTextBounds(widthParams), "X")
+    local measuredWidth = boundAxis(getTextBounds(makeParams(text, font, size, math.huge)), "X")
     if not measuredWidth then
-                                local length = utf8.len(text) or #text
+        local length = utf8.len(text) or #text
         return math.ceil(size * 0.55 * length)
     end
 
@@ -83,12 +89,7 @@ function textMetrics.textHeight(font: Font, size: number, text: any, width: numb
         return cached
     end
 
-    heightParams.Text = text
-    heightParams.Font = font
-    heightParams.Size = size
-    heightParams.Width = width
-
-    local measuredHeight = boundAxis(getTextBounds(heightParams), "Y")
+    local measuredHeight = boundAxis(getTextBounds(makeParams(text, font, size, width)), "Y")
     if not measuredHeight then
         return size
     end
