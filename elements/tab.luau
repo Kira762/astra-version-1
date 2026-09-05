@@ -1,26 +1,26 @@
-local Tab = {}
-Tab.__index = Tab
-Tab.__type = "Tab"
+local a1 = {}
+a1.__index = a1
+a1.__type = "Tab"
 
-local utility = script.Parent.Parent.utilities
+local a2 = script.Parent.Parent.utilities
 
-local variables = require(utility.Parent.core.state)
-local assignOrder = require(utility.ordering)
-local hapticEngine = require(utility.HapticEngine)
-local search = require(script.Parent.Parent.components.search)
-local tabSelector = require(script.Parent.Parent.components.tabSelector)
+local a3 = require(a2.Parent.core.state)
+local a4 = require(a2.ordering)
+local a5 = require(a2.HapticEngine)
+local a6 = require(script.Parent.Parent.components.search)
+local a7 = require(script.Parent.Parent.components.tabSelector)
 
-local function teardownElements(window, elements)
-    for _, element in elements do
+local function a8(window, a9)
+    for _, element in a9 do
         if element.__type == "Group" then
-            teardownElements(window, element.elements)
+            a8(window, element.elements)
         else
             window:_unregisterControl(element)
         end
 
                 if element.connections then
-            for _, connection in element.connections do
-                window:Disconnect(connection)
+            for _, a10 in element.connections do
+                window:Disconnect(a10)
             end
             element.connections = nil
         end
@@ -39,47 +39,47 @@ local function teardownElements(window, elements)
     end
 end
 
-local selectTweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local hoverTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local a11 = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local a12 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local function pageSize(layout)
-    if layout.mode == "sidebar" then
+local function a13(a14)
+    if a14.mode == "sidebar" then
         return UDim2.new(1, -35, 1, 0)
     end
     return UDim2.new(1, -20, 1, 0)
 end
 
-local function pagePosition(layout)
-    if layout.mode == "sidebar" then
+local function a15(a16)
+    if a16.mode == "sidebar" then
         return UDim2.new(0, 35, 0, 0)
     end
     return UDim2.new(0, 0, 0, 0)
 end
 
-function Tab.new(window, properties)
-    properties = if typeof(properties) == "table" then properties else {}
+function a1.new(window, a17)
+    a17 = if typeof(a17) == "table" then a17 else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        name = properties.name or properties.Name,
-        icon = window:ResolveIcon(properties.icon or properties.Icon),
-        neglectSelector = properties.neglectSelector or properties.NeglectSelector or false,
-        customOrder = properties.customOrder or properties.CustomOrder or 0,
-                forgetState = properties.forgetState or properties.ForgetState or false,
+        name = a17.name or a17.Name,
+        icon = window:ResolveIcon(a17.icon or a17.Icon),
+        neglectSelector = a17.neglectSelector or a17.NeglectSelector or false,
+        customOrder = a17.customOrder or a17.CustomOrder or 0,
+                forgetState = a17.forgetState or a17.ForgetState or false,
 
         elements = {},
-        connections = {},     }, Tab)
+        connections = {},     }, a1)
 
         assert(self.name or self.icon, "A tab needs a name or an icon.")
 
         if not self.neglectSelector then
-        tabSelector.build(self, self.window.layout)
+        a7.build(self, self.window.layout)
     end
 
         self.tabPage = self.window:Create("ScrollingFrame", {
         Name = self.name,
-        Size = pageSize(self.window.layout),
-        Position = pagePosition(self.window.layout),
+        Size = a13(self.window.layout),
+        Position = a15(self.window.layout),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -114,12 +114,12 @@ function Tab.new(window, properties)
     return self
 end
 
-function Tab:_bindSelector()
+function a1:_bindSelector()
     if self.neglectSelector or not self.topbarItemInteract then
         return
     end
     table.insert(self.connections, self.window:Connect(self.topbarItemInteract.MouseButton1Click, function()
-        hapticEngine.click()
+        a5.click()
         self:Select()
     end))
     table.insert(self.connections, self.window:Connect(self.topbarItemInteract.MouseEnter, function()
@@ -127,59 +127,59 @@ function Tab:_bindSelector()
             return
         end
         if self.window.selectedTab ~= self then
-            self:_applyVisual("hover", hoverTweenInfo)
+            self:_applyVisual("hover", a12)
             self:_spinGradients()
         end
     end))
     table.insert(self.connections, self.window:Connect(self.topbarItemInteract.MouseLeave, function()
         if self.window.selectedTab ~= self then
-            self:_applyVisual("unselected", hoverTweenInfo)
+            self:_applyVisual("unselected", a12)
         end
     end))
 end
 
-function Tab:_rebuildSelector()
+function a1:_rebuildSelector()
     if self.neglectSelector then
         return
     end
-    for _, connection in self.connections do
-        self.window:Disconnect(connection)
+    for _, a18 in self.connections do
+        self.window:Disconnect(a18)
     end
     table.clear(self.connections)
     if self.topbarItem then
         self.window:DestroySubtree(self.topbarItem)
     end
-    tabSelector.build(self, self.window.layout)
+    a7.build(self, self.window.layout)
     self:_bindSelector()
 end
 
-function Tab:_applyVisual(stateName, tweenInfo)
+function a1:_applyVisual(a19, a20)
     if self.neglectSelector or not self.topbarItem then
         return
     end
 
-    local state = tabSelector.states[self.window.layout.mode][stateName]
-    if not state then
+    local a21 = a7.states[self.window.layout.mode][a19]
+    if not a21 then
         return
     end
 
-    tabSelector.applyVisual(self, state, tweenInfo)
+    a7.applyVisual(self, a21, a20)
 end
 
-function Tab:_spinGradients()
+function a1:_spinGradients()
     if self.neglectSelector then
         return
     end
 
-    local spinInfo = TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    for _, gradient in { self.topbarItemGradient, self.topbarItemStrokeGradient } do
-        gradient.Rotation = 90 - 360         variables.tweenService:Create(gradient, spinInfo, { Rotation = 90 }):Play()
+    local a22 = TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    for _, a23 in { self.topbarItemGradient, self.topbarItemStrokeGradient } do
+        a23.Rotation = 90 - 360         a3.tweenService:Create(a23, a22, { Rotation = 90 }):Play()
     end
 end
 
-function Tab:Select(noAnimation)
+function a1:Select(a24)
             if self.window._searching then
-        search.close(self.window, { showTabs = true, jumpTo = false })
+        a6.close(self.window, { showTabs = true, jumpTo = false })
     end
 
     self.window.selectedTab = self
@@ -188,20 +188,20 @@ function Tab:Select(noAnimation)
     end
     self.window:_jumpTo(self.tabPage)
 
-                    local skipAnimation = noAnimation or not self.window:_interactive()
+                    local a25 = a24 or not self.window:_interactive()
 
-    if not self.neglectSelector and not skipAnimation then
-        self:_applyVisual("selected", selectTweenInfo)
+    if not self.neglectSelector and not a25 then
+        self:_applyVisual("selected", a11)
     end
 
     for _, tab in self.window.tabs do
         if tab ~= self.window.selectedTab then
-            tab:Deselect(skipAnimation)
+            tab:Deselect(a25)
         end
     end
 
-    if self ~= self.window.rfSettings and self.window.settingsAction and not skipAnimation then
-        variables.tweenService
+    if self ~= self.window.rfSettings and self.window.settingsAction and not a25 then
+        a3.tweenService
             :Create(
                 self.window.settingsAction.iconLabel,
                 TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -211,15 +211,15 @@ function Tab:Select(noAnimation)
     end
 end
 
-function Tab:Deselect(noAnimation)
-    if not self.neglectSelector and not noAnimation then
-        self:_applyVisual("unselected", selectTweenInfo)
+function a1:Deselect(a26)
+    if not self.neglectSelector and not a26 then
+        self:_applyVisual("unselected", a11)
     end
 end
 
-function Tab:_register(element)
+function a1:_register(element)
     table.insert(self.elements, element)
-    assignOrder(element, #self.elements * 10)
+    a4(element, #self.elements * 10)
     self.window:_restoreLate(element)
 
     if not self.window.hidden then
@@ -229,89 +229,89 @@ function Tab:_register(element)
     return element
 end
 
-function Tab:CreateButton(properties)
-    return self:_register(require(script.Parent.button).new(self, properties))
+function a1:CreateButton(a27)
+    return self:_register(require(script.Parent.button).new(self, a27))
 end
 
-function Tab:CreateToggle(properties)
-    return self:_register(require(script.Parent.toggle).new(self, properties))
+function a1:CreateToggle(a28)
+    return self:_register(require(script.Parent.toggle).new(self, a28))
 end
 
-function Tab:CreateSwitch(properties)
-    return self:CreateToggle(properties)
+function a1:CreateSwitch(a29)
+    return self:CreateToggle(a29)
 end
 
-function Tab:CreateSection(properties)
-    return self:_register(require(script.Parent.section).new(self, properties))
+function a1:CreateSection(a30)
+    return self:_register(require(script.Parent.section).new(self, a30))
 end
 
-function Tab:CreateText(properties)
-    return self:_register(require(script.Parent.text).new(self, properties))
+function a1:CreateText(a31)
+    return self:_register(require(script.Parent.text).new(self, a31))
 end
 
-function Tab:CreateDivider(properties)
-    return self:_register(require(script.Parent.divider).new(self, properties))
+function a1:CreateDivider(a32)
+    return self:_register(require(script.Parent.divider).new(self, a32))
 end
 
-function Tab:CreateProgress(properties)
-    return self:_register(require(script.Parent.progress).new(self, properties))
+function a1:CreateProgress(a33)
+    return self:_register(require(script.Parent.progress).new(self, a33))
 end
 
-function Tab:CreateConsole(properties)
-    return self:_register(require(script.Parent.console).new(self, properties))
+function a1:CreateConsole(a34)
+    return self:_register(require(script.Parent.console).new(self, a34))
 end
 
-function Tab:CreateStat(properties)
-    return self:_register(require(script.Parent.stat).new(self, properties))
+function a1:CreateStat(a35)
+    return self:_register(require(script.Parent.stat).new(self, a35))
 end
 
-function Tab:CreateSlider(properties)
-    return self:_register(require(script.Parent.slider).new(self, properties))
+function a1:CreateSlider(a36)
+    return self:_register(require(script.Parent.slider).new(self, a36))
 end
 
-function Tab:CreateDropdown(properties)
-    return self:_register(require(script.Parent.dropdown).new(self, properties))
+function a1:CreateDropdown(a37)
+    return self:_register(require(script.Parent.dropdown).new(self, a37))
 end
 
-function Tab:CreateInput(properties)
-    return self:_register(require(script.Parent.input).new(self, properties))
+function a1:CreateInput(a38)
+    return self:_register(require(script.Parent.input).new(self, a38))
 end
 
-function Tab:CreateKeybind(properties)
-    return self:_register(require(script.Parent.keybind).new(self, properties))
+function a1:CreateKeybind(a39)
+    return self:_register(require(script.Parent.keybind).new(self, a39))
 end
 
-function Tab:CreateColorPicker(properties)
-    return self:_register(require(script.Parent.colorpicker).new(self, properties))
+function a1:CreateColorPicker(a40)
+    return self:_register(require(script.Parent.colorpicker).new(self, a40))
 end
 
-function Tab:CreateGroup(properties)
-    return self:_register(require(script.Parent.group).new(self, properties))
+function a1:CreateGroup(a41)
+    return self:_register(require(script.Parent.group).new(self, a41))
 end
 
-function Tab:_moveElement(element, targetIndex)
-    local idx = table.find(self.elements, element)
-    if not idx then
+function a1:_moveElement(element, a42)
+    local a43 = table.find(self.elements, element)
+    if not a43 then
         return
     end
-    table.remove(self.elements, idx)
-    targetIndex = math.clamp(targetIndex, 1, #self.elements + 1)
-    table.insert(self.elements, targetIndex, element)
+    table.remove(self.elements, a43)
+    a42 = math.clamp(a42, 1, #self.elements + 1)
+    table.insert(self.elements, a42, element)
     for i, el in self.elements do
-        assignOrder(el, i * 10)
+        a4(el, i * 10)
     end
 end
 
-function Tab:Remove()
+function a1:Remove()
     local window = self.window
 
             if window._searching then
-        search.close(window, { showTabs = true, jumpTo = window.selectedTab and window.selectedTab.tabPage })
+        a6.close(window, { showTabs = true, jumpTo = window.selectedTab and window.selectedTab.tabPage })
     end
 
-    local idx = table.find(window.tabs, self)
-    if idx then
-        table.remove(window.tabs, idx)
+    local a44 = table.find(window.tabs, self)
+    if a44 then
+        table.remove(window.tabs, a44)
     end
 
         if window.selectedTab == self then
@@ -324,10 +324,10 @@ function Tab:Remove()
         end
     end
 
-            teardownElements(window, self.elements)
+            a8(window, self.elements)
 
-            for _, connection in self.connections do
-        window:Disconnect(connection)
+            for _, a45 in self.connections do
+        window:Disconnect(a45)
     end
     self.connections = {}
 
@@ -342,4 +342,4 @@ function Tab:Remove()
     self.elements = {}
 end
 
-return Tab
+return a1

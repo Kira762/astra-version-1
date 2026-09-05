@@ -1,11 +1,5 @@
--- Built-in settings registry (settings/registry.luau).
---
--- Declares every supported built-in Astra setting: its type for validation
--- and its domain (appearance / behavior / performance). These definitions are
--- data, not UI; the window's Settings page renders them and the manager
--- validates writes against this registry.
 
-local registry = {}
+local a1 = {}
 
 export type SettingDefinition = {
     key: string,
@@ -14,7 +8,7 @@ export type SettingDefinition = {
     description: string?,
 }
 
-registry.definitions = {
+a1.definitions = {
     toggleKeybind = {
         key = "toggleKeybind",
         kind = "keybind",
@@ -77,17 +71,17 @@ registry.definitions = {
     },
 }
 
-function registry.definition(key: string): SettingDefinition?
-    return registry.definitions[key]
+function a1.definition(a2: string): SettingDefinition?
+    return a1.definitions[a2]
 end
 
-function registry.keys(): { string }
-    local keys = {}
-    for key in registry.definitions do
-        table.insert(keys, key)
+function a1.keys(): { string }
+    local a3 = {}
+    for a4 in a1.definitions do
+        table.insert(a3, a4)
     end
-    table.sort(keys)
-    return keys
+    table.sort(a3)
+    return a3
 end
 
-return registry
+return a1

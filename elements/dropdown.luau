@@ -1,90 +1,90 @@
-local Dropdown = {}
-Dropdown.__index = Dropdown
-Dropdown.__type = "Dropdown"
+local a1 = {}
+a1.__index = a1
+a1.__type = "Dropdown"
 
-local utility = script.Parent.Parent.utilities
+local a2 = script.Parent.Parent.utilities
 
-local variables = require(utility.Parent.core.state)
-local functions = require(script.Parent.Parent.functions)
-local image = require(script.Parent.Parent.images.image)
-local constants = require(utility.constants)
-local locale = require(utility.locale)
-local hapticEngine = require(utility.HapticEngine)
-local windowSizing = require(utility.windowSizing)
-local lockable = require(utility.lockable)
+local a3 = require(a2.Parent.core.state)
+local a4 = require(script.Parent.Parent.functions)
+local a5 = require(script.Parent.Parent.images.image)
+local a6 = require(a2.constants)
+local a7 = require(a2.locale)
+local a8 = require(a2.HapticEngine)
+local a9 = require(a2.windowSizing)
+local a10 = require(a2.lockable)
 
-local chevronIcon = constants.icons.chevron
-local checkIcon = constants.icons.check
-local dotIcon = constants.icons.dot
-local searchIconAsset = constants.icons.search
+local a11 = a6.icons.chevron
+local a12 = a6.icons.check
+local a13 = a6.icons.dot
+local a14 = a6.icons.search
 
-local roundRadius = UDim.new(0, 12)
-local flatRadius = UDim.new(0, 7)
+local a15 = UDim.new(0, 12)
+local a16 = UDim.new(0, 7)
 
-local searchCollapsedHeight = 30
-local searchExpandedHeight = 38
+local a17 = 30
+local a18 = 38
 
-local optionHeight = 38
-local optionGap = 5
-local listPadding = 2 
-local headerHeight = 41
-local headerGap = 6
-local cardPaddingTop = 7
-local cardPaddingBottom = 6
-local cardPadding = cardPaddingTop + cardPaddingBottom
+local a19 = 38
+local a20 = 5
+local a21 = 2
+local a22 = 41
+local a23 = 6
+local a24 = 7
+local a25 = 6
+local a26 = a24 + a25
 
-local maxVisibleOptions = 4
+local a27 = 4
 
-local actionsHeight = 22
-local hintTween = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local hoverTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local panelTween = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local openTween = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local closeTween = TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local a28 = 22
+local a29 = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local a30 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local a31 = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local a32 = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local a33 = TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-local scrollbarShown = 0.4
-local searchTween = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local a34 = 0.4
+local a35 = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-local function dedupStrings(arr)
-    local seen = {}
-    local out = {}
-    for _, v in arr do
-        if typeof(v) == "string" and not seen[v] then
-            seen[v] = true
-            table.insert(out, v)
+local function a36(a37)
+    local a38 = {}
+    local a39 = {}
+    for _, v in a37 do
+        if typeof(v) == "string" and not a38[v] then
+            a38[v] = true
+            table.insert(a39, v)
         end
     end
-    return out
+    return a39
 end
 
-local function normalizeValue(value, multi)
-    if value == nil then
+local function a40(a41, a42)
+    if a41 == nil then
         return {}
     end
-    if typeof(value) == "string" then
-        return { value }
+    if typeof(a41) == "string" then
+        return { a41 }
     end
-    if typeof(value) == "table" then
-        local out = dedupStrings(value)
-        if not multi and #out > 1 then
-            return { out[1] }
+    if typeof(a41) == "table" then
+        local a43 = a36(a41)
+        if not a42 and #a43 > 1 then
+            return { a43[1] }
         end
-        return out
+        return a43
     end
     return {}
 end
 
-local function intersectWithOptions(value, options)
-    local out = {}
-    for _, v in value do
-        if table.find(options, v) then
-            table.insert(out, v)
+local function a44(a45, a46)
+    local a47 = {}
+    for _, v in a45 do
+        if table.find(a46, v) then
+            table.insert(a47, v)
         end
     end
-    return out
+    return a47
 end
 
-local function sameSelection(a, b)
+local function a48(a, b)
     if #a ~= #b then
         return false
     end
@@ -96,43 +96,43 @@ local function sameSelection(a, b)
     return true
 end
 
-function Dropdown.new(tab, properties)
-    properties = if typeof(properties) == "table" then properties else {}
+function a1.new(tab, a49)
+    a49 = if typeof(a49) == "table" then a49 else {}
 
-    local options = properties.options or properties.Options or {}
-    local multiSelect = properties.multiSelect or properties.MultiSelect or properties.MultipleOptions or false
+    local a50 = a49.options or a49.Options or {}
+    local a51 = a49.multiSelect or a49.MultiSelect or a49.MultipleOptions or false
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = properties.name or properties.Name or "Dropdown",
-        icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
-        description = properties.description or properties.Description,
-        forgetState = properties.forgetState or properties.ForgetState or tab.forgetState, 
-        flag = properties.flag
-            or properties.Flag
+        name = a49.name or a49.Name or "Dropdown",
+        icon = tab.window:ResolveIcon(a49.icon or a49.Icon),
+        description = a49.description or a49.Description,
+        forgetState = a49.forgetState or a49.ForgetState or tab.forgetState,
+        flag = a49.flag
+            or a49.Flag
             or (
-                not (properties.forgetState or properties.ForgetState or tab.forgetState)
-                    and functions.deriveFlagFromName(properties.name or properties.Name or "Dropdown")
+                not (a49.forgetState or a49.ForgetState or tab.forgetState)
+                    and a4.deriveFlagFromName(a49.name or a49.Name or "Dropdown")
                 or nil
             ),
 
-        callback = properties.callback or properties.Callback or function() end,
+        callback = a49.callback or a49.Callback or function() end,
 
-        options = dedupStrings(options),
-        multiSelect = multiSelect,
-        placeholderText = locale.resolve(properties.placeholder or properties.Placeholder or "None"),
-        value = normalizeValue(
-            properties.value or properties.Value or properties.currentOption or properties.CurrentOption,
-            multiSelect
+        options = a36(a50),
+        multiSelect = a51,
+        placeholderText = a7.resolve(a49.placeholder or a49.Placeholder or "None"),
+        value = a40(
+            a49.value or a49.Value or a49.currentOption or a49.CurrentOption,
+            a51
         ),
 
         _isOpen = false,
         _optionFrames = {},
-    }, Dropdown)
+    }, a1)
 
             self._desiredValue = self.value
-    self.value = intersectWithOptions(self.value, self.options)
+    self.value = a44(self.value, self.options)
 
         self.window:_registerControl(self)
 
@@ -158,7 +158,7 @@ function Dropdown.new(tab, properties)
 
             self.stroke = self.window:StyleElementBody(self.top)
     self.hoverOverlay = self.window:CreateHoverOverlay(self.top)
-    self.flashTarget = self.top 
+    self.flashTarget = self.top
     self.container = self.window:Create("Frame", {
         BorderSizePixel = 0,
 
@@ -186,14 +186,14 @@ function Dropdown.new(tab, properties)
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
 
-                        ImageTransparency = 1, 
+                        ImageTransparency = 1,
             ZIndex = 5,
             Parent = self.container,
         }, { ImageColor3 = "ContentColor" })
     end
 
     self.title = self.window:Create("TextLabel", {
-                Text = locale.t(self.name),
+                Text = a7.t(self.name),
 
         Size = UDim2.fromOffset(150, 16),
         BorderSizePixel = 0,
@@ -204,7 +204,7 @@ function Dropdown.new(tab, properties)
         TextWrapped = true,
         LayoutOrder = 1,
 
-                TextTransparency = 1, 
+                TextTransparency = 1,
         ZIndex = 5,
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
@@ -219,7 +219,7 @@ function Dropdown.new(tab, properties)
         TextXAlignment = Enum.TextXAlignment.Right,
         TextWrapped = true,
 
-                TextTransparency = 1, 
+                TextTransparency = 1,
         ZIndex = 5,
         Parent = self.top,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
@@ -230,10 +230,10 @@ function Dropdown.new(tab, properties)
         Size = UDim2.fromOffset(16, 16),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
-        Image = "rbxassetid://" .. tostring(chevronIcon),
+        Image = "rbxassetid://" .. tostring(a11),
         Rotation = 180,
 
-                ImageTransparency = 1, 
+                ImageTransparency = 1,
         ZIndex = 5,
         Parent = self.top,
     }, { ImageColor3 = "ContentColor" })
@@ -254,13 +254,13 @@ function Dropdown.new(tab, properties)
                     self.panel = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(1, 1),
         Position = UDim2.new(1, 0, 1, 0),
-        Size = UDim2.new(1, 0, 1, -(headerHeight + headerGap)),
+        Size = UDim2.new(1, 0, 1, -(a22 + a23)),
         BorderSizePixel = 0,
         ClipsDescendants = true,
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         ZIndex = 1,
 
-        BackgroundTransparency = 1, 
+        BackgroundTransparency = 1,
         Parent = self.main,
     })
 
@@ -277,8 +277,8 @@ function Dropdown.new(tab, properties)
     })
 
     self.window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, cardPaddingTop),
-        PaddingBottom = UDim.new(0, cardPaddingBottom),
+        PaddingTop = UDim.new(0, a24),
+        PaddingBottom = UDim.new(0, a25),
 
         Parent = self.panel,
     })
@@ -328,17 +328,17 @@ function Dropdown.new(tab, properties)
     })
 
             self.window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, listPadding),
-        PaddingBottom = UDim.new(0, listPadding),
+        PaddingTop = UDim.new(0, a21),
+        PaddingBottom = UDim.new(0, a21),
 
         Parent = self.list,
     })
 
             self.emptyLabel = self.window:Create("TextLabel", {
         Name = "Empty",
-        Size = UDim2.new(1, -12, 0, optionHeight),
+        Size = UDim2.new(1, -12, 0, a19),
         BackgroundTransparency = 1,
-        Text = locale.t("No matches"),
+        Text = a7.t("No matches"),
         TextSize = 14,
         TextTransparency = 0.55,
         Visible = false,
@@ -347,34 +347,34 @@ function Dropdown.new(tab, properties)
         Parent = self.list,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-    local function isOptionSelected(name)
-        return table.find(self.value, name) ~= nil
+    local function a52(a53)
+        return table.find(self.value, a53) ~= nil
     end
 
-    local function renderOptionState(data, animate)
-        local selected = isOptionSelected(data.name)
-        local bgT = if self._isOpen then (selected and 0.9 or 0.95) else 1
-        local titleT = if self._isOpen then (selected and 0 or 0.3) else 1
-                local iconT = if self._isOpen then (selected and 0 or 0.7) else 1
-        local strokeT = if self._isOpen then (selected and 0.85 or 0.93) else 1
+    local function a54(a55, a56)
+        local a57 = a52(a55.name)
+        local a58 = if self._isOpen then (a57 and 0.9 or 0.95) else 1
+        local a59 = if self._isOpen then (a57 and 0 or 0.3) else 1
+                local a60 = if self._isOpen then (a57 and 0 or 0.7) else 1
+        local a61 = if self._isOpen then (a57 and 0.85 or 0.93) else 1
 
-        image.assign(data.checkIcon, "Image", if selected then checkIcon else dotIcon)
+        a5.assign(a55.checkIcon, "Image", if a57 then a12 else a13)
 
-        if animate then
-            local info = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-            variables.tweenService:Create(data.frame, info, { BackgroundTransparency = bgT }):Play()
-            variables.tweenService:Create(data.title, info, { TextTransparency = titleT }):Play()
-            variables.tweenService:Create(data.checkIcon, info, { ImageTransparency = iconT }):Play()
-            variables.tweenService:Create(data.stroke, info, { Transparency = strokeT }):Play()
+        if a56 then
+            local a62 = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+            a3.tweenService:Create(a55.frame, a62, { BackgroundTransparency = a58 }):Play()
+            a3.tweenService:Create(a55.title, a62, { TextTransparency = a59 }):Play()
+            a3.tweenService:Create(a55.checkIcon, a62, { ImageTransparency = a60 }):Play()
+            a3.tweenService:Create(a55.stroke, a62, { Transparency = a61 }):Play()
         else
-            data.frame.BackgroundTransparency = bgT
-            data.title.TextTransparency = titleT
-            data.checkIcon.ImageTransparency = iconT
-            data.stroke.Transparency = strokeT
+            a55.frame.BackgroundTransparency = a58
+            a55.title.TextTransparency = a59
+            a55.checkIcon.ImageTransparency = a60
+            a55.stroke.Transparency = a61
         end
     end
 
-    local function updateSelectedLabel()
+    local function a63()
         if self.multiSelect then
             local n = #self.value
             if n == 0 then
@@ -382,19 +382,19 @@ function Dropdown.new(tab, properties)
             elseif n == 1 then
                 self.selectedLabel.Text = self.value[1]
             else
-                self.selectedLabel.Text = locale.resolve("Various")
+                self.selectedLabel.Text = a7.resolve("Various")
             end
         else
             self.selectedLabel.Text = self.value[1] or self.placeholderText
         end
     end
 
-    self._renderOptionState = renderOptionState
-    self._updateSelectedLabel = updateSelectedLabel
+    self._renderOptionState = a54
+    self._updateSelectedLabel = a63
 
-    local function buildOption(optionName)
-        local frame = self.window:Create("Frame", {
-            Size = UDim2.new(1, -12, 0, optionHeight),
+    local function a64(a65)
+        local a66 = self.window:Create("Frame", {
+            Size = UDim2.new(1, -12, 0, a19),
             BorderSizePixel = 0,
                                     LayoutOrder = #self._optionFrames + 1,
 
@@ -403,33 +403,33 @@ function Dropdown.new(tab, properties)
             Parent = self.list,
         }, { BackgroundColor3 = "DropdownHighlight" })
 
-                local corner = self.window:Create("UICorner", {
-            CornerRadius = flatRadius,
-            Parent = frame,
+                local a67 = self.window:Create("UICorner", {
+            CornerRadius = a16,
+            Parent = a66,
         })
 
-                local optionStroke = self.window:Create("UIStroke", {
+                local a68 = self.window:Create("UIStroke", {
             Color = Color3.fromRGB(255, 255, 255),
-            Transparency = 1,             Parent = frame,
+            Transparency = 1,             Parent = a66,
         })
 
-        local interact = self.window:Create("TextButton", {
+        local a69 = self.window:Create("TextButton", {
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
             Text = "",
             TextTransparency = 1,
             ZIndex = 50,
-            Parent = frame,
+            Parent = a66,
         })
 
-        local container = self.window:Create("Frame", {
+        local a70 = self.window:Create("Frame", {
             AnchorPoint = Vector2.new(0, 0.5),
             Position = UDim2.new(0, 14, 0.5, 0),
             Size = UDim2.fromOffset(170, 16),
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
             ZIndex = 5,
-            Parent = frame,
+            Parent = a66,
         })
 
         self.window:Create("UIListLayout", {
@@ -437,21 +437,21 @@ function Dropdown.new(tab, properties)
             FillDirection = Enum.FillDirection.Horizontal,
             VerticalAlignment = Enum.VerticalAlignment.Center,
             SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = container,
+            Parent = a70,
         })
 
-        local checkIcon = self.window:Create("ImageLabel", {
-            Image = "rbxassetid://" .. tostring(checkIcon),
+        local a71 = self.window:Create("ImageLabel", {
+            Image = "rbxassetid://" .. tostring(a12),
             Size = UDim2.fromOffset(16, 16),
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
             ImageTransparency = 1,
             ZIndex = 5,
-            Parent = container,
+            Parent = a70,
         }, { ImageColor3 = "ContentColor" })
 
-        local title = self.window:Create("TextLabel", {
-            Text = optionName,
+        local a72 = self.window:Create("TextLabel", {
+            Text = a65,
             Size = UDim2.fromOffset(170, 16),
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
@@ -461,41 +461,41 @@ function Dropdown.new(tab, properties)
             LayoutOrder = 1,
             TextTransparency = 1,
             ZIndex = 5,
-            Parent = container,
+            Parent = a70,
         }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-        local data = {
-            name = optionName,
-            frame = frame,
-            interact = interact,
-            title = title,
-            checkIcon = checkIcon,
-            container = container,
-            stroke = optionStroke,
-            corner = corner,
+        local a73 = {
+            name = a65,
+            frame = a66,
+            interact = a69,
+            title = a72,
+            checkIcon = a71,
+            container = a70,
+            stroke = a68,
+            corner = a67,
                         connections = {},
         }
 
         table.insert(
-            data.connections,
-            self.window:ConnectFor(self, frame.MouseEnter, function()
+            a73.connections,
+            self.window:ConnectFor(self, a66.MouseEnter, function()
                 if not self._isOpen or not self.window:_interactive() then
                     return
                 end
-                if isOptionSelected(data.name) then
+                if a52(a73.name) then
                     return
                 end
-                variables.tweenService
+                a3.tweenService
                     :Create(
-                        frame,
-                        hintTween,
+                        a66,
+                        a29,
                         { BackgroundTransparency = 0.9 }
                     )
                     :Play()
-                variables.tweenService
+                a3.tweenService
                     :Create(
-                        title,
-                        hintTween,
+                        a72,
+                        a29,
                         { TextTransparency = 0.15 }
                     )
                     :Play()
@@ -503,25 +503,25 @@ function Dropdown.new(tab, properties)
         )
 
         table.insert(
-            data.connections,
-            self.window:ConnectFor(self, frame.MouseLeave, function()
+            a73.connections,
+            self.window:ConnectFor(self, a66.MouseLeave, function()
                 if not self._isOpen then
                     return
                 end
-                if isOptionSelected(data.name) then
+                if a52(a73.name) then
                     return
                 end
-                variables.tweenService
+                a3.tweenService
                     :Create(
-                        frame,
-                        hintTween,
+                        a66,
+                        a29,
                         { BackgroundTransparency = 0.95 }
                     )
                     :Play()
-                variables.tweenService
+                a3.tweenService
                     :Create(
-                        title,
-                        hintTween,
+                        a72,
+                        a29,
                         { TextTransparency = 0.3 }
                     )
                     :Play()
@@ -529,39 +529,39 @@ function Dropdown.new(tab, properties)
         )
 
         table.insert(
-            data.connections,
-            self.window:ConnectFor(self, interact.MouseButton1Click, function()
+            a73.connections,
+            self.window:ConnectFor(self, a69.MouseButton1Click, function()
                                 if not self._isOpen then
                     return
                 end
-                hapticEngine.click()
-                local sel = isOptionSelected(data.name)
+                a8.click()
+                local a74 = a52(a73.name)
 
                 if not self.multiSelect then
-                    if sel then
+                    if a74 then
                         self:_close()
                         return
                     end
                     table.clear(self.value)
-                    table.insert(self.value, data.name)
+                    table.insert(self.value, a73.name)
                 else
-                    if sel then
-                        local idx = table.find(self.value, data.name)
-                        if idx then
-                            table.remove(self.value, idx)
+                    if a74 then
+                        local a75 = table.find(self.value, a73.name)
+                        if a75 then
+                            table.remove(self.value, a75)
                         end
                     else
-                        table.insert(self.value, data.name)
+                        table.insert(self.value, a73.name)
                     end
                 end
 
                                                 self._desiredValue = table.clone(self.value)
 
                 for _, d in self._optionFrames do
-                    renderOptionState(d, true)
+                    a54(d, true)
                 end
 
-                updateSelectedLabel()
+                a63()
 
                 self.window:_runGuarded(self, self.callback, self:_callbackValue())
                 self.window:_persist(self)
@@ -576,21 +576,21 @@ function Dropdown.new(tab, properties)
             end)
         )
 
-        return data
+        return a73
     end
 
-    self._buildOption = buildOption
+    self._buildOption = a64
 
-    for _, opt in self.options do
-        local data = buildOption(opt)
-        table.insert(self._optionFrames, data)
+    for _, a76 in self.options do
+        local a77 = a64(a76)
+        table.insert(self._optionFrames, a77)
     end
 
-    updateSelectedLabel()
+    a63()
     self:_updateCorners()
 
         self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
-        hapticEngine.click()
+        a8.click()
         if self._isOpen then
             self:_close()
         else
@@ -602,12 +602,12 @@ function Dropdown.new(tab, properties)
         if self._isOpen or not self.window:_interactive() then
             return
         end
-        variables.tweenService
-            :Create(self.title, hoverTween, { TextColor3 = self.window.theme.ElementTextHoverColor })
+        a3.tweenService
+            :Create(self.title, a30, { TextColor3 = self.window.theme.ElementTextHoverColor })
             :Play()
-        variables.tweenService:Create(self.hoverOverlay, hoverTween, { BackgroundTransparency = 0.97 }):Play()
-        variables.tweenService
-            :Create(self.stroke, hoverTween, {
+        a3.tweenService:Create(self.hoverOverlay, a30, { BackgroundTransparency = 0.97 }):Play()
+        a3.tweenService
+            :Create(self.stroke, a30, {
                 Transparency = self.window.theme.ElementStrokeHoverTransparency,
                 Color = self.window.theme.ElementStrokeHover,
             })
@@ -615,10 +615,10 @@ function Dropdown.new(tab, properties)
     end)
 
     self.window:ConnectFor(self, self.main.MouseLeave, function()
-        variables.tweenService:Create(self.title, hoverTween, { TextColor3 = self.window.theme.ContentColor }):Play()
-        variables.tweenService:Create(self.hoverOverlay, hoverTween, { BackgroundTransparency = 1 }):Play()
-        variables.tweenService
-            :Create(self.stroke, hoverTween, {
+        a3.tweenService:Create(self.title, a30, { TextColor3 = self.window.theme.ContentColor }):Play()
+        a3.tweenService:Create(self.hoverOverlay, a30, { BackgroundTransparency = 1 }):Play()
+        a3.tweenService
+            :Create(self.stroke, a30, {
                 Transparency = self.window.theme.ElementStrokeTransparency,
                 Color = self.window.theme.ElementStroke,
             })
@@ -632,19 +632,19 @@ function Dropdown.new(tab, properties)
     return self
 end
 
-function Dropdown:_callbackValue()
+function a1:_callbackValue()
     if self.multiSelect then
         return table.clone(self.value)
     end
     return self.value[1]
 end
 
-function Dropdown:_buildSearch()
+function a1:_buildSearch()
     self._searchOpen = false
 
     self.searchbar = self.window:Create("Frame", {
         Name = "Search",
-        Size = UDim2.new(1, -12, 0, searchCollapsedHeight),
+        Size = UDim2.new(1, -12, 0, a17),
         BorderSizePixel = 0,
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BackgroundTransparency = 1,         LayoutOrder = 1,
@@ -664,7 +664,7 @@ function Dropdown:_buildSearch()
         Transparency = 1,         Parent = self.searchbar,
     })
 
-    self.searchShadow = self.window:CreateGlow(self.searchbar, Color3.fromRGB(255, 255, 255), 20, 1) 
+    self.searchShadow = self.window:CreateGlow(self.searchbar, Color3.fromRGB(255, 255, 255), 20, 1)
             self.searchToggle = self.window:Create("TextButton", {
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
@@ -676,7 +676,7 @@ function Dropdown:_buildSearch()
 
     self.searchInput = self.window:Create("TextBox", {
         Text = "",
-        PlaceholderText = locale.t("Search..."),
+        PlaceholderText = a7.t("Search..."),
         Size = UDim2.new(1, -58, 0, 16),
         Position = UDim2.new(0, 44, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
@@ -686,12 +686,12 @@ function Dropdown:_buildSearch()
         ClearTextOnFocus = false,
         TextEditable = false,         Interactable = false,         ZIndex = 52,
 
-        TextTransparency = 1, 
+        TextTransparency = 1,
         Parent = self.searchbar,
     }, { TextColor3 = "ContentColor", FontFace = "Font", PlaceholderColor3 = "PlaceholderColor" })
 
     self.searchIcon = self.window:Create("ImageButton", {
-        Image = "rbxassetid://" .. tostring(searchIconAsset),
+        Image = "rbxassetid://" .. tostring(a14),
         Size = UDim2.fromOffset(20, 20),
         Position = UDim2.new(0, 24, 0.5, 0),         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundTransparency = 1,
@@ -699,7 +699,7 @@ function Dropdown:_buildSearch()
         AutoButtonColor = false,
         ZIndex = 53,
 
-        ImageTransparency = 1, 
+        ImageTransparency = 1,
         Parent = self.searchbar,
     }, { ImageColor3 = "ContentColor" })
 
@@ -725,7 +725,7 @@ function Dropdown:_buildSearch()
     end)
 end
 
-function Dropdown:_expandSearch()
+function a1:_expandSearch()
     if self._searchOpen then
         return
     end
@@ -733,21 +733,21 @@ function Dropdown:_expandSearch()
     self.searchInput.TextEditable = true
     self.searchInput.Interactable = true
 
-    variables.tweenService
+    a3.tweenService
         :Create(
             self.searchbar,
-            searchTween,
-            { Size = UDim2.new(1, -12, 0, searchExpandedHeight), BackgroundTransparency = 0.92 }
+            a35,
+            { Size = UDim2.new(1, -12, 0, a18), BackgroundTransparency = 0.92 }
         )
         :Play()
-    variables.tweenService:Create(self.searchStroke, searchTween, { Transparency = 0.86 }):Play()
-    variables.tweenService:Create(self.searchShadow, searchTween, { Transparency = 0.92 }):Play()
-    variables.tweenService:Create(self.searchInput, searchTween, { TextTransparency = 0.3 }):Play()
+    a3.tweenService:Create(self.searchStroke, a35, { Transparency = 0.86 }):Play()
+    a3.tweenService:Create(self.searchShadow, a35, { Transparency = 0.92 }):Play()
+    a3.tweenService:Create(self.searchInput, a35, { TextTransparency = 0.3 }):Play()
 
     self:_resizeToOptions()     self.searchInput:CaptureFocus()
 end
 
-function Dropdown:_collapseSearch()
+function a1:_collapseSearch()
     if not self._searchOpen then
         return
     end
@@ -755,69 +755,69 @@ function Dropdown:_collapseSearch()
     self.searchInput.TextEditable = false
     self.searchInput.Interactable = false
     self.searchInput:ReleaseFocus()
-    self.searchInput.Text = "" 
-    variables.tweenService
+    self.searchInput.Text = ""
+    a3.tweenService
         :Create(
             self.searchbar,
-            searchTween,
-            { Size = UDim2.new(1, -12, 0, searchCollapsedHeight), BackgroundTransparency = 1 }
+            a35,
+            { Size = UDim2.new(1, -12, 0, a17), BackgroundTransparency = 1 }
         )
         :Play()
-    variables.tweenService:Create(self.searchStroke, searchTween, { Transparency = 1 }):Play()
-    variables.tweenService:Create(self.searchShadow, searchTween, { Transparency = 1 }):Play()
-    variables.tweenService:Create(self.searchInput, searchTween, { TextTransparency = 1 }):Play()
+    a3.tweenService:Create(self.searchStroke, a35, { Transparency = 1 }):Play()
+    a3.tweenService:Create(self.searchShadow, a35, { Transparency = 1 }):Play()
+    a3.tweenService:Create(self.searchInput, a35, { TextTransparency = 1 }):Play()
 
     self:_resizeToOptions()
 end
 
-function Dropdown:_applyFilter(query)
-    query = string.lower(query or "")
-    local shown = 0
-    for _, data in self._optionFrames do
-        local visible = query == "" or string.find(string.lower(data.name), query, 1, true) ~= nil
-        data.frame.Visible = visible
-        if visible then
-            shown += 1
+function a1:_applyFilter(a78)
+    a78 = string.lower(a78 or "")
+    local a79 = 0
+    for _, a80 in self._optionFrames do
+        local a81 = a78 == "" or string.find(string.lower(a80.name), a78, 1, true) ~= nil
+        a80.frame.Visible = a81
+        if a81 then
+            a79 += 1
         end
     end
 
-            self.emptyLabel.Visible = shown == 0 and query ~= ""
+            self.emptyLabel.Visible = a79 == 0 and a78 ~= ""
     self:_updateCorners()
     self:_resizeToOptions()
     self:_syncScrollHint()
 end
 
-function Dropdown:_syncScrollHint()
-        local canvasSize, windowSize, at =
+function a1:_syncScrollHint()
+        local a82, a83, at =
         self.list.AbsoluteCanvasSize, self.list.AbsoluteWindowSize, self.list.CanvasPosition
-    if not canvasSize or not windowSize or not at then
+    if not a82 or not a83 or not at then
         return
     end
 
-    local more = self._isOpen and windowSize.Y > 0 and canvasSize.Y - (at.Y + windowSize.Y) > 1
+    local a84 = self._isOpen and a83.Y > 0 and a82.Y - (at.Y + a83.Y) > 1
 
-    variables.tweenService
-        :Create(self.list, hintTween, { ScrollBarImageTransparency = if more then scrollbarShown else 1 })
+    a3.tweenService
+        :Create(self.list, a29, { ScrollBarImageTransparency = if a84 then a34 else 1 })
         :Play()
 end
 
-function Dropdown:_visibleOptions(): { string }
-    local names = {}
-    for _, data in self._optionFrames do
-        if data.frame.Visible then
-            table.insert(names, data.name)
+function a1:_visibleOptions(): { string }
+    local a85 = {}
+    for _, a86 in self._optionFrames do
+        if a86.frame.Visible then
+            table.insert(a85, a86.name)
         end
     end
-    return names
+    return a85
 end
 
-function Dropdown:_buildActions()
+function a1:_buildActions()
     if not self.multiSelect then
         return     end
 
     self.actions = self.window:Create("Frame", {
         Name = "Actions",
-        Size = UDim2.new(1, -12, 0, actionsHeight),
+        Size = UDim2.new(1, -12, 0, a28),
         BackgroundTransparency = 1,
         LayoutOrder = 2,
 
@@ -833,124 +833,124 @@ function Dropdown:_buildActions()
         Parent = self.actions,
     })
 
-    local function action(label: string, order: number, apply: () -> ())
-        local button = self.window:Create("TextButton", {
+    local function a87(a88: string, a89: number, a90: () -> ())
+        local a91 = self.window:Create("TextButton", {
             AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2.fromOffset(0, actionsHeight),
+            Size = UDim2.fromOffset(0, a28),
             BackgroundTransparency = 1,
-            Text = locale.t(label),
+            Text = a7.t(a88),
             TextSize = 13,
-            TextTransparency = 0.45,             LayoutOrder = order,
+            TextTransparency = 0.45,             LayoutOrder = a89,
 
             Parent = self.actions,
         }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-        self.window:ConnectFor(self, button.MouseEnter, function()
-            variables.tweenService:Create(button, hintTween, { TextTransparency = 0.15 }):Play()
+        self.window:ConnectFor(self, a91.MouseEnter, function()
+            a3.tweenService:Create(a91, a29, { TextTransparency = 0.15 }):Play()
         end)
-        self.window:ConnectFor(self, button.MouseLeave, function()
-            variables.tweenService:Create(button, hintTween, { TextTransparency = 0.45 }):Play()
+        self.window:ConnectFor(self, a91.MouseLeave, function()
+            a3.tweenService:Create(a91, a29, { TextTransparency = 0.45 }):Play()
         end)
-        self.window:ConnectFor(self, button.MouseButton1Click, function()
-            apply()
+        self.window:ConnectFor(self, a91.MouseButton1Click, function()
+            a90()
             self:_afterBulkChange()
         end)
 
-        return button
+        return a91
     end
 
-                action("Select all", 1, function()
-        local shown = self:_visibleOptions()
-        for _, name in shown do
-            if not table.find(self.value, name) then
-                table.insert(self.value, name)
+                a87("Select all", 1, function()
+        local a92 = self:_visibleOptions()
+        for _, a93 in a92 do
+            if not table.find(self.value, a93) then
+                table.insert(self.value, a93)
             end
         end
     end)
-    action("Clear", 2, function()
-        local shown = self:_visibleOptions()
-        for index = #self.value, 1, -1 do
-            if table.find(shown, self.value[index]) then
-                table.remove(self.value, index)
+    a87("Clear", 2, function()
+        local a94 = self:_visibleOptions()
+        for a95 = #self.value, 1, -1 do
+            if table.find(a94, self.value[a95]) then
+                table.remove(self.value, a95)
             end
         end
     end)
 end
 
-function Dropdown:_afterBulkChange()
+function a1:_afterBulkChange()
             self._desiredValue = table.clone(self.value)
 
-    for _, data in self._optionFrames do
-        self._renderOptionState(data, true)
+    for _, a96 in self._optionFrames do
+        self._renderOptionState(a96, true)
     end
     self:_updateSelectedLabel()
     self:_updateCorners()
     self.window:_runGuarded(self, self.callback, self:_callbackValue())
     self.window:_persist(self)
-    hapticEngine.click()
+    a8.click()
 end
 
-function Dropdown:_resizeToOptions()
+function a1:_resizeToOptions()
     if not self._isOpen then
         return
     end
-    variables.tweenService:Create(self.main, searchTween, { Size = UDim2.new(1, -20, 0, self:_openHeight()) }):Play()
+    a3.tweenService:Create(self.main, a35, { Size = UDim2.new(1, -20, 0, self:_openHeight()) }):Play()
 end
 
-function Dropdown:_updateCorners()
-    local visible = {}
-    for _, data in self._optionFrames do
-        if data.frame.Visible then
-            table.insert(visible, data)
+function a1:_updateCorners()
+    local a97 = {}
+    for _, a98 in self._optionFrames do
+        if a98.frame.Visible then
+            table.insert(a97, a98)
         end
     end
 
-    for i, data in visible do
-        local topR = if i == 1 then roundRadius else flatRadius
-        local botR = if i == #visible then roundRadius else flatRadius
-        data.corner.TopLeftRadius = topR
-        data.corner.TopRightRadius = topR
-        data.corner.BottomLeftRadius = botR
-        data.corner.BottomRightRadius = botR
+    for i, a99 in a97 do
+        local a100 = if i == 1 then a15 else a16
+        local a101 = if i == #a97 then a15 else a16
+        a99.corner.TopLeftRadius = a100
+        a99.corner.TopRightRadius = a100
+        a99.corner.BottomLeftRadius = a101
+        a99.corner.BottomRightRadius = a101
     end
 end
 
-local function listHeight(count: number): number
-    return count * optionHeight + math.max(0, count - 1) * optionGap + listPadding * 2
+local function a102(a103: number): number
+    return a103 * a19 + math.max(0, a103 - 1) * a20 + a21 * 2
 end
 
-local function rowsThatFit(space: number): number
-    return math.max(math.floor((space - listPadding * 2 + optionGap) / (optionHeight + optionGap)), 1)
+local function a104(a105: number): number
+    return math.max(math.floor((a105 - a21 * 2 + a20) / (a19 + a20)), 1)
 end
 
-function Dropdown:_pageHeight(): number
-    local size = self.window.size
-    return windowSizing.pageHeight(size and size.Y.Offset, self.window.layout.mode)
+function a1:_pageHeight(): number
+    local a106 = self.window.size
+    return a9.pageHeight(a106 and a106.Y.Offset, self.window.layout.mode)
 end
 
-function Dropdown:_openHeight()
+function a1:_openHeight()
     local n = 0
-    for _, data in self._optionFrames do
-        if data.frame.Visible then
+    for _, a107 in self._optionFrames do
+        if a107.frame.Visible then
             n += 1
         end
     end
 
-            local searchHeight = if self._searchOpen then searchExpandedHeight else searchCollapsedHeight
-    local overhead = headerHeight
-        + headerGap
-        + cardPadding
-        + searchHeight
-        + optionGap
-        + (if self.actions then actionsHeight + optionGap else 0)
+            local a108 = if self._searchOpen then a18 else a17
+    local a109 = a22
+        + a23
+        + a26
+        + a108
+        + a20
+        + (if self.actions then a28 + a20 else 0)
 
-    local available = self:_pageHeight()
-        local rows = math.min(math.max(n, 1), maxVisibleOptions, rowsThatFit(available - overhead))
+    local a110 = self:_pageHeight()
+        local a111 = math.min(math.max(n, 1), a27, a104(a110 - a109))
 
-    return math.min(overhead + listHeight(rows), available)
+    return math.min(a109 + a102(a111), a110)
 end
 
-function Dropdown:_open()
+function a1:_open()
     if self._isOpen then
         return
     end
@@ -959,98 +959,98 @@ function Dropdown:_open()
     if self._outsideClickConn then
         self.window:Disconnect(self._outsideClickConn)
     end
-    self._outsideClickConn = self.window:Connect(variables.userInputService.InputBegan, function(input)
+    self._outsideClickConn = self.window:Connect(a3.userInputService.InputBegan, function(a112)
         if
-            input.UserInputType ~= Enum.UserInputType.MouseButton1
-            and input.UserInputType ~= Enum.UserInputType.Touch
+            a112.UserInputType ~= Enum.UserInputType.MouseButton1
+            and a112.UserInputType ~= Enum.UserInputType.Touch
         then
             return
         end
 
-        local pos = input.Position
-        local mainPos = self.main.AbsolutePosition
-        local mainSize = self.main.AbsoluteSize
+        local a113 = a112.Position
+        local a114 = self.main.AbsolutePosition
+        local a115 = self.main.AbsoluteSize
         if
-            pos.X < mainPos.X
-            or pos.X > mainPos.X + mainSize.X
-            or pos.Y < mainPos.Y
-            or pos.Y > mainPos.Y + mainSize.Y
+            a113.X < a114.X
+            or a113.X > a114.X + a115.X
+            or a113.Y < a114.Y
+            or a113.Y > a114.Y + a115.Y
         then
             self:_close()
         end
     end)
 
-    variables.tweenService
+    a3.tweenService
         :Create(
             self.main,
-            openTween,
+            a32,
             { Size = UDim2.new(1, -20, 0, self:_openHeight()) }
         )
         :Play()
-    variables.tweenService
+    a3.tweenService
         :Create(
             self.chevron,
-            closeTween,
+            a33,
             { Rotation = 0 }
         )
         :Play()
-    variables.tweenService
+    a3.tweenService
         :Create(
             self.panel,
-            panelTween,
+            a31,
             { BackgroundTransparency = self.window.theme.ElementTransparency or 0 }
         )
         :Play()
-    variables.tweenService
+    a3.tweenService
         :Create(
             self.panelStroke,
-            panelTween,
+            a31,
             { Transparency = self.window.theme.ElementStrokeTransparency }
         )
         :Play()
-    variables.tweenService
+    a3.tweenService
         :Create(
             self.searchIcon,
-            panelTween,
+            a31,
             { ImageTransparency = 0.5 }
         )
         :Play()
 
-    for _, data in self._optionFrames do
-        self._renderOptionState(data, true)
+    for _, a116 in self._optionFrames do
+        self._renderOptionState(a116, true)
     end
 
     self:_syncScrollHint()
     self:_bringIntoView()
 end
 
-function Dropdown:_bringIntoView()
-    local page = self.tab and self.tab.tabPage
-    if not page then
+function a1:_bringIntoView()
+    local a117 = self.tab and self.tab.tabPage
+    if not a117 then
         return
     end
 
-        local view, at, pageAt, cardAt =
-        page.AbsoluteWindowSize, page.CanvasPosition, page.AbsolutePosition, self.main.AbsolutePosition
-    if not view or not at or not pageAt or not cardAt or view.Y <= 0 then
+        local a118, at, a119, a120 =
+        a117.AbsoluteWindowSize, a117.CanvasPosition, a117.AbsolutePosition, self.main.AbsolutePosition
+    if not a118 or not at or not a119 or not a120 or a118.Y <= 0 then
         return
     end
 
-        local top = cardAt.Y - pageAt.Y + at.Y
-    local bottom = top + self:_openHeight()
-    local overflow = bottom - (at.Y + view.Y)
-    if overflow <= 0 then
+        local a121 = a120.Y - a119.Y + at.Y
+    local a122 = a121 + self:_openHeight()
+    local a123 = a122 - (at.Y + a118.Y)
+    if a123 <= 0 then
         return     end
 
-            local target = math.min(at.Y + overflow + 8, top)
-    variables.tweenService
-        :Create(page, panelTween, {
-            CanvasPosition = Vector2.new(at.X, target),
+            local a124 = math.min(at.Y + a123 + 8, a121)
+    a3.tweenService
+        :Create(a117, a31, {
+            CanvasPosition = Vector2.new(at.X, a124),
         })
         :Play()
 end
 
-function Dropdown:_close()
+function a1:_close()
     if not self._isOpen then
         return
     end
@@ -1064,170 +1064,170 @@ function Dropdown:_close()
     self:_collapseSearch()
     self:_syncScrollHint()
 
-    variables.tweenService
+    a3.tweenService
         :Create(
             self.chevron,
-            closeTween,
+            a33,
             { Rotation = 180 }
         )
         :Play()
-    variables.tweenService
+    a3.tweenService
         :Create(
             self.panel,
-            panelTween,
+            a31,
             { BackgroundTransparency = 1 }
         )
         :Play()
-    variables.tweenService
+    a3.tweenService
         :Create(
             self.panelStroke,
-            panelTween,
+            a31,
             { Transparency = 1 }
         )
         :Play()
-    variables.tweenService
+    a3.tweenService
         :Create(
             self.searchIcon,
-            panelTween,
+            a31,
             { ImageTransparency = 1 }
         )
         :Play()
 
-    for _, data in self._optionFrames do
-        self._renderOptionState(data, true)
+    for _, a125 in self._optionFrames do
+        self._renderOptionState(a125, true)
     end
 
-    variables.tweenService
+    a3.tweenService
         :Create(
             self.main,
-            openTween,
+            a32,
             { Size = UDim2.new(1, -20, 0, 41) }
         )
         :Play()
 end
 
-function Dropdown:_destroyOption(data)
-    if data.connections then
-        for _, connection in data.connections do
-            local idx = table.find(self.connections, connection)
-            if idx then
-                table.remove(self.connections, idx)
+function a1:_destroyOption(a126)
+    if a126.connections then
+        for _, a127 in a126.connections do
+            local a128 = table.find(self.connections, a127)
+            if a128 then
+                table.remove(self.connections, a128)
             end
-            self.window:Disconnect(connection)
+            self.window:Disconnect(a127)
         end
-        data.connections = nil
+        a126.connections = nil
     end
-    self.window:DestroySubtree(data.frame)
+    self.window:DestroySubtree(a126.frame)
 end
 
-function Dropdown:_deriveSelection()
-    local previous = self.value
-    self.value = intersectWithOptions(self._desiredValue or self.value, self.options)
-    return not sameSelection(self.value, previous)
+function a1:_deriveSelection()
+    local a129 = self.value
+    self.value = a44(self._desiredValue or self.value, self.options)
+    return not a48(self.value, a129)
 end
 
-function Dropdown:_reindexOptions()
-    for index, data in self._optionFrames do
-        data.frame.LayoutOrder = index
+function a1:_reindexOptions()
+    for a130, a131 in self._optionFrames do
+        a131.frame.LayoutOrder = a130
     end
 end
 
-function Dropdown:_rebindOption(data, name, index)
-    data.name = name
-    data.title.Text = name
-    data.frame.LayoutOrder = index
+function a1:_rebindOption(a132, a133, a134)
+    a132.name = a133
+    a132.title.Text = a133
+    a132.frame.LayoutOrder = a134
 end
 
-function Dropdown:_destroyOptionsFrom(first)
-    local roots, connections = {}, {}
+function a1:_destroyOptionsFrom(a135)
+    local a136, a137 = {}, {}
 
-    for index = #self._optionFrames, first, -1 do
-        local data = self._optionFrames[index]
-        table.insert(roots, data.frame)
-        if data.connections then
-            table.move(data.connections, 1, #data.connections, #connections + 1, connections)
-            data.connections = nil
+    for a138 = #self._optionFrames, a135, -1 do
+        local a139 = self._optionFrames[a138]
+        table.insert(a136, a139.frame)
+        if a139.connections then
+            table.move(a139.connections, 1, #a139.connections, #a137 + 1, a137)
+            a139.connections = nil
         end
-        self._optionFrames[index] = nil
+        self._optionFrames[a138] = nil
     end
 
-    self.window:DisconnectMany(self, connections)
-    self.window:DestroySubtrees(roots)
+    self.window:DisconnectMany(self, a137)
+    self.window:DestroySubtrees(a136)
 end
 
-function Dropdown:Refresh(newOptions)
-    self.options = dedupStrings(newOptions or {})
+function a1:Refresh(a140)
+    self.options = a36(a140 or {})
 
-    local selectionChanged = self:_deriveSelection()
+    local a141 = self:_deriveSelection()
 
-                local existing = #self._optionFrames
-    local wanted = #self.options
+                local a142 = #self._optionFrames
+    local a143 = #self.options
 
-    for index = 1, math.min(existing, wanted) do
-        self:_rebindOption(self._optionFrames[index], self.options[index], index)
+    for a144 = 1, math.min(a142, a143) do
+        self:_rebindOption(self._optionFrames[a144], self.options[a144], a144)
     end
 
-    for index = existing + 1, wanted do
-        local data = self._buildOption(self.options[index])
-        data.frame.LayoutOrder = index
-        table.insert(self._optionFrames, data)
+    for a145 = a142 + 1, a143 do
+        local a146 = self._buildOption(self.options[a145])
+        a146.frame.LayoutOrder = a145
+        table.insert(self._optionFrames, a146)
     end
 
-    if wanted < existing then
-        self:_destroyOptionsFrom(wanted + 1)
+    if a143 < a142 then
+        self:_destroyOptionsFrom(a143 + 1)
     end
 
-                for _, data in self._optionFrames do
-        self._renderOptionState(data, false)
+                for _, a147 in self._optionFrames do
+        self._renderOptionState(a147, false)
     end
 
     self._updateSelectedLabel()
         self:_applyFilter(if self._searchOpen then self.searchInput.Text else "")
 
-        if selectionChanged then
+        if a141 then
         self.window:_runGuarded(self, self.callback, self:_callbackValue())
         self.window:_persist(self)
     end
 end
 
-function Dropdown:Add(option)
-    if typeof(option) ~= "string" or option == "" then
+function a1:Add(a148)
+    if typeof(a148) ~= "string" or a148 == "" then
         return
     end
-    if table.find(self.options, option) then
+    if table.find(self.options, a148) then
         return
     end
 
-    table.insert(self.options, option)
-    local data = self._buildOption(option)
-    table.insert(self._optionFrames, data)
+    table.insert(self.options, a148)
+    local a149 = self._buildOption(a148)
+    table.insert(self._optionFrames, a149)
 
-        local selectionChanged = self:_deriveSelection()
+        local a150 = self:_deriveSelection()
 
     if self._isOpen then
-        self._renderOptionState(data, true)
+        self._renderOptionState(a149, true)
     end
 
             self:_applyFilter(if self._searchOpen then self.searchInput.Text else "")
 
-        if selectionChanged then
+        if a150 then
         self._updateSelectedLabel()
         self.window:_runGuarded(self, self.callback, self:_callbackValue())
         self.window:_persist(self)
     end
 end
 
-function Dropdown:Remove(option)
-    local idx = table.find(self.options, option)
-    if not idx then
+function a1:Remove(a151)
+    local a152 = table.find(self.options, a151)
+    if not a152 then
         return
     end
 
-    table.remove(self.options, idx)
+    table.remove(self.options, a152)
 
-    for i, data in self._optionFrames do
-        if data.name == option then
-            self:_destroyOption(data)
+    for i, a153 in self._optionFrames do
+        if a153.name == a151 then
+            self:_destroyOption(a153)
             table.remove(self._optionFrames, i)
             self:_reindexOptions()
             break
@@ -1235,15 +1235,15 @@ function Dropdown:Remove(option)
     end
 
             if self._desiredValue then
-        local desiredIdx = table.find(self._desiredValue, option)
-        if desiredIdx then
-            table.remove(self._desiredValue, desiredIdx)
+        local a154 = table.find(self._desiredValue, a151)
+        if a154 then
+            table.remove(self._desiredValue, a154)
         end
     end
 
-    local valueIdx = table.find(self.value, option)
-    if valueIdx then
-        table.remove(self.value, valueIdx)
+    local a155 = table.find(self.value, a151)
+    if a155 then
+        table.remove(self.value, a155)
         self._updateSelectedLabel()
                 self.window:_runGuarded(self, self.callback, self:_callbackValue())
         self.window:_persist(self)
@@ -1252,66 +1252,66 @@ function Dropdown:Remove(option)
         self:_applyFilter(if self._searchOpen then self.searchInput.Text else "")
 end
 
-function Dropdown:Set(value, skipCallback)
-    local newValue = normalizeValue(value, self.multiSelect)
-        self._desiredValue = newValue
-    self.value = intersectWithOptions(newValue, self.options)
+function a1:Set(a156, a157)
+    local a158 = a40(a156, self.multiSelect)
+        self._desiredValue = a158
+    self.value = a44(a158, self.options)
 
-    for _, data in self._optionFrames do
-        self._renderOptionState(data, true)
+    for _, a159 in self._optionFrames do
+        self._renderOptionState(a159, true)
     end
     self._updateSelectedLabel()
 
-    if not skipCallback then
+    if not a157 then
         self.window:_runGuarded(self, self.callback, self:_callbackValue())
         self.window:_persist(self)     end
 end
 
-function Dropdown:_setShown(shown, animate)
+function a1:_setShown(a160, a161)
             local w = self.window
-    w:_reveal(self.stroke, { Transparency = if shown then w.theme.ElementStrokeTransparency else 1 }, animate)
-    w:_reveal(self.title, { TextTransparency = if shown then 0 else 1 }, animate)
-    w:_reveal(self.top, { BackgroundTransparency = if shown then (w.theme.ElementTransparency or 0) else 1 }, animate)
+    w:_reveal(self.stroke, { Transparency = if a160 then w.theme.ElementStrokeTransparency else 1 }, a161)
+    w:_reveal(self.title, { TextTransparency = if a160 then 0 else 1 }, a161)
+    w:_reveal(self.top, { BackgroundTransparency = if a160 then (w.theme.ElementTransparency or 0) else 1 }, a161)
     if self.iconLabel then
-        w:_reveal(self.iconLabel, { ImageTransparency = if shown then 0 else 1 }, animate)
+        w:_reveal(self.iconLabel, { ImageTransparency = if a160 then 0 else 1 }, a161)
     end
     if self.descriptor then
-        w:_reveal(self.descriptor.titleLabel, { TextTransparency = if shown then 0.7 else 1 }, animate)
+        w:_reveal(self.descriptor.titleLabel, { TextTransparency = if a160 then 0.7 else 1 }, a161)
     end
-    w:_reveal(self.selectedLabel, { TextTransparency = if shown then 0.5 else 1 }, animate)
-    w:_reveal(self.chevron, { ImageTransparency = if shown then 0.5 else 1 }, animate)
+    w:_reveal(self.selectedLabel, { TextTransparency = if a160 then 0.5 else 1 }, a161)
+    w:_reveal(self.chevron, { ImageTransparency = if a160 then 0.5 else 1 }, a161)
 
-        if not shown and self._isOpen then
+        if not a160 and self._isOpen then
         self:_close()
     end
 end
 
-function Dropdown:MoveTo(index)
-    self.tab:_moveElement(self, index)
+function a1:MoveTo(a162)
+    self.tab:_moveElement(self, a162)
 end
 
-function Dropdown:MoveToTop()
+function a1:MoveToTop()
     self.tab:_moveElement(self, 1)
 end
 
-function Dropdown:MoveToBottom()
+function a1:MoveToBottom()
     self.tab:_moveElement(self, #self.tab.elements)
 end
 
-function Dropdown:MoveUp()
-    local idx = table.find(self.tab.elements, self)
-    if idx then
-        self.tab:_moveElement(self, idx - 1)
+function a1:MoveUp()
+    local a163 = table.find(self.tab.elements, self)
+    if a163 then
+        self.tab:_moveElement(self, a163 - 1)
     end
 end
 
-function Dropdown:MoveDown()
-    local idx = table.find(self.tab.elements, self)
-    if idx then
-        self.tab:_moveElement(self, idx + 1)
+function a1:MoveDown()
+    local a164 = table.find(self.tab.elements, self)
+    if a164 then
+        self.tab:_moveElement(self, a164 + 1)
     end
 end
 
-lockable(Dropdown)
+a10(a1)
 
-return Dropdown
+return a1

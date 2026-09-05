@@ -1,57 +1,57 @@
-local Notification = {}
-Notification.__index = Notification
-Notification.__type = "Notification"
+local a1 = {}
+a1.__index = a1
+a1.__type = "Notification"
 
-local utility = script.Parent.Parent.utilities
+local a2 = script.Parent.Parent.utilities
 
-local variables = require(utility.Parent.core.state)
-local functions = require(script.Parent.Parent.functions)
-local constants = require(utility.constants)
-local hapticEngine = require(utility.HapticEngine)
+local a3 = require(a2.Parent.core.state)
+local a4 = require(script.Parent.Parent.functions)
+local a5 = require(a2.constants)
+local a6 = require(a2.HapticEngine)
 
-local growInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local fadeLong = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local fadeShort = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local swipeInInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local shrinkInfo = TweenInfo.new(0.9, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local a7 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local a8 = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a9 = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a10 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local a11 = TweenInfo.new(0.9, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-local offscreenRight = UDim2.new(0.5, 360, 0.5, 0)
-local centred = UDim2.new(0.5, 0, 0.5, 0)
+local a12 = UDim2.new(0.5, 360, 0.5, 0)
+local a13 = UDim2.new(0.5, 0, 0.5, 0)
 
-local maxLive = 6
+local a14 = 6
 
-local stackPadding = 8
+local a15 = 8
 
-local function autoDuration(content)
-    return math.clamp(#content * 0.06 + 3, 3, 9)
+local function a16(a17)
+    return math.clamp(#a17 * 0.06 + 3, 3, 9)
 end
 
-function Notification.new(window, properties)
-    properties = if typeof(properties) == "table" then properties else {}
+function a1.new(window, a18)
+    a18 = if typeof(a18) == "table" then a18 else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        title = properties.title or properties.Title or "Notification",
-        content = properties.content or properties.Content or "",
-        icon = window:ResolveIcon(properties.icon or properties.Icon),
+        title = a18.title or a18.Title or "Notification",
+        content = a18.content or a18.Content or "",
+        icon = window:ResolveIcon(a18.icon or a18.Icon),
         _hovered = false,
         _dismissed = false,
-    }, Notification)
+    }, a1)
 
-    self.duration = properties.duration or properties.Duration or autoDuration(self.content)
+    self.duration = a18.duration or a18.Duration or a16(self.content)
 
-    local hasIcon = self.icon ~= nil and self.icon ~= 0 and self.icon ~= ""
+    local a19 = self.icon ~= nil and self.icon ~= 0 and self.icon ~= ""
 
             self.main = self.window:Create("Frame", {
         Name = "Notification",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 0),
         BorderSizePixel = 0,
-        ZIndex = constants.zIndex.notification,
+        ZIndex = a5.zIndex.notification,
 
         Parent = self.window.notifications,
     })
 
             self.window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, stackPadding),
+        PaddingTop = UDim.new(0, a15),
 
         Parent = self.main,
     })
@@ -59,11 +59,11 @@ function Notification.new(window, properties)
             self.body = self.window:Create("Frame", {
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         Size = UDim2.new(1, 0, 1, 0),
-        Position = offscreenRight,         AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = a12,         AnchorPoint = Vector2.new(0.5, 0.5),
         Active = true,         BorderSizePixel = 0,
-        ZIndex = constants.zIndex.notification,
+        ZIndex = a5.zIndex.notification,
 
-                BackgroundTransparency = 1, 
+                BackgroundTransparency = 1,
         Parent = self.main,
     })
 
@@ -72,18 +72,18 @@ function Notification.new(window, properties)
         Offset = Vector2.new(0, -0.1),
 
         Parent = self.body,
-    }, { Color = { "WindowColor", functions.toColorSequence } })
+    }, { Color = { "WindowColor", a4.toColorSequence } })
 
     self.window:Create("UICorner", {
         Parent = self.body,
     }, { CornerRadius = "CornerRoundness" })
 
     self.stroke = self.window:Create("UIStroke", {
-        Transparency = 1, 
+        Transparency = 1,
         Parent = self.body,
     }, { Color = "SurfaceStroke" })
 
-    self.shadow = self.window:CreateGlow(self.body, "ShadowColor", 20, 1) 
+    self.shadow = self.window:CreateGlow(self.body, "ShadowColor", 20, 1)
         self.window:Create("UIPadding", {
         PaddingLeft = UDim.new(0, 20),
         PaddingRight = UDim.new(0, 20),
@@ -101,27 +101,27 @@ function Notification.new(window, properties)
         Parent = self.body,
     })
 
-    if hasIcon then
+    if a19 then
         self.iconLabel = self.window:Create("ImageLabel", {
             Image = self.icon,
             Size = UDim2.fromOffset(24, 24),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             LayoutOrder = 1,
-            ZIndex = constants.zIndex.notification,
+            ZIndex = a5.zIndex.notification,
 
-                        ImageTransparency = 1, 
+                        ImageTransparency = 1,
             Parent = self.body,
         }, { ImageColor3 = "ContentColor" })
     end
 
         self.container = self.window:Create("Frame", {
-        Size = UDim2.fromOffset(hasIcon and 222 or 260, 0),
+        Size = UDim2.fromOffset(a19 and 222 or 260, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         LayoutOrder = 2,
-        ZIndex = constants.zIndex.notification,
+        ZIndex = a5.zIndex.notification,
 
         Parent = self.body,
     })
@@ -143,9 +143,9 @@ function Notification.new(window, properties)
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 1,
-        ZIndex = constants.zIndex.notification,
+        ZIndex = a5.zIndex.notification,
 
-                TextTransparency = 1, 
+                TextTransparency = 1,
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "TitleFont" })
 
@@ -160,9 +160,9 @@ function Notification.new(window, properties)
             TextXAlignment = Enum.TextXAlignment.Left,
             TextYAlignment = Enum.TextYAlignment.Top,
             LayoutOrder = 2,
-            ZIndex = constants.zIndex.notification,
+            ZIndex = a5.zIndex.notification,
 
-                        TextTransparency = 1, 
+                        TextTransparency = 1,
             Parent = self.container,
         }, { TextColor3 = "ContentColor", FontFace = "Font" })
     end
@@ -170,16 +170,16 @@ function Notification.new(window, properties)
         self.window._notificationCount = (self.window._notificationCount or 0) + 1
     self.main.LayoutOrder = self.window._notificationCount
 
-            local live = self.window._liveNotifications
-    if not live then
-        live = {}
-        self.window._liveNotifications = live
+            local a20 = self.window._liveNotifications
+    if not a20 then
+        a20 = {}
+        self.window._liveNotifications = a20
     end
-    table.insert(live, self)
-    while #live > maxLive do
-        local oldest = table.remove(live, 1)
-        if oldest and oldest ~= self then
-            task.spawn(oldest._dismiss, oldest)
+    table.insert(a20, self)
+    while #a20 > a14 do
+        local a21 = table.remove(a20, 1)
+        if a21 and a21 ~= self then
+            task.spawn(a21._dismiss, a21)
         end
     end
 
@@ -190,10 +190,10 @@ function Notification.new(window, properties)
         self.window:Connect(self.body.MouseLeave, function()
             self._hovered = false
         end),
-        self.window:Connect(self.body.InputBegan, function(input)
+        self.window:Connect(self.body.InputBegan, function(a22)
             if
-                input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch
+                a22.UserInputType == Enum.UserInputType.MouseButton1
+                or a22.UserInputType == Enum.UserInputType.Touch
             then
                 self:_dismiss()
             end
@@ -207,36 +207,36 @@ function Notification.new(window, properties)
     return self
 end
 
-function Notification:_measure()
-    local colWidth = self.iconLabel and 222 or 260
+function a1:_measure()
+    local a23 = self.iconLabel and 222 or 260
 
-    local contentH = functions.textHeight(self.window.theme.TitleFont, 16, self.title, colWidth)
+    local a24 = a4.textHeight(self.window.theme.TitleFont, 16, self.title, a23)
     if self.descriptionLabel then
-        contentH = contentH + 4 + functions.textHeight(self.window.theme.Font, 15, self.content, colWidth)
+        a24 = a24 + 4 + a4.textHeight(self.window.theme.Font, 15, self.content, a23)
     end
 
-    return math.max(contentH, self.iconLabel and 24 or 0) + 28
+    return math.max(a24, self.iconLabel and 24 or 0) + 28
 end
 
-function Notification:_show()
-                local target = self:_measure() + stackPadding
+function a1:_show()
+                local a25 = self:_measure() + a15
     if self._dismissed or not self.main.Parent then
         return     end
 
-    hapticEngine.notify()
+    a6.notify()
 
-        variables.tweenService:Create(self.main, growInfo, { Size = UDim2.new(1, 0, 0, target) }):Play()
-    variables.tweenService:Create(self.body, swipeInInfo, { Position = centred }):Play()
-    variables.tweenService:Create(self.body, fadeLong, { BackgroundTransparency = 0 }):Play()
-    variables.tweenService:Create(self.titleLabel, fadeShort, { TextTransparency = 0 }):Play()
-    variables.tweenService:Create(self.stroke, fadeLong, { Transparency = 0.95 }):Play()
-    variables.tweenService:Create(self.shadow, fadeShort, { Transparency = 0.6 }):Play()
+        a3.tweenService:Create(self.main, a7, { Size = UDim2.new(1, 0, 0, a25) }):Play()
+    a3.tweenService:Create(self.body, a10, { Position = a13 }):Play()
+    a3.tweenService:Create(self.body, a8, { BackgroundTransparency = 0 }):Play()
+    a3.tweenService:Create(self.titleLabel, a9, { TextTransparency = 0 }):Play()
+    a3.tweenService:Create(self.stroke, a8, { Transparency = 0.95 }):Play()
+    a3.tweenService:Create(self.shadow, a9, { Transparency = 0.6 }):Play()
 
     task.wait(0.05)
     if self._dismissed or not self.main.Parent then
         return     end
     if self.iconLabel then
-        variables.tweenService:Create(self.iconLabel, fadeShort, { ImageTransparency = 0 }):Play()
+        a3.tweenService:Create(self.iconLabel, a9, { ImageTransparency = 0 }):Play()
     end
 
     task.wait(0.05)
@@ -244,65 +244,65 @@ function Notification:_show()
         return
     end
     if self.descriptionLabel then
-        variables.tweenService:Create(self.descriptionLabel, fadeShort, { TextTransparency = 0.35 }):Play()
+        a3.tweenService:Create(self.descriptionLabel, a9, { TextTransparency = 0.35 }):Play()
     end
 
-        local elapsed = 0
-    while elapsed < self.duration and not self._dismissed and self.main.Parent do
+        local a26 = 0
+    while a26 < self.duration and not self._dismissed and self.main.Parent do
         local dt = task.wait()
         if not self._hovered then
-            elapsed += dt
+            a26 += dt
         end
     end
 
     self:_dismiss()
 end
 
-function Notification:_dismiss()
+function a1:_dismiss()
     if self._dismissed then
         return
     end
     self._dismissed = true
 
-    local live = self.window._liveNotifications
-    local index = live and table.find(live, self)
-    if live and index then
-        table.remove(live, index)
+    local a27 = self.window._liveNotifications
+    local a28 = a27 and table.find(a27, self)
+    if a27 and a28 then
+        table.remove(a27, a28)
     end
 
     if not self.main.Parent then
         return
     end
 
-        variables.tweenService:Create(self.body, fadeLong, { BackgroundTransparency = 1 }):Play()
-    variables.tweenService:Create(self.stroke, fadeLong, { Transparency = 1 }):Play()
-    variables.tweenService:Create(self.shadow, fadeShort, { Transparency = 1 }):Play()
-    variables.tweenService:Create(self.titleLabel, fadeShort, { TextTransparency = 1 }):Play()
+        a3.tweenService:Create(self.body, a8, { BackgroundTransparency = 1 }):Play()
+    a3.tweenService:Create(self.stroke, a8, { Transparency = 1 }):Play()
+    a3.tweenService:Create(self.shadow, a9, { Transparency = 1 }):Play()
+    a3.tweenService:Create(self.titleLabel, a9, { TextTransparency = 1 }):Play()
     if self.descriptionLabel then
-        variables.tweenService:Create(self.descriptionLabel, fadeShort, { TextTransparency = 1 }):Play()
+        a3.tweenService:Create(self.descriptionLabel, a9, { TextTransparency = 1 }):Play()
     end
     if self.iconLabel then
-        variables.tweenService:Create(self.iconLabel, fadeShort, { ImageTransparency = 1 }):Play()
+        a3.tweenService:Create(self.iconLabel, a9, { ImageTransparency = 1 }):Play()
     end
 
-        variables.tweenService:Create(self.body, shrinkInfo, { Size = UDim2.new(1, -90, 1, 0) }):Play()
-    local collapse = variables.tweenService:Create(self.main, shrinkInfo, { Size = UDim2.new(1, 0, 0, 0) })
-    local dismissConnection
-    dismissConnection = collapse.Completed:Connect(function(state)
-        if dismissConnection then
-            dismissConnection:Disconnect()
-            dismissConnection = nil
+        a3.tweenService:Create(self.body, a11, { Size = UDim2.new(1, -90, 1, 0) }):Play()
+    local a29 = a3.tweenService:Create(self.main, a11, { Size = UDim2.new(1, 0, 0, 0) })
+    local a30
+    a30 = a29.Completed:Connect(function(a31)
+        if a30 then
+            a30:Disconnect()
+            a30 = nil
         end
-        if state ~= Enum.PlaybackState.Completed or not self._dismissed or not self.main.Parent then
+        if a31 ~= Enum.PlaybackState.Completed or not self._dismissed or not self.main.Parent then
             return
         end
 
-        for _, connection in self._connections do
-            self.window:Disconnect(connection)
+        for _, a32 in self._connections do
+            self.window:Disconnect(a32)
         end
         self.window:DestroySubtree(self.main)
     end)
-    collapse:Play()
+    a29:Play()
 end
 
-return Notification
+return a1

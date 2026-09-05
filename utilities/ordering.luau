@@ -3,11 +3,11 @@ type OrderedElement = {
     descriptor: { main: GuiObject }?,
 }
 
-local function assignOrder(element: OrderedElement, order: number)
-    element.main.LayoutOrder = order
+local function a1(element: OrderedElement, a2: number)
+    element.main.LayoutOrder = a2
     if element.descriptor then
-        element.descriptor.main.LayoutOrder = order + 1
+        element.descriptor.main.LayoutOrder = a2 + 1
     end
 end
 
-return assignOrder
+return a1

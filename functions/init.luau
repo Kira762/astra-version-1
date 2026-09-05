@@ -1,22 +1,15 @@
--- Generic helper entrypoint (functions/init.luau).
---
--- Preserves the old utilities/functions.luau re-export surface
--- (textWidth/textHeight/deriveFlagFromName/contrastColor/toColorSequence/
--- contrastText) over the real modules in functions/. UI-independent: nothing
--- here may require elements, components, or core state.
 
--- This file IS the `functions` ModuleScript (init.luau semantics).
-local textMetrics = require(script.textMetrics)
-local colors = require(script.colors)
-local flags = require(script.flagNames)
+local a1 = require(script.textMetrics)
+local a2 = require(script.colors)
+local a3 = require(script.flagNames)
 
-local functions = {}
+local a4 = {}
 
-functions.textWidth = textMetrics.textWidth
-functions.textHeight = textMetrics.textHeight
-functions.deriveFlagFromName = flags.deriveFlagFromName
-functions.contrastColor = colors.contrastColor
-functions.toColorSequence = colors.toColorSequence
-functions.contrastText = colors.contrastText
+a4.textWidth = a1.textWidth
+a4.textHeight = a1.textHeight
+a4.deriveFlagFromName = a3.deriveFlagFromName
+a4.contrastColor = a2.contrastColor
+a4.toColorSequence = a2.toColorSequence
+a4.contrastText = a2.contrastText
 
-return functions
+return a4

@@ -1,29 +1,22 @@
--- Public settings service entrypoint (settings/init.luau).
---
--- Consumed by the window to build its per-instance manager and by the
--- entrypoint's duplicate-window guard to read the persisted preference.
 
--- This file IS the `settings` ModuleScript (init.luau semantics): siblings are
--- children of `script`.
-local manager = require(script.manager)
-local registry = require(script.registry)
-local defaults = require(script.defaults)
-local persistence = require(script.persistence)
+local a1 = require(script.manager)
+local a2 = require(script.registry)
+local a3 = require(script.defaults)
+local a4 = require(script.persistence)
 
-local settings = {
-    manager = manager,
-    registry = registry,
-    defaults = defaults,
-    persistence = persistence,
+local a5 = {
+    manager = a1,
+    registry = a2,
+    defaults = a3,
+    persistence = a4,
 }
 
-function settings.newManager(initialOverrides: { [string]: any }?)
-    return manager.new(initialOverrides)
+function a5.newManager(a6: { [string]: any }?)
+    return a1.new(a6)
 end
 
--- Single-setting disk read used before any window/manager exists.
-function settings.readPersisted(key: string, fallback: any): any
-    return persistence.read(key, fallback)
+function a5.readPersisted(a7: string, a8: any): any
+    return a4.read(a7, a8)
 end
 
-return settings
+return a5

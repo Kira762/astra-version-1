@@ -1,49 +1,43 @@
--- Internal module/service registry (core/registry.luau).
---
--- Keeps a name -> module table for Astra's internal services so consumers can
--- resolve a service once without hard require chains, and so the loader can
--- lazily construct services on first use. UI elements should not need this;
--- it exists for cross-cutting services (settings, caches, icons, images).
 
-local registry = {}
+local a1 = {}
 
-local registered: { [string]: any } = {}
-local factories: { [string]: () -> any } = {}
+local a2: { [string]: any } = {}
+local a3: { [string]: () -> any } = {}
 
-function registry.register(name: string, module: any)
-    registered[name] = module
+function a1.register(a4: string, a5: any)
+    a2[a4] = a5
 end
 
-function registry.registerFactory(name: string, factory: () -> any)
-    factories[name] = factory
+function a1.registerFactory(a6: string, a7: () -> any)
+    a3[a6] = a7
 end
 
-function registry.get(name: string): any?
-    local existing = registered[name]
-    if existing ~= nil then
-        return existing
+function a1.get(a8: string): any?
+    local a9 = a2[a8]
+    if a9 ~= nil then
+        return a9
     end
-    local factory = factories[name]
-    if factory then
-        local built = factory()
-        registered[name] = built
-        return built
+    local a10 = a3[a8]
+    if a10 then
+        local a11 = a10()
+        a2[a8] = a11
+        return a11
     end
     return nil
 end
 
-function registry.names(): { string }
-    local names = {}
-    for name in registered do
-        table.insert(names, name)
+function a1.names(): { string }
+    local a12 = {}
+    for a13 in a2 do
+        table.insert(a12, a13)
     end
-    for name in factories do
-        if registered[name] == nil then
-            table.insert(names, name)
+    for a14 in a3 do
+        if a2[a14] == nil then
+            table.insert(a12, a14)
         end
     end
-    table.sort(names)
-    return names
+    table.sort(a12)
+    return a12
 end
 
-return registry
+return a1

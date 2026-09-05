@@ -1,33 +1,33 @@
-local function moveable<T>(class: T): T
-    local target = class :: any
+local function a1<T>(a2: T): T
+    local a3 = a2 :: any
 
-    function target:MoveTo(index: number)
-        self.tab:_moveElement(self, index)
+    function a3:MoveTo(a4: number)
+        self.tab:_moveElement(self, a4)
     end
 
-    function target:MoveToTop()
+    function a3:MoveToTop()
         self.tab:_moveElement(self, 1)
     end
 
-    function target:MoveToBottom()
+    function a3:MoveToBottom()
         self.tab:_moveElement(self, #self.tab.elements)
     end
 
-    function target:MoveUp()
-        local idx = table.find(self.tab.elements, self)
-        if idx then
-            self.tab:_moveElement(self, idx - 1)
+    function a3:MoveUp()
+        local a5 = table.find(self.tab.elements, self)
+        if a5 then
+            self.tab:_moveElement(self, a5 - 1)
         end
     end
 
-    function target:MoveDown()
-        local idx = table.find(self.tab.elements, self)
-        if idx then
-            self.tab:_moveElement(self, idx + 1)
+    function a3:MoveDown()
+        local a6 = table.find(self.tab.elements, self)
+        if a6 then
+            self.tab:_moveElement(self, a6 + 1)
         end
     end
 
-    return class
+    return a2
 end
 
-return moveable
+return a1

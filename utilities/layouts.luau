@@ -1,10 +1,10 @@
-local layouts = {}
+local a1 = {}
 
-local topbarHeight = 64
+local a2 = 64
 
-local tabStripTop = topbarHeight - 1
-local tabStripHeight = 38
-local tabStripGap = 3
+local a3 = a2 - 1
+local a4 = 38
+local a5 = 3
 
 export type Mode = "top" | "sidebar"
 
@@ -43,14 +43,14 @@ export type Layout = {
     forceCollapsed: boolean?,
 }
 
-layouts.top = {
+a1.top = {
     mode = "top" :: Mode,
 
-    topbarHeight = topbarHeight,
-    chromeHeight = tabStripTop + tabStripHeight + tabStripGap,
+    topbarHeight = a2,
+    chromeHeight = a3 + a4 + a5,
 
-    tabStripTop = tabStripTop,
-    tabStripHeight = tabStripHeight,
+    tabStripTop = a3,
+    tabStripHeight = a4,
 
     profileHeight = 48,
 
@@ -65,11 +65,11 @@ layouts.top = {
     }),
 } :: Layout
 
-layouts.sidebar = {
+a1.sidebar = {
     mode = "sidebar" :: Mode,
 
-    topbarHeight = topbarHeight,
-    chromeHeight = topbarHeight,
+    topbarHeight = a2,
+    chromeHeight = a2,
 
             railWidth = 219,
             railCollapsedWidth = 64,
@@ -108,29 +108,29 @@ layouts.sidebar = {
         fadeCorners = { "BottomLeftRadius", "BottomRightRadius" },
 } :: Layout
 
-local collapsedSidebar = table.clone(layouts.sidebar)
-collapsedSidebar.forceCollapsed = true
+local a6 = table.clone(a1.sidebar)
+a6.forceCollapsed = true
 
-function layouts.get(mode: unknown): Layout?
-    if mode == "sidebar" then
-        return layouts.sidebar
-    elseif mode == "collapsedSidebar" then
-        return collapsedSidebar
-    elseif mode == "top" then
-        return layouts.top
+function a1.get(a7: unknown): Layout?
+    if a7 == "sidebar" then
+        return a1.sidebar
+    elseif a7 == "collapsedSidebar" then
+        return a6
+    elseif a7 == "top" then
+        return a1.top
     end
     return nil
 end
 
-function layouts.railWidthFor(layout: Layout, windowWidth: number): number
-    if layout.mode ~= "sidebar" then
+function a1.railWidthFor(a8: Layout, a9: number): number
+    if a8.mode ~= "sidebar" then
         return 0
     end
-    local full = layout.railWidth :: number
-    if layout.forceCollapsed or windowWidth < (layout.railCollapseBelow :: number) then
-        return layout.railCollapsedWidth :: number
+    local a10 = a8.railWidth :: number
+    if a8.forceCollapsed or a9 < (a8.railCollapseBelow :: number) then
+        return a8.railCollapsedWidth :: number
     end
-    return full
+    return a10
 end
 
-return layouts
+return a1

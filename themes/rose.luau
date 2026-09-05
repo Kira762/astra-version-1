@@ -29,7 +29,7 @@ return {
         AccentColor = Color3.fromRGB(240, 82, 138),
     AccentStroke = Color3.fromRGB(255, 134, 178),
 
-    ToggleKnobOff = Color3.fromRGB(236, 220, 226), 
+    ToggleKnobOff = Color3.fromRGB(236, 220, 226),
     StatBackground = Color3.fromRGB(28, 20, 24),
 
     DropdownHighlight = Color3.fromRGB(240, 82, 138),

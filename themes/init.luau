@@ -1,22 +1,11 @@
--- Theme resolution engine (themes/init.luau).
---
--- Extracted verbatim from components/window.luau so the window no longer owns
--- theme logic. Responsibilities: named-theme lookup against the themes folder,
--- value coercion (Color3 -> ColorSequence for gradient keys), stroke
--- derivation for user-supplied theme tables, and brand-font fallbacks.
--- Only the default theme module is required eagerly; named themes load on
--- demand when selected.
 
--- This file IS the `themes` ModuleScript (init.luau semantics): the theme
--- modules (default, frost, ...) are children of `script`, and other folders
--- (core, utilities) are siblings reachable through script.Parent.
-local themesFolder = script
-local variables = require(script.Parent.core.state)
-local log = require(script.Parent.utilities.log)
+local a1 = script
+local a2 = require(script.Parent.core.state)
+local a3 = require(script.Parent.utilities.log)
 
-local themes = {}
+local a4 = {}
 
-local gradientKeys = {
+local a5 = {
     WindowColor = true,
     ElementGradient = true,
     ElementStrokeGradient = true,
@@ -25,79 +14,75 @@ local gradientKeys = {
     SliderProgress = true,
 }
 
-function themes.coerceValue(key, value)
-    if gradientKeys[key] and typeof(value) == "Color3" then
-        return ColorSequence.new(value)
+function a4.coerceValue(a6, a7)
+    if a5[a6] and typeof(a7) == "Color3" then
+        return ColorSequence.new(a7)
     end
-    return value
+    return a7
 end
 
-function themes.firstColor(value)
-    return if typeof(value) == "ColorSequence" then value.Keypoints[1].Value else value
+function a4.firstColor(a8)
+    return if typeof(a8) == "ColorSequence" then a8.Keypoints[1].Value else a8
 end
 
-local function edgeShade(color, amount)
-    local luminance = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B
-    local target = if luminance > 0.5 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1)
-    return color:Lerp(target, amount)
+local function a9(a10, a11)
+    local a12 = 0.299 * a10.R + 0.587 * a10.G + 0.114 * a10.B
+    local a13 = if a12 > 0.5 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1)
+    return a10:Lerp(a13, a11)
 end
 
--- Stroke derivation for user-supplied theme tables. Exposed so ChangeTheme
--- can re-derive derived stroke colors after merging user overrides.
-function themes.deriveStrokes(resolved, overrides)
-    if overrides.ElementGradient then
-        local fill = themes.firstColor(resolved.ElementGradient)
-        if overrides.ElementStroke == nil then
-            resolved.ElementStroke = edgeShade(fill, 0.28)
+function a4.deriveStrokes(a14, a15)
+    if a15.ElementGradient then
+        local a16 = a4.firstColor(a14.ElementGradient)
+        if a15.ElementStroke == nil then
+            a14.ElementStroke = a9(a16, 0.28)
         end
-        if overrides.ElementStrokeGradient == nil then
-            resolved.ElementStrokeGradient = ColorSequence.new(edgeShade(fill, 0.4))
+        if a15.ElementStrokeGradient == nil then
+            a14.ElementStrokeGradient = ColorSequence.new(a9(a16, 0.4))
         end
-        if overrides.ElementStrokeHover == nil then
-            resolved.ElementStrokeHover = edgeShade(fill, 0.52)
+        if a15.ElementStrokeHover == nil then
+            a14.ElementStrokeHover = a9(a16, 0.52)
         end
     end
-    if overrides.TabBackground and overrides.TabStroke == nil then
-        resolved.TabStroke = ColorSequence.new(edgeShade(themes.firstColor(resolved.TabBackground), 0.4))
+    if a15.TabBackground and a15.TabStroke == nil then
+        a14.TabStroke = ColorSequence.new(a9(a4.firstColor(a14.TabBackground), 0.4))
     end
 end
 
-local function themeOverrides(value)
-    if typeof(value) == "table" then
-        return value
-    elseif typeof(value) == "string" then
-        local named = themesFolder:FindFirstChild(string.lower(value))
-        if named then
-            return require(named)
+local function a17(a18)
+    if typeof(a18) == "table" then
+        return a18
+    elseif typeof(a18) == "string" then
+        local a19 = a1:FindFirstChild(string.lower(a18))
+        if a19 then
+            return require(a19)
         end
-        log.warn("Astra: unknown theme '" .. value .. "', using default")
-    elseif value ~= nil then
-        log.warn("Astra: invalid theme (expected a built-in name or a theme table), using default")
+        a3.warn("Astra: unknown theme '" .. a18 .. "', using default")
+    elseif a18 ~= nil then
+        a3.warn("Astra: invalid theme (expected a built-in name or a theme table), using default")
     end
-    return require(themesFolder["default"])
+    return require(a1["default"])
 end
 
--- Resolve a theme value (nil, built-in name, or theme table) to a full theme
--- table. Public API: window code calls themes.resolve(value).
-function themes.resolve(value)
-    local resolved = table.clone(require(themesFolder["default"]))
-    local overrides = themeOverrides(value)
-    for key, override in overrides do
-        resolved[key] = themes.coerceValue(key, override)
+function a4.resolve(a20)
+    local a21 = table.clone(require(a1["default"]))
+    local a22 = a17(a20)
+    for a23, a24 in a22 do
+        a21[a23] = a4.coerceValue(a23, a24)
     end
-    if typeof(value) == "table" then
-        deriveStrokes(resolved, overrides)
+    if typeof(a20) == "table" then
+        deriveStrokes(a21, a22)
     end
 
-    local userTable = if typeof(value) == "table" then value else nil
-    if not (userTable and (userTable.Font or userTable.font)) then
-        resolved.Font = variables.brandFont(Enum.FontWeight.Medium)
+    local a25 = if typeof(a20) == "table" then a20 else nil
+    if not (a25 and (a25.Font or a25.font)) then
+        a21.Font = a2.brandFont(Enum.FontWeight.Medium)
     end
-    if not (userTable and (userTable.TitleFont or userTable.titleFont)) then
-        resolved.TitleFont = variables.brandFont(Enum.FontWeight.SemiBold)
+    if not (a25 and (a25.TitleFont or a25.titleFont)) then
+        a21.TitleFont = a2.brandFont(Enum.FontWeight.SemiBold)
     end
 
-    return resolved
+    return a21
 end
 
-return themes
+return a4

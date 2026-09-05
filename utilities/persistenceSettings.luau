@@ -1,10 +1,10 @@
-local variables = require(script.Parent.Parent.core.state)
-local filesystem = require(script.Parent.filesystem)
-local paths = require(script.Parent.persistencePaths)
-local atomic = require(script.Parent.persistenceWrite)
-local enums = require(script.Parent.enums)
+local a1 = require(script.Parent.Parent.core.state)
+local a2 = require(script.Parent.filesystem)
+local a3 = require(script.Parent.persistencePaths)
+local a4 = require(script.Parent.persistenceWrite)
+local a5 = require(script.Parent.enums)
 
-local persistenceSettings = {}
+local a6 = {}
 
 type SettingsWindow = {
     settings: {
@@ -33,14 +33,14 @@ type DecodedSettings = {
     activeSubTab: unknown?,
 }
 
-function persistenceSettings.getSettingsPath(): (string, string)
-    return paths.getSettingsPath()
+function a6.getSettingsPath(): (string, string)
+    return a3.getSettingsPath()
 end
 
-function persistenceSettings.saveSettings(window: SettingsWindow): boolean
-    local dir, fullPath = persistenceSettings.getSettingsPath()
+function a6.saveSettings(window: SettingsWindow): boolean
+    local a7, a8 = a6.getSettingsPath()
 
-    local data: { [string]: unknown } = {
+    local a9: { [string]: unknown } = {
         toggleKeybind = {
             tostring(window.settings.toggleKeybind.EnumType),
             window.settings.toggleKeybind.Value,
@@ -56,116 +56,115 @@ function persistenceSettings.saveSettings(window: SettingsWindow): boolean
         activeSubTab = window.settings.activeSubTab,
     }
 
-    local ok, encoded = pcall(variables.httpService.JSONEncode, variables.httpService, data)
+    local ok, a10 = pcall(a1.httpService.JSONEncode, a1.httpService, a9)
     if not ok then
         return false
     end
 
-    local writeOk = pcall(atomic.write, dir, fullPath, encoded)
+    local a11 = pcall(a4.write, a7, a8, a10)
 
-    if not writeOk then
+    if not a11 then
         return false
     end
 
     return true
 end
 
-local function decodeFile(fullPath: string): (DecodedSettings?, string?)
-    local fileExists = false
+local function a12(a13: string): (DecodedSettings?, string?)
+    local a14 = false
     pcall(function()
-        fileExists = filesystem.isfile(fullPath)
+        a14 = a2.isfile(a13)
     end)
-    if not fileExists then
+    if not a14 then
         return nil, nil
     end
 
-    local readOk, contents = pcall(filesystem.readfile, fullPath)
-    if not readOk or type(contents) ~= "string" then
+    local a15, a16 = pcall(a2.readfile, a13)
+    if not a15 or type(a16) ~= "string" then
         return nil, nil
     end
 
-    local decodeOk, parsed = pcall(variables.httpService.JSONDecode, variables.httpService, contents)
-        if not decodeOk or type(parsed) ~= "table" then
-        return nil, contents
+    local a17, a18 = pcall(a1.httpService.JSONDecode, a1.httpService, a16)
+        if not a17 or type(a18) ~= "table" then
+        return nil, a16
     end
 
-        return parsed :: DecodedSettings, contents
+        return a18 :: DecodedSettings, a16
 end
 
-local function readSavedSettings(): DecodedSettings?
-    local dir, fullPath = persistenceSettings.getSettingsPath()
-    local settings = decodeFile(fullPath)
-    if settings then
-        return settings
+local function a19(): DecodedSettings?
+    local a20, a21 = a6.getSettingsPath()
+    local a22 = a12(a21)
+    if a22 then
+        return a22
     end
 
-    local parked, parkedRaw = decodeFile(atomic.tempPathFor(fullPath))
-    if parked and parkedRaw then
-        pcall(atomic.write, dir, fullPath, parkedRaw)
-        return parked
+    local a23, a24 = a12(a4.tempPathFor(a21))
+    if a23 and a24 then
+        pcall(a4.write, a20, a21, a24)
+        return a23
     end
 
     return nil
 end
 
-function persistenceSettings.loadSettings(window: SettingsWindow): boolean
-    local settings = readSavedSettings()
+function a6.loadSettings(window: SettingsWindow): boolean
+    local a25 = a19()
 
-
-    if not settings then
+    if not a25 then
         return false
     end
 
-    if settings.toggleKeybind then
+    if a25.toggleKeybind then
         pcall(function()
-            local enumName = tostring(settings.toggleKeybind[1]):gsub("^Enum%.", "")
-            local enumType = (Enum :: any)[enumName]
-            if enumType then
-                local enumItem = enums.itemFromValue(enumType, settings.toggleKeybind[2])
-                if enumItem then
-                    window.settings.toggleKeybind = enumItem
+            local a26 = tostring(a25.toggleKeybind[1]):gsub("^Enum%.", "")
+            local a27 = (Enum :: any)[a26]
+            if a27 then
+                local a28 = a5.itemFromValue(a27, a25.toggleKeybind[2])
+                if a28 then
+                    window.settings.toggleKeybind = a28
                 end
             end
         end)
     end
 
-    if type(settings.mouseOverride) == "boolean" then
-        window.settings.mouseOverride = settings.mouseOverride
+    if type(a25.mouseOverride) == "boolean" then
+        window.settings.mouseOverride = a25.mouseOverride
     end
 
-    if type(settings.keepOnScreen) == "boolean" then
-        window.settings.keepOnScreen = settings.keepOnScreen
+    if type(a25.keepOnScreen) == "boolean" then
+        window.settings.keepOnScreen = a25.keepOnScreen
     end
 
-    if type(settings.welcomeToast) == "boolean" then
-        window.settings.welcomeToast = settings.welcomeToast
+    if type(a25.welcomeToast) == "boolean" then
+        window.settings.welcomeToast = a25.welcomeToast
     end
 
-    if type(settings.haptics) == "boolean" then
-        window.settings.haptics = settings.haptics
+    if type(a25.haptics) == "boolean" then
+        window.settings.haptics = a25.haptics
     end
 
-    if type(settings.showProfile) == "boolean" then
-        window.settings.showProfile = settings.showProfile
+    if type(a25.showProfile) == "boolean" then
+        window.settings.showProfile = a25.showProfile
     end
-    if type(settings.showFullUsername) == "boolean" then
-        window.settings.showFullUsername = settings.showFullUsername
+    if type(a25.showFullUsername) == "boolean" then
+        window.settings.showFullUsername = a25.showFullUsername
     end
-    if type(settings.antiWindowDuplicate) == "boolean" then
-        window.settings.antiWindowDuplicate = settings.antiWindowDuplicate
+    if type(a25.antiWindowDuplicate) == "boolean" then
+        window.settings.antiWindowDuplicate = a25.antiWindowDuplicate
     end
-    if settings.layoutMode == "top"
-        or settings.layoutMode == "sidebar"
-        or settings.layoutMode == "collapsedSidebar"
+    if a25.layoutMode == "top"
+        or a25.layoutMode == "sidebar"
+        or a25.layoutMode == "collapsedSidebar"
     then
-        window.settings.layoutMode = settings.layoutMode
+        window.settings.layoutMode = a25.layoutMode
     end
 
-    if type(settings.activeSubTab) == "number" and settings.activeSubTab >= 1 then
-        window.settings.activeSubTab = math.floor(settings.activeSubTab)
+    if type(a25.activeSubTab) == "number" and a25.activeSubTab >= 1 then
+        window.settings.activeSubTab = math.floor(a25.activeSubTab)
     end
 
     return true
 end
 
-return persistenceSettings
+return a6

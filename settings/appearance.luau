@@ -1,25 +1,20 @@
--- Appearance settings domain (settings/appearance.luau).
---
--- Validation and normalization for the visual/window appearance settings.
--- Settings are internal configuration, not UI elements; the window consumes
--- these through the manager.
 
-local appearance = {}
+local a1 = {}
 
-function appearance.validate(key: string, value: any): (boolean, any)
-    if key == "keepOnScreen" or key == "showProfile" or key == "showFullUsername" then
-        return type(value) == "boolean", value == true
+function a1.validate(a2: string, a3: any): (boolean, any)
+    if a2 == "keepOnScreen" or a2 == "showProfile" or a2 == "showFullUsername" then
+        return type(a3) == "boolean", a3 == true
     end
-    if key == "layoutMode" then
-        if value == "top" or value == "sidebar" or value == "collapsedSidebar" then
-            return true, value
+    if a2 == "layoutMode" then
+        if a3 == "top" or a3 == "sidebar" or a3 == "collapsedSidebar" then
+            return true, a3
         end
         return false, nil
     end
-    if key == "activeSubTab" then
-        return type(value) == "number" and value >= 1, math.floor(value)
+    if a2 == "activeSubTab" then
+        return type(a3) == "number" and a3 >= 1, math.floor(a3)
     end
     return false, nil
 end
 
-return appearance
+return a1

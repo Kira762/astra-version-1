@@ -1,11 +1,11 @@
-local core = require(script.Parent.core)
-local variables = require(script.Parent.core.state)
-local image = require(script.Parent.images.image)
-local locale = require(script.Parent.utilities.locale)
-local constants = require(script.Parent.utilities.constants)
-local icons = require(script.Parent.icons)
-local settings = require(script.Parent.settings)
-local types = require(script.Parent.Types)
+local a1 = require(script.Parent.core)
+local a2 = require(script.Parent.core.state)
+local a3 = require(script.Parent.images.image)
+local a4 = require(script.Parent.utilities.locale)
+local a5 = require(script.Parent.utilities.constants)
+local a6 = require(script.Parent.icons)
+local a7 = require(script.Parent.settings)
+local a8 = require(script.Parent.Types)
 
 export type Theme = types.Theme
 export type Translator = types.Translator
@@ -60,99 +60,94 @@ export type Astra = types.Astra
 
 type WindowModule = { new: (types.WindowProps) -> types.Window }
 
-local astra = {} :: Astra
-local activeWindow: types.Window? = nil
-local activeWindowKey = "__ASTRA_ACTIVE_WINDOW_V1"
+local a9 = {} :: Astra
+local a10: types.Window? = nil
+local a11 = "__ASTRA_ACTIVE_WINDOW_V1"
 
-local function sharedEnvironment(): { [string]: any }
-    local fallback = _G :: any
-    local ok, environment = pcall(function()
+local function a12(): { [string]: any }
+    local a13 = _G :: any
+    local ok, a14 = pcall(function()
         return (getgenv :: any)()
     end)
-    return if ok and type(environment) == "table" then environment else fallback
+    return if ok and type(a14) == "table" then a14 else a13
 end
 
-local shared = sharedEnvironment()
+local a15 = a12()
 
--- Public icon catalog.
--- Use astra.Icons.get(name, pack) for explicit pack selection.
-astra.Icons = icons
+a9.Icons = a6
 
--- Internal service surface (kept for advanced consumers / tests).
-astra.Core = core
-astra.Settings = settings
+a9.Core = a1
+a9.Settings = a7
 
-function astra:CreateWindow(properties: types.WindowProps): types.Window
-    local existing = activeWindow or shared[activeWindowKey]
-    activeWindow = existing
-    if existing then
-        local state = existing :: any
-        if state.unloaded then
-            activeWindow = nil
-            if shared[activeWindowKey] == existing then
-                shared[activeWindowKey] = nil
+function a9:CreateWindow(a16: types.WindowProps): types.Window
+    local a17 = a10 or a15[a11]
+    a10 = a17
+    if a17 then
+        local a18 = a17 :: any
+        if a18.unloaded then
+            a10 = nil
+            if a15[a11] == a17 then
+                a15[a11] = nil
             end
         else
-            -- Read the persisted preference through the settings service
-            -- (cached after first read) instead of a bespoke settings module.
-            local savedPreference = settings.readPersisted("antiWindowDuplicate", true)
-            if savedPreference and (not state.settings or state.settings.antiWindowDuplicate ~= false) then
-                state:Unload()
-                activeWindow = nil
-                if shared[activeWindowKey] == existing then
-                    shared[activeWindowKey] = nil
+            local a19 = a7.readPersisted("antiWindowDuplicate", true)
+            if a19 and (not a18.settings or a18.settings.antiWindowDuplicate ~= false) then
+                a18:Unload()
+                a10 = nil
+                if a15[a11] == a17 then
+                    a15[a11] = nil
                 end
             end
         end
     end
 
-    local made, result = pcall(function()
-        return (require(script.Parent.components.window) :: WindowModule).new(properties)
+    local a20, a21 = pcall(function()
+        return (require(script.Parent.components.window) :: WindowModule).new(a16)
     end)
-    if not made then
-        error(result, 0)
+    if not a20 then
+        error(a21, 0)
     end
 
-    local built = result :: types.Window
-    activeWindow = built
-    shared[activeWindowKey] = built
-    if variables.secureMode then
+    local a22 = a21 :: types.Window
+    a10 = a22
+    a15[a11] = a22
+    if a2.secureMode then
         task.defer(function()
-            image.preload(function(failed, failedRoles)
-                if failed <= 0 or built.unloaded then
+            a3.preload(function(a23, a24)
+                if a23 <= 0 or a22.unloaded then
                     return
                 end
-                local roleText = if #failedRoles > 0
-                    then table.concat(failedRoles, ", ")
+                local a25 = if #a24 > 0
+                    then table.concat(a24, ", ")
                     else "optional window icon"
-                built:Notify({
-                    title = locale.resolve("Optional icon warning"),
-                    content = locale.resolve("Failed to load: ") .. roleText,
+                a22:Notify({
+                    title = a4.resolve("Optional icon warning"),
+                    content = a4.resolve("Failed to load: ") .. a25,
                 })
             end)
         end)
     end
-    if variables.secureMode then
+    if a2.secureMode then
                         task.spawn(function()
-            local body = variables.fontManager:loadFont(constants.fontAsset, Enum.FontWeight.Medium)
-            local title = variables.fontManager:loadFont(constants.fontAsset, Enum.FontWeight.SemiBold)
+            local a26 = a2.fontManager:loadFont(a5.fontAsset, Enum.FontWeight.Medium)
+            local a27 = a2.fontManager:loadFont(a5.fontAsset, Enum.FontWeight.SemiBold)
                         if
-                not built.unloaded
-                and body
-                and title
-                and body ~= variables.fallbackFont
-                and title ~= variables.fallbackFont
+                not a22.unloaded
+                and a26
+                and a27
+                and a26 ~= a2.fallbackFont
+                and a27 ~= a2.fallbackFont
             then
-                built:ChangeTheme({ Font = body, TitleFont = title })
+                a22:ChangeTheme({ Font = a26, TitleFont = a27 })
             end
         end)
     end
 
-    if not built.unloaded then
-        built:Show()
+    if not a22.unloaded then
+        a22:Show()
     end
 
-    return built
+    return a22
 end
 
-return astra
+return a9

@@ -1,96 +1,96 @@
-local Statistic = {}
-Statistic.__index = Statistic
-Statistic.__type = "Statistic"
+local a1 = {}
+a1.__index = a1
+a1.__type = "Statistic"
 
-local utility = script.Parent.Parent.utilities
+local a2 = script.Parent.Parent.utilities
 
-local variables = require(utility.Parent.core.state)
-local functions = require(script.Parent.Parent.functions)
-local odometer = require(utility.odometer)
-local moveable = require(utility.moveable)
-local constants = require(utility.constants)
-local locale = require(utility.locale)
-local log = require(utility.log)
+local a3 = require(a2.Parent.core.state)
+local a4 = require(script.Parent.Parent.functions)
+local a5 = require(a2.odometer)
+local a6 = require(a2.moveable)
+local a7 = require(a2.constants)
+local a8 = require(a2.locale)
+local a9 = require(a2.log)
 
-local accents = constants.statAccents
+local a10 = a7.statAccents
 
-local accentTransparency = NumberSequence.new({
+local a11 = NumberSequence.new({
     NumberSequenceKeypoint.new(0, 0.85),
     NumberSequenceKeypoint.new(1, 0),
 })
 
-local compactHeight = 41
+local a12 = 41
 
-local accentTweenInfo = TweenInfo.new(0.6, Enum.EasingStyle.Exponential)
+local a13 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential)
 
-local function glowColor(accent)
-    return accent.fill.Keypoints[1].Value
+local function a14(a15)
+    return a15.fill.Keypoints[1].Value
 end
 
-local function formatPct(pct)
-    if pct > 0 then
-        return string.format("+%.1f%%", pct)
-    elseif pct < 0 then
-        return string.format("%.1f%%", pct)
+local function a16(a17)
+    if a17 > 0 then
+        return string.format("+%.1f%%", a17)
+    elseif a17 < 0 then
+        return string.format("%.1f%%", a17)
     else
         return "0%"
     end
 end
 
-local function formatValue(value)
-    if typeof(value) ~= "number" then
-        return tostring(value)
+local function a18(a19)
+    if typeof(a19) ~= "number" then
+        return tostring(a19)
     end
-            local rounded = math.round(math.abs(value))
-    local s = string.format("%.0f", rounded)
-    local result = s:reverse():gsub("%d%d%d", "%0,"):reverse()
-    if result:sub(1, 1) == "," then
-        result = result:sub(2)
+            local a20 = math.round(math.abs(a19))
+    local s = string.format("%.0f", a20)
+    local a21 = s:reverse():gsub("%d%d%d", "%0,"):reverse()
+    if a21:sub(1, 1) == "," then
+        a21 = a21:sub(2)
     end
-        return if value < 0 and rounded ~= 0 then "-" .. result else result
+        return if a19 < 0 and a20 ~= 0 then "-" .. a21 else a21
 end
 
-local function formatChange(delta)
-        local rounded = math.round(delta)
-    if rounded > 0 then
-        return "+" .. formatValue(rounded)
-    elseif rounded < 0 then
-        return formatValue(rounded)
+local function a22(a23)
+        local a24 = math.round(a23)
+    if a24 > 0 then
+        return "+" .. a18(a24)
+    elseif a24 < 0 then
+        return a18(a24)
     else
         return "0"
     end
 end
 
-function Statistic.new(tab, properties)
-    properties = if typeof(properties) == "table" then properties else {}
+function a1.new(tab, a25)
+    a25 = if typeof(a25) == "table" then a25 else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = properties.name or properties.Name or "Statistic",
-        icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
-        description = properties.description or properties.Description,
+        name = a25.name or a25.Name or "Statistic",
+        icon = tab.window:ResolveIcon(a25.icon or a25.Icon),
+        description = a25.description or a25.Description,
 
-        value = if (properties.value or properties.Value) ~= nil then (properties.value or properties.Value) else 0,
-                        _hasValue = (properties.value or properties.Value) ~= nil,
+        value = if (a25.value or a25.Value) ~= nil then (a25.value or a25.Value) else 0,
+                        _hasValue = (a25.value or a25.Value) ~= nil,
 
-        numberEasing = if (properties.numberEasing ~= nil)
-            then properties.numberEasing
-            elseif properties.NumberEasing ~= nil then properties.NumberEasing
+        numberEasing = if (a25.numberEasing ~= nil)
+            then a25.numberEasing
+            elseif a25.NumberEasing ~= nil then a25.NumberEasing
             else true,
 
-        changeMode = properties.changeMode or properties.ChangeMode or "percentage",         changeBaseline = properties.changeBaseline or properties.ChangeBaseline or "previous",
+        changeMode = a25.changeMode or a25.ChangeMode or "percentage",         changeBaseline = a25.changeBaseline or a25.ChangeBaseline or "previous",
 
-        prefix = properties.prefix or properties.Prefix or "",
-        suffix = properties.suffix or properties.Suffix or "",
+        prefix = a25.prefix or a25.Prefix or "",
+        suffix = a25.suffix or a25.Suffix or "",
 
-                        compact = properties.compact or properties.Compact or tab.compact or false,
-        display = (properties.display or properties.Display or "value"), 
-        _initialValue = if (properties.value or properties.Value) ~= nil
-            then (properties.value or properties.Value)
+                        compact = a25.compact or a25.Compact or tab.compact or false,
+        display = (a25.display or a25.Display or "value"),
+        _initialValue = if (a25.value or a25.Value) ~= nil
+            then (a25.value or a25.Value)
             else nil,
         _lastChange = 0,
-    }, Statistic)
+    }, a1)
 
     if self.compact then
         self:_buildCompact()
@@ -100,7 +100,7 @@ function Statistic.new(tab, properties)
 
     if self.description then
         if self.compact then
-            log.warn(`Astra: a compact stat has no room for a description, ignoring it on '{self.name}'.`)
+            a9.warn(`Astra: a compact stat has no room for a description, ignoring it on '{self.name}'.`)
         else
             self.descriptor = require(script.Parent.descriptor).new(self.tab, { description = self.description })
         end
@@ -109,7 +109,7 @@ function Statistic.new(tab, properties)
     return self
 end
 
-function Statistic:_buildFull()
+function a1:_buildFull()
     local window = self.window
 
     self.main = window:Create("Frame", {
@@ -136,8 +136,8 @@ function Statistic:_buildFull()
     self.strokeGradient = window:Create("UIGradient", {
         Rotation = 2,
         Offset = Vector2.new(0, 0.5),
-        Color = accents.neutral.stroke,
-        Transparency = accentTransparency,
+        Color = a10.neutral.stroke,
+        Transparency = a11,
 
         Parent = self.stroke,
     })
@@ -163,10 +163,10 @@ function Statistic:_buildFull()
         Parent = self.main,
     })
 
-            self.glow = window:CreateGlow(self.main, glowColor(accents.neutral), 13, 1)
+            self.glow = window:CreateGlow(self.main, a14(a10.neutral), 13, 1)
 
     self.title = window:Create("TextLabel", {
-        Text = locale.t(self.name),
+        Text = a8.t(self.name),
 
         Size = UDim2.fromOffset(300, 19),
         BorderSizePixel = 0,
@@ -177,15 +177,15 @@ function Statistic:_buildFull()
         LayoutOrder = 1,
         ZIndex = 10,
 
-        TextTransparency = 1, 
+        TextTransparency = 1,
         Parent = self.titleContainer,
     }, { TextColor3 = "ContentColor", FontFace = "TitleFont" })
 
     self.mainGradient = window:Create("UIGradient", {
         Rotation = 2,
         Offset = Vector2.new(0, 0.5),
-        Color = accents.neutral.fill,
-        Transparency = accentTransparency,
+        Color = a10.neutral.fill,
+        Transparency = a11,
 
         Parent = self.gradientContainer,
     })
@@ -202,7 +202,7 @@ function Statistic:_buildFull()
             BackgroundTransparency = 1,
             ZIndex = 10,
 
-            ImageTransparency = 1, 
+            ImageTransparency = 1,
             Parent = self.titleContainer,
         }, { ImageColor3 = "ContentColor" })
     end
@@ -239,13 +239,13 @@ function Statistic:_buildFull()
         Parent = self.main,
     })
 
-    self.valueOdo = odometer.new(window, self.valueHost, {
+    self.valueOdo = a5.new(window, self.valueHost, {
         textSize = 20,
         alignment = Enum.HorizontalAlignment.Left,
         transparency = 1,     })
     self.valueOdo:snap(self:_formatValue(self.value))
 
-    self.changeOdo = odometer.new(window, self.changeHost, {
+    self.changeOdo = a5.new(window, self.changeHost, {
         textSize = 15,
         alignment = Enum.HorizontalAlignment.Right,
         transparency = 1,
@@ -255,20 +255,20 @@ function Statistic:_buildFull()
     self._accentGradients = { self.strokeGradient, self.mainGradient }
 end
 
-function Statistic:_buildCompact()
+function a1:_buildCompact()
     local window = self.window
 
-        local inRow = self.tab.compact or false
+        local a26 = self.tab.compact or false
 
     self.main = window:Create("Frame", {
         Name = self.name,
-        Size = if inRow then UDim2.fromOffset(0, compactHeight) else UDim2.new(1, -20, 0, compactHeight),
-        AutomaticSize = if inRow then Enum.AutomaticSize.X else Enum.AutomaticSize.None,
+        Size = if a26 then UDim2.fromOffset(0, a12) else UDim2.new(1, -20, 0, a12),
+        AutomaticSize = if a26 then Enum.AutomaticSize.X else Enum.AutomaticSize.None,
         ClipsDescendants = true,
         BorderSizePixel = 0,
         ZIndex = 5,
 
-        BackgroundTransparency = 1, 
+        BackgroundTransparency = 1,
         Parent = self.tab.tabPage,
     }, { BackgroundColor3 = "StatBackground", BackgroundTransparency = "ElementTransparency" })
 
@@ -285,13 +285,13 @@ function Statistic:_buildCompact()
     self.strokeGradient = window:Create("UIGradient", {
         Rotation = 2,
         Offset = Vector2.new(0, 0.5),
-        Color = accents.neutral.stroke,
-        Transparency = accentTransparency,
+        Color = a10.neutral.stroke,
+        Transparency = a11,
 
         Parent = self.stroke,
     })
 
-    if inRow then
+    if a26 then
         window:Create("UIFlexItem", {
             FlexMode = Enum.UIFlexMode.Fill,
             Parent = self.main,
@@ -308,12 +308,12 @@ function Statistic:_buildCompact()
 
         self.card = window:Create("Frame", {
         AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, compactHeight),
+        Size = UDim2.fromOffset(0, a12),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 5,
 
-        BackgroundTransparency = 1, 
+        BackgroundTransparency = 1,
         Parent = self.main,
     })
 
@@ -324,8 +324,8 @@ function Statistic:_buildCompact()
     self.mainGradient = window:Create("UIGradient", {
         Rotation = 2,
         Offset = Vector2.new(0, 0.5),
-        Color = accents.neutral.fill,
-        Transparency = accentTransparency,
+        Color = a10.neutral.fill,
+        Transparency = a11,
 
         Parent = self.card,
     })
@@ -380,13 +380,13 @@ function Statistic:_buildCompact()
             LayoutOrder = 0,
             ZIndex = 6,
 
-            ImageTransparency = 1, 
+            ImageTransparency = 1,
             Parent = self.titleContainer,
         }, { ImageColor3 = "ContentColor" })
     end
 
     self.title = window:Create("TextLabel", {
-        Text = locale.t(self.name),
+        Text = a8.t(self.name),
         Size = UDim2.fromOffset(0, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -397,9 +397,9 @@ function Statistic:_buildCompact()
         LayoutOrder = 1,
         ZIndex = 6,
 
-        TextTransparency = 1, 
+        TextTransparency = 1,
         Parent = self.titleContainer,
-    }, { TextColor3 = "ContentColor", FontFace = "Font" }) 
+    }, { TextColor3 = "ContentColor", FontFace = "Font" })
         window:Create("UIFlexItem", {
         FlexMode = Enum.UIFlexMode.Shrink,
         Parent = self.title,
@@ -416,7 +416,7 @@ function Statistic:_buildCompact()
         Parent = self.card,
     })
 
-    self.readoutOdo = odometer.new(window, self.readoutHost, {
+    self.readoutOdo = a5.new(window, self.readoutHost, {
         textSize = 17,
         alignment = Enum.HorizontalAlignment.Right,
         transparency = 1,
@@ -426,126 +426,126 @@ function Statistic:_buildCompact()
     self._accentGradients = { self.strokeGradient, self.mainGradient }
 end
 
-function Statistic:_setAccent(key, direction)
-    local accent = accents[key]
-    self.strokeGradient.Color = accent.stroke
-    self.mainGradient.Color = accent.fill
+function a1:_setAccent(a27, a28)
+    local a29 = a10[a27]
+    self.strokeGradient.Color = a29.stroke
+    self.mainGradient.Color = a29.fill
     if self.glow then
-        self.glow.Color = glowColor(accent)
+        self.glow.Color = a14(a29)
     end
 
-        local rotation = if direction == 1 then 14 elseif direction == -1 then -10 else 2
-    local offset = if direction == 1
+        local a30 = if a28 == 1 then 14 elseif a28 == -1 then -10 else 2
+    local a31 = if a28 == 1
         then Vector2.new(0.04, 0.5)
-        elseif direction == -1 then Vector2.new(-0.04, 0.5)
+        elseif a28 == -1 then Vector2.new(-0.04, 0.5)
         else Vector2.new(0, 0.5)
-    for _, gradient in self._accentGradients do
-        variables.tweenService:Create(gradient, accentTweenInfo, { Rotation = rotation, Offset = offset }):Play()
+    for _, a32 in self._accentGradients do
+        a3.tweenService:Create(a32, a13, { Rotation = a30, Offset = a31 }):Play()
     end
 end
 
-function Statistic:_formatValue(value)
-    return self.prefix .. formatValue(value) .. self.suffix
+function a1:_formatValue(a33)
+    return self.prefix .. a18(a33) .. self.suffix
 end
 
-function Statistic:_formatChange(delta)
+function a1:_formatChange(a34)
     if self.changeMode == "absolute" then
-        return formatChange(delta)
+        return a22(a34)
     else
-        return formatPct(delta)
+        return a16(a34)
     end
 end
 
-function Statistic:_showValue(odo, value, previousValue, hasNoHistory)
-    if self.numberEasing and not hasNoHistory then
-        odo:to(self:_formatValue(value), value >= previousValue)
+function a1:_showValue(a35, a36, a37, a38)
+    if self.numberEasing and not a38 then
+        a35:to(self:_formatValue(a36), a36 >= a37)
     else
-        odo:snap(self:_formatValue(value))
+        a35:snap(self:_formatValue(a36))
     end
 end
 
-function Statistic:_updateFullReadouts(value, previousValue, targetChange, noChange, infinityText, hasNoHistory)
-    self:_showValue(self.valueOdo, value, previousValue, hasNoHistory)
+function a1:_updateFullReadouts(a39, a40, a41, a42, a43, a44)
+    self:_showValue(self.valueOdo, a39, a40, a44)
 
-    if infinityText then
-        self.changeOdo:snap(infinityText)
+    if a43 then
+        self.changeOdo:snap(a43)
         self._lastChange = 0
-    elseif self.numberEasing and not noChange then
-        self.changeOdo:to(self:_formatChange(targetChange), targetChange >= self._lastChange)
-        self._lastChange = targetChange
+    elseif self.numberEasing and not a42 then
+        self.changeOdo:to(self:_formatChange(a41), a41 >= self._lastChange)
+        self._lastChange = a41
     else
-        self.changeOdo:snap(self:_formatChange(targetChange or 0))
-        self._lastChange = targetChange or 0
+        self.changeOdo:snap(self:_formatChange(a41 or 0))
+        self._lastChange = a41 or 0
     end
 end
 
-function Statistic:_updateCompactReadout(value, previousValue, targetChange, noChange, infinityText, hasNoHistory)
+function a1:_updateCompactReadout(a45, a46, a47, a48, a49, a50)
     if self.display == "change" then
-        if infinityText then
-            self.readoutOdo:snap(infinityText)
+        if a49 then
+            self.readoutOdo:snap(a49)
             self._lastChange = 0
-        elseif self.numberEasing and not noChange then
-            self.readoutOdo:to(self:_formatChange(targetChange), targetChange >= self._lastChange)
-            self._lastChange = targetChange
+        elseif self.numberEasing and not a48 then
+            self.readoutOdo:to(self:_formatChange(a47), a47 >= self._lastChange)
+            self._lastChange = a47
         else
-            self.readoutOdo:snap(self:_formatChange(targetChange or 0))
-            self._lastChange = targetChange or 0
+            self.readoutOdo:snap(self:_formatChange(a47 or 0))
+            self._lastChange = a47 or 0
         end
-    else         self:_showValue(self.readoutOdo, value, previousValue, hasNoHistory)
+    else         self:_showValue(self.readoutOdo, a45, a46, a50)
     end
 end
 
-function Statistic:Set(value)
-    assert(typeof(value) == "number", "Statistic:Set() - value must be a number, got " .. typeof(value))
+function a1:Set(a51)
+    assert(typeof(a51) == "number", "Statistic:Set() - value must be a number, got " .. typeof(a51))
 
-    local previousValue = self.value
-    local hasNoHistory = not self._hasValue
-    self.value = value
+    local a52 = self.value
+    local a53 = not self._hasValue
+    self.value = a51
     self._hasValue = true
 
-    if hasNoHistory then
-        self._initialValue = value
+    if a53 then
+        self._initialValue = a51
     end
 
-    local refValue = if self.changeBaseline == "initial" then self._initialValue else previousValue
-    local noChange = hasNoHistory or refValue == value
+    local a54 = if self.changeBaseline == "initial" then self._initialValue else a52
+    local a55 = a53 or a54 == a51
 
-        local targetChange, infinityText, accentKey, direction
-    if noChange then
-        targetChange = 0
-        accentKey = "neutral"
-        direction = 0
-    elseif refValue == 0 then
-        local sign = if value > 0 then "+" else "-"
-        local suffix = if self.changeMode == "percentage" then "∞%" else "∞"
-        infinityText = sign .. suffix
-        accentKey = if value > 0 then "positive" else "negative"
-        direction = if value > 0 then 1 else -1
+        local a56, a57, a58, a59
+    if a55 then
+        a56 = 0
+        a58 = "neutral"
+        a59 = 0
+    elseif a54 == 0 then
+        local a60 = if a51 > 0 then "+" else "-"
+        local a61 = if self.changeMode == "percentage" then "∞%" else "∞"
+        a57 = a60 .. a61
+        a58 = if a51 > 0 then "positive" else "negative"
+        a59 = if a51 > 0 then 1 else -1
     elseif self.changeMode == "percentage" then
-        targetChange = ((value - refValue) / math.abs(refValue)) * 100
-        direction = if targetChange > 0 then 1 elseif targetChange < 0 then -1 else 0
-        accentKey = if direction == 1 then "positive" elseif direction == -1 then "negative" else "neutral"
+        a56 = ((a51 - a54) / math.abs(a54)) * 100
+        a59 = if a56 > 0 then 1 elseif a56 < 0 then -1 else 0
+        a58 = if a59 == 1 then "positive" elseif a59 == -1 then "negative" else "neutral"
     else
-        targetChange = value - refValue
-        direction = if targetChange > 0 then 1 elseif targetChange < 0 then -1 else 0
-        accentKey = if direction == 1 then "positive" elseif direction == -1 then "negative" else "neutral"
+        a56 = a51 - a54
+        a59 = if a56 > 0 then 1 elseif a56 < 0 then -1 else 0
+        a58 = if a59 == 1 then "positive" elseif a59 == -1 then "negative" else "neutral"
     end
 
-    self:_setAccent(accentKey, direction)
+    self:_setAccent(a58, a59)
 
     if self.compact then
-        self:_updateCompactReadout(value, previousValue, targetChange, noChange, infinityText, hasNoHistory)
+        self:_updateCompactReadout(a51, a52, a56, a55, a57, a53)
     else
-        self:_updateFullReadouts(value, previousValue, targetChange, noChange, infinityText, hasNoHistory)
+        self:_updateFullReadouts(a51, a52, a56, a55, a57, a53)
     end
 end
 
-function Statistic:ResetBaseline(newBaseline)
-    local previousValue = self.value
-    local hasNoHistory = not self._hasValue
-    local baseline = if typeof(newBaseline) == "number" then newBaseline else self.value
-    self._initialValue = baseline
-    self.value = baseline
+function a1:ResetBaseline(a62)
+    local a63 = self.value
+    local a64 = not self._hasValue
+    local a65 = if typeof(a62) == "number" then a62 else self.value
+    self._initialValue = a65
+    self.value = a65
     self._hasValue = true
     self._lastChange = 0
 
@@ -553,63 +553,63 @@ function Statistic:ResetBaseline(newBaseline)
         if self.display == "change" then
             self.readoutOdo:snap(self:_formatChange(0))
         else
-            self:_showValue(self.readoutOdo, baseline, previousValue, hasNoHistory)
+            self:_showValue(self.readoutOdo, a65, a63, a64)
         end
     else
         self.changeOdo:snap(self:_formatChange(0))
-        self:_showValue(self.valueOdo, baseline, previousValue, hasNoHistory)
+        self:_showValue(self.valueOdo, a65, a63, a64)
     end
 
     self:_setAccent("neutral", 0)
 end
 
-function Statistic:_setShown(shown, animate)
+function a1:_setShown(a66, a67)
     local w = self.window
 
     if self.compact then
         w:_reveal(
             self.main,
-            { BackgroundTransparency = if shown then (self.window.theme.ElementTransparency or 0) else 1 },
-            animate
+            { BackgroundTransparency = if a66 then (self.window.theme.ElementTransparency or 0) else 1 },
+            a67
         )
         w:_reveal(
             self.stroke,
-            { Transparency = if shown then self.window.theme.ElementStrokeTransparency else 1 },
-            animate
+            { Transparency = if a66 then self.window.theme.ElementStrokeTransparency else 1 },
+            a67
         )
-        w:_reveal(self.card, { BackgroundTransparency = if shown then 0 else 1 }, animate)
-        w:_reveal(self.title, { TextTransparency = if shown then 0 else 1 }, animate)
+        w:_reveal(self.card, { BackgroundTransparency = if a66 then 0 else 1 }, a67)
+        w:_reveal(self.title, { TextTransparency = if a66 then 0 else 1 }, a67)
         if self.iconLabel then
-            w:_reveal(self.iconLabel, { ImageTransparency = if shown then 0 else 1 }, animate)
+            w:_reveal(self.iconLabel, { ImageTransparency = if a66 then 0 else 1 }, a67)
         end
-        self.readoutOdo:reveal(if shown then 0 else 1, animate)
+        self.readoutOdo:reveal(if a66 then 0 else 1, a67)
         return
     end
 
-    if shown then
-        w:_revealCommon(self, animate)
-        w:_reveal(self.gradientContainer, { BackgroundTransparency = 0 }, animate)
-        w:_reveal(self.glow, { Transparency = 0.82 }, animate)
-        self.valueOdo:reveal(0, animate)
-        self.changeOdo:reveal(0, animate)
+    if a66 then
+        w:_revealCommon(self, a67)
+        w:_reveal(self.gradientContainer, { BackgroundTransparency = 0 }, a67)
+        w:_reveal(self.glow, { Transparency = 0.82 }, a67)
+        self.valueOdo:reveal(0, a67)
+        self.changeOdo:reveal(0, a67)
     else
-        w:_hideCommon(self, animate)
-        w:_reveal(self.gradientContainer, { BackgroundTransparency = 1 }, animate)
-        w:_reveal(self.glow, { Transparency = 1 }, animate)
-        self.valueOdo:reveal(1, animate)
-        self.changeOdo:reveal(1, animate)
+        w:_hideCommon(self, a67)
+        w:_reveal(self.gradientContainer, { BackgroundTransparency = 1 }, a67)
+        w:_reveal(self.glow, { Transparency = 1 }, a67)
+        self.valueOdo:reveal(1, a67)
+        self.changeOdo:reveal(1, a67)
     end
 end
 
-function Statistic:_minWidth()
+function a1:_minWidth()
     local w = 30 + 10     if self.icon then
         w += 26     end
-        w += functions.textWidth(self.window.theme.Font, 16, locale.resolve(self.name))
-    local readout = if self.display == "change" then self:_formatChange(0) else self:_formatValue(self.value)
-    w += functions.textWidth(self.window.theme.Font, 17, readout)
+        w += a4.textWidth(self.window.theme.Font, 16, a8.resolve(self.name))
+    local a68 = if self.display == "change" then self:_formatChange(0) else self:_formatValue(self.value)
+    w += a4.textWidth(self.window.theme.Font, 17, a68)
     return w
 end
 
-moveable(Statistic)
+a6(a1)
 
-return Statistic
+return a1

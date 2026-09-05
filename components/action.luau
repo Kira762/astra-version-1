@@ -1,30 +1,30 @@
-local Action = {}
-Action.__index = Action
-Action.__type = "Action"
+local a1 = {}
+a1.__index = a1
+a1.__type = "Action"
 
-local utility = script.Parent.Parent.utilities
+local a2 = script.Parent.Parent.utilities
 
-local variables = require(utility.Parent.core.state)
-local log = require(utility.log)
-local hapticEngine = require(utility.HapticEngine)
-local actionHoverTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local a3 = require(a2.Parent.core.state)
+local a4 = require(a2.log)
+local a5 = require(a2.HapticEngine)
+local a6 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-function Action.new(window, properties)
-    properties = if typeof(properties) == "table" then properties else {}
+function a1.new(window, a7)
+    a7 = if typeof(a7) == "table" then a7 else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        name = properties.name or properties.Name or "Action",
-        icon = assert(window:ResolveIcon(properties.icon or properties.Icon), "Missing argument (Icon expected)"),
-        callback = assert(properties.callback or properties.Callback, "Missing argument (Function expected)"),
-        linkedTab = properties.linkedTab or properties.LinkedTab,
-    }, Action)
+        name = a7.name or a7.Name or "Action",
+        icon = assert(window:ResolveIcon(a7.icon or a7.Icon), "Missing argument (Icon expected)"),
+        callback = assert(a7.callback or a7.Callback, "Missing argument (Function expected)"),
+        linkedTab = a7.linkedTab or a7.LinkedTab,
+    }, a1)
 
     self.action = self.window:Create("Frame", {
         Name = self.name,
         BorderSizePixel = 0,
 
-        LayoutOrder = -(properties.order or 0),
+        LayoutOrder = -(a7.order or 0),
         Size = UDim2.fromOffset(24, 24),
         BackgroundTransparency = 1,
 
@@ -40,7 +40,7 @@ function Action.new(window, properties)
         Position = UDim2.fromScale(0.5, 0.5),
         BackgroundTransparency = 1,
 
-                ImageTransparency = 1, 
+                ImageTransparency = 1,
         Parent = self.action,
     }, { ImageColor3 = "ActionColor" })
 
@@ -55,7 +55,7 @@ function Action.new(window, properties)
         Parent = self.action,
     })
 
-                local function settleIcon()
+                local function a8()
         if self.window.unloaded then
             return
         end
@@ -67,44 +67,44 @@ function Action.new(window, properties)
         if self.isLit and self:isLit() then
             return
         end
-        variables.tweenService
+        a3.tweenService
             :Create(
                 self.iconLabel,
-                actionHoverTween,
+                a6,
                 { ImageTransparency = 0.6 }
             )
             :Play()
     end
 
     self.window:Connect(self.interact.MouseButton1Click, function()
-        hapticEngine.click()
+        a5.click()
         task.spawn(function()
-            local success, result = pcall(self.callback)
-            if not success then
-                log.warn(
+            local a9, a10 = pcall(self.callback)
+            if not a9 then
+                a4.warn(
                     `Astra encountered an error, with the callback for a {self.__type} component named '{self.name}':`
                 )
-                log.print(result)
+                a4.print(a10)
             end
-                                    settleIcon()
+                                    a8()
         end)
     end)
 
     self.window:Connect(self.interact.MouseEnter, function()
         if not self.window:_interactive() then
             return         end
-        variables.tweenService
+        a3.tweenService
             :Create(
                 self.iconLabel,
-                actionHoverTween,
+                a6,
                 { ImageTransparency = 0.2 }
             )
             :Play()
     end)
 
-    self.window:Connect(self.interact.MouseLeave, settleIcon)
+    self.window:Connect(self.interact.MouseLeave, a8)
 
     return self
 end
 
-return Action
+return a1

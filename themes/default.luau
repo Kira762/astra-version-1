@@ -1,4 +1,4 @@
-local variables = require(script.Parent.Parent.core.state)
+local a1 = require(script.Parent.Parent.core.state)
 
 return {
     CornerRoundness = UDim.new(0, 20),
@@ -28,11 +28,11 @@ return {
     SliderProgress = ColorSequence.new(Color3.fromRGB(0, 170, 127), Color3.fromRGB(0, 134, 98)),
     SliderStroke = Color3.fromRGB(255, 255, 255),
     ActionColor = Color3.fromRGB(255, 255, 255),
-    TitleFont = variables.brandFont(Enum.FontWeight.SemiBold),
-    Font = variables.brandFont(Enum.FontWeight.Medium),
+    TitleFont = a1.brandFont(Enum.FontWeight.SemiBold),
+    Font = a1.brandFont(Enum.FontWeight.Medium),
     ContentColor = Color3.fromRGB(255, 255, 255),
 
-    LiveAnimation = false, 
+    LiveAnimation = false,
     DarkToggleOverlay = true,
     ElementTransparency = 0,
     ElementStrokeTransparency = 0,
@@ -46,10 +46,10 @@ return {
 
         AccentColor = Color3.fromRGB(23, 153, 110),
     AccentStroke = Color3.fromRGB(32, 201, 144),
-    AccentGlow = 0.4, 
+    AccentGlow = 0.4,
     StatBackground = Color3.fromRGB(25, 25, 25),
     SliderHandle = Color3.fromRGB(255, 255, 255),
-    PillCornerRadius = UDim.new(1, 0), 
+    PillCornerRadius = UDim.new(1, 0),
         ToggleTrack = Color3.fromRGB(0, 0, 0),
     ToggleTrackTransparency = 0.9,
     ToggleKnobOff = Color3.fromRGB(255, 255, 255),
@@ -59,7 +59,7 @@ return {
     FieldTransparency = 0.9,
     FieldGlow = Color3.fromRGB(255, 255, 255),
 
-    PlaceholderColor = Color3.fromRGB(178, 178, 178),     SurfaceStroke = Color3.fromRGB(255, 255, 255), 
+    PlaceholderColor = Color3.fromRGB(178, 178, 178),     SurfaceStroke = Color3.fromRGB(255, 255, 255),
         NeutralButton = Color3.fromRGB(38, 38, 38),
     NeutralButtonHover = Color3.fromRGB(54, 54, 54),
     NeutralButtonStroke = Color3.fromRGB(255, 255, 255),

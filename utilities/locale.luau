@@ -1,96 +1,96 @@
-local variables = require(script.Parent.Parent.core.state)
-local log = require(script.Parent.log)
+local a1 = require(script.Parent.Parent.core.state)
+local a2 = require(script.Parent.log)
 
-local locale = {}
+local a3 = {}
 
 export type LocaleToken = { [any]: string }
 export type Translator = (source: string, localeId: string) -> string?
 export type TranslationTables = { [string]: { [string]: string } }
 
-locale.strings = {} :: TranslationTables
-locale.current = "en"
-locale.translator = nil :: Translator?
+a3.strings = {} :: TranslationTables
+a3.current = "en"
+a3.translator = nil :: Translator?
 
-local tokenTag = {}
+local a4 = {}
 
-local function languageOf(id: string): string
+local function a5(id: string): string
     return string.match(id, "^(%a+)") or id
 end
 
-function locale.t(source: unknown): unknown
-    if type(source) ~= "string" or source == "" then
-        return source
+function a3.t(a6: unknown): unknown
+    if type(a6) ~= "string" or a6 == "" then
+        return a6
     end
-    return { [tokenTag] = source }
+    return { [a4] = a6 }
 end
 
-function locale.isToken(value: unknown): boolean
-    return type(value) == "table" and type((value :: { [any]: unknown })[tokenTag]) == "string"
+function a3.isToken(a7: unknown): boolean
+    return type(a7) == "table" and type((a7 :: { [any]: unknown })[a4]) == "string"
 end
 
-function locale.sourceOf(token: LocaleToken): string
-    return token[tokenTag]
+function a3.sourceOf(a8: LocaleToken): string
+    return a8[a4]
 end
 
-function locale.resolve(source: unknown): any
-    if type(source) ~= "string" then
-        return source
+function a3.resolve(a9: unknown): any
+    if type(a9) ~= "string" then
+        return a9
     end
 
-    if locale.translator then
-        local ok, translated = pcall(locale.translator, source, locale.current)
-        if ok and type(translated) == "string" and translated ~= "" then
-            return translated
+    if a3.translator then
+        local ok, a10 = pcall(a3.translator, a9, a3.current)
+        if ok and type(a10) == "string" and a10 ~= "" then
+            return a10
         end
     end
 
-    local exact = locale.strings[locale.current]
-    if exact and exact[source] then
-        return exact[source]
+    local a11 = a3.strings[a3.current]
+    if a11 and a11[a9] then
+        return a11[a9]
     end
 
-    local language = locale.strings[languageOf(locale.current)]
-    if language and language[source] then
-        return language[source]
+    local a12 = a3.strings[a5(a3.current)]
+    if a12 and a12[a9] then
+        return a12[a9]
     end
 
-    return source
+    return a9
 end
 
-function locale.register(tables: TranslationTables?)
-    if type(tables) ~= "table" then
+function a3.register(a13: TranslationTables?)
+    if type(a13) ~= "table" then
         return
     end
-    for id, entries in tables do
-        if type(id) == "string" and type(entries) == "table" then
+    for id, a14 in a13 do
+        if type(id) == "string" and type(a14) == "table" then
             id = string.lower(id)
-            local target = locale.strings[id]
-            if not target then
-                target = {}
-                locale.strings[id] = target
+            local a15 = a3.strings[id]
+            if not a15 then
+                a15 = {}
+                a3.strings[id] = a15
             end
-            for source, translated in entries do
-                if type(source) == "string" and type(translated) == "string" then
-                    target[source] = translated
+            for a16, a17 in a14 do
+                if type(a16) == "string" and type(a17) == "string" then
+                    a15[a16] = a17
                 else
-                    log.warn(`Astra: skipping a '{id}' translation, entries must be string to string.`)
+                    a2.warn(`Astra: skipping a '{id}' translation, entries must be string to string.`)
                 end
             end
         end
     end
 end
 
-function locale.setActive(localeId: string?): string
-    locale.current = if type(localeId) == "string" and localeId ~= "" then string.lower(localeId) else "en"
-    return locale.current
+function a3.setActive(a18: string?): string
+    a3.current = if type(a18) == "string" and a18 ~= "" then string.lower(a18) else "en"
+    return a3.current
 end
 
-function locale.detect(): string
-    local id = variables.localizationService.RobloxLocaleId
+function a3.detect(): string
+    local id = a1.localizationService.RobloxLocaleId
     if type(id) == "string" and id ~= "" then
         return string.lower(id)
     end
     return "en"
 end
 
-return locale
+return a3

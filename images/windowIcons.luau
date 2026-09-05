@@ -1,9 +1,7 @@
--- Central registry for built-in window icons.
--- Change an icon ID here and every consumer plus the preload manifest follows it.
 
-local windowIcons = {}
+local a1 = {}
 
-windowIcons.ids = {
+a1.ids = {
     close = 83277910885129,
     minimise = 108115485663409,
     maximise = 88738500661569,
@@ -16,7 +14,7 @@ windowIcons.ids = {
     config = 125823673784681,
 }
 
-windowIcons.roles = {
+a1.roles = {
     close = "close",
     minimise = "minimise",
     maximise = "maximise",
@@ -29,34 +27,34 @@ windowIcons.roles = {
     config = "config",
 }
 
-function windowIcons.manifest()
-    local manifest: { [number]: { roles: { string } } } = {}
-    for name, id in windowIcons.ids do
-        local entry = manifest[id]
-        if not entry then
-            entry = { roles = {} }
-            manifest[id] = entry
+function a1.manifest()
+    local a2: { [number]: { roles: { string } } } = {}
+    for a3, id in a1.ids do
+        local a4 = a2[id]
+        if not a4 then
+            a4 = { roles = {} }
+            a2[id] = a4
         end
-        table.insert(entry.roles, windowIcons.roles[name] or name)
+        table.insert(a4.roles, a1.roles[a3] or a3)
     end
-    return manifest
+    return a2
 end
 
-function windowIcons.roleForId(id: number): string
-    local entry = windowIcons.manifest()[id]
-    if not entry or #entry.roles == 0 then
+function a1.roleForId(id: number): string
+    local a5 = a1.manifest()[id]
+    if not a5 or #a5.roles == 0 then
         return "window icon"
     end
-    return table.concat(entry.roles, "/")
+    return table.concat(a5.roles, "/")
 end
 
-function windowIcons.roleList(): { string }
-    local roles = {}
-    for name in windowIcons.ids do
-        table.insert(roles, windowIcons.roles[name] or name)
+function a1.roleList(): { string }
+    local a6 = {}
+    for a7 in a1.ids do
+        table.insert(a6, a1.roles[a7] or a7)
     end
-    table.sort(roles)
-    return roles
+    table.sort(a6)
+    return a6
 end
 
-return windowIcons
+return a1

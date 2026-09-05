@@ -1,32 +1,32 @@
-local Divider = {}
-Divider.__index = Divider
-Divider.__type = "Divider"
+local a1 = {}
+a1.__index = a1
+a1.__type = "Divider"
 
-local moveable = require(script.Parent.Parent.utilities.moveable)
-local locale = require(script.Parent.Parent.utilities.locale)
+local a2 = require(script.Parent.Parent.utilities.moveable)
+local a3 = require(script.Parent.Parent.utilities.locale)
 
-local lineThickness = 1
-local defaultSpacing = 12
-local labelGap = 10
-local labelHeight = 14
-local textSize = 12
+local a4 = 1
+local a5 = 12
+local a6 = 10
+local a7 = 14
+local a8 = 12
 
-local lineShown = 0.88
-local labelShown = 0.55
+local a9 = 0.88
+local a10 = 0.55
 
-function Divider.new(tab, properties)
-    properties = if typeof(properties) == "table" then properties else {}
+function a1.new(tab, a11)
+    a11 = if typeof(a11) == "table" then a11 else {}
 
-    local spacing = properties.spacing or properties.Spacing
-    local text = properties.text or properties.Text
+    local a12 = a11.spacing or a11.Spacing
+    local a13 = a11.text or a11.Text
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        text = if text ~= nil then tostring(text) else "",
-        spacing = if type(spacing) == "number" then math.max(spacing, 0) else defaultSpacing,
-                        line = properties.line ~= false and properties.Line ~= false,
-    }, Divider)
+        text = if a13 ~= nil then tostring(a13) else "",
+        spacing = if type(a12) == "number" then math.max(a12, 0) else a5,
+                        line = a11.line ~= false and a11.Line ~= false,
+    }, a1)
 
     self.main = self.window:Create("Frame", {
         Size = UDim2.new(1, -40, 0, 0),
@@ -39,7 +39,7 @@ function Divider.new(tab, properties)
 
     self.window:Create("UIListLayout", {
         FillDirection = Enum.FillDirection.Horizontal,
-        Padding = UDim.new(0, labelGap),
+        Padding = UDim.new(0, a6),
         SortOrder = Enum.SortOrder.LayoutOrder,
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -60,37 +60,37 @@ function Divider.new(tab, properties)
     return self
 end
 
-function Divider:_buildHalf(order)
-    local rule = self.window:Create("Frame", {
-        Size = UDim2.new(0, 0, 0, lineThickness),
+function a1:_buildHalf(a14)
+    local a15 = self.window:Create("Frame", {
+        Size = UDim2.new(0, 0, 0, a4),
         BorderSizePixel = 0,
-        LayoutOrder = order,
+        LayoutOrder = a14,
 
-                BackgroundTransparency = 1, 
+                BackgroundTransparency = 1,
         Parent = self.main,
     }, { BackgroundColor3 = "ContentColor" })
 
     self.window:Create("UIFlexItem", {
         FlexMode = Enum.UIFlexMode.Fill,
 
-        Parent = rule,
+        Parent = a15,
     })
 
-    return rule
+    return a15
 end
 
-function Divider:_buildLabel()
+function a1:_buildLabel()
     self.title = self.window:Create("TextLabel", {
-        Text = locale.t(self.text),
-        Size = UDim2.fromOffset(0, labelHeight),
+        Text = a3.t(self.text),
+        Size = UDim2.fromOffset(0, a7),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
-        TextSize = textSize,
+        TextSize = a8,
         TextXAlignment = Enum.TextXAlignment.Center,
         LayoutOrder = 2,
 
-                TextTransparency = 1, 
+                TextTransparency = 1,
         Parent = self.main,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
@@ -99,13 +99,13 @@ function Divider:_buildLabel()
     end
 end
 
-function Divider:_applyHeight()
-    local content = if self.text ~= "" then labelHeight elseif self.line then lineThickness else 0
-    self.main.Size = UDim2.new(1, -40, 0, self.spacing * 2 + content)
+function a1:_applyHeight()
+    local a16 = if self.text ~= "" then a7 elseif self.line then a4 else 0
+    self.main.Size = UDim2.new(1, -40, 0, self.spacing * 2 + a16)
 end
 
-function Divider:Set(text)
-    self.text = if text ~= nil then tostring(text) else ""
+function a1:Set(a17)
+    self.text = if a17 ~= nil then tostring(a17) else ""
 
     if self.text ~= "" and not self.title then
         self:_buildLabel()
@@ -118,25 +118,25 @@ function Divider:Set(text)
         if self.title then
         self.window:_bindLocale(self.title, "Text", self.text)
 
-                                        local named = self.text ~= ""
-        self.title.Visible = named
+                                        local a18 = self.text ~= ""
+        self.title.Visible = a18
         if self.right then
-            self.right.Visible = named
+            self.right.Visible = a18
         end
     end
 
     self:_applyHeight()
 end
 
-function Divider:_setShown(shown, animate)
+function a1:_setShown(a19, a20)
     local w = self.window
-    local ruleTransparency = if shown then lineShown else 1
+    local a21 = if a19 then a9 else 1
 
-    w:_reveal(self.left, { BackgroundTransparency = ruleTransparency }, animate)
-    w:_reveal(self.right, { BackgroundTransparency = ruleTransparency }, animate)
-    w:_reveal(self.title, { TextTransparency = if shown then labelShown else 1 }, animate)
+    w:_reveal(self.left, { BackgroundTransparency = a21 }, a20)
+    w:_reveal(self.right, { BackgroundTransparency = a21 }, a20)
+    w:_reveal(self.title, { TextTransparency = if a19 then a10 else 1 }, a20)
 end
 
-moveable(Divider)
+a2(a1)
 
-return Divider
+return a1

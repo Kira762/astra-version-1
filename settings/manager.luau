@@ -1,21 +1,14 @@
--- Settings manager (settings/manager.luau).
---
--- Central settings API over the built-in registry: get/set/reset with
--- validation, default handling, and change notifications. Each window owns a
--- manager-scoped settings table so instances never share state. Settings are
--- an internal configuration system; UI renders them, but they are not
--- elements themselves.
 
-local registry = require(script.Parent.registry)
-local defaults = require(script.Parent.defaults)
-local persistence = require(script.Parent.persistence)
-local appearance = require(script.Parent.appearance)
-local behavior = require(script.Parent.behavior)
-local performance = require(script.Parent.performance)
+local a1 = require(script.Parent.registry)
+local a2 = require(script.Parent.defaults)
+local a3 = require(script.Parent.persistence)
+local a4 = require(script.Parent.appearance)
+local a5 = require(script.Parent.behavior)
+local a6 = require(script.Parent.performance)
 
-local manager = {}
+local a7 = {}
 
-manager.__index = manager
+a7.__index = a7
 
 export type SettingsManager = {
     values: { [string]: any },
@@ -28,79 +21,76 @@ export type SettingsManager = {
     load: (self: SettingsManager) -> boolean,
 }
 
-local domains = {
-    appearance = appearance,
-    behavior = behavior,
-    performance = performance,
+local a8 = {
+    appearance = a4,
+    behavior = a5,
+    performance = a6,
 }
 
-function manager.new(initialOverrides: { [string]: any }?): SettingsManager
+function a7.new(a9: { [string]: any }?): SettingsManager
     local self = setmetatable({
-        values = defaults.clone(initialOverrides),
+        values = a2.clone(a9),
         listeners = {},
-    }, manager)
+    }, a7)
     return self
 end
 
-function manager:get(key: string): any
-    return self.values[key]
+function a7:get(a10: string): any
+    return self.values[a10]
 end
 
--- Validate + write a setting. Returns true when the value was applied.
--- Notification fires only for accepted changes to a different value.
-function manager:set(key: string, value: any): boolean
-    local definition = registry.definition(key)
-    if not definition then
+function a7:set(a11: string, a12: any): boolean
+    local a13 = a1.definition(a11)
+    if not a13 then
         return false
     end
 
-    local domain = domains[definition.domain]
-    local valid, normalized
-    if domain then
-        valid, normalized = domain.validate(key, value)
+    local a14 = a8[a13.domain]
+    local a15, a16
+    if a14 then
+        a15, a16 = a14.validate(a11, a12)
     else
-        valid, normalized = true, value
+        a15, a16 = true, a12
     end
-    if not valid then
+    if not a15 then
         return false
     end
 
-    local previous = self.values[key]
-    if previous == normalized then
+    local a17 = self.values[a11]
+    if a17 == a16 then
         return true
     end
 
-    self.values[key] = normalized
-    for _, listener in self.listeners do
-        task.spawn(listener, key, normalized, previous)
+    self.values[a11] = a16
+    for _, a18 in self.listeners do
+        task.spawn(a18, a11, a16, a17)
     end
     return true
 end
 
--- Restore one setting (or all with no key) to its default value.
-function manager:reset(key: string?): boolean
-    if key then
-        if not registry.definition(key) then
+function a7:reset(a19: string?): boolean
+    if a19 then
+        if not a1.definition(a19) then
             return false
         end
-        return self:set(key, defaults.values[key])
+        return self:set(a19, a2.values[a19])
     end
-    for _, definedKey in registry.keys() do
-        self:reset(definedKey)
+    for _, a20 in a1.keys() do
+        self:reset(a20)
     end
     return true
 end
 
-function manager:onChange(listener: (string, any, any) -> ())
-    table.insert(self.listeners, listener)
+function a7:onChange(a21: (string, any, any) -> ())
+    table.insert(self.listeners, a21)
 end
 
-function manager:save(): boolean
-    return persistence.save(self.values)
+function a7:save(): boolean
+    return a3.save(self.values)
 end
 
-function manager:load(): boolean
-    return persistence.load(self.values)
+function a7:load(): boolean
+    return a3.load(self.values)
 end
 
-return manager
+return a7

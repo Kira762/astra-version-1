@@ -1,17 +1,17 @@
-local TabSection = {}
-TabSection.__index = TabSection
-TabSection.__type = "TabSection"
+local a1 = {}
+a1.__index = a1
+a1.__type = "TabSection"
 
-local locale = require(script.Parent.Parent.utilities.locale)
-local log = require(script.Parent.Parent.utilities.log)
+local a2 = require(script.Parent.Parent.utilities.locale)
+local a3 = require(script.Parent.Parent.utilities.log)
 
-local sectionInset = 20
+local a4 = 20
 
-local spacingAbove = 6
+local a5 = 6
 
-local spacingBelow = 3
+local a6 = 3
 
-local function anythingAbove(window)
+local function a7(window)
     for _, tab in window.tabs do
         if not tab.neglectSelector then
             return true
@@ -20,19 +20,19 @@ local function anythingAbove(window)
     return #window.tabSections > 0
 end
 
-function TabSection.new(window, properties)
-    properties = if typeof(properties) == "table" then properties else {}
+function a1.new(window, a8)
+    a8 = if typeof(a8) == "table" then a8 else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        name = properties.name or properties.Name or "Section",
-        icon = window:ResolveIcon(properties.icon or properties.Icon),
-    }, TabSection)
+        name = a8.name or a8.Name or "Section",
+        icon = window:ResolveIcon(a8.icon or a8.Icon),
+    }, a1)
 
             if window.layout.mode ~= "sidebar" then
         if not window._warnedTabSection then
             window._warnedTabSection = true
-            log.warn("Astra: Window:CreateSection needs the sidebar layout; it does nothing on the top strip.")
+            a3.warn("Astra: Window:CreateSection needs the sidebar layout; it does nothing on the top strip.")
         end
         self.inert = true
         return self
@@ -40,18 +40,18 @@ function TabSection.new(window, properties)
 
         self.main = window:Create("Frame", {
         Name = self.name,
-        Size = UDim2.new(1, -sectionInset * 2, 0, 0),
+        Size = UDim2.new(1, -a4 * 2, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
 
-        Visible = false, 
+        Visible = false,
         Parent = window.tabList,
     })
 
     self.padding = window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, if anythingAbove(window) then spacingAbove else 0),
-        PaddingBottom = UDim.new(0, spacingBelow),
+        PaddingTop = UDim.new(0, if a7(window) then a5 else 0),
+        PaddingBottom = UDim.new(0, a6),
 
         Parent = self.main,
     })
@@ -74,13 +74,13 @@ function TabSection.new(window, properties)
             BorderSizePixel = 0,
             LayoutOrder = 0,
 
-                        ImageTransparency = 1, 
+                        ImageTransparency = 1,
             Parent = self.main,
         }, { ImageColor3 = "ContentColor" })
     end
 
     self.title = window:Create("TextLabel", {
-        Text = locale.t(self.name),
+        Text = a2.t(self.name),
 
         Size = UDim2.fromOffset(0, 15),
         AutomaticSize = Enum.AutomaticSize.X,
@@ -92,36 +92,36 @@ function TabSection.new(window, properties)
         TextWrapped = true,
         LayoutOrder = 1,
 
-                TextTransparency = 1, 
+                TextTransparency = 1,
         Parent = self.main,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
     return self
 end
 
-function TabSection:_setShown(shown, animate)
+function a1:_setShown(a9, a10)
     if not self.main then
         return     end
     local w = self.window
-    w:_reveal(self.title, { TextTransparency = if shown then 0.6 else 1 }, animate)
+    w:_reveal(self.title, { TextTransparency = if a9 then 0.6 else 1 }, a10)
     if self.iconLabel then
-        w:_reveal(self.iconLabel, { ImageTransparency = if shown then 0.65 else 1 }, animate)
+        w:_reveal(self.iconLabel, { ImageTransparency = if a9 then 0.65 else 1 }, a10)
     end
 end
 
-function TabSection:_setVisible(visible)
+function a1:_setVisible(a11)
     if self.main then
-        self.main.Visible = visible
+        self.main.Visible = a11
     end
 end
 
-function TabSection:Remove()
-    local index = table.find(self.window.tabSections, self)
-    if index then
-        table.remove(self.window.tabSections, index)
+function a1:Remove()
+    local a12 = table.find(self.window.tabSections, self)
+    if a12 then
+        table.remove(self.window.tabSections, a12)
     end
     self.window:DestroySubtree(self.main)
     self.main = nil
 end
 
-return TabSection
+return a1

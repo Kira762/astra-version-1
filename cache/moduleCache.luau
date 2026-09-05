@@ -1,41 +1,28 @@
--- Module cache (cache/moduleCache.luau).
---
--- Prevents repeated initialization of loaded modules/services. Roblox's
--- require() already caches module return values per ModuleScript instance,
--- so this cache exists for values that are *constructed* rather than required:
--- services built with .new() that must only ever be constructed once, keyed by
--- an explicit name. Factories are registered by the settings/images/icons
--- services through core/registry integration.
---
--- Entries are intentionally never evicted: everything cached here is a small
--- stateless singleton (or a handle to one), so staleness cannot occur.
 
-local moduleCache = {}
+local a1 = {}
 
-local singletons: { [string]: any } = {}
+local a2: { [string]: any } = {}
 
-function moduleCache.singleton(name: string, factory: () -> any): any
-    local existing = singletons[name]
-    if existing ~= nil then
-        return existing
+function a1.singleton(a3: string, a4: () -> any): any
+    local a5 = a2[a3]
+    if a5 ~= nil then
+        return a5
     end
-    local built = factory()
-    singletons[name] = built
-    return built
+    local a6 = a4()
+    a2[a3] = a6
+    return a6
 end
 
-function moduleCache.get(name: string): any?
-    return singletons[name]
+function a1.get(a7: string): any?
+    return a2[a7]
 end
 
-function moduleCache.peek(name: string): boolean
-    return singletons[name] ~= nil
+function a1.peek(a8: string): boolean
+    return a2[a8] ~= nil
 end
 
--- Test/integration hook: forget a constructed singleton. Only call this for
--- factories that are safe to re-run; the library itself never evicts.
-function moduleCache._forget(name: string)
-    singletons[name] = nil
+function a1._forget(a9: string)
+    a2[a9] = nil
 end
 
-return moduleCache
+return a1

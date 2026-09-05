@@ -1,11 +1,7 @@
--- Default settings values (settings/defaults.luau).
---
--- These mirror the defaults the window previously embedded inline. The
--- manager clones this table per window so instances never share state.
 
-local defaults = {}
+local a1 = {}
 
-defaults.values = {
+a1.values = {
     toggleKeybind = Enum.KeyCode.K,
     mouseOverride = true,
     keepOnScreen = true,
@@ -14,18 +10,17 @@ defaults.values = {
     showProfile = true,
     showFullUsername = false,
     antiWindowDuplicate = true,
-    layoutMode = "top", -- replaced by the window's actual initial layout mode
-    activeSubTab = 1,
+    layoutMode = "top",    activeSubTab = 1,
 }
 
-function defaults.clone(overrides: { [string]: any }?): { [string]: any }
-    local cloned = table.clone(defaults.values)
-    if overrides then
-        for key, value in overrides do
-            cloned[key] = value
+function a1.clone(a2: { [string]: any }?): { [string]: any }
+    local a3 = table.clone(a1.values)
+    if a2 then
+        for a4, a5 in a2 do
+            a3[a4] = a5
         end
     end
-    return cloned
+    return a3
 end
 
-return defaults
+return a1

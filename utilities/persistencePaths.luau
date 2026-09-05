@@ -1,7 +1,7 @@
-local variables = require(script.Parent.Parent.core.state)
-local path = require(script.Parent.path)
+local a1 = require(script.Parent.Parent.core.state)
+local a2 = require(script.Parent.path)
 
-local paths = {}
+local a3 = {}
 
 type ConfigWindow = {
     configuration: {
@@ -11,31 +11,31 @@ type ConfigWindow = {
     name: string,
 }
 
-function paths.getConfigPath(window: ConfigWindow, name: unknown?): (string?, string?)
-    local dir = variables.fileSystemManager:getPath("Configurations")
+function a3.getConfigPath(window: ConfigWindow, a4: unknown?): (string?, string?)
+    local a5 = a1.fileSystemManager:getPath("Configurations")
     if window.configuration.customFolder then
-        dir = path.join(dir, path.sanitizeFolder(window.configuration.customFolder))
+        a5 = a2.join(a5, a2.sanitizeFolder(window.configuration.customFolder))
     end
-    if name ~= nil then
-        local safe = path.sanitizeFile(name)
-        if safe == "" then
+    if a4 ~= nil then
+        local a6 = a2.sanitizeFile(a4)
+        if a6 == "" then
             return nil, nil
         end
-        return dir, path.join(dir, safe .. ".rfld")
+        return a5, a2.join(a5, a6 .. ".rfld")
     end
-    local safe = path.sanitizeFile(window.configuration.fileName or window.name)
-    if safe == "" then
-        safe = path.sanitizeFile(window.name)
+    local a7 = a2.sanitizeFile(window.configuration.fileName or window.name)
+    if a7 == "" then
+        a7 = a2.sanitizeFile(window.name)
     end
-    if safe == "" then
-        safe = "Configuration"
+    if a7 == "" then
+        a7 = "Configuration"
     end
-    return dir, path.join(dir, safe .. ".rfld")
+    return a5, a2.join(a5, a7 .. ".rfld")
 end
 
-function paths.getSettingsPath(): (string, string)
-    local dir = variables.fileSystemManager:getPath("Settings")
-    return dir, path.join(dir, "astra.rfld")
+function a3.getSettingsPath(): (string, string)
+    local a8 = a1.fileSystemManager:getPath("Settings")
+    return a8, a2.join(a8, "astra.rfld")
 end
 
-return paths
+return a3

@@ -1,18 +1,18 @@
-local windowIcons = require(script.Parent.Parent.images.windowIcons)
-local constants = {}
+local a1 = require(script.Parent.Parent.images.windowIcons)
+local a2 = {}
 
-constants.fontAsset = "rbxassetid://12187375716"
+a2.fontAsset = "rbxassetid://12187375716"
 
-constants.pillResizeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+a2.pillResizeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-constants.icons = windowIcons.ids
+a2.icons = a1.ids
 
-constants.accent = {
+a2.accent = {
     on = Color3.fromRGB(23, 153, 110),
     onStroke = Color3.fromRGB(32, 201, 144),
 }
 
-constants.statAccents = {
+a2.statAccents = {
     positive = {
         fill = ColorSequence.new(Color3.fromRGB(0, 170, 127), Color3.fromRGB(0, 134, 98)),
         stroke = ColorSequence.new(Color3.fromRGB(0, 213, 156), Color3.fromRGB(0, 189, 135)),
@@ -27,7 +27,7 @@ constants.statAccents = {
     },
 }
 
-constants.zIndex = {
+a2.zIndex = {
         elementLock = 60,
     elementLockContent = 65,
     bottomFade = 100,
@@ -39,10 +39,10 @@ constants.zIndex = {
     restoreInteract = 100002,
 }
 
-constants.displayOrder = {
+a2.displayOrder = {
     window = 99999,
-    
+
         popup = 100001,
 }
 
-return constants
+return a2

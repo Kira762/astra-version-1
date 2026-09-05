@@ -1,55 +1,46 @@
--- Settings persistence (settings/persistence.luau).
---
--- Thin bridge over the existing settings persistence infrastructure
--- (utilities/persistenceSettings.luau, which keeps its JSON file format and
--- atomic write behavior). The manager talks to this module; nothing outside
--- settings/ touches the raw file format.
 
-local persistenceSettings = require(script.Parent.Parent.utilities.persistenceSettings)
-local persistenceCache = require(script.Parent.Parent.cache.persistenceCache)
+local a1 = require(script.Parent.Parent.utilities.persistenceSettings)
+local a2 = require(script.Parent.Parent.cache.persistenceCache)
 
-local persistence = {}
+local a3 = {}
 
-function persistence.path(): (string, string)
-    return persistenceSettings.getSettingsPath()
+function a3.path(): (string, string)
+    return a1.getSettingsPath()
 end
 
-function persistence.save(settingsTable: { [string]: any }): boolean
-    local ok = persistenceSettings.saveSettings({ settings = settingsTable })
-    persistenceCache.invalidateSettings()
+function a3.save(a4: { [string]: any }): boolean
+    local ok = a1.saveSettings({ settings = a4 })
+    a2.invalidateSettings()
     return ok
 end
 
-function persistence.load(settingsTable: { [string]: any }): boolean
-    return persistenceSettings.loadSettings({ settings = settingsTable })
+function a3.load(a5: { [string]: any }): boolean
+    return a1.loadSettings({ settings = a5 })
 end
 
--- Reads a single setting straight from disk with a fallback, used by the
--- window-duplicate guard before any window exists. Cached after first read;
--- the cache is invalidated whenever settings are saved.
-function persistence.read(key: string, fallback: any): any
-    local _, fullPath = persistenceSettings.getSettingsPath()
-    local cached = persistenceCache.getSettings(fullPath)
-    if cached == nil then
-        local decoded = nil :: any?
-        local filesystem = require(script.Parent.Parent.utilities.filesystem)
-        local httpService = (require(script.Parent.Parent.core.state)).httpService
+function a3.read(a6: string, a7: any): any
+    local _, a8 = a1.getSettingsPath()
+    local a9 = a2.getSettings(a8)
+    if a9 == nil then
+        local a10 = nil :: any?
+        local a11 = require(script.Parent.Parent.utilities.filesystem)
+        local a12 = (require(script.Parent.Parent.core.state)).httpService
         pcall(function()
-            if filesystem.isfile(fullPath) then
-                local contents = filesystem.readfile(fullPath)
-                local ok, parsed = pcall(httpService.JSONDecode, httpService, contents)
-                if ok and type(parsed) == "table" then
-                    decoded = parsed :: any
+            if a11.isfile(a8) then
+                local a13 = a11.readfile(a8)
+                local ok, a14 = pcall(a12.JSONDecode, a12, a13)
+                if ok and type(a14) == "table" then
+                    a10 = a14 :: any
                 end
             end
         end)
-        persistenceCache.putSettings(fullPath, decoded or false)
-        cached = persistenceCache.getSettings(fullPath)
+        a2.putSettings(a8, a10 or false)
+        a9 = a2.getSettings(a8)
     end
-    if type(cached) == "table" and (cached :: any)[key] ~= nil then
-        return (cached :: any)[key]
+    if type(a9) == "table" and (a9 :: any)[a6] ~= nil then
+        return (a9 :: any)[a6]
     end
-    return fallback
+    return a7
 end
 
-return persistence
+return a3

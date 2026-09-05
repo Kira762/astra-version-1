@@ -1,8 +1,8 @@
-local services = {}
+local a1 = {}
 
-function services.getService(name)
-    local service = game:GetService(name)
-    return if cloneref then cloneref(service) else service
+function a1.getService(a2)
+    local a3 = game:GetService(a2)
+    return if cloneref then cloneref(a3) else a3
 end
 
-return services
+return a1

@@ -1,29 +1,29 @@
-local flagNames = {}
+local a1 = {}
 
-local offsetBasis = 2166136261
-local prime = 16777619
+local a2 = 2166136261
+local a3 = 16777619
 
-local function hashName(name: string): number
-    local hash = offsetBasis
-    for index = 1, #name do
-        hash = bit32.bxor(hash, string.byte(name, index))
-                local low = hash % 65536
-        local high = (hash - low) / 65536
-        hash = (((high * prime) % 65536) * 65536 + low * prime) % 4294967296
+local function a4(a5: string): number
+    local a6 = a2
+    for a7 = 1, #a5 do
+        a6 = bit32.bxor(a6, string.byte(a5, a7))
+                local a8 = a6 % 65536
+        local a9 = (a6 - a8) / 65536
+        a6 = (((a9 * a3) % 65536) * 65536 + a8 * a3) % 4294967296
     end
-    return hash
+    return a6
 end
 
-function flagNames.deriveFlagFromName(name: string): string
-    local flag = name:gsub("(%S+)", function(w: string): string
+function a1.deriveFlagFromName(a10: string): string
+    local a11 = a10:gsub("(%S+)", function(w: string): string
         return w:sub(1, 1):upper() .. w:sub(2, -1)
     end):gsub("[^%w]", "")
 
-            if flag == "" and name ~= "" then
-        return string.format("Flag%08x", hashName(name))
+            if a11 == "" and a10 ~= "" then
+        return string.format("Flag%08x", a4(a10))
     end
 
-    return flag
+    return a11
 end
 
-return flagNames
+return a1

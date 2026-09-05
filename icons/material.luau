@@ -1,5 +1,3 @@
--- material icon pack (name -> URL).
--- Split from the legacy catalog; pure data, loaded lazily by icons/init.luau.
 
 local material = {
     ["ac_unit"] = "https://raw.githubusercontent.com/Haijo12/sisys_ididh/main/icons-pack/material-pack/white/a/ac_unit.png",

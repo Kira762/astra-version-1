@@ -1,12 +1,12 @@
-local bundleSource = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
-local bundleLoader, bundleError = loadstring(bundleSource)
-assert(type(bundleLoader) == "function", "Astra bundle failed to compile: " .. tostring(bundleError))
+local a1 = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
+local a2, a3 = loadstring(a1)
+assert(type(a2) == "function", "Astra bundle failed to compile: " .. tostring(a3))
 
-local Astra = bundleLoader()
-assert(type(Astra) == "table", "Astra bundle did not return its API table")
-assert(Astra.Icons and Astra.Icons.lucide, "Astra bundle is missing the lucide icon pack")
+local a4 = a2()
+assert(type(a4) == "table", "Astra bundle did not return its API table")
+assert(a4.Icons and a4.Icons.lucide, "Astra bundle is missing the lucide icon pack")
 
-local window = Astra:CreateWindow({
+local window = a4:CreateWindow({
     name = "Astra",
     subtitle = "Example UI - Lucide Icons",
     iconPack = "lucide",
@@ -20,11 +20,11 @@ local window = Astra:CreateWindow({
 
 window:CreateSection({ name = "Main" })
 
-local home = window:CreateTab({ name = "Home", icon = "house" })
+local a5 = window:CreateTab({ name = "Home", icon = "house" })
 
-home:CreateSection({ name = "Buttons" })
+a5:CreateSection({ name = "Buttons" })
 
-home:CreateButton({
+a5:CreateButton({
     name = "Click Me",
     icon = "play",
     callback = function()
@@ -32,7 +32,7 @@ home:CreateButton({
     end,
 })
 
-home:CreateButton({
+a5:CreateButton({
     name = "With Icon",
     icon = "settings",
     callback = function()
@@ -40,7 +40,7 @@ home:CreateButton({
     end,
 })
 
-home:CreateButton({
+a5:CreateButton({
     name = "With Description",
     description = "This button has a description below it.",
     callback = function()
@@ -48,36 +48,36 @@ home:CreateButton({
     end,
 })
 
-home:CreateSection({ name = "Toggles" })
+a5:CreateSection({ name = "Toggles" })
 
-home:CreateToggle({
+a5:CreateToggle({
     name = "Basic Toggle",
     icon = "toggle-right",
     value = true,
 })
 
-home:CreateToggle({
+a5:CreateToggle({
     name = "Described Toggle",
     icon = "bell",
     description = "This toggle has a description.",
 })
 
-home:CreateToggle({
+a5:CreateToggle({
     name = "Flagged Toggle",
     icon = "flag",
     flag = "MyFlag",
     value = false,
 })
 
-home:CreateSection({ name = "Sliders" })
+a5:CreateSection({ name = "Sliders" })
 
-home:CreateSlider({
+a5:CreateSlider({
     name = "Basic Slider",
     range = { 0, 100 },
     value = 50,
 })
 
-home:CreateSlider({
+a5:CreateSlider({
     name = "With Suffix",
     range = { 0, 360 },
     value = 180,
@@ -85,22 +85,22 @@ home:CreateSlider({
     suffix = "°",
 })
 
-home:CreateSlider({
+a5:CreateSlider({
     name = "With Description",
     description = "This slider has a description.",
     range = { 1, 10 },
     value = 5,
 })
 
-home:CreateSection({ name = "Dropdowns" })
+a5:CreateSection({ name = "Dropdowns" })
 
-home:CreateDropdown({
+a5:CreateDropdown({
     name = "Basic Dropdown",
     options = { "Option 1", "Option 2", "Option 3" },
     value = "Option 1",
 })
 
-home:CreateDropdown({
+a5:CreateDropdown({
     name = "Multi Select",
     multiSelect = true,
     options = { "A", "B", "C", "D" },
@@ -108,132 +108,132 @@ home:CreateDropdown({
     placeholder = "Pick items",
 })
 
-home:CreateDropdown({
+a5:CreateDropdown({
     name = "With Description",
     description = "This dropdown has a description.",
     options = { "Low", "Medium", "High" },
     value = "Medium",
 })
 
-local inputs = window:CreateTab({ name = "Inputs", icon = "keyboard" })
+local a6 = window:CreateTab({ name = "Inputs", icon = "keyboard" })
 
-inputs:CreateSection({ name = "Text Inputs" })
+a6:CreateSection({ name = "Text Inputs" })
 
-inputs:CreateInput({
+a6:CreateInput({
     name = "Basic Input",
     placeholder = "Type here",
 })
 
-inputs:CreateInput({
+a6:CreateInput({
     name = "Numeric Input",
     numeric = true,
     value = "42",
 })
 
-inputs:CreateInput({
+a6:CreateInput({
     name = "With Description",
     description = "This input has a description.",
     placeholder = "Enter value",
 })
 
-inputs:CreateSection({ name = "Keybinds" })
+a6:CreateSection({ name = "Keybinds" })
 
-inputs:CreateKeybind({
+a6:CreateKeybind({
     name = "Basic Keybind",
     value = Enum.KeyCode.F,
 })
 
-inputs:CreateKeybind({
+a6:CreateKeybind({
     name = "Hold Mode",
     hold = true,
     value = Enum.KeyCode.LeftShift,
 })
 
-inputs:CreateSection({ name = "Color Pickers" })
+a6:CreateSection({ name = "Color Pickers" })
 
-inputs:CreateColorPicker({
+a6:CreateColorPicker({
     name = "Basic Color",
     color = Color3.fromRGB(96, 205, 255),
 })
 
-inputs:CreateColorPicker({
+a6:CreateColorPicker({
     name = "With Alpha",
     color = Color3.fromRGB(255, 100, 100),
     alpha = 0.8,
 })
 
-local display = window:CreateTab({ name = "Display", icon = "layout-dashboard" })
+local a7 = window:CreateTab({ name = "Display", icon = "layout-dashboard" })
 
-display:CreateSection({ name = "Stats" })
+a7:CreateSection({ name = "Stats" })
 
-local stat1 = display:CreateStat({
+local a8 = a7:CreateStat({
     name = "Revenue",
     prefix = "$",
     value = 12400,
 })
 
-local stat2 = display:CreateStat({
+local a9 = a7:CreateStat({
     name = "Kills",
     value = 128,
 })
 
-display:CreateButton({
+a7:CreateButton({
     name = "Update Stats",
     callback = function()
-        stat1:Set(stat1.value + math.random(500, 3000))
-        stat2:Set(stat2.value + math.random(1, 20))
+        a8:Set(a8.value + math.random(500, 3000))
+        a9:Set(a9.value + math.random(1, 20))
     end,
 })
 
-display:CreateSection({ name = "Progress" })
+a7:CreateSection({ name = "Progress" })
 
-display:CreateProgress({
+a7:CreateProgress({
     name = "Download",
     range = { 0, 100 },
     value = 35,
 })
 
-display:CreateProgress({
+a7:CreateProgress({
     name = "Steps",
     steps = 5,
     value = 2,
 })
 
-display:CreateProgress({
+a7:CreateProgress({
     name = "Loading",
     indeterminate = true,
 })
 
-display:CreateSection({ name = "Text" })
+a7:CreateSection({ name = "Text" })
 
-display:CreateText({
+a7:CreateText({
     name = "Title",
     text = "This is a text element with a title and body.",
 })
 
-display:CreateText({
+a7:CreateText({
     text = "This is body text only.",
 })
 
-display:CreateText({
+a7:CreateText({
     name = "With Icon",
     text = "This text has an icon.",
     icon = "house",
 })
 
-display:CreateSection({ name = "Dividers" })
+a7:CreateSection({ name = "Dividers" })
 
-display:CreateDivider()
+a7:CreateDivider()
 
-display:CreateDivider({ text = "or" })
+a7:CreateDivider({ text = "or" })
 
-display:CreateDivider({ text = "spaced", spacing = 24 })
+a7:CreateDivider({ text = "spaced", spacing = 24 })
 
-display:CreateDivider({ line = false, spacing = 20 })
+a7:CreateDivider({ line = false, spacing = 20 })
 
-display:CreateSection({ name = "Console" })
+a7:CreateSection({ name = "Console" })
 
-local console = display:CreateConsole({
+local a10 = a7:CreateConsole({
     name = "Console",
     text = "-- output lands here",
     height = 130,
@@ -241,37 +241,37 @@ local console = display:CreateConsole({
     maxLines = 50,
 })
 
-display:CreateButton({
+a7:CreateButton({
     name = "Log Line",
     callback = function()
-        console:Append(string.format("[%s] New entry", os.date("%H:%M:%S")))
+        a10:Append(string.format("[%s] New entry", os.date("%H:%M:%S")))
     end,
 })
 
-display:CreateButton({
+a7:CreateButton({
     name = "Clear Console",
     callback = function()
-        console:Clear()
+        a10:Clear()
     end,
 })
 
-display:CreateSection({ name = "Groups" })
+a7:CreateSection({ name = "Groups" })
 
-local grid = display:CreateGroup()
+local a11 = a7:CreateGroup()
 
-local left = grid:CreateGroup({ direction = "column" })
-left:CreateToggle({ name = "Left Toggle 1", value = true })
-left:CreateToggle({ name = "Left Toggle 2" })
+local a12 = a11:CreateGroup({ direction = "column" })
+a12:CreateToggle({ name = "Left Toggle 1", value = true })
+a12:CreateToggle({ name = "Left Toggle 2" })
 
-local right = grid:CreateGroup({ direction = "column" })
-right:CreateToggle({ name = "Right Toggle 1", value = true })
-right:CreateToggle({ name = "Right Toggle 2" })
+local a13 = a11:CreateGroup({ direction = "column" })
+a13:CreateToggle({ name = "Right Toggle 1", value = true })
+a13:CreateToggle({ name = "Right Toggle 2" })
 
-local utility = window:CreateTab({ name = "Utility", icon = "search" })
+local a14 = window:CreateTab({ name = "Utility", icon = "search" })
 
-utility:CreateSection({ name = "Notifications" })
+a14:CreateSection({ name = "Notifications" })
 
-utility:CreateButton({
+a14:CreateButton({
     name = "Send Notification",
     callback = function()
         window:Notify({
@@ -282,7 +282,7 @@ utility:CreateButton({
     end,
 })
 
-utility:CreateButton({
+a14:CreateButton({
     name = "Send Toast",
     callback = function()
         window:Toast({
@@ -292,7 +292,7 @@ utility:CreateButton({
     end,
 })
 
-utility:CreateButton({
+a14:CreateButton({
     name = "Open Popup",
     callback = function()
         window:Popup({
@@ -307,7 +307,7 @@ utility:CreateButton({
     end,
 })
 
-utility:CreateSection({ name = "Tags" })
+a14:CreateSection({ name = "Tags" })
 
 window:CreateTag({
     text = "v1.0.0",
@@ -315,64 +315,64 @@ window:CreateTag({
     color = Color3.fromRGB(96, 205, 255),
 })
 
-utility:CreateSection({ name = "Window Controls" })
+a14:CreateSection({ name = "Window Controls" })
 
-utility:CreateButton({
+a14:CreateButton({
     name = "Hide Window",
     callback = function()
         window:Hide()
     end,
 })
 
-utility:CreateButton({
+a14:CreateButton({
     name = "Save Config",
     callback = function()
         window:Save()
     end,
 })
 
-utility:CreateButton({
+a14:CreateButton({
     name = "Load Config",
     callback = function()
         window:Load()
     end,
 })
 
-utility:CreateButton({
+a14:CreateButton({
     name = "List Configs",
     callback = function()
-        local configs = window:ListConfigs()
-        for _, name in configs do
+        local a15 = window:ListConfigs()
+        for _, a16 in a15 do
         end
     end,
 })
 
-local advanced = window:CreateTab({ name = "Advanced", icon = "sliders-horizontal" })
+local a17 = window:CreateTab({ name = "Advanced", icon = "sliders-horizontal" })
 
-advanced:CreateSection({ name = "Runtime Controls" })
+a17:CreateSection({ name = "Runtime Controls" })
 
-advanced:CreateToggle({
+a17:CreateToggle({
     name = "Performance Mode",
     icon = "gauge",
     description = "Prefer lower visual overhead while keeping the interface responsive.",
     value = false,
 })
 
-advanced:CreateToggle({
+a17:CreateToggle({
     name = "Auto Refresh",
     icon = "refresh-cw",
     description = "Refresh placeholder data automatically every few seconds.",
     value = true,
 })
 
-advanced:CreateDropdown({
+a17:CreateDropdown({
     name = "Refresh Interval",
     icon = "timer",
     options = { "5 seconds", "15 seconds", "30 seconds", "1 minute" },
     value = "15 seconds",
 })
 
-advanced:CreateSlider({
+a17:CreateSlider({
     name = "Update Frequency",
     icon = "activity",
     description = "Adjust how often the example would poll for new data.",
@@ -382,65 +382,65 @@ advanced:CreateSlider({
     suffix = " sec",
 })
 
-advanced:CreateSection({ name = "Developer Tools" })
+a17:CreateSection({ name = "Developer Tools" })
 
-advanced:CreateInput({
+a17:CreateInput({
     name = "Workspace Name",
     icon = "folder-open",
     description = "A placeholder input for a project or workspace identifier.",
     placeholder = "example-workspace",
 })
 
-advanced:CreateKeybind({
+a17:CreateKeybind({
     name = "Toggle Developer Panel",
     icon = "terminal",
     value = Enum.KeyCode.F3,
 })
 
-advanced:CreateColorPicker({
+a17:CreateColorPicker({
     name = "Accent Preview",
     icon = "palette",
     color = Color3.fromRGB(96, 205, 255),
     alpha = 0.9,
 })
 
-advanced:CreateSection({ name = "Execution" })
+a17:CreateSection({ name = "Execution" })
 
-local advancedProgress = advanced:CreateProgress({
+local a18 = a17:CreateProgress({
     name = "Task Progress",
     icon = "loader-circle",
     range = { 0, 100 },
     value = 68,
 })
 
-advanced:CreateButton({
+a17:CreateButton({
     name = "Run Placeholder Task",
     icon = "circle-play",
     description = "Simulates a task and advances the progress indicator.",
     callback = function()
-        advancedProgress:Set(math.min(100, advancedProgress.value + 8))
+        a18:Set(math.min(100, a18.value + 8))
     end,
 })
 
-advanced:CreateButton({
+a17:CreateButton({
     name = "Reset Task",
     icon = "rotate-ccw",
     callback = function()
-        advancedProgress:Set(0)
+        a18:Set(0)
     end,
 })
 
-local activity = window:CreateTab({ name = "Activity", icon = "activity" })
+local a19 = window:CreateTab({ name = "Activity", icon = "activity" })
 
-activity:CreateSection({ name = "Recent Activity" })
+a19:CreateSection({ name = "Recent Activity" })
 
-activity:CreateText({
+a19:CreateText({
     name = "Today",
     icon = "calendar-days",
     text = "Your placeholder activity feed can show events, status changes, and recent actions here.",
 })
 
-local activityConsole = activity:CreateConsole({
+local a20 = a19:CreateConsole({
     name = "Event Stream",
     icon = "radio-tower",
     text = "[system] Waiting for activity...",
@@ -449,56 +449,56 @@ local activityConsole = activity:CreateConsole({
     maxLines = 80,
 })
 
-activity:CreateButton({
+a19:CreateButton({
     name = "Add Activity Event",
     icon = "circle-plus",
     callback = function()
-        activityConsole:Append(string.format("[%s] Placeholder event received", os.date("%H:%M:%S")))
+        a20:Append(string.format("[%s] Placeholder event received", os.date("%H:%M:%S")))
     end,
 })
 
-activity:CreateButton({
+a19:CreateButton({
     name = "Clear Activity",
     icon = "trash-2",
     callback = function()
-        activityConsole:Clear()
+        a20:Clear()
     end,
 })
 
-activity:CreateSection({ name = "Filters" })
+a19:CreateSection({ name = "Filters" })
 
-activity:CreateToggle({
+a19:CreateToggle({
     name = "Show System Events",
     icon = "server",
     value = true,
 })
 
-activity:CreateToggle({
+a19:CreateToggle({
     name = "Show User Events",
     icon = "user-round",
     value = true,
 })
 
-activity:CreateDropdown({
+a19:CreateDropdown({
     name = "Activity Range",
     icon = "calendar-range",
     options = { "Today", "This week", "This month", "All time" },
     value = "Today",
 })
 
-local about = window:CreateTab({ name = "About", icon = "info" })
+local a21 = window:CreateTab({ name = "About", icon = "info" })
 
-about:CreateSection({ name = "Astra Example" })
+a21:CreateSection({ name = "Astra Example" })
 
-about:CreateText({
+a21:CreateText({
     name = "Component Showcase",
     icon = "sparkles",
     text = "A detailed placeholder window demonstrating tabs, actions, forms, progress, statistics, notifications, groups, tags, and console output with the Lucide icon pack.",
 })
 
-about:CreateDivider({ text = "Resources" })
+a21:CreateDivider({ text = "Resources" })
 
-about:CreateButton({
+a21:CreateButton({
     name = "View Documentation",
     icon = "book-open",
     description = "Placeholder action for opening the project documentation.",
@@ -511,7 +511,7 @@ about:CreateButton({
     end,
 })
 
-about:CreateButton({
+a21:CreateButton({
     name = "Check for Updates",
     icon = "cloud-download",
     callback = function()
@@ -523,30 +523,30 @@ about:CreateButton({
     end,
 })
 
-about:CreateSection({ name = "Environment" })
+a21:CreateSection({ name = "Environment" })
 
-local environment = about:CreateGroup({ direction = "column" })
+local a22 = a21:CreateGroup({ direction = "column" })
 
-environment:CreateStat({
+a22:CreateStat({
     name = "Version",
     value = 100,
     prefix = "v",
     suffix = ".0.0",
     icon = "tag",
 })
-environment:CreateText({
+a22:CreateText({
     name = "Icon Pack",
     text = "Lucide",
     icon = "library",
 })
-environment:CreateStat({
+a22:CreateStat({
     name = "Status",
     value = 1,
     suffix = " ready",
     icon = "circle-check",
 })
 
-about:CreateSection({ name = "Tags" })
+a21:CreateSection({ name = "Tags" })
 
 window:CreateTag({
     text = "Lucide",

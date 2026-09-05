@@ -1,73 +1,73 @@
-local Progress = {}
-Progress.__index = Progress
-Progress.__type = "Progress"
+local a1 = {}
+a1.__index = a1
+a1.__type = "Progress"
 
-local utility = script.Parent.Parent.utilities
+local a2 = script.Parent.Parent.utilities
 
-local variables = require(utility.Parent.core.state)
-local functions = require(script.Parent.Parent.functions)
-local moveable = require(utility.moveable)
-local locale = require(utility.locale)
+local a3 = require(a2.Parent.core.state)
+local a4 = require(script.Parent.Parent.functions)
+local a5 = require(a2.moveable)
+local a6 = require(a2.locale)
 
-local rowHeight = 60
-local trackHeight = 8
-local inset = 20 
-local stepHeight = 6
-local stepGap = 6
+local a7 = 60
+local a8 = 8
+local a9 = 20
+local a10 = 6
+local a11 = 6
 
-local titleSize = 16
-local readoutSize = 14
-local readoutTransparency = 0.4
+local a12 = 16
+local a13 = 14
+local a14 = 0.4
 
-local fillInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local a15 = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local fillTransparency = NumberSequence.new({
+local a16 = NumberSequence.new({
     NumberSequenceKeypoint.new(0, 0.85),
     NumberSequenceKeypoint.new(1, 0),
 })
 
-local sweepSeconds = 0.9
-local sweepInfo = TweenInfo.new(sweepSeconds, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut, -1, true)
+local a17 = 0.9
+local a18 = TweenInfo.new(a17, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut, -1, true)
 
-local function finite(value: unknown): number?
-    local number = tonumber(value)
-    if number == nil or number ~= number or math.abs(number) == math.huge then
+local function a19(a20: unknown): number?
+    local a21 = tonumber(a20)
+    if a21 == nil or a21 ~= a21 or math.abs(a21) == math.huge then
         return nil
     end
-    return number
+    return a21
 end
 
-function Progress.new(tab, properties)
-    properties = if typeof(properties) == "table" then properties else {}
+function a1.new(tab, a22)
+    a22 = if typeof(a22) == "table" then a22 else {}
 
-            local steps = finite(properties.steps or properties.Steps)
-    steps = if steps and steps >= 2 then math.floor(steps) else nil
+            local a23 = a19(a22.steps or a22.Steps)
+    a23 = if a23 and a23 >= 2 then math.floor(a23) else nil
 
-    local range = properties.range or properties.Range
-    local min = finite(range and range[1]) or 0
-    local max = finite(range and range[2]) or steps or 1
-    if min > max then
-        min, max = max, min
+    local a24 = a22.range or a22.Range
+    local a25 = a19(a24 and a24[1]) or 0
+    local a26 = a19(a24 and a24[2]) or a23 or 1
+    if a25 > a26 then
+        a25, a26 = a26, a25
     end
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = properties.name or properties.Name or "Progress",
-        icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
-        description = properties.description or properties.Description,
+        name = a22.name or a22.Name or "Progress",
+        icon = tab.window:ResolveIcon(a22.icon or a22.Icon),
+        description = a22.description or a22.Description,
 
-        min = min,
-        max = max,
-        steps = steps,
-        value = 0, 
-                text = properties.text or properties.Text,
-        format = properties.format or properties.Format,
-        showValue = if properties.showValue == nil then true else properties.showValue == true,
-        indeterminate = properties.indeterminate or properties.Indeterminate or false,
-    }, Progress)
+        min = a25,
+        max = a26,
+        steps = a23,
+        value = 0,
+                text = a22.text or a22.Text,
+        format = a22.format or a22.Format,
+        showValue = if a22.showValue == nil then true else a22.showValue == true,
+        indeterminate = a22.indeterminate or a22.Indeterminate or false,
+    }, a1)
 
-    self.value = self:_clamp(finite(properties.value or properties.Value) or min)
+    self.value = self:_clamp(a19(a22.value or a22.Value) or a25)
 
     self:_build()
 
@@ -78,31 +78,31 @@ function Progress.new(tab, properties)
     return self
 end
 
-function Progress:_clamp(value: number): number
-    return math.clamp(finite(value) or self.min, self.min, self.max)
+function a1:_clamp(a27: number): number
+    return math.clamp(a19(a27) or self.min, self.min, self.max)
 end
 
-function Progress:_ratio(): number
-    local span = self.max - self.min
-    if span <= 0 then
+function a1:_ratio(): number
+    local a28 = self.max - self.min
+    if a28 <= 0 then
         return 1
     end
-    return (self.value - self.min) / span
+    return (self.value - self.min) / a28
 end
 
-function Progress:_filledSteps(): number
-    local count = self.steps :: number
-    return math.clamp(math.round(self:_ratio() * count), 0, count)
+function a1:_filledSteps(): number
+    local a29 = self.steps :: number
+    return math.clamp(math.round(self:_ratio() * a29), 0, a29)
 end
 
-function Progress:_readout(): string
+function a1:_readout(): string
     if self.text then
-        return locale.resolve(self.text)
+        return a6.resolve(self.text)
     end
     if self.format then
-        local ok, formatted = pcall(self.format, self.value, self.min, self.max)
-        if ok and type(formatted) == "string" then
-            return formatted
+        local ok, a30 = pcall(self.format, self.value, self.min, self.max)
+        if ok and type(a30) == "string" then
+            return a30
         end
     end
         if self.steps then
@@ -111,22 +111,22 @@ function Progress:_readout(): string
     return string.format("%d%%", math.round(self:_ratio() * 100))
 end
 
-function Progress:_build()
+function a1:_build()
     self.main = self.window:Create("Frame", {
-        Size = UDim2.new(1, -20, 0, rowHeight),
+        Size = UDim2.new(1, -20, 0, a7),
         BorderSizePixel = 0,
         Name = self.name,
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 
-                BackgroundTransparency = 1, 
+                BackgroundTransparency = 1,
         Parent = self.tab.tabPage,
     }, { BackgroundTransparency = "ElementTransparency" })
 
     self.stroke = self.window:StyleElementBody(self.main)
 
         self.container = self.window:Create("Frame", {
-        Size = UDim2.new(0, 170, 0, titleSize),
-        Position = UDim2.new(0, inset, 0, 20),
+        Size = UDim2.new(0, 170, 0, a12),
+        Position = UDim2.new(0, a9, 0, 20),
         AnchorPoint = Vector2.new(0, 0.5),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -151,24 +151,24 @@ function Progress:_build()
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
 
-                        ImageTransparency = 1, 
+                        ImageTransparency = 1,
             Parent = self.container,
         }, { ImageColor3 = "ContentColor" })
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = locale.t(self.name),
+        Text = a6.t(self.name),
 
-        Size = UDim2.fromOffset(250, titleSize),
+        Size = UDim2.fromOffset(250, a12),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
-        TextSize = titleSize,
+        TextSize = a12,
         AutomaticSize = Enum.AutomaticSize.X,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextWrapped = true,
         LayoutOrder = 1,
 
-                TextTransparency = 1, 
+                TextTransparency = 1,
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
@@ -176,16 +176,16 @@ function Progress:_build()
         Text = self:_readout(),
 
         AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -inset, 0, 20),
-        Size = UDim2.fromOffset(50, readoutSize),
+        Position = UDim2.new(1, -a9, 0, 20),
+        Size = UDim2.fromOffset(50, a13),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
-        TextSize = readoutSize,
+        TextSize = a13,
         TextXAlignment = Enum.TextXAlignment.Right,
         Visible = self.showValue,
 
-                TextTransparency = 1, 
+                TextTransparency = 1,
         Parent = self.main,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
@@ -197,10 +197,10 @@ function Progress:_build()
                 self.track = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0.5, 1),
         Position = UDim2.new(0.5, 0, 1, -16),
-        Size = UDim2.new(1, -inset * 2, 0, trackHeight),
+        Size = UDim2.new(1, -a9 * 2, 0, a8),
         BorderSizePixel = 0,
 
-        BackgroundTransparency = 1, 
+        BackgroundTransparency = 1,
         Parent = self.main,
     }, { BackgroundColor3 = "SliderBackground" })
 
@@ -218,7 +218,7 @@ function Progress:_build()
         BorderSizePixel = 0,
         ZIndex = 2,
 
-        BackgroundTransparency = 1, 
+        BackgroundTransparency = 1,
         Parent = self.track,
     })
 
@@ -231,10 +231,10 @@ function Progress:_build()
     self.window:Create("UIGradient", {
         Offset = Vector2.new(0, 0.5),
         Rotation = 2,
-        Transparency = fillTransparency,
+        Transparency = a16,
 
         Parent = self.fill,
-    }, { Color = { "SliderProgress", functions.toColorSequence } })
+    }, { Color = { "SliderProgress", a4.toColorSequence } })
 
     self.fillGlow = self.window:CreateGlow(self.fill, "AccentColor", 20, 1)
 
@@ -243,13 +243,13 @@ function Progress:_build()
     end
 end
 
-function Progress:_buildSteps()
-    local count = self.steps :: number
+function a1:_buildSteps()
+    local a31 = self.steps :: number
 
     self.track = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0.5, 1),
         Position = UDim2.new(0.5, 0, 1, -17),
-        Size = UDim2.new(1, -inset * 2, 0, stepHeight),
+        Size = UDim2.new(1, -a9 * 2, 0, a10),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
 
@@ -257,7 +257,7 @@ function Progress:_buildSteps()
     })
 
     self.window:Create("UIListLayout", {
-        Padding = UDim.new(0, stepGap),
+        Padding = UDim.new(0, a11),
         FillDirection = Enum.FillDirection.Horizontal,
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
@@ -267,48 +267,48 @@ function Progress:_buildSteps()
     })
 
     self.stepFrames = {}
-    for index = 1, count do
-                local segment = self.window:Create("Frame", {
-            Size = UDim2.new(1 / count, -(stepGap * (count - 1)) / count, 1, 0),
+    for a32 = 1, a31 do
+                local a33 = self.window:Create("Frame", {
+            Size = UDim2.new(1 / a31, -(a11 * (a31 - 1)) / a31, 1, 0),
             BorderSizePixel = 0,
-            LayoutOrder = index,
-                                                BackgroundTransparency = 1, 
+            LayoutOrder = a32,
+                                                BackgroundTransparency = 1,
             Parent = self.track,
         }, { BackgroundColor3 = "SliderBackground" })
 
         self.window:Create("UICorner", {
             CornerRadius = UDim.new(1, 0),
 
-            Parent = segment,
+            Parent = a33,
         })
 
-                local fill = self.window:Create("Frame", {
+                local a34 = self.window:Create("Frame", {
             Size = UDim2.fromScale(1, 1),
             BackgroundColor3 = Color3.fromRGB(255, 255, 255),
             BorderSizePixel = 0,
             ZIndex = 2,
 
-            BackgroundTransparency = 1, 
-            Parent = segment,
+            BackgroundTransparency = 1,
+            Parent = a33,
         })
 
         self.window:Create("UICorner", {
             CornerRadius = UDim.new(1, 0),
 
-            Parent = fill,
+            Parent = a34,
         })
 
                         self.window:Create("UIGradient", {
             Rotation = 90,
 
-            Parent = fill,
-        }, { Color = { "SliderProgress", functions.toColorSequence } })
+            Parent = a34,
+        }, { Color = { "SliderProgress", a4.toColorSequence } })
 
-        table.insert(self.stepFrames, { segment = segment, fill = fill })
+        table.insert(self.stepFrames, { segment = a33, fill = a34 })
     end
 end
 
-function Progress:_startSweep()
+function a1:_startSweep()
     if self._sweep or self.steps then
         return     end
 
@@ -316,11 +316,11 @@ function Progress:_startSweep()
     self.fill.Position = UDim2.fromScale(0, 0.5)
     self.fill.Size = UDim2.fromScale(0, 1)
 
-    self._sweep = variables.tweenService:Create(self.fill, sweepInfo, { Size = UDim2.fromScale(1, 1) })
+    self._sweep = a3.tweenService:Create(self.fill, a18, { Size = UDim2.fromScale(1, 1) })
     self._sweep:Play()
 end
 
-function Progress:_stopSweep()
+function a1:_stopSweep()
     if not self._sweep then
         return
     end
@@ -330,35 +330,35 @@ function Progress:_stopSweep()
     self.fill.Position = UDim2.fromScale(0, 0.5)
 end
 
-function Progress:_render(animate: boolean?)
+function a1:_render(a35: boolean?)
     self.readout.Text = self:_readout()
 
     if self.steps then
                 if not self._shown then
             return
         end
-        local filled = self:_filledSteps()
-        for index, step in self.stepFrames do
-            local target = if index <= filled then 0 else 1
-            if animate == false then
-                step.fill.BackgroundTransparency = target
+        local a36 = self:_filledSteps()
+        for a37, a38 in self.stepFrames do
+            local a39 = if a37 <= a36 then 0 else 1
+            if a35 == false then
+                a38.fill.BackgroundTransparency = a39
             else
-                variables.tweenService:Create(step.fill, fillInfo, { BackgroundTransparency = target }):Play()
+                a3.tweenService:Create(a38.fill, a15, { BackgroundTransparency = a39 }):Play()
             end
         end
         return
     end
 
-    local size = UDim2.fromScale(self:_ratio(), 1)
-    if animate == false then
-        self.fill.Size = size
+    local a40 = UDim2.fromScale(self:_ratio(), 1)
+    if a35 == false then
+        self.fill.Size = a40
     else
-        variables.tweenService:Create(self.fill, fillInfo, { Size = size }):Play()
+        a3.tweenService:Create(self.fill, a15, { Size = a40 }):Play()
     end
 end
 
-function Progress:Set(value)
-    self.value = self:_clamp(value)
+function a1:Set(a41)
+    self.value = self:_clamp(a41)
 
     if self.indeterminate then
         self.indeterminate = false
@@ -368,39 +368,39 @@ function Progress:Set(value)
     self:_render()
 end
 
-function Progress:Get(): number
+function a1:Get(): number
     return self.value
 end
 
-function Progress:GetPercentage(): number
+function a1:GetPercentage(): number
     return self:_ratio()
 end
 
-function Progress:SetRange(min, max)
-    min = finite(min) or self.min
-    max = finite(max) or self.max
-    if min > max then
-        min, max = max, min
+function a1:SetRange(a42, a43)
+    a42 = a19(a42) or self.min
+    a43 = a19(a43) or self.max
+    if a42 > a43 then
+        a42, a43 = a43, a42
     end
 
-    self.min, self.max = min, max
+    self.min, self.max = a42, a43
     self.value = self:_clamp(self.value)
     self:_render()
 end
 
-function Progress:SetText(text)
-    self.text = text
+function a1:SetText(a44)
+    self.text = a44
     self.readout.Text = self:_readout()
 end
 
-function Progress:SetIndeterminate(state)
-    state = state == true
-    if state == self.indeterminate then
+function a1:SetIndeterminate(a45)
+    a45 = a45 == true
+    if a45 == self.indeterminate then
         return
     end
-    self.indeterminate = state
+    self.indeterminate = a45
 
-    if state then
+    if a45 then
         self:_startSweep()
     else
         self:_stopSweep()
@@ -408,33 +408,33 @@ function Progress:SetIndeterminate(state)
     end
 end
 
-function Progress:_setShown(shown, animate)
+function a1:_setShown(a46, a47)
     local w = self.window
 
-    self._shown = shown
-    w:_reveal(self.readout, { TextTransparency = if shown then readoutTransparency else 1 }, animate)
+    self._shown = a46
+    w:_reveal(self.readout, { TextTransparency = if a46 then a14 else 1 }, a47)
 
-    if shown then
-        w:_revealCommon(self, animate)
+    if a46 then
+        w:_revealCommon(self, a47)
     else
-        w:_hideCommon(self, animate)
+        w:_hideCommon(self, a47)
     end
 
     if self.steps then
-        local filled = self:_filledSteps()
-        for index, step in self.stepFrames do
-            w:_reveal(step.segment, { BackgroundTransparency = if shown then 0 else 1 }, animate)
-            w:_reveal(step.fill, { BackgroundTransparency = if shown and index <= filled then 0 else 1 }, animate)
+        local a48 = self:_filledSteps()
+        for a49, a50 in self.stepFrames do
+            w:_reveal(a50.segment, { BackgroundTransparency = if a46 then 0 else 1 }, a47)
+            w:_reveal(a50.fill, { BackgroundTransparency = if a46 and a49 <= a48 then 0 else 1 }, a47)
         end
         return
     end
 
-    w:_reveal(self.track, { BackgroundTransparency = if shown then 0 else 1 }, animate)
-    w:_reveal(self.fill, { BackgroundTransparency = if shown then 0 else 1 }, animate)
-    w:_reveal(self.fillGlow, { Transparency = if shown then w.theme.AccentGlow else 1 }, animate)
+    w:_reveal(self.track, { BackgroundTransparency = if a46 then 0 else 1 }, a47)
+    w:_reveal(self.fill, { BackgroundTransparency = if a46 then 0 else 1 }, a47)
+    w:_reveal(self.fillGlow, { Transparency = if a46 then w.theme.AccentGlow else 1 }, a47)
 end
 
-function Progress:Remove()
+function a1:Remove()
     self:_stopSweep()
     if self.descriptor then
         self.descriptor:Remove()
@@ -442,6 +442,6 @@ function Progress:Remove()
     self.main:Destroy()
 end
 
-moveable(Progress)
+a5(a1)
 
-return Progress
+return a1

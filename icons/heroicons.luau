@@ -1,5 +1,3 @@
--- heroicons icon pack (name -> URL).
--- Split from the legacy catalog; pure data, loaded lazily by icons/init.luau.
 
 local heroicons = {
     ["academic-cap"] = "https://raw.githubusercontent.com/Haijo12/sisys_ididh/main/icons-pack/heroicons-pack/a/academic-cap.png",

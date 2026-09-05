@@ -1,53 +1,53 @@
-local Input = {}
-Input.__index = Input
-Input.__type = "Input"
+local a1 = {}
+a1.__index = a1
+a1.__type = "Input"
 
-local utility = script.Parent.Parent.utilities
+local a2 = script.Parent.Parent.utilities
 
-local variables = require(utility.Parent.core.state)
-local functions = require(script.Parent.Parent.functions)
-local moveable = require(utility.moveable)
-local lockable = require(utility.lockable)
-local locale = require(utility.locale)
-local constants = require(utility.constants)
-local hapticEngine = require(utility.HapticEngine)
+local a3 = require(a2.Parent.core.state)
+local a4 = require(script.Parent.Parent.functions)
+local a5 = require(a2.moveable)
+local a6 = require(a2.lockable)
+local a7 = require(a2.locale)
+local a8 = require(a2.constants)
+local a9 = require(a2.HapticEngine)
 
-local resizeInfo = constants.pillResizeInfo
-local focusInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local a10 = a8.pillResizeInfo
+local a11 = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local function parseExp(text)
-    local a, b = text:match("^([%d%.%-]+)%^([%d%.%-]+)$")
+local function a12(a13)
+    local a, b = a13:match("^([%d%.%-]+)%^([%d%.%-]+)$")
     if a and b then
         local na, nb = tonumber(a), tonumber(b)
         if na and nb then
             return na ^ nb
         end
     end
-    return tonumber(text)
+    return tonumber(a13)
 end
 
-function Input.new(tab, properties)
-    properties = if typeof(properties) == "table" then properties else {}
+function a1.new(tab, a14)
+    a14 = if typeof(a14) == "table" then a14 else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = properties.name or properties.Name or "Input",
-        icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
-        description = properties.description or properties.Description,
-        forgetState = properties.forgetState or properties.ForgetState or tab.forgetState,
-        placeholder = properties.placeholder or properties.Placeholder or "",
-        numeric = properties.numeric or properties.Numeric or false,         clearOnFocus = properties.clearOnFocus or properties.ClearOnFocus or false,
+        name = a14.name or a14.Name or "Input",
+        icon = tab.window:ResolveIcon(a14.icon or a14.Icon),
+        description = a14.description or a14.Description,
+        forgetState = a14.forgetState or a14.ForgetState or tab.forgetState,
+        placeholder = a14.placeholder or a14.Placeholder or "",
+        numeric = a14.numeric or a14.Numeric or false,         clearOnFocus = a14.clearOnFocus or a14.ClearOnFocus or false,
 
-        callback = properties.callback or properties.Callback or function() end,
-    }, Input)
+        callback = a14.callback or a14.Callback or function() end,
+    }, a1)
 
     self.value =
-        tostring(properties.value or properties.Value or properties.currentValue or properties.CurrentValue or "")
+        tostring(a14.value or a14.Value or a14.currentValue or a14.CurrentValue or "")
 
-    self.flag = properties.flag
-        or properties.Flag
-        or (not self.forgetState and functions.deriveFlagFromName(self.name) or nil)
+    self.flag = a14.flag
+        or a14.Flag
+        or (not self.forgetState and a4.deriveFlagFromName(self.name) or nil)
     self.window:_registerControl(self)
 
     self.main = self.window:Create("Frame", {
@@ -56,7 +56,7 @@ function Input.new(tab, properties)
         Name = self.name,
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 
-        BackgroundTransparency = 1, 
+        BackgroundTransparency = 1,
         Parent = self.tab.tabPage,
     }, { BackgroundTransparency = "ElementTransparency" })
 
@@ -90,13 +90,13 @@ function Input.new(tab, properties)
             BackgroundTransparency = 1,
             ZIndex = 5,
 
-            ImageTransparency = 1, 
+            ImageTransparency = 1,
             Parent = self.container,
         }, { ImageColor3 = "ContentColor" })
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = locale.t(self.name),
+        Text = a7.t(self.name),
         Size = UDim2.fromOffset(150, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -106,7 +106,7 @@ function Input.new(tab, properties)
         LayoutOrder = 1,
         ZIndex = 5,
 
-        TextTransparency = 1, 
+        TextTransparency = 1,
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
@@ -116,7 +116,7 @@ function Input.new(tab, properties)
         Size = UDim2.fromOffset(85, 30),
         BorderSizePixel = 0,
 
-        BackgroundTransparency = 1, 
+        BackgroundTransparency = 1,
         Parent = self.main,
     }, { BackgroundColor3 = "FieldBackground" })
 
@@ -126,15 +126,15 @@ function Input.new(tab, properties)
     })
 
     self.boxStroke = self.window:Create("UIStroke", {
-        Transparency = 1, 
+        Transparency = 1,
         Parent = self.box,
     }, { Color = "SurfaceStroke" })
 
         self.glow = self.window:CreateGlow(self.box, "FieldGlow", 20, 1)
-    self._glowIdle = 1 
+    self._glowIdle = 1
     self.input = self.window:Create("TextBox", {
         Text = self.value,
-        PlaceholderText = locale.t(self.placeholder),
+        PlaceholderText = a7.t(self.placeholder),
         Size = UDim2.new(1, -15, 0, 15),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -145,26 +145,26 @@ function Input.new(tab, properties)
         TextTruncate = Enum.TextTruncate.AtEnd,
         ClearTextOnFocus = self.clearOnFocus,
 
-        TextTransparency = 1, 
+        TextTransparency = 1,
         Parent = self.box,
     }, { TextColor3 = "ContentColor", FontFace = "Font", PlaceholderColor3 = "PlaceholderColor" })
 
         self.window:ConnectFor(self, self.input:GetPropertyChangedSignal("Text"), function()
         if self.numeric then
-            local cleaned = (self.input.Text:gsub("[^%d%.%-eE%^]", ""))
-            if cleaned ~= self.input.Text then
-                self.input.Text = cleaned
+            local a15 = (self.input.Text:gsub("[^%d%.%-eE%^]", ""))
+            if a15 ~= self.input.Text then
+                self.input.Text = a15
                 return             end
         end
         self:_sizeBox(true)
     end)
 
         self.window:ConnectFor(self, self.input.Focused, function()
-        variables.tweenService:Create(self.input, focusInfo, { TextTransparency = 0 }):Play()
+        a3.tweenService:Create(self.input, a11, { TextTransparency = 0 }):Play()
     end)
 
         self.window:ConnectFor(self, self.input.FocusLost, function()
-        variables.tweenService:Create(self.input, focusInfo, { TextTransparency = 0.6 }):Play()
+        a3.tweenService:Create(self.input, a11, { TextTransparency = 0.6 }):Play()
                         if self.clearOnFocus and self.input.Text == "" and self.value ~= "" then
             self.input.Text = self.value
             return
@@ -180,70 +180,70 @@ function Input.new(tab, properties)
         self.descriptor = require(script.Parent.descriptor).new(self.tab, { description = self.description })
     end
 
-    self:_sizeBox(false) 
+    self:_sizeBox(false)
     return self
 end
 
-function Input:_sizeBox(animate)
-    local shown = self.input.Text ~= "" and self.input.Text or self.placeholder
-    local width = math.clamp(functions.textWidth(self.window.theme.Font, 15, shown) + 30, 70, 220)
-    if animate then
-        variables.tweenService:Create(self.box, resizeInfo, { Size = UDim2.fromOffset(width, 30) }):Play()
+function a1:_sizeBox(a16)
+    local a17 = self.input.Text ~= "" and self.input.Text or self.placeholder
+    local a18 = math.clamp(a4.textWidth(self.window.theme.Font, 15, a17) + 30, 70, 220)
+    if a16 then
+        a3.tweenService:Create(self.box, a10, { Size = UDim2.fromOffset(a18, 30) }):Play()
     else
-        self.box.Size = UDim2.fromOffset(width, 30)
+        self.box.Size = UDim2.fromOffset(a18, 30)
     end
 end
 
-function Input:_commit(text, silent)
-    text = tostring(text)
+function a1:_commit(a19, a20)
+    a19 = tostring(a19)
     if self.numeric then
-        local n = parseExp(text)
+        local n = a12(a19)
         if not n or n ~= n or n == math.huge or n == -math.huge then
                         if self.input.Text ~= self.value then
                 self.input.Text = self.value
             end
             return
         end
-        text = tostring(n)
+        a19 = tostring(n)
     end
 
-    local changed = text ~= self.value
-    self.value = text
-    if self.input.Text ~= text then
-        self.input.Text = text
+    local a21 = a19 ~= self.value
+    self.value = a19
+    if self.input.Text ~= a19 then
+        self.input.Text = a19
     end
 
-    if not silent then
-        self.window:_runGuarded(self, self.callback, text)
+    if not a20 then
+        self.window:_runGuarded(self, self.callback, a19)
         self.window:_persist(self)
-                        if changed and not self.window._loading then
-            hapticEngine.click()
+                        if a21 and not self.window._loading then
+            a9.click()
             self.window:_flashResult(self, true)
         end
     end
 end
 
-function Input:Set(value, skipCallback)
-    self:_commit(value, skipCallback)
+function a1:Set(a22, a23)
+    self:_commit(a22, a23)
 end
 
-function Input:_setShown(shown, animate)
+function a1:_setShown(a24, a25)
     local w = self.window
-    if shown then
-        w:_revealCommon(self, animate)
-        w:_reveal(self.box, { BackgroundTransparency = w.theme.FieldTransparency }, animate)
-        w:_reveal(self.boxStroke, { Transparency = 0.85 }, animate)
-        w:_reveal(self.input, { TextTransparency = 0.6 }, animate)
+    if a24 then
+        w:_revealCommon(self, a25)
+        w:_reveal(self.box, { BackgroundTransparency = w.theme.FieldTransparency }, a25)
+        w:_reveal(self.boxStroke, { Transparency = 0.85 }, a25)
+        w:_reveal(self.input, { TextTransparency = 0.6 }, a25)
     else
-        w:_hideCommon(self, animate)
-        w:_reveal(self.box, { BackgroundTransparency = 1 }, animate)
-        w:_reveal(self.boxStroke, { Transparency = 1 }, animate)
-        w:_reveal(self.input, { TextTransparency = 1 }, animate)
+        w:_hideCommon(self, a25)
+        w:_reveal(self.box, { BackgroundTransparency = 1 }, a25)
+        w:_reveal(self.boxStroke, { Transparency = 1 }, a25)
+        w:_reveal(self.input, { TextTransparency = 1 }, a25)
     end
 end
 
-function Input:_refreshTheme()
-    variables.tweenService
+function a1:_refreshTheme()
+    a3.tweenService
         :Create(
             self.box,
             TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -252,7 +252,7 @@ function Input:_refreshTheme()
         :Play()
 end
 
-moveable(Input)
-lockable(Input)
+a5(a1)
+a6(a1)
 
-return Input
+return a1

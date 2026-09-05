@@ -1,42 +1,33 @@
--- Controlled/lazy loading of internal modules (core/loader.luau).
---
--- The core must stay small: this loader exists so heavy or rarely used
--- services (settings, caches, icon packs, images) are required on first use
--- instead of during startup. require() caches the module value after the
--- first call, so repeated loads are table lookups.
 
-local loader = {}
+local a1 = {}
 
-local pending: { [string]: boolean } = {}
+local a2: { [string]: boolean } = {}
 
--- Load a module from the core module's children via script.Parent[name].
--- Names are validated against an allowlist to keep the load surface explicit.
-local allowed = {
+local a3 = {
     state = true,
     registry = true,
 }
 
-function loader.load(name: string)
-    assert(allowed[name], "Astra core loader: unknown module '" .. tostring(name) .. "'")
-    if pending[name] then
+function a1.load(a4: string)
+    assert(a3[a4], "Astra core loader: unknown module '" .. tostring(a4) .. "'")
+    if a2[a4] then
         return nil
     end
-    pending[name] = true
-    local ok, result = pcall(function()
-        return require((script :: any).Parent[name])
+    a2[a4] = true
+    local ok, a5 = pcall(function()
+        return require((script :: any).Parent[a4])
     end)
-    pending[name] = nil
+    a2[a4] = nil
     if not ok then
-        error(result, 0)
+        error(a5, 0)
     end
-    return result
+    return a5
 end
 
--- Register an external lazy service factory on the core registry.
-function loader.service(name: string, factory: () -> any)
-    local registry = loader.load("registry")
-    registry.registerFactory(name, factory)
-    return registry
+function a1.service(a6: string, a7: () -> any)
+    local a8 = a1.load("registry")
+    a8.registerFactory(a6, a7)
+    return a8
 end
 
-return loader
+return a1

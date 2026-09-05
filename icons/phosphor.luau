@@ -1,5 +1,3 @@
--- phosphor icon pack (name -> URL).
--- Split from the legacy catalog; pure data, loaded lazily by icons/init.luau.
 
 local phosphor = {
     ["acorn"] = "https://raw.githubusercontent.com/Haijo12/sisys_ididh/main/icons-pack/phosphor-pack/a/acorn.png",

@@ -1,5 +1,3 @@
--- tabler icon pack (name -> URL).
--- Split from the legacy catalog; pure data, loaded lazily by icons/init.luau.
 
 local tabler = {
     ["a-b-2"] = "https://raw.githubusercontent.com/Haijo12/sisys_ididh/main/icons-pack/tabler-pack/a/a-b-2.png",

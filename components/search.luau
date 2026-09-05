@@ -1,206 +1,206 @@
-local utility = script.Parent.Parent.utilities
-local variables = require(utility.Parent.core.state)
-local constants = require(utility.constants)
-local locale = require(utility.locale)
-local action = require(script.Parent.action)
+local a1 = script.Parent.Parent.utilities
+local a2 = require(a1.Parent.core.state)
+local a3 = require(a1.constants)
+local a4 = require(a1.locale)
+local a5 = require(script.Parent.action)
 
-local search = {}
+local a6 = {}
 
-local swapInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local a7 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local iconRest = 0.6
-local iconLit = 0.2
+local a8 = 0.6
+local a9 = 0.2
 
-local function unitText(unit)
-    if unit.__type == "Group" then
-        local parts = {}
-        local function walk(group)
-            for _, child in group.elements do
-                if child.__type == "Group" then
-                    walk(child)
-                elseif child.name then
-                    table.insert(parts, child.name)
+local function a10(a11)
+    if a11.__type == "Group" then
+        local a12 = {}
+        local function a13(a14)
+            for _, a15 in a14.elements do
+                if a15.__type == "Group" then
+                    a13(a15)
+                elseif a15.name then
+                    table.insert(a12, a15.name)
                 end
             end
         end
-        walk(unit)
-        return table.concat(parts, "\n")
+        a13(a11)
+        return table.concat(a12, "\n")
     end
-    return unit.name or ""
+    return a11.name or ""
 end
 
-local function collectUnits(window)
-    local units = {}
+local function a16(window)
+    local a17 = {}
     for _, tab in window.tabs do
         if tab.neglectSelector then
             continue
         end
         for _, element in tab.elements do
             if element.__type ~= "Section" then
-                table.insert(units, element)
+                table.insert(a17, element)
             end
         end
     end
-    return units
+    return a17
 end
 
-local function setPillShown(window, shown, info)
-    variables.tweenService
-        :Create(window.searchPill, info, {
-            BackgroundTransparency = if shown then 0.9 else 1,
+local function a18(window, a19, a20)
+    a2.tweenService
+        :Create(window.searchPill, a20, {
+            BackgroundTransparency = if a19 then 0.9 else 1,
         })
         :Play()
-    variables.tweenService:Create(window.searchStroke, info, { Transparency = if shown then 0.85 else 1 }):Play()
-    variables.tweenService:Create(window.searchShadow, info, { Transparency = if shown then 0.92 else 1 }):Play()
-    variables.tweenService:Create(window.searchIcon, info, { ImageTransparency = if shown then 0.65 else 1 }):Play()
-    variables.tweenService:Create(window.searchInput, info, { TextTransparency = if shown then 0.2 else 1 }):Play()
+    a2.tweenService:Create(window.searchStroke, a20, { Transparency = if a19 then 0.85 else 1 }):Play()
+    a2.tweenService:Create(window.searchShadow, a20, { Transparency = if a19 then 0.92 else 1 }):Play()
+    a2.tweenService:Create(window.searchIcon, a20, { ImageTransparency = if a19 then 0.65 else 1 }):Play()
+    a2.tweenService:Create(window.searchInput, a20, { TextTransparency = if a19 then 0.2 else 1 }):Play()
 end
 
-local function setTabsShown(window, shown, info)
+local function a21(window, a22, a23)
     if window.layout.mode == "sidebar" then
         return
     end
     for _, tab in window.tabs do
         if not tab.neglectSelector and tab.topbarItem then
             tab:_applyVisual(
-                if shown then (if window.selectedTab == tab then "selected" else "unselected") else "hidden",
-                info
+                if a22 then (if window.selectedTab == tab then "selected" else "unselected") else "hidden",
+                a23
             )
         end
     end
 end
 
-local function applyFilter(window, query)
-    query = string.lower(query or "")
-    local anyVisible = false
-    for _, entry in window._searchUnits do
-        local match = query == "" or string.find(entry.text, query, 1, true) ~= nil
-        entry.unit.main.Visible = match
-        if entry.unit.descriptor then
-            entry.unit.descriptor.main.Visible = match
+local function a24(window, a25)
+    a25 = string.lower(a25 or "")
+    local a26 = false
+    for _, a27 in window._searchUnits do
+        local a28 = a25 == "" or string.find(a27.text, a25, 1, true) ~= nil
+        a27.unit.main.Visible = a28
+        if a27.unit.descriptor then
+            a27.unit.descriptor.main.Visible = a28
         end
-        anyVisible = anyVisible or match
+        a26 = a26 or a28
     end
-    window.searchEmpty.Visible = not anyVisible and query ~= ""
+    window.searchEmpty.Visible = not a26 and a25 ~= ""
 end
 
-local function gatherUnits(window)
+local function a29(window)
     window._searchUnits = {}
-    local order = 0
-    for _, unit in collectUnits(window) do
-        order += 1
-        local main = unit.main
+    local a30 = 0
+    for _, a31 in a16(window) do
+        a30 += 1
+        local a32 = a31.main
         table.insert(window._searchUnits, {
-            unit = unit,
-            text = string.lower(unitText(unit)),
-            homeParent = main.Parent,
-            homeOrder = main.LayoutOrder,
-            descOrder = unit.descriptor and unit.descriptor.main.LayoutOrder,
+            unit = a31,
+            text = string.lower(a10(a31)),
+            homeParent = a32.Parent,
+            homeOrder = a32.LayoutOrder,
+            descOrder = a31.descriptor and a31.descriptor.main.LayoutOrder,
         })
 
-        main.LayoutOrder = order * 10
-        main.Parent = window.searchPage
-        main.Visible = true
-        if unit.descriptor then
-            unit.descriptor.main.LayoutOrder = order * 10 + 1
-            unit.descriptor.main.Parent = window.searchPage
-            unit.descriptor.main.Visible = true
+        a32.LayoutOrder = a30 * 10
+        a32.Parent = window.searchPage
+        a32.Visible = true
+        if a31.descriptor then
+            a31.descriptor.main.LayoutOrder = a30 * 10 + 1
+            a31.descriptor.main.Parent = window.searchPage
+            a31.descriptor.main.Visible = true
         end
     end
 end
 
-local function restoreUnits(window)
-    for _, entry in window._searchUnits do
-        local unit = entry.unit
-        if unit.main and unit.main.Parent then
-            unit.main.LayoutOrder = entry.homeOrder
-            unit.main.Parent = entry.homeParent
-            unit.main.Visible = true
+local function a33(window)
+    for _, a34 in window._searchUnits do
+        local a35 = a34.unit
+        if a35.main and a35.main.Parent then
+            a35.main.LayoutOrder = a34.homeOrder
+            a35.main.Parent = a34.homeParent
+            a35.main.Visible = true
         end
-        if unit.descriptor and unit.descriptor.main and unit.descriptor.main.Parent then
-            unit.descriptor.main.LayoutOrder = entry.descOrder
-            unit.descriptor.main.Parent = entry.homeParent
-            unit.descriptor.main.Visible = true
+        if a35.descriptor and a35.descriptor.main and a35.descriptor.main.Parent then
+            a35.descriptor.main.LayoutOrder = a34.descOrder
+            a35.descriptor.main.Parent = a34.homeParent
+            a35.descriptor.main.Visible = true
         end
     end
     window._searchUnits = {}
 end
 
-function search.open(window)
+function a6.open(window)
         if window._searching or window.minimised or not window:_interactive() then
         return
     end
     window._searching = true
 
-    gatherUnits(window)
-    applyFilter(window, "")
+    a29(window)
+    a24(window, "")
     window:_jumpTo(window.searchPage)
 
-        setTabsShown(window, false, swapInfo)
-    task.delay(swapInfo.Time, function()
+        a21(window, false, a7)
+    task.delay(a7.Time, function()
         if not window.unloaded and window._searching and window.layout.mode ~= "sidebar" then
             window.tabList.Visible = false
         end
     end)
 
     window.searchPill.Visible = true
-    setPillShown(window, true, swapInfo)
+    a18(window, true, a7)
     window.searchInput:CaptureFocus()
 
-    variables.tweenService:Create(window.searchAction.iconLabel, swapInfo, { ImageTransparency = iconLit }):Play()
+    a2.tweenService:Create(window.searchAction.iconLabel, a7, { ImageTransparency = a9 }):Play()
 end
 
-function search.close(window, config)
+function a6.close(window, a36)
     if not window._searching then
         return
     end
-    config = config or {}
+    a36 = a36 or {}
     window._searching = false
 
     window.searchInput.Text = ""
     window.searchInput:ReleaseFocus()
     window.searchEmpty.Visible = false
 
-    restoreUnits(window)
-    local target = if config.jumpTo == nil then window.selectedTab and window.selectedTab.tabPage else config.jumpTo
-    if target then
-        window:_jumpTo(target)
+    a33(window)
+    local a37 = if a36.jumpTo == nil then window.selectedTab and window.selectedTab.tabPage else a36.jumpTo
+    if a37 then
+        window:_jumpTo(a37)
     end
 
-    setPillShown(window, false, swapInfo)
-    task.delay(swapInfo.Time, function()
+    a18(window, false, a7)
+    task.delay(a7.Time, function()
         if not window.unloaded and not window._searching then
             window.searchPill.Visible = false
         end
     end)
 
-    if config.showTabs then
+    if a36.showTabs then
         if window.layout.mode == "sidebar" and window._applySettingsLayout then
             window:_applySettingsLayout(window.selectedTab == window.rfSettings)
         else
             window.tabList.Visible = true
         end
-        setTabsShown(window, true, swapInfo)
+        a21(window, true, a7)
     end
 
-    variables.tweenService:Create(window.searchAction.iconLabel, swapInfo, { ImageTransparency = iconRest }):Play()
+    a2.tweenService:Create(window.searchAction.iconLabel, a7, { ImageTransparency = a8 }):Play()
 end
 
-function search.toggle(window)
+function a6.toggle(window)
     if window._searching then
-        search.close(window, { showTabs = true })
+        a6.close(window, { showTabs = true })
     else
-        search.open(window)
+        a6.open(window)
     end
 end
 
-function search.railWidth(window, width)
+function a6.railWidth(window, a38)
     if window.searchPill then
-        window.searchPill.Size = UDim2.new(1, -(width + 30), 0, 35)
+        window.searchPill.Size = UDim2.new(1, -(a38 + 30), 0, 35)
     end
 end
 
-function search.build(window)
+function a6.build(window)
     window._searching = false
 
         window.searchPage = window:Create("ScrollingFrame", {
@@ -213,7 +213,7 @@ function search.build(window)
         CanvasSize = UDim2.new(0, 0, 0, 0),
         ScrollBarThickness = 0,
         ScrollingDirection = Enum.ScrollingDirection.Y,
-        LayoutOrder = 2000, 
+        LayoutOrder = 2000,
         Parent = window.elements,
     })
 
@@ -236,8 +236,8 @@ function search.build(window)
 
             window.searchEmpty = window:Create("TextLabel", {
         Name = "NoResults",
-        Text = locale.t("No results"),
-        FontFace = variables.brandFont(Enum.FontWeight.Medium),
+        Text = a4.t("No results"),
+        FontFace = a2.brandFont(Enum.FontWeight.Medium),
         TextSize = 15,
         TextTransparency = 0.6,
         BackgroundTransparency = 1,
@@ -250,14 +250,14 @@ function search.build(window)
         Parent = window.main,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-            local sidebarLayout = window.layout.mode == "sidebar"
-            local top = if sidebarLayout then window.layout.chromeHeight + 8 else window.layout.tabStripTop + 1
+            local a39 = window.layout.mode == "sidebar"
+            local a40 = if a39 then window.layout.chromeHeight + 8 else window.layout.tabStripTop + 1
 
     window.searchPill = window:Create("Frame", {
         Name = "SearchBar",
-        AnchorPoint = Vector2.new(if sidebarLayout then 1 else 0.5, 0),
-        Position = UDim2.new(if sidebarLayout then 1 else 0.5, if sidebarLayout then -15 else 0, 0, top),
-        Size = UDim2.new(1, if sidebarLayout then -(window.layout.railWidth + 30) else -35, 0, 35),
+        AnchorPoint = Vector2.new(if a39 then 1 else 0.5, 0),
+        Position = UDim2.new(if a39 then 1 else 0.5, if a39 then -15 else 0, 0, a40),
+        Size = UDim2.new(1, if a39 then -(window.layout.railWidth + 30) else -35, 0, 35),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 10,
@@ -276,7 +276,7 @@ function search.build(window)
         Color = Color3.fromRGB(255, 255, 255),
         Thickness = 1,
 
-        Transparency = 1, 
+        Transparency = 1,
         Parent = window.searchPill,
     })
 
@@ -285,25 +285,25 @@ function search.build(window)
         Color = Color3.fromRGB(255, 255, 255),
         ZIndex = -1,
 
-        Transparency = 1, 
+        Transparency = 1,
         Parent = window.searchPill,
     })
 
     window.searchIcon = window:Create("ImageLabel", {
-        Image = "rbxassetid://" .. tostring(constants.icons.search),
+        Image = "rbxassetid://" .. tostring(a3.icons.search),
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 15, 0.5, 1),
         Size = UDim2.fromOffset(16, 16),
         BackgroundTransparency = 1,
         ZIndex = 10,
 
-        ImageTransparency = 1, 
+        ImageTransparency = 1,
         Parent = window.searchPill,
     }, { ImageColor3 = "ContentColor" })
 
     window.searchInput = window:Create("TextBox", {
         Text = "",
-        PlaceholderText = locale.t("Search all pages"),
+        PlaceholderText = a4.t("Search all pages"),
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 40, 0.5, 0),
         Size = UDim2.new(1, -110, 0, 18),
@@ -314,23 +314,23 @@ function search.build(window)
         ClipsDescendants = true,
         ZIndex = 10,
 
-        TextTransparency = 1, 
+        TextTransparency = 1,
         Parent = window.searchPill,
     }, { TextColor3 = "ContentColor", FontFace = "Font", PlaceholderColor3 = "PlaceholderColor" })
 
     window:Connect(window.searchInput:GetPropertyChangedSignal("Text"), function()
         if window._searching then
-            applyFilter(window, window.searchInput.Text)
+            a24(window, window.searchInput.Text)
         end
     end)
 
-        window.searchAction = action.new(window, {
+        window.searchAction = a5.new(window, {
         name = "Search",
-        icon = constants.icons.search,
+        icon = a3.icons.search,
         order = 4,
 
         callback = function()
-            search.toggle(window)
+            a6.toggle(window)
         end,
     })
         window.searchAction.isLit = function()
@@ -338,4 +338,4 @@ function search.build(window)
     end
 end
 
-return search
+return a6

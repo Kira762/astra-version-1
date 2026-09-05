@@ -1,16 +1,11 @@
--- Performance settings domain (settings/performance.luau).
---
--- Validation for performance-related settings. Haptics is classified here
--- because enabling it allocates HapticEffect instances; disabling it tears
--- them down.
 
-local performance = {}
+local a1 = {}
 
-function performance.validate(key: string, value: any): (boolean, any)
-    if key == "haptics" then
-        return type(value) == "boolean", value == true
+function a1.validate(a2: string, a3: any): (boolean, any)
+    if a2 == "haptics" then
+        return type(a3) == "boolean", a3 == true
     end
     return false, nil
 end
 
-return performance
+return a1

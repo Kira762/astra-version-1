@@ -1,9 +1,3 @@
--- Minimal Roblox environment stubs for smoke-testing the Astra bundle
--- under the Luau CLI (`sh scripts/smoke_test_bundle.sh`).
---
--- Scope: ONLY what module-load time touches. Nothing here pretends to build
--- real UI. This file is concatenated before the bundle, so its locals are
--- visible to the bundle code as upvalues (line offsets stay intact).
 
 local function makeProxy(name)
 	local proxy
@@ -31,7 +25,6 @@ local function getService(name)
 	return servicesByName[name]
 end
 
--- Players.LocalPlayer must be a table-like, not a function
 servicesByName["Players"] = setmetatable({}, {
 	__index = function(_, key)
 		if key == "LocalPlayer" then
@@ -54,8 +47,6 @@ game = setmetatable({}, {
 	end
 })
 
--- RunService:IsStudio() drives the native-filesystem probe; return false so
--- the bundle takes the same "no native FS" path it would in a plain executor.
 local runService = setmetatable({}, {
 	__index = function(_, key)
 		if key == "IsStudio" then
@@ -180,6 +171,3 @@ NumberSequence = {
 	end,
 }
 
--- getgenv/writefile/readfile/isfile/isfolder/makefolder/listfiles/delfile/
--- delfolder/cloneref stay nil on purpose: the bundle must tolerate executors
--- without them, and that is exactly the path we want to exercise.

@@ -1,8 +1,8 @@
-local filesystem = require(script.Parent.Parent.utilities.filesystem)
-local path = require(script.Parent.Parent.utilities.path)
-local variables = require(script.Parent.Parent.core.state)
-local constants = require(script.Parent.Parent.utilities.constants)
-local windowIcons = require(script.Parent.Parent.images.windowIcons)
+local a1 = require(script.Parent.Parent.utilities.filesystem)
+local a2 = require(script.Parent.Parent.utilities.path)
+local a3 = require(script.Parent.Parent.core.state)
+local a4 = require(script.Parent.Parent.utilities.constants)
+local a5 = require(script.Parent.Parent.images.windowIcons)
 
 export type RewriteMap = { [number]: string }
 export type CacheSettledCallback = (failed: number, failedRoles: { string }) -> ()
@@ -16,279 +16,279 @@ export type ThumbnailEntry = {
 export type ThumbnailResponse = {
     data: { ThumbnailEntry }?,
 }
-local imageCache = {}
+local a6 = {}
 
 type RemoteCallback = (uri: string?) -> ()
 
-local cacheRoot = variables.fileSystemManager:getRootFolder()
-local cacheFolder = variables.fileSystemManager:getAssetsFolder()
-local assetResolver = variables.assetResolver
+local a7 = a3.fileSystemManager:getRootFolder()
+local a8 = a3.fileSystemManager:getAssetsFolder()
+local a9 = a3.assetResolver
 
-local assetBase = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/assets/"
-local headshotPx = 48
-local thumbEndpoint =
+local a10 = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/assets/"
+local a11 = 48
+local a12 =
     "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=%dx%d&format=Png&isCircular=false"
 
-local manifest: { [number]: string } = {}
-local iconManifest = windowIcons.manifest()
-for iconId in iconManifest do
-    manifest[iconId] = assetBase .. tostring(iconId) .. ".png"
+local a13: { [number]: string } = {}
+local a14 = a5.manifest()
+for a15 in a14 do
+    a13[a15] = a10 .. tostring(a15) .. ".png"
 end
-local manifestSize = 0
-for _ in manifest do
-    manifestSize += 1
+local a16 = 0
+for _ in a13 do
+    a16 += 1
 end
 
-imageCache.rewrites = {} :: RewriteMap
-imageCache.onCached = nil :: OnCachedCallback? 
-local pngMagic = "\137PNG\r\n\26\n"
-local remoteRewrites: { [string]: string } = {}
-local remotePending: { [string]: { RemoteCallback } } = {}
+a6.rewrites = {} :: RewriteMap
+a6.onCached = nil :: OnCachedCallback?
+local a17 = "\137PNG\r\n\26\n"
+local a18: { [string]: string } = {}
+local a19: { [string]: { RemoteCallback } } = {}
 
-local function cacheFile(filePath: string, url: string): string?
-        if type(getfenv().getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
+local function a20(a21: string, a22: string): string?
+        if type(getfenv().getcustomasset) ~= "function" or typeof(a1.isfile) ~= "function" then
         return nil
     end
-    if not filesystem.isfile(filePath) then
-        pcall(filesystem.ensureFolder, cacheRoot)
-        pcall(filesystem.ensureFolder, cacheFolder)
-        local body = assetResolver:getAssetContentFromUrl(url, filePath, false)
-                        if not body or string.sub(body, 1, 8) ~= pngMagic then
+    if not a1.isfile(a21) then
+        pcall(a1.ensureFolder, a7)
+        pcall(a1.ensureFolder, a8)
+        local a23 = a9:getAssetContentFromUrl(a22, a21, false)
+                        if not a23 or string.sub(a23, 1, 8) ~= a17 then
             return nil
         end
-        if not pcall(filesystem.writefile, filePath, body) then
+        if not pcall(a1.writefile, a21, a23) then
             return nil
         end
     end
-    local ok, uri = pcall(getfenv().getcustomasset, filePath)
-    return if ok and type(uri) == "string" then uri else nil
+    local ok, a24 = pcall(getfenv().getcustomasset, a21)
+    return if ok and type(a24) == "string" then a24 else nil
 end
 
-local function remoteFilePath(url: string): string
-    local hash = 0
-    for index = 1, #url do
-        hash = (hash * 33 + string.byte(url, index)) % 2147483647
+local function a25(a26: string): string
+    local a27 = 0
+    for a28 = 1, #a26 do
+        a27 = (a27 * 33 + string.byte(a26, a28)) % 2147483647
     end
-    return path.join(cacheFolder, "icon_" .. tostring(hash) .. ".png")
+    return a2.join(a8, "icon_" .. tostring(a27) .. ".png")
 end
 
-function imageCache.remote(url: string, onReady: RemoteCallback?): string
-    local env = getfenv()
-    if type(env.getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
-        if onReady then
-            task.defer(onReady, nil)
+function a6.remote(a29: string, a30: RemoteCallback?): string
+    local a31 = getfenv()
+    if type(a31.getcustomasset) ~= "function" or typeof(a1.isfile) ~= "function" then
+        if a30 then
+            task.defer(a30, nil)
         end
         return ""
     end
 
-    local rewritten = remoteRewrites[url]
-    if rewritten then
-        if onReady then
-            task.defer(onReady, rewritten)
+    local a32 = a18[a29]
+    if a32 then
+        if a30 then
+            task.defer(a30, a32)
         end
-        return rewritten
+        return a32
     end
 
-    local filePath = remoteFilePath(url)
-    if filesystem.isfile(filePath) then
-        local ok, uri = pcall(env.getcustomasset, filePath)
-        if ok and type(uri) == "string" then
-            remoteRewrites[url] = uri
-            if onReady then
-                task.defer(onReady, uri)
+    local a33 = a25(a29)
+    if a1.isfile(a33) then
+        local ok, a34 = pcall(a31.getcustomasset, a33)
+        if ok and type(a34) == "string" then
+            a18[a29] = a34
+            if a30 then
+                task.defer(a30, a34)
             end
-            return uri
+            return a34
         end
     end
 
-    local pending = remotePending[url]
-    if not pending then
-        pending = {}
-        remotePending[url] = pending
+    local a35 = a19[a29]
+    if not a35 then
+        a35 = {}
+        a19[a29] = a35
         task.spawn(function()
-            local uri = cacheFile(filePath, url)
-            if uri then
-                remoteRewrites[url] = uri
+            local a36 = a20(a33, a29)
+            if a36 then
+                a18[a29] = a36
             end
-            local callbacks = remotePending[url]
-            remotePending[url] = nil
-            if callbacks then
-                for _, callback in callbacks do
-                    pcall(callback, uri)
+            local a37 = a19[a29]
+            a19[a29] = nil
+            if a37 then
+                for _, a38 in a37 do
+                    pcall(a38, a36)
                 end
             end
         end)
     end
-    if onReady then
-        table.insert(pending, onReady)
+    if a30 then
+        table.insert(a35, a30)
     end
     return ""
 end
 
-local function avatarPath(userId: number): string
-    return path.join(cacheFolder, "avatar_" .. tostring(userId) .. ".png")
+local function a39(a40: number): string
+    return a2.join(a8, "avatar_" .. tostring(a40) .. ".png")
 end
 
-local function decodeThumbnailUrl(body: string): string?
-    local decodeOk, parsed = pcall(function()
-        return variables.httpService:JSONDecode(body)
+local function a41(a42: string): string?
+    local a43, a44 = pcall(function()
+        return a3.httpService:JSONDecode(a42)
     end)
-    if not decodeOk or type(parsed) ~= "table" then
+    if not a43 or type(a44) ~= "table" then
         return nil
     end
 
-    local data = (parsed :: ThumbnailResponse).data
-    if type(data) ~= "table" then
+    local a45 = (a44 :: ThumbnailResponse).data
+    if type(a45) ~= "table" then
         return nil
     end
 
-    local entry = data[1]
-    if type(entry) ~= "table" then
+    local a46 = a45[1]
+    if type(a46) ~= "table" then
         return nil
     end
 
-    local thumbnail = entry :: ThumbnailEntry
-    if thumbnail.state == "Completed" and type(thumbnail.imageUrl) == "string" then
-        return thumbnail.imageUrl
+    local a47 = a46 :: ThumbnailEntry
+    if a47.state == "Completed" and type(a47.imageUrl) == "string" then
+        return a47.imageUrl
     end
 
     return nil
 end
 
-local function fetchAvatar(userId: number): string?
-    local cdnUrl: string? = nil
-    for attempt = 1, 4 do
-                local body = assetResolver:getAssetContentFromUrl(
-            string.format(thumbEndpoint, userId, headshotPx, headshotPx),
-            "avatar:" .. tostring(userId),
-            attempt > 1
+local function a48(a49: number): string?
+    local a50: string? = nil
+    for a51 = 1, 4 do
+                local a52 = a9:getAssetContentFromUrl(
+            string.format(a12, a49, a11, a11),
+            "avatar:" .. tostring(a49),
+            a51 > 1
         )
-        if body then
-            local imageUrl = decodeThumbnailUrl(body)
-            if imageUrl then
-                cdnUrl = imageUrl
+        if a52 then
+            local a53 = a41(a52)
+            if a53 then
+                a50 = a53
                 break
             end
         end
-        if attempt < 4 then
+        if a51 < 4 then
             task.wait(0.3)
         end
     end
-    if not cdnUrl then
+    if not a50 then
         return nil
     end
 
-    return cacheFile(avatarPath(userId), cdnUrl)
+    return a20(a39(a49), a50)
 end
 
-local pendingAvatars: { [number]: { AvatarCallback } } = {}
-local failedAvatars: { [number]: boolean } = {}
+local a54: { [number]: { AvatarCallback } } = {}
+local a55: { [number]: boolean } = {}
 
-function imageCache.preload(onSettled: PreloadCallback?): (boolean, number)
-    local env = getfenv()
-    if type(env.getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
-        if onSettled then
-            task.defer(onSettled, manifestSize, windowIcons.roleList())
+function a6.preload(a56: PreloadCallback?): (boolean, number)
+    local a57 = getfenv()
+    if type(a57.getcustomasset) ~= "function" or typeof(a1.isfile) ~= "function" then
+        if a56 then
+            task.defer(a56, a16, a5.roleList())
         end
-        return false, manifestSize
+        return false, a16
     end
 
-    local rewrites = imageCache.rewrites
-    table.clear(rewrites) 
-    local function settle()
-        if not onSettled then
+    local a58 = a6.rewrites
+    table.clear(a58)
+    local function a59()
+        if not a56 then
             return
         end
-        local failed = 0
-        local failedRoles = {}
-        for id in manifest do
-            if not rewrites[id] then
-                failed += 1
-                table.insert(failedRoles, windowIcons.roleForId(id))
+        local a60 = 0
+        local a61 = {}
+        for id in a13 do
+            if not a58[id] then
+                a60 += 1
+                table.insert(a61, a5.roleForId(id))
             end
         end
-        table.sort(failedRoles)
-        onSettled(failed, failedRoles)
+        table.sort(a61)
+        a56(a60, a61)
     end
 
-    local pending, missing = 0, 0
-    local spawning = true     for id, url in manifest do
-        local filePath = path.join(cacheFolder, tostring(id) .. ".png")
-        local uri: string? = nil
-        if filesystem.isfile(filePath) then
-            local ok, res = pcall(env.getcustomasset, filePath)
-            uri = if ok and type(res) == "string" then res else nil
+    local a62, a63 = 0, 0
+    local a64 = true     for id, a65 in a13 do
+        local a66 = a2.join(a8, tostring(id) .. ".png")
+        local a67: string? = nil
+        if a1.isfile(a66) then
+            local ok, a68 = pcall(a57.getcustomasset, a66)
+            a67 = if ok and type(a68) == "string" then a68 else nil
         end
-        if uri then
-                        rewrites[id] = uri
+        if a67 then
+                        a58[id] = a67
         else
-                        missing += 1
-            pending += 1
+                        a63 += 1
+            a62 += 1
             task.spawn(function()
-                local cached = cacheFile(filePath, url)
-                if cached then
-                    rewrites[id] = cached
-                    if imageCache.onCached then
-                                                pcall(imageCache.onCached, id)
+                local a69 = a20(a66, a65)
+                if a69 then
+                    a58[id] = a69
+                    if a6.onCached then
+                                                pcall(a6.onCached, id)
                     end
                 end
-                pending -= 1
-                if pending == 0 and not spawning then
-                    settle()
+                a62 -= 1
+                if a62 == 0 and not a64 then
+                    a59()
                 end
             end)
         end
     end
 
-    spawning = false
-    if pending == 0 then
-        settle()
+    a64 = false
+    if a62 == 0 then
+        a59()
     end
 
-    return missing == 0, missing
+    return a63 == 0, a63
 end
 
-function imageCache.avatar(userId: unknown, onReady: AvatarCallback?): string
-    if type(userId) ~= "number" then
+function a6.avatar(a70: unknown, a71: AvatarCallback?): string
+    if type(a70) ~= "number" then
         return ""
     end
 
-        if typeof(filesystem.isfile) ~= "function" then
+        if typeof(a1.isfile) ~= "function" then
         return ""
     end
 
-    local filePath = avatarPath(userId)
-    if filesystem.isfile(filePath) then
-        local ok, uri = pcall(getfenv().getcustomasset, filePath)
-        if ok and type(uri) == "string" then
-            return uri
+    local a72 = a39(a70)
+    if a1.isfile(a72) then
+        local ok, a73 = pcall(getfenv().getcustomasset, a72)
+        if ok and type(a73) == "string" then
+            return a73
         end
     end
 
-        if failedAvatars[userId] then
+        if a55[a70] then
         return ""
     end
 
-            local waiting = pendingAvatars[userId]
-    if waiting then
-        if onReady then
-            table.insert(waiting, onReady)
+            local a74 = a54[a70]
+    if a74 then
+        if a71 then
+            table.insert(a74, a71)
         end
         return ""
     end
 
-    if onReady then
-        pendingAvatars[userId] = { onReady }
+    if a71 then
+        a54[a70] = { a71 }
         task.spawn(function()
-            local uri = fetchAvatar(userId)
-            local callbacks = pendingAvatars[userId]
-            pendingAvatars[userId] = nil
-            if not uri then
-                failedAvatars[userId] = true
+            local a75 = a48(a70)
+            local a76 = a54[a70]
+            a54[a70] = nil
+            if not a75 then
+                a55[a70] = true
             end
-            if callbacks then
-                for _, callback in callbacks do
-                    pcall(callback, uri or "")
+            if a76 then
+                for _, a77 in a76 do
+                    pcall(a77, a75 or "")
                 end
             end
         end)
@@ -297,4 +297,4 @@ function imageCache.avatar(userId: unknown, onReady: AvatarCallback?): string
     return ""
 end
 
-return imageCache
+return a6

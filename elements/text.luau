@@ -1,25 +1,25 @@
-local Text = {}
-Text.__index = Text
-Text.__type = "Text"
+local a1 = {}
+a1.__index = a1
+a1.__type = "Text"
 
-local moveable = require(script.Parent.Parent.utilities.moveable)
-local locale = require(script.Parent.Parent.utilities.locale)
+local a2 = require(script.Parent.Parent.utilities.moveable)
+local a3 = require(script.Parent.Parent.utilities.locale)
 
-local titleSize = 16
-local bodySize = 14
+local a4 = 16
+local a5 = 14
 
-local bodyShown = 0.45
+local a6 = 0.45
 
-function Text.new(tab, properties)
-    properties = if typeof(properties) == "table" then properties else {}
+function a1.new(tab, a7)
+    a7 = if typeof(a7) == "table" then a7 else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = tostring(properties.name or properties.Name or ""),
-        text = tostring(properties.text or properties.Text or ""),
-        icon = tab.window:ResolveIcon(properties.icon or properties.Icon),
-    }, Text)
+        name = tostring(a7.name or a7.Name or ""),
+        text = tostring(a7.text or a7.Text or ""),
+        icon = tab.window:ResolveIcon(a7.icon or a7.Icon),
+    }, a1)
 
             self.main = self.window:Create("Frame", {
         Size = UDim2.new(1, -20, 0, 0),
@@ -28,7 +28,7 @@ function Text.new(tab, properties)
         Name = if self.name ~= "" then self.name else "Text",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 
-                BackgroundTransparency = 1, 
+                BackgroundTransparency = 1,
         Parent = self.tab.tabPage,
     }, { BackgroundTransparency = "ElementTransparency" })
 
@@ -77,40 +77,40 @@ function Text.new(tab, properties)
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
 
-                        ImageTransparency = 1, 
+                        ImageTransparency = 1,
             Parent = self.titleRow,
         }, { ImageColor3 = "ContentColor" })
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = locale.t(self.name),
+        Text = a3.t(self.name),
         Size = UDim2.new(1, if self.icon then -22 else 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         RichText = true,
-        TextSize = titleSize,
+        TextSize = a4,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 1,
 
-                TextTransparency = 1, 
+                TextTransparency = 1,
         Parent = self.titleRow,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 
     self.body = self.window:Create("TextLabel", {
-        Text = locale.t(self.text),
+        Text = a3.t(self.text),
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         RichText = true,
-        TextSize = bodySize,
+        TextSize = a5,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 2,
 
-                TextTransparency = 1, 
+                TextTransparency = 1,
         Parent = self.main,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
@@ -119,33 +119,33 @@ function Text.new(tab, properties)
     return self
 end
 
-function Text:_applyPresence()
+function a1:_applyPresence()
     self.titleRow.Visible = self.name ~= "" or self.icon ~= nil
     self.body.Visible = self.text ~= ""
 end
 
-function Text:Set(text)
-    self.text = tostring(text)
+function a1:Set(a8)
+    self.text = tostring(a8)
     self.window:_bindLocale(self.body, "Text", self.text)
     self:_applyPresence()
 end
 
-function Text:SetTitle(title)
-    self.name = tostring(title)
+function a1:SetTitle(a9)
+    self.name = tostring(a9)
     self.window:_bindLocale(self.title, "Text", self.name)
     self:_applyPresence()
 end
 
-function Text:_setShown(shown, animate)
-        if shown then
-        self.window:_revealCommon(self, animate)
+function a1:_setShown(a10, a11)
+        if a10 then
+        self.window:_revealCommon(self, a11)
     else
-        self.window:_hideCommon(self, animate)
+        self.window:_hideCommon(self, a11)
     end
 
-    self.window:_reveal(self.body, { TextTransparency = if shown then bodyShown else 1 }, animate)
+    self.window:_reveal(self.body, { TextTransparency = if a10 then a6 else 1 }, a11)
 end
 
-moveable(Text)
+a2(a1)
 
-return Text
+return a1

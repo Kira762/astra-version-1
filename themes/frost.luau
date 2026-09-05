@@ -1,4 +1,4 @@
-local variables = require(script.Parent.Parent.core.state)
+local a1 = require(script.Parent.Parent.core.state)
 
 return {
     WindowColor = ColorSequence.new({
@@ -15,7 +15,7 @@ return {
     ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(224, 230, 234), Color3.fromRGB(232, 238, 242)),
     ElementStrokeTransparency = 0.1,
     ElementStrokeHoverTransparency = 0,
-    ElementStrokeHover = Color3.fromRGB(0, 176, 208),     DarkToggleOverlay = false, 
+    ElementStrokeHover = Color3.fromRGB(0, 176, 208),     DarkToggleOverlay = false,
         TabColor = Color3.fromRGB(38, 42, 46),
     TabBackground = ColorSequence.new(Color3.fromRGB(0, 176, 208), Color3.fromRGB(0, 150, 184)),
     TabStroke = ColorSequence.new(Color3.fromRGB(80, 206, 230), Color3.fromRGB(0, 160, 196)),
@@ -27,9 +27,9 @@ return {
 
         AccentColor = Color3.fromRGB(0, 176, 208),
     AccentStroke = Color3.fromRGB(96, 210, 232),
-    AccentGlow = 0.85, 
+    AccentGlow = 0.85,
     StatBackground = Color3.fromRGB(255, 255, 255),
-    SliderHandle = Color3.fromRGB(60, 66, 72), 
+    SliderHandle = Color3.fromRGB(60, 66, 72),
         ToggleTrack = Color3.fromRGB(198, 204, 210),
     ToggleTrackTransparency = 0,
     ToggleKnobOffTransparency = 0.05,
@@ -43,10 +43,10 @@ return {
 
         NeutralButton = Color3.fromRGB(224, 230, 234),
     NeutralButtonHover = Color3.fromRGB(212, 220, 224),
-    NeutralButtonStroke = Color3.fromRGB(242, 246, 248), 
+    NeutralButtonStroke = Color3.fromRGB(242, 246, 248),
     ActionColor = Color3.fromRGB(68, 74, 80),     TitlingColor = Color3.fromRGB(26, 30, 34),
-    TitleFont = variables.brandFont(Enum.FontWeight.SemiBold),
-    Font = variables.brandFont(Enum.FontWeight.Medium),
+    TitleFont = a1.brandFont(Enum.FontWeight.SemiBold),
+    Font = a1.brandFont(Enum.FontWeight.Medium),
     ContentColor = Color3.fromRGB(42, 46, 52),
     ElementTextHoverColor = Color3.fromRGB(18, 22, 26),
 

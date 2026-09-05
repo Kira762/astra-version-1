@@ -1,87 +1,87 @@
-local Popup = {}
-Popup.__index = Popup
-Popup.__type = "Popup"
+local a1 = {}
+a1.__index = a1
+a1.__type = "Popup"
 
-local utility = script.Parent.Parent.utilities
-local variables = require(utility.Parent.core.state)
-local functions = require(script.Parent.Parent.functions)
-local constants = require(utility.constants)
-local locale = require(utility.locale)
-local log = require(utility.log)
-local hapticEngine = require(utility.HapticEngine)
+local a2 = script.Parent.Parent.utilities
+local a3 = require(a2.Parent.core.state)
+local a4 = require(script.Parent.Parent.functions)
+local a5 = require(a2.constants)
+local a6 = require(a2.locale)
+local a7 = require(a2.log)
+local a8 = require(a2.HapticEngine)
 
-local enterInfo = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local fadeLong = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local fadeShort = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local backdropInfo = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local a9 = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a10 = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a11 = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a12 = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-local cardWidth = 400
-local sidePadding = 22
-local topPadding = 24
-local bottomPadding = 22
-local regionGap = 16 local innerWidth = cardWidth - sidePadding * 2
+local a13 = 400
+local a14 = 22
+local a15 = 24
+local a16 = 22
+local a17 = 16 local a18 = a13 - a14 * 2
 
-local titleSize = 18
-local subtitleSize = 14
-local contentSize = 15
-local headerIconSize = 16
-local headerIconGap = 12 local maxContentHeight = 300 local contentInset = 4
-local contentWidth = innerWidth - contentInset * 2
+local a19 = 18
+local a20 = 14
+local a21 = 15
+local a22 = 16
+local a23 = 12 local a24 = 300 local a25 = 4
+local a26 = a18 - a25 * 2
 
-local boxSidePad = 16
-local boxVerticalPad = 13
-local boxIconSize = 20
-local boxIconGap = 10
-local boxTitleSize = 15
-local boxDescSize = 14
-local boxGap = 8
-local boxWidthInset = 10 
-local buttonHeight = 40
-local buttonGap = 8
-local buttonCorner = UDim.new(1, 0) local buttonTextSize = 16
+local a27 = 16
+local a28 = 13
+local a29 = 20
+local a30 = 10
+local a31 = 15
+local a32 = 14
+local a33 = 8
+local a34 = 10
+local a35 = 40
+local a36 = 8
+local a37 = UDim.new(1, 0) local a38 = 16
 
-local backdropShown = 0.5 
-local stack = {}
+local a39 = 0.5
+local a40 = {}
 
-local consumedEscape = nil
+local a41 = nil
 
-local function pruneStack()
-    for index = #stack, 1, -1 do
-        local open = stack[index]
-        if open._closed or not open.screenGui.Parent then
-            table.remove(stack, index)
+local function a42()
+    for a43 = #a40, 1, -1 do
+        local a44 = a40[a43]
+        if a44._closed or not a44.screenGui.Parent then
+            table.remove(a40, a43)
         end
     end
 end
 
-local function topmost(popup)
-    pruneStack()
-    return stack[#stack] == popup
+local function a45(a46)
+    a42()
+    return a40[#a40] == a46
 end
 
-function Popup.new(window, properties)
-    properties = if typeof(properties) == "table" then properties else {}
+function a1.new(window, a47)
+    a47 = if typeof(a47) == "table" then a47 else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        title = properties.title or properties.Title or "Popup",
-        subtitle = properties.subtitle or properties.Subtitle,
-        content = properties.content or properties.Content,
-        icon = window:ResolveIcon(properties.icon or properties.Icon),
-        boxes = properties.boxes or properties.Boxes,
-        options = properties.options or properties.Options,
-                dismissable = if properties.dismissable ~= nil
-            then properties.dismissable
-            elseif properties.Dismissable ~= nil then properties.Dismissable
+        title = a47.title or a47.Title or "Popup",
+        subtitle = a47.subtitle or a47.Subtitle,
+        content = a47.content or a47.Content,
+        icon = window:ResolveIcon(a47.icon or a47.Icon),
+        boxes = a47.boxes or a47.Boxes,
+        options = a47.options or a47.Options,
+                dismissable = if a47.dismissable ~= nil
+            then a47.dismissable
+            elseif a47.Dismissable ~= nil then a47.Dismissable
             else true,
         _reveal = {},         _connections = {},
         _closed = false,
-    }, Popup)
+    }, a1)
 
         if not self.options or #self.options == 0 then
         self.options = { { text = "Okay" } }
     end
 
     self:_build()
-            pruneStack()
-    table.insert(stack, self) 
+            a42()
+    table.insert(a40, self)
     task.spawn(function()
         self:_show()
     end)
@@ -89,24 +89,24 @@ function Popup.new(window, properties)
     return self
 end
 
-function Popup:_fade(instance, prop, to)
-    table.insert(self._reveal, { instance = instance, prop = prop, to = to })
-    return instance
+function a1:_fade(a48, a49, to)
+    table.insert(self._reveal, { instance = a48, prop = a49, to = to })
+    return a48
 end
 
-function Popup:_build()
+function a1:_build()
     local window = self.window
-    local hasIcon = self.icon ~= nil and self.icon ~= 0 and self.icon ~= ""
+    local a50 = self.icon ~= nil and self.icon ~= 0 and self.icon ~= ""
 
         self.screenGui = window:Create("ScreenGui", {
-        Name = variables.httpService:GenerateGUID(false),
+        Name = a3.httpService:GenerateGUID(false),
         IgnoreGuiInset = true,
         ResetOnSpawn = false,
         Enabled = true,
-        DisplayOrder = constants.displayOrder.popup,
+        DisplayOrder = a5.displayOrder.popup,
         ZIndexBehavior = Enum.ZIndexBehavior.Global,
 
-        Parent = variables.guiContainer,
+        Parent = a3.guiContainer,
     })
 
                 self.backdrop = window:Create("Frame", {
@@ -116,20 +116,20 @@ function Popup:_build()
         Size = UDim2.fromScale(1, 1),
         Active = true,
 
-        BackgroundTransparency = 1, 
+        BackgroundTransparency = 1,
         Parent = self.screenGui,
     })
-    self:_fade(self.backdrop, "BackgroundTransparency", backdropShown)
+    self:_fade(self.backdrop, "BackgroundTransparency", a39)
 
         self.card = window:Create("Frame", {
         Name = "Card",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, 0, 0.5, 14),         Size = UDim2.fromOffset(cardWidth, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 14),         Size = UDim2.fromOffset(a13, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         Active = true,         BorderSizePixel = 0,
 
-        BackgroundTransparency = 1, 
+        BackgroundTransparency = 1,
         Parent = self.screenGui,
     })
     self:_fade(self.card, "BackgroundTransparency", 0)
@@ -139,14 +139,14 @@ function Popup:_build()
         Offset = Vector2.new(0, -0.1),
 
         Parent = self.card,
-    }, { Color = { "WindowColor", functions.toColorSequence } })
+    }, { Color = { "WindowColor", a4.toColorSequence } })
 
     window:Create("UICorner", {
         Parent = self.card,
     }, { CornerRadius = "CornerRoundness" })
 
     self.cardStroke = window:Create("UIStroke", {
-        Transparency = 1, 
+        Transparency = 1,
         Parent = self.card,
     }, { Color = "SurfaceStroke" })
     self:_fade(self.cardStroke, "Transparency", 0.95)
@@ -154,10 +154,10 @@ function Popup:_build()
     self.cardShadow = window:CreateGlow(self.card, "ShadowColor", 26, 1)     self:_fade(self.cardShadow, "Transparency", 0.55)
 
     window:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, sidePadding),
-        PaddingRight = UDim.new(0, sidePadding),
-        PaddingTop = UDim.new(0, topPadding),
-        PaddingBottom = UDim.new(0, bottomPadding),
+        PaddingLeft = UDim.new(0, a14),
+        PaddingRight = UDim.new(0, a14),
+        PaddingTop = UDim.new(0, a15),
+        PaddingBottom = UDim.new(0, a16),
 
         Parent = self.card,
     })
@@ -166,32 +166,32 @@ function Popup:_build()
         FillDirection = Enum.FillDirection.Vertical,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, regionGap),
+        Padding = UDim.new(0, a17),
 
         Parent = self.card,
     })
 
-                local headerHeight = self:_measureHeader(hasIcon)
-    self:_buildHeader(hasIcon, headerHeight)
-    local contentHeight = self:_buildContent()
+                local a51 = self:_measureHeader(a50)
+    self:_buildHeader(a50, a51)
+    local a52 = self:_buildContent()
     self:_buildFooter()
 
-    local regions = 2 + (contentHeight > 0 and 1 or 0)     local cardHeight = topPadding
-        + headerHeight
-        + contentHeight
-        + buttonHeight
-        + bottomPadding
-        + regionGap * (regions - 1)
-    self.card.Size = UDim2.fromOffset(cardWidth, cardHeight)
+    local a53 = 2 + (a52 > 0 and 1 or 0)     local a54 = a15
+        + a51
+        + a52
+        + a35
+        + a16
+        + a17 * (a53 - 1)
+    self.card.Size = UDim2.fromOffset(a13, a54)
     self.card.AutomaticSize = Enum.AutomaticSize.None
 
         if self.dismissable then
         table.insert(
             self._connections,
-            window:Connect(self.backdrop.InputBegan, function(input)
+            window:Connect(self.backdrop.InputBegan, function(a55)
                 if
-                    input.UserInputType == Enum.UserInputType.MouseButton1
-                    or input.UserInputType == Enum.UserInputType.Touch
+                    a55.UserInputType == Enum.UserInputType.MouseButton1
+                    or a55.UserInputType == Enum.UserInputType.Touch
                 then
                     self:Close()
                 end
@@ -199,12 +199,12 @@ function Popup:_build()
         )
         table.insert(
             self._connections,
-            window:Connect(variables.userInputService.InputBegan, function(input, processed)
-                if not processed and input.KeyCode == Enum.KeyCode.Escape and topmost(self) then
-                    if input == consumedEscape then
+            window:Connect(a3.userInputService.InputBegan, function(a56, a57)
+                if not a57 and a56.KeyCode == Enum.KeyCode.Escape and a45(self) then
+                    if a56 == a41 then
                         return
                     end
-                    consumedEscape = input
+                    a41 = a56
                     self:Close()
                 end
             end)
@@ -212,13 +212,13 @@ function Popup:_build()
     end
 end
 
-function Popup:_buildHeader(hasIcon, headerHeight)
+function a1:_buildHeader(a58, a59)
     local window = self.window
 
-    local header = window:Create("Frame", {
+    local a60 = window:Create("Frame", {
         Name = "Header",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, headerHeight),
+        Size = UDim2.new(1, 0, 0, a59),
         LayoutOrder = 1,
 
         Parent = self.card,
@@ -229,35 +229,35 @@ function Popup:_buildHeader(hasIcon, headerHeight)
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, headerIconGap),
+        Padding = UDim.new(0, a23),
 
-        Parent = header,
+        Parent = a60,
     })
 
-    if hasIcon then
+    if a58 then
         self:_fade(
             window:Create("ImageLabel", {
                 Image = self.icon,
-                Size = UDim2.fromOffset(headerIconSize, headerIconSize),
+                Size = UDim2.fromOffset(a22, a22),
                 BackgroundTransparency = 1,
                 BorderSizePixel = 0,
                 LayoutOrder = 1,
 
-                ImageTransparency = 1, 
-                Parent = header,
+                ImageTransparency = 1,
+                Parent = a60,
             }, { ImageColor3 = "TitlingColor" }),
             "ImageTransparency",
             0
         )
     end
 
-    local textColumn = window:Create("Frame", {
+    local a61 = window:Create("Frame", {
         Name = "Text",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, hasIcon and -(headerIconSize + headerIconGap) or 0, 0, self._columnH),
+        Size = UDim2.new(1, a58 and -(a22 + a23) or 0, 0, self._columnH),
         LayoutOrder = 2,
 
-        Parent = header,
+        Parent = a60,
     })
 
     window:Create("UIListLayout", {
@@ -265,21 +265,21 @@ function Popup:_buildHeader(hasIcon, headerHeight)
         SortOrder = Enum.SortOrder.LayoutOrder,
         Padding = UDim.new(0, 3),
 
-        Parent = textColumn,
+        Parent = a61,
     })
 
     self:_fade(
         window:Create("TextLabel", {
-            Text = locale.t(self.title),
+            Text = a6.t(self.title),
             Size = UDim2.new(1, 0, 0, self._titleH),
             BackgroundTransparency = 1,
-            TextSize = titleSize,
+            TextSize = a19,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextWrapped = true,
             LayoutOrder = 1,
 
-            TextTransparency = 1, 
-            Parent = textColumn,
+            TextTransparency = 1,
+            Parent = a61,
         }, { TextColor3 = "TitlingColor", FontFace = "Font" }),
         "TextTransparency",
         0
@@ -288,16 +288,16 @@ function Popup:_buildHeader(hasIcon, headerHeight)
     if self.subtitle and self.subtitle ~= "" then
         self:_fade(
             window:Create("TextLabel", {
-                Text = locale.t(self.subtitle),
+                Text = a6.t(self.subtitle),
                 Size = UDim2.new(1, 0, 0, self._subH),
                 BackgroundTransparency = 1,
-                TextSize = subtitleSize,
+                TextSize = a20,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextWrapped = true,
                 LayoutOrder = 2,
 
-                TextTransparency = 1, 
-                Parent = textColumn,
+                TextTransparency = 1,
+                Parent = a61,
             }, { TextColor3 = "TitlingColor", FontFace = "Font" }),
             "TextTransparency",
             0.55
@@ -305,19 +305,19 @@ function Popup:_buildHeader(hasIcon, headerHeight)
     end
 end
 
-function Popup:_buildContent()
+function a1:_buildContent()
     if (not self.content or self.content == "") and (not self.boxes or #self.boxes == 0) then
         return 0     end
 
     local window = self.window
-    local measured = if self.boxes and #self.boxes > 0 then self:_measureBoxes() else self:_measureText()
-    local viewHeight = math.min(measured, maxContentHeight) + contentInset * 2
+    local a62 = if self.boxes and #self.boxes > 0 then self:_measureBoxes() else self:_measureText()
+    local a63 = math.min(a62, a24) + a25 * 2
 
-    local content = window:Create("ScrollingFrame", {
+    local a64 = window:Create("ScrollingFrame", {
         Name = "Content",
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, viewHeight),
+        Size = UDim2.new(1, 0, 0, a63),
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ScrollBarThickness = 4,
@@ -325,18 +325,18 @@ function Popup:_buildContent()
         ScrollingDirection = Enum.ScrollingDirection.Y,
         LayoutOrder = 2,
 
-        ScrollBarImageTransparency = 1, 
+        ScrollBarImageTransparency = 1,
         Parent = self.card,
     })
-    self:_fade(content, "ScrollBarImageTransparency", 0.8)
+    self:_fade(a64, "ScrollBarImageTransparency", 0.8)
 
         window:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, contentInset),
-        PaddingRight = UDim.new(0, contentInset),
-        PaddingTop = UDim.new(0, contentInset),
-        PaddingBottom = UDim.new(0, contentInset),
+        PaddingLeft = UDim.new(0, a25),
+        PaddingRight = UDim.new(0, a25),
+        PaddingTop = UDim.new(0, a25),
+        PaddingBottom = UDim.new(0, a25),
 
-        Parent = content,
+        Parent = a64,
     })
 
     if self.boxes and #self.boxes > 0 then
@@ -344,63 +344,63 @@ function Popup:_buildContent()
             FillDirection = Enum.FillDirection.Vertical,
             HorizontalAlignment = Enum.HorizontalAlignment.Center,
             SortOrder = Enum.SortOrder.LayoutOrder,
-            Padding = UDim.new(0, boxGap),
+            Padding = UDim.new(0, a33),
 
-            Parent = content,
+            Parent = a64,
         })
-        for index, box in self.boxes do
-            self:_buildBox(content, box, index)
+        for a65, a66 in self.boxes do
+            self:_buildBox(a64, a66, a65)
         end
     else
         self:_fade(
             window:Create("TextLabel", {
-                Text = locale.t(self.content),
-                Size = UDim2.new(1, 0, 0, measured),
+                Text = a6.t(self.content),
+                Size = UDim2.new(1, 0, 0, a62),
                 BackgroundTransparency = 1,
-                TextSize = contentSize,
+                TextSize = a21,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextYAlignment = Enum.TextYAlignment.Top,
                 TextWrapped = true,
 
-                TextTransparency = 1, 
-                Parent = content,
+                TextTransparency = 1,
+                Parent = a64,
             }, { TextColor3 = "ContentColor", FontFace = "Font" }),
             "TextTransparency",
             0.5
         )
     end
 
-    return viewHeight
+    return a63
 end
 
-function Popup:_buildBox(parent, box, order)
+function a1:_buildBox(a67, a68, a69)
     local window = self.window
-    box = if typeof(box) == "table" then box else { title = tostring(box) }
-    local hasIcon = box.icon ~= nil and box.icon ~= 0 and box.icon ~= ""
-    local frameH, titleH, descH, columnH = self:_measureBox(box)
+    a68 = if typeof(a68) == "table" then a68 else { title = tostring(a68) }
+    local a70 = a68.icon ~= nil and a68.icon ~= 0 and a68.icon ~= ""
+    local a71, a72, a73, a74 = self:_measureBox(a68)
 
-    local frame = window:Create("Frame", {
+    local a75 = window:Create("Frame", {
         Name = "Box",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
-        Size = UDim2.new(1, -boxWidthInset, 0, frameH),
-        LayoutOrder = order,
+        Size = UDim2.new(1, -a34, 0, a71),
+        LayoutOrder = a69,
 
-        BackgroundTransparency = 1, 
-        Parent = parent,
+        BackgroundTransparency = 1,
+        Parent = a67,
     })
-    self:_fade(frame, "BackgroundTransparency", 0)
+    self:_fade(a75, "BackgroundTransparency", 0)
 
-    local stroke = window:StyleElementPanel(frame)
-    self:_fade(stroke, "Transparency", window.theme.ElementStrokeTransparency)
+    local a76 = window:StyleElementPanel(a75)
+    self:_fade(a76, "Transparency", window.theme.ElementStrokeTransparency)
 
     window:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, boxSidePad),
-        PaddingRight = UDim.new(0, boxSidePad),
-        PaddingTop = UDim.new(0, boxVerticalPad),
-        PaddingBottom = UDim.new(0, boxVerticalPad),
+        PaddingLeft = UDim.new(0, a27),
+        PaddingRight = UDim.new(0, a27),
+        PaddingTop = UDim.new(0, a28),
+        PaddingBottom = UDim.new(0, a28),
 
-        Parent = frame,
+        Parent = a75,
     })
 
     window:Create("UIListLayout", {
@@ -408,34 +408,34 @@ function Popup:_buildBox(parent, box, order)
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, boxIconGap),
+        Padding = UDim.new(0, a30),
 
-        Parent = frame,
+        Parent = a75,
     })
 
-    if hasIcon then
+    if a70 then
         self:_fade(
             window:Create("ImageLabel", {
-                Image = box.icon,
-                Size = UDim2.fromOffset(boxIconSize, boxIconSize),
+                Image = a68.icon,
+                Size = UDim2.fromOffset(a29, a29),
                 BackgroundTransparency = 1,
                 BorderSizePixel = 0,
                 LayoutOrder = 1,
 
-                ImageTransparency = 1, 
-                Parent = frame,
+                ImageTransparency = 1,
+                Parent = a75,
             }, { ImageColor3 = "ContentColor" }),
             "ImageTransparency",
             0
         )
     end
 
-    local textColumn = window:Create("Frame", {
+    local a77 = window:Create("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, hasIcon and -(boxIconSize + boxIconGap) or 0, 0, columnH),
+        Size = UDim2.new(1, a70 and -(a29 + a30) or 0, 0, a74),
         LayoutOrder = 2,
 
-        Parent = frame,
+        Parent = a75,
     })
 
     window:Create("UIListLayout", {
@@ -443,41 +443,41 @@ function Popup:_buildBox(parent, box, order)
         SortOrder = Enum.SortOrder.LayoutOrder,
         Padding = UDim.new(0, 3),
 
-        Parent = textColumn,
+        Parent = a77,
     })
 
     self:_fade(
         window:Create("TextLabel", {
-            Text = locale.t(box.title or box.Title or ""),
-            Size = UDim2.new(1, 0, 0, titleH),
+            Text = a6.t(a68.title or a68.Title or ""),
+            Size = UDim2.new(1, 0, 0, a72),
             BackgroundTransparency = 1,
-            TextSize = boxTitleSize,
+            TextSize = a31,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextWrapped = true,
             LayoutOrder = 1,
 
-            TextTransparency = 1, 
-            Parent = textColumn,
+            TextTransparency = 1,
+            Parent = a77,
         }, { TextColor3 = "ContentColor", FontFace = "TitleFont" }),
         "TextTransparency",
         0
     )
 
-    local description = box.description or box.Description
-    if description and description ~= "" then
+    local a78 = a68.description or a68.Description
+    if a78 and a78 ~= "" then
         self:_fade(
             window:Create("TextLabel", {
-                Text = locale.t(description),
-                Size = UDim2.new(1, 0, 0, descH),
+                Text = a6.t(a78),
+                Size = UDim2.new(1, 0, 0, a73),
                 BackgroundTransparency = 1,
-                TextSize = boxDescSize,
+                TextSize = a32,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextYAlignment = Enum.TextYAlignment.Top,
                 TextWrapped = true,
                 LayoutOrder = 2,
 
-                TextTransparency = 1, 
-                Parent = textColumn,
+                TextTransparency = 1,
+                Parent = a77,
             }, { TextColor3 = "ContentColor", FontFace = "Font" }),
             "TextTransparency",
             0.65
@@ -485,13 +485,13 @@ function Popup:_buildBox(parent, box, order)
     end
 end
 
-function Popup:_buildFooter()
+function a1:_buildFooter()
     local window = self.window
 
-    local footer = window:Create("Frame", {
+    local a79 = window:Create("Frame", {
         Name = "Footer",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, buttonHeight),
+        Size = UDim2.new(1, 0, 0, a35),
         LayoutOrder = 3,
 
         Parent = self.card,
@@ -502,115 +502,115 @@ function Popup:_buildFooter()
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         HorizontalFlex = Enum.UIFlexAlignment.Fill,         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, buttonGap),
+        Padding = UDim.new(0, a36),
 
-        Parent = footer,
+        Parent = a79,
     })
 
-    for index, option in self.options do
-        self:_buildButton(footer, option, index)
+    for a80, a81 in self.options do
+        self:_buildButton(a79, a81, a80)
     end
 end
 
-function Popup:_buildButton(parent, option, order)
+function a1:_buildButton(a82, a83, a84)
     local window = self.window
-    option = if typeof(option) == "table" then option else { text = tostring(option) }
-    local style = option.style or option.Style or "neutral"
-    local label = option.text or option.Text or option.name or option.Name or "Okay"
-    local callback = option.callback or option.Callback
+    a83 = if typeof(a83) == "table" then a83 else { text = tostring(a83) }
+    local a85 = a83.style or a83.Style or "neutral"
+    local a86 = a83.text or a83.Text or a83.name or a83.Name or "Okay"
+    local a87 = a83.callback or a83.Callback
 
-            local restColor, hoverColor, edgeColor, strokeShown
-    if style == "primary" then
-        restColor, hoverColor, edgeColor, strokeShown =
+            local a88, a89, a90, a91
+    if a85 == "primary" then
+        a88, a89, a90, a91 =
             window.theme.AccentColor, window.theme.AccentStroke, window.theme.AccentStroke, 0.1
-    elseif style == "danger" then
-        restColor, hoverColor, edgeColor, strokeShown =
+    elseif a85 == "danger" then
+        a88, a89, a90, a91 =
             window.theme.ErrorColor, window.theme.ErrorStrokeColor, window.theme.ErrorStrokeColor, 0
     else
-        restColor, hoverColor, edgeColor, strokeShown =
+        a88, a89, a90, a91 =
             window.theme.NeutralButton, window.theme.NeutralButtonHover, window.theme.NeutralButtonStroke, 0.85
     end
 
-    local button = window:Create("Frame", {
+    local a92 = window:Create("Frame", {
         Name = "Button",
-        BackgroundColor3 = restColor,
+        BackgroundColor3 = a88,
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 0, 0, buttonHeight),
-        LayoutOrder = order,
+        Size = UDim2.new(0, 0, 0, a35),
+        LayoutOrder = a84,
 
-        BackgroundTransparency = 1, 
-        Parent = parent,
+        BackgroundTransparency = 1,
+        Parent = a82,
     })
-    self:_fade(button, "BackgroundTransparency", 0)
+    self:_fade(a92, "BackgroundTransparency", 0)
 
-    window:Create("UIFlexItem", { FlexMode = Enum.UIFlexMode.Fill, Parent = button })
-    window:Create("UICorner", { CornerRadius = buttonCorner, Parent = button })
+    window:Create("UIFlexItem", { FlexMode = Enum.UIFlexMode.Fill, Parent = a92 })
+    window:Create("UICorner", { CornerRadius = a37, Parent = a92 })
 
-    local stroke = window:Create("UIStroke", {
-        Color = edgeColor,
-        Transparency = 1, 
-        Parent = button,
+    local a93 = window:Create("UIStroke", {
+        Color = a90,
+        Transparency = 1,
+        Parent = a92,
     })
-    self:_fade(stroke, "Transparency", strokeShown)
+    self:_fade(a93, "Transparency", a91)
 
     self:_fade(
         window:Create("TextLabel", {
-            Text = locale.t(label),
+            Text = a6.t(a86),
             Size = UDim2.fromScale(1, 1),
             BackgroundTransparency = 1,
-            TextSize = buttonTextSize,
+            TextSize = a38,
             TextXAlignment = Enum.TextXAlignment.Center,
             TextTruncate = Enum.TextTruncate.AtEnd,
 
-                        TextColor3 = functions.contrastText(restColor),
-            TextTransparency = 1, 
-            Parent = button,
+                        TextColor3 = a4.contrastText(a88),
+            TextTransparency = 1,
+            Parent = a92,
         }, { FontFace = "Font" }),
         "TextTransparency",
         0
     )
 
-    local interact = window:Create("TextButton", {
+    local a94 = window:Create("TextButton", {
         Text = "",
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
         BorderSizePixel = 0,
         ZIndex = 2,
 
-        Parent = button,
+        Parent = a92,
     })
 
-    local hoverInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local a95 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     table.insert(
         self._connections,
-        window:Connect(interact.MouseEnter, function()
+        window:Connect(a94.MouseEnter, function()
             if self._closed then
                 return
             end
-            variables.tweenService:Create(button, hoverInfo, { BackgroundColor3 = hoverColor }):Play()
+            a3.tweenService:Create(a92, a95, { BackgroundColor3 = a89 }):Play()
         end)
     )
     table.insert(
         self._connections,
-        window:Connect(interact.MouseLeave, function()
-            variables.tweenService:Create(button, hoverInfo, { BackgroundColor3 = restColor }):Play()
+        window:Connect(a94.MouseLeave, function()
+            a3.tweenService:Create(a92, a95, { BackgroundColor3 = a88 }):Play()
         end)
     )
 
     table.insert(
         self._connections,
-        window:Connect(interact.MouseButton1Click, function()
+        window:Connect(a94.MouseButton1Click, function()
             if self._closed then
                 return
             end
-            hapticEngine.click()
-                        variables.tweenService:Create(stroke, hoverInfo, { Transparency = 1 }):Play()
-            if callback then
+            a8.click()
+                        a3.tweenService:Create(a93, a95, { Transparency = 1 }):Play()
+            if a87 then
                 task.spawn(function()
-                    local ok, err = pcall(callback)
+                    local ok, a96 = pcall(a87)
                     if not ok then
-                        log.warn("Astra: popup button '" .. label .. "' callback errored:")
-                        log.print(err)
+                        a7.warn("Astra: popup button '" .. a86 .. "' callback errored:")
+                        a7.print(a96)
                     end
                 end)
             end
@@ -619,81 +619,81 @@ function Popup:_buildButton(parent, option, order)
     )
 end
 
-function Popup:_measureHeader(hasIcon)
-    local textWidth = innerWidth - (if hasIcon then headerIconSize + headerIconGap else 0)
-    self._titleH = functions.textHeight(self.window.theme.Font, titleSize, locale.resolve(self.title), textWidth)
+function a1:_measureHeader(a97)
+    local a98 = a18 - (if a97 then a22 + a23 else 0)
+    self._titleH = a4.textHeight(self.window.theme.Font, a19, a6.resolve(self.title), a98)
     self._subH = if self.subtitle and self.subtitle ~= ""
-        then functions.textHeight(self.window.theme.Font, subtitleSize, locale.resolve(self.subtitle), textWidth)
+        then a4.textHeight(self.window.theme.Font, a20, a6.resolve(self.subtitle), a98)
         else 0
     self._columnH = self._titleH + (if self._subH > 0 then 3 + self._subH else 0)
-    return math.max(self._columnH, if hasIcon then headerIconSize else 0)
+    return math.max(self._columnH, if a97 then a22 else 0)
 end
 
-function Popup:_measureText()
-        return functions.textHeight(self.window.theme.Font, contentSize, locale.resolve(self.content), contentWidth)
+function a1:_measureText()
+        return a4.textHeight(self.window.theme.Font, a21, a6.resolve(self.content), a26)
 end
 
-function Popup:_measureBox(box)
-    box = if typeof(box) == "table" then box else { title = tostring(box) }
-    local hasIcon = box.icon ~= nil and box.icon ~= 0 and box.icon ~= ""
-    local textWidth = contentWidth - boxWidthInset - boxSidePad * 2 - (if hasIcon then boxIconSize + boxIconGap else 0)
+function a1:_measureBox(a99)
+    a99 = if typeof(a99) == "table" then a99 else { title = tostring(a99) }
+    local a100 = a99.icon ~= nil and a99.icon ~= 0 and a99.icon ~= ""
+    local a101 = a26 - a34 - a27 * 2 - (if a100 then a29 + a30 else 0)
 
-    local titleH = functions.textHeight(
+    local a102 = a4.textHeight(
         self.window.theme.TitleFont,
-        boxTitleSize,
-        locale.resolve(box.title or box.Title or ""),
-        textWidth
+        a31,
+        a6.resolve(a99.title or a99.Title or ""),
+        a101
     )
-    local descH = 0
-    local description = box.description or box.Description
-    if description and description ~= "" then
-        descH = functions.textHeight(self.window.theme.Font, boxDescSize, locale.resolve(description), textWidth)
+    local a103 = 0
+    local a104 = a99.description or a99.Description
+    if a104 and a104 ~= "" then
+        a103 = a4.textHeight(self.window.theme.Font, a32, a6.resolve(a104), a101)
     end
 
-    local columnH = titleH + (if descH > 0 then 3 + descH else 0)
-    local frameH = math.max(columnH, if hasIcon then boxIconSize else 0) + boxVerticalPad * 2
-    return frameH, titleH, descH, columnH
+    local a105 = a102 + (if a103 > 0 then 3 + a103 else 0)
+    local a106 = math.max(a105, if a100 then a29 else 0) + a28 * 2
+    return a106, a102, a103, a105
 end
 
-function Popup:_measureBoxes()
-    local total = 0
-    for index, box in self.boxes do
-        total += (self:_measureBox(box))
-        if index < #self.boxes then
-            total += boxGap
+function a1:_measureBoxes()
+    local a107 = 0
+    for a108, a109 in self.boxes do
+        a107 += (self:_measureBox(a109))
+        if a108 < #self.boxes then
+            a107 += a33
         end
     end
-    return total
+    return a107
 end
 
-function Popup:_show()
+function a1:_show()
     if self._closed or not self.screenGui.Parent then
         return
     end
 
-    hapticEngine.notify()
+    a8.notify()
 
-    variables.tweenService:Create(self.card, enterInfo, { Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
+    a3.tweenService:Create(self.card, a9, { Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
 
-    for _, entry in self._reveal do
-        local info = if entry.instance == self.backdrop then backdropInfo else fadeLong
-        variables.tweenService:Create(entry.instance, info, { [entry.prop] = entry.to }):Play()
+    for _, a110 in self._reveal do
+        local a111 = if a110.instance == self.backdrop then a12 else a10
+        a3.tweenService:Create(a110.instance, a111, { [a110.prop] = a110.to }):Play()
     end
 end
 
-function Popup:Close()
+function a1:Close()
     if self._closed then
         return
     end
     self._closed = true
 
-    local index = table.find(stack, self)
-    if index then
-        table.remove(stack, index)
+    local a112 = table.find(a40, self)
+    if a112 then
+        table.remove(a40, a112)
     end
 
-    for _, connection in self._connections do
-        self.window:Disconnect(connection)
+    for _, a113 in self._connections do
+        self.window:Disconnect(a113)
     end
     self._connections = {}
 
@@ -706,26 +706,26 @@ function Popup:Close()
         self._closeConnection = nil
     end
 
-    local closeTween = variables.tweenService:Create(
+    local a114 = a3.tweenService:Create(
         self.card,
-        fadeShort,
+        a11,
         { Position = UDim2.new(0.5, 0, 0.5, 10) }
     )
-    self._closeConnection = closeTween.Completed:Connect(function(state)
-        local connection = self._closeConnection
+    self._closeConnection = a114.Completed:Connect(function(a115)
+        local a116 = self._closeConnection
         self._closeConnection = nil
-        if connection then
-            connection:Disconnect()
+        if a116 then
+            a116:Disconnect()
         end
-        if state == Enum.PlaybackState.Completed and self._closed and self.screenGui.Parent then
+        if a115 == Enum.PlaybackState.Completed and self._closed and self.screenGui.Parent then
             self.window:DestroySubtree(self.screenGui)
         end
     end)
-    closeTween:Play()
+    a114:Play()
 
-    for _, entry in self._reveal do
-        variables.tweenService:Create(entry.instance, fadeShort, { [entry.prop] = 1 }):Play()
+    for _, a117 in self._reveal do
+        a3.tweenService:Create(a117.instance, a11, { [a117.prop] = 1 }):Play()
     end
 end
 
-return Popup
+return a1

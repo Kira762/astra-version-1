@@ -1,5 +1,3 @@
--- lucide icon pack (name -> URL).
--- Split from the legacy catalog; pure data, loaded lazily by icons/init.luau.
 
 local lucide = {
     ["a-arrow-down"] = "https://raw.githubusercontent.com/Haijo12/sisys_ididh/main/icons-pack/lucide-pack/a/a-arrow-down.png",

@@ -1,25 +1,25 @@
-local Tag = {}
-Tag.__index = Tag
-Tag.__type = "Tag"
+local a1 = {}
+a1.__index = a1
+a1.__type = "Tag"
 
-local utility = script.Parent.Parent.utilities
+local a2 = script.Parent.Parent.utilities
 
-local variables = require(utility.Parent.core.state)
-local functions = require(script.Parent.Parent.functions)
-local image = require(script.Parent.Parent.images.image)
+local a3 = require(a2.Parent.core.state)
+local a4 = require(script.Parent.Parent.functions)
+local a5 = require(script.Parent.Parent.images.image)
 
-local defaultColor = Color3.fromRGB(255, 175, 15)
-local setTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local a6 = Color3.fromRGB(255, 175, 15)
+local a7 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-function Tag.new(window, properties)
-    properties = if typeof(properties) == "table" then properties else {}
+function a1.new(window, a8)
+    a8 = if typeof(a8) == "table" then a8 else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        text = properties.text or properties.Text or properties.title or properties.Title,
-        icon = window:ResolveIcon(properties.icon or properties.Icon),
-        color = properties.color or properties.Color or defaultColor,
-    }, Tag)
+        text = a8.text or a8.Text or a8.title or a8.Title,
+        icon = window:ResolveIcon(a8.icon or a8.Icon),
+        color = a8.color or a8.Color or a6,
+    }, a1)
 
     assert(self.icon or (self.text and self.text ~= ""), "A Tag requires an icon, text, or both.")
 
@@ -29,9 +29,9 @@ function Tag.new(window, properties)
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundColor3 = self.color,
         BorderSizePixel = 0,
-        LayoutOrder = properties.order or properties.Order or 0,
+        LayoutOrder = a8.order or a8.Order or 0,
 
-                BackgroundTransparency = 1, 
+                BackgroundTransparency = 1,
         Parent = self.window.tagContainer,
     })
 
@@ -57,18 +57,18 @@ function Tag.new(window, properties)
         Parent = self.main,
     })
 
-    local contrast = functions.contrastColor(self.color)
+    local a9 = a4.contrastColor(self.color)
 
     self.iconLabel = self.window:Create("ImageLabel", {
         Name = "Icon",
         Image = self.icon or "",
-        ImageColor3 = contrast,
+        ImageColor3 = a9,
         Size = UDim2.fromOffset(16, 16),
         BackgroundTransparency = 1,
         Visible = self.icon ~= nil,
         ZIndex = 5,
 
-                ImageTransparency = 1, 
+                ImageTransparency = 1,
         Parent = self.main,
     })
 
@@ -79,7 +79,7 @@ function Tag.new(window, properties)
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
         Text = self.text or "",
-        TextColor3 = contrast,
+        TextColor3 = a9,
         TextSize = 15,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextWrapped = true,
@@ -88,74 +88,74 @@ function Tag.new(window, properties)
         LayoutOrder = 1,
         ZIndex = 5,
 
-                TextTransparency = 1, 
+                TextTransparency = 1,
         Parent = self.main,
     }, { FontFace = "Font" })
 
     self.window.tagContainer.Visible = true
 
         if not self.window.hidden then
-        self:_setShown(true, setTweenInfo)
+        self:_setShown(true, a7)
     end
 
     return self
 end
 
-function Tag:_setShown(shown, animate)
-    local target = if shown then 0 else 1
-    local info = if typeof(animate) == "TweenInfo" then animate elseif animate then setTweenInfo else nil
-    if info then
-        variables.tweenService:Create(self.main, info, { BackgroundTransparency = target }):Play()
-        variables.tweenService:Create(self.iconLabel, info, { ImageTransparency = target }):Play()
-        variables.tweenService:Create(self.title, info, { TextTransparency = target }):Play()
+function a1:_setShown(a10, a11)
+    local a12 = if a10 then 0 else 1
+    local a13 = if typeof(a11) == "TweenInfo" then a11 elseif a11 then a7 else nil
+    if a13 then
+        a3.tweenService:Create(self.main, a13, { BackgroundTransparency = a12 }):Play()
+        a3.tweenService:Create(self.iconLabel, a13, { ImageTransparency = a12 }):Play()
+        a3.tweenService:Create(self.title, a13, { TextTransparency = a12 }):Play()
     else
-        self.main.BackgroundTransparency = target
-        self.iconLabel.ImageTransparency = target
-        self.title.TextTransparency = target
+        self.main.BackgroundTransparency = a12
+        self.iconLabel.ImageTransparency = a12
+        self.title.TextTransparency = a12
     end
 end
 
-function Tag:SetColor(color)
-    self.color = color
-    local contrast = functions.contrastColor(color)
-    variables.tweenService:Create(self.main, setTweenInfo, { BackgroundColor3 = color }):Play()
-    variables.tweenService:Create(self.iconLabel, setTweenInfo, { ImageColor3 = contrast }):Play()
-    variables.tweenService:Create(self.title, setTweenInfo, { TextColor3 = contrast }):Play()
+function a1:SetColor(a14)
+    self.color = a14
+    local a15 = a4.contrastColor(a14)
+    a3.tweenService:Create(self.main, a7, { BackgroundColor3 = a14 }):Play()
+    a3.tweenService:Create(self.iconLabel, a7, { ImageColor3 = a15 }):Play()
+    a3.tweenService:Create(self.title, a7, { TextColor3 = a15 }):Play()
 end
 
-function Tag:SetText(text)
-    self.text = text
-    self.title.Text = text or ""
-    self.title.Visible = text ~= nil and text ~= ""
+function a1:SetText(a16)
+    self.text = a16
+    self.title.Text = a16 or ""
+    self.title.Visible = a16 ~= nil and a16 ~= ""
 end
 
-function Tag:SetIcon(icon)
-    self.icon = icon
-    image.assign(self.iconLabel, "Image", icon)
-    self.iconLabel.Visible = icon ~= nil
+function a1:SetIcon(a17)
+    self.icon = a17
+    a5.assign(self.iconLabel, "Image", a17)
+    self.iconLabel.Visible = a17 ~= nil
 end
 
-function Tag:Set(properties)
-    if properties.color or properties.Color then
-        self:SetColor(properties.color or properties.Color)
+function a1:Set(a18)
+    if a18.color or a18.Color then
+        self:SetColor(a18.color or a18.Color)
     end
-    if properties.text or properties.Text or properties.title or properties.Title then
-        self:SetText(properties.text or properties.Text or properties.title or properties.Title)
+    if a18.text or a18.Text or a18.title or a18.Title then
+        self:SetText(a18.text or a18.Text or a18.title or a18.Title)
     end
-    if properties.icon ~= nil or properties.Icon ~= nil then
-        self:SetIcon(properties.icon or properties.Icon)
+    if a18.icon ~= nil or a18.Icon ~= nil then
+        self:SetIcon(a18.icon or a18.Icon)
     end
 end
 
-function Tag:Remove()
+function a1:Remove()
         self.window:DestroySubtree(self.main)
-    local idx = table.find(self.window.tags, self)
-    if idx then
-        table.remove(self.window.tags, idx)
+    local a19 = table.find(self.window.tags, self)
+    if a19 then
+        table.remove(self.window.tags, a19)
     end
     if #self.window.tags == 0 then
         self.window.tagContainer.Visible = false
     end
 end
 
-return Tag
+return a1

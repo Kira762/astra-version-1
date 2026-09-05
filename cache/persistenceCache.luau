@@ -1,27 +1,22 @@
--- Persistence cache (cache/persistenceCache.luau).
---
--- Caches decoded settings payloads so repeated reads of the same file do not
--- re-hit the filesystem. The settings payload is cached until explicitly
--- invalidated; settings save paths call invalidateSettings() after writing.
 
-local persistenceCache = {}
+local a1 = {}
 
-local settingsCache: { [string]: any } = {}
+local a2: { [string]: any } = {}
 
-function persistenceCache.getSettings(key: string): any?
-    return settingsCache[key]
+function a1.getSettings(a3: string): any?
+    return a2[a3]
 end
 
-function persistenceCache.putSettings(key: string, value: any)
-    settingsCache[key] = value
+function a1.putSettings(a4: string, a5: any)
+    a2[a4] = a5
 end
 
-function persistenceCache.invalidateSettings(key: string?)
-    if key then
-        settingsCache[key] = nil
+function a1.invalidateSettings(a6: string?)
+    if a6 then
+        a2[a6] = nil
     else
-        table.clear(settingsCache)
+        table.clear(a2)
     end
 end
 
-return persistenceCache
+return a1

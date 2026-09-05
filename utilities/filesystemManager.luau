@@ -1,10 +1,10 @@
-local filesystem = require(script.Parent.filesystem)
-local path = require(script.Parent.path)
+local a1 = require(script.Parent.filesystem)
+local a2 = require(script.Parent.path)
 
-local DEFAULT_ROOT_PATH = "Astra"
+local a3 = "Astra"
 
-local fileSystemManager = {}
-fileSystemManager.__index = fileSystemManager
+local a4 = {}
+a4.__index = a4
 
 export type FileSystemManager = {
     root: string,
@@ -14,33 +14,33 @@ export type FileSystemManager = {
     getRootFolder: (self: FileSystemManager) -> string,
 }
 
-function fileSystemManager.new(name: string?): FileSystemManager
-        local root = name or DEFAULT_ROOT_PATH
+function a4.new(a5: string?): FileSystemManager
+        local a6 = a5 or a3
     local self = setmetatable({
-        root = root,
-        assets = root .. "/Assets",
-    }, fileSystemManager) :: any
-    pcall(filesystem.ensureFolder, self.root)
-    pcall(filesystem.ensureFolder, self.assets)
+        root = a6,
+        assets = a6 .. "/Assets",
+    }, a4) :: any
+    pcall(a1.ensureFolder, self.root)
+    pcall(a1.ensureFolder, self.assets)
 
     return self
 end
 
-function fileSystemManager:getPath(subpath: string?): string
-    return path.join(self.root, subpath)
+function a4:getPath(a7: string?): string
+    return a2.join(self.root, a7)
 end
 
-function fileSystemManager:getAssetsFolder(subfolder: string?): string
-    if subfolder then
-        local assetPath = path.join(self.assets, subfolder)
-        pcall(filesystem.ensureFolder, assetPath)
-        return assetPath
+function a4:getAssetsFolder(a8: string?): string
+    if a8 then
+        local a9 = a2.join(self.assets, a8)
+        pcall(a1.ensureFolder, a9)
+        return a9
     end
     return self.assets
 end
 
-function fileSystemManager:getRootFolder(): string
+function a4:getRootFolder(): string
     return self.root
 end
 
-return fileSystemManager
+return a4

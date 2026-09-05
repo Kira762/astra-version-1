@@ -1,6 +1,6 @@
-local layouts = require(script.Parent.layouts)
+local a1 = require(script.Parent.layouts)
 
-local windowSizing = {}
+local a2 = {}
 
 export type Profile = {
                 defaultSize: Vector2,
@@ -21,9 +21,9 @@ export type Profile = {
     chromeHeight: number,
 }
 
-local minPlausibleViewport = 200
+local a3 = 200
 
-local profiles = {
+local a4 = {
     top = {
         defaultSize = Vector2.new(685, 450),
         minSize = Vector2.new(560, 350),
@@ -36,7 +36,7 @@ local profiles = {
                                         maxAspectRatio = 2.3,
         widthCompensation = 130,
 
-        chromeHeight = layouts.top.chromeHeight,
+        chromeHeight = a1.top.chromeHeight,
     } :: Profile,
     sidebar = {
         defaultSize = Vector2.new(685, 450),
@@ -50,72 +50,70 @@ local profiles = {
         maxAspectRatio = 2.6,
         minAspectRatio = 1.2,
 
-        chromeHeight = layouts.sidebar.chromeHeight,
+        chromeHeight = a1.sidebar.chromeHeight,
     } :: Profile,
 }
 
-function windowSizing.profile(mode: layouts.Mode?): Profile
-    if mode == "sidebar" then
-        return profiles.sidebar
+function a2.profile(a5: layouts.Mode?): Profile
+    if a5 == "sidebar" then
+        return a4.sidebar
     end
-    return profiles.top
+    return a4.top
 end
 
-function windowSizing.pageHeight(windowHeight: number?, mode: layouts.Mode?): number
-    local profile = windowSizing.profile(mode)
-    local height = if windowHeight and windowHeight > 0 then windowHeight else profile.minSize.Y
-    return math.max(height - profile.chromeHeight, 0)
+function a2.pageHeight(a6: number?, a7: layouts.Mode?): number
+    local a8 = a2.profile(a7)
+    local a9 = if a6 and a6 > 0 then a6 else a8.minSize.Y
+    return math.max(a9 - a8.chromeHeight, 0)
 end
 
-local function availableHeight(profile: Profile, viewportY: number): number
-    local limit = viewportY - profile.marginFloorY
-    if profile.topbarClearance then
-        limit = math.min(limit, viewportY - profile.topbarClearance * 2)
+local function a10(a11: Profile, a12: number): number
+    local a13 = a12 - a11.marginFloorY
+    if a11.topbarClearance then
+        a13 = math.min(a13, a12 - a11.topbarClearance * 2)
     end
-    if profile.maxOccupancyY then
-        limit = math.min(limit, viewportY * profile.maxOccupancyY)
+    if a11.maxOccupancyY then
+        a13 = math.min(a13, a12 * a11.maxOccupancyY)
     end
-    return limit
+    return a13
 end
 
-local function deficit(actual: number, ideal: number, floor: number): number
-    return math.clamp((ideal - actual) / (ideal - floor), 0, 1)
+local function a14(a15: number, a16: number, a17: number): number
+    return math.clamp((a16 - a15) / (a16 - a17), 0, 1)
 end
 
-local function fitVertical(profile: Profile, availableX: number, availableY: number): UDim2
-                    local height = math.floor(math.min(math.clamp(availableY, profile.minSize.Y, profile.defaultSize.Y), availableY))
-    local lost = deficit(height, profile.defaultSize.Y, profile.minSize.Y)
-    local width = math.max(profile.defaultSize.X + (profile.widthCompensation :: number) * lost, profile.minSize.X)
+local function a18(a19: Profile, a20: number, a21: number): UDim2
+                    local a22 = math.floor(math.min(math.clamp(a21, a19.minSize.Y, a19.defaultSize.Y), a21))
+    local a23 = a14(a22, a19.defaultSize.Y, a19.minSize.Y)
+    local a24 = math.max(a19.defaultSize.X + (a19.widthCompensation :: number) * a23, a19.minSize.X)
 
-                return UDim2.fromOffset(math.floor(math.min(width, availableX, height * profile.maxAspectRatio)), height)
+                return UDim2.fromOffset(math.floor(math.min(a24, a20, a22 * a19.maxAspectRatio)), a22)
 end
 
-local function fitHorizontal(profile: Profile, availableX: number, availableY: number): UDim2
-    local width = math.min(math.clamp(availableX, profile.minSize.X, profile.defaultSize.X), availableX)
-    local height = math.min(math.clamp(availableY, profile.minSize.Y, profile.defaultSize.Y), availableY)
+local function a25(a26: Profile, a27: number, a28: number): UDim2
+    local a29 = math.min(math.clamp(a27, a26.minSize.X, a26.defaultSize.X), a27)
+    local a30 = math.min(math.clamp(a28, a26.minSize.Y, a26.defaultSize.Y), a28)
 
-                        height = math.floor(math.min(height, width / (profile.minAspectRatio :: number)))
-    width = math.floor(math.min(width, height * profile.maxAspectRatio))
+                        a30 = math.floor(math.min(a30, a29 / (a26.minAspectRatio :: number)))
+    a29 = math.floor(math.min(a29, a30 * a26.maxAspectRatio))
 
-    return UDim2.fromOffset(width, height)
+    return UDim2.fromOffset(a29, a30)
 end
 
-function windowSizing.fit(viewport: Vector2?, mode: layouts.Mode?): UDim2
-    -- Every bar layout shares the same outer window geometry. Layout-specific
-    -- differences are applied inside the window by the layout modules.
-    local profile = profiles.sidebar
+function a2.fit(a31: Vector2?, a32: layouts.Mode?): UDim2
+    local a33 = a4.sidebar
 
-    if not viewport or viewport.X < minPlausibleViewport or viewport.Y < minPlausibleViewport then
-        return UDim2.fromOffset(profile.defaultSize.X, profile.defaultSize.Y)
+    if not a31 or a31.X < a3 or a31.Y < a3 then
+        return UDim2.fromOffset(a33.defaultSize.X, a33.defaultSize.Y)
     end
 
-    local availableX = math.min(viewport.X * profile.maxOccupancyX, viewport.X - profile.marginFloorX)
-    local availableY = availableHeight(profile, viewport.Y)
+    local a34 = math.min(a31.X * a33.maxOccupancyX, a31.X - a33.marginFloorX)
+    local a35 = a10(a33, a31.Y)
 
-    if profile.minAspectRatio then
-        return fitHorizontal(profile, availableX, availableY)
+    if a33.minAspectRatio then
+        return a25(a33, a34, a35)
     end
-    return fitVertical(profile, availableX, availableY)
+    return a18(a33, a34, a35)
 end
 
-return windowSizing
+return a2

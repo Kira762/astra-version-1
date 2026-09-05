@@ -1,11 +1,11 @@
-local variables = require(script.Parent.Parent.core.state)
-local filesystem = require(script.Parent.filesystem)
-local log = require(script.Parent.log)
-local path = require(script.Parent.path)
-local paths = require(script.Parent.persistencePaths)
-local atomic = require(script.Parent.persistenceWrite)
+local a1 = require(script.Parent.Parent.core.state)
+local a2 = require(script.Parent.filesystem)
+local a3 = require(script.Parent.log)
+local a4 = require(script.Parent.path)
+local a5 = require(script.Parent.persistencePaths)
+local a6 = require(script.Parent.persistenceWrite)
 
-local persistenceConfig = {}
+local a7 = {}
 
 type PersistedControl = {
     value: unknown,
@@ -28,212 +28,212 @@ type ConfigWindow = {
     _loadedConfigPath: string?,
 }
 
-function persistenceConfig.getPath(window: ConfigWindow, name: unknown?): (string?, string?)
-    return paths.getConfigPath(window, name)
+function a7.getPath(window: ConfigWindow, a8: unknown?): (string?, string?)
+    return a5.getConfigPath(window, a8)
 end
 
-function persistenceConfig.save(window: ConfigWindow, name: unknown?): boolean
-    local dir, fullPath = persistenceConfig.getPath(window, name)
-    if not dir or not fullPath then
-        log.warn("Astra: configuration name '" .. tostring(name) .. "' has no usable characters")
+function a7.save(window: ConfigWindow, a9: unknown?): boolean
+    local a10, a11 = a7.getPath(window, a9)
+    if not a10 or not a11 then
+        a3.warn("Astra: configuration name '" .. tostring(a9) .. "' has no usable characters")
         return false
     end
 
-        if typeof(filesystem.writefile) ~= "function" then
+        if typeof(a2.writefile) ~= "function" then
         return false
     end
 
-    local flags: { [string]: unknown } = {}
-    for flag, control in window.controls do
-        local ok, value = pcall(function()
-            local serialize = control._serialize
-            if serialize then
-                return serialize(control)
+    local a12: { [string]: unknown } = {}
+    for a13, a14 in window.controls do
+        local ok, a15 = pcall(function()
+            local a16 = a14._serialize
+            if a16 then
+                return a16(a14)
             end
-            return control.value
+            return a14.value
         end)
         if ok then
-            flags[flag] = value
+            a12[a13] = a15
         else
-            log.warn("Astra: Failed to serialize flag '" .. tostring(flag) .. "' - " .. tostring(value))
+            a3.warn("Astra: Failed to serialize flag '" .. tostring(a13) .. "' - " .. tostring(a15))
         end
     end
 
-                local loadedConfig = window._loadedConfig
-    if loadedConfig and window._loadedConfigPath == fullPath then
-        for flag, value in loadedConfig do
-            if window.controls[flag] == nil then
-                flags[flag] = value
+                local a17 = window._loadedConfig
+    if a17 and window._loadedConfigPath == a11 then
+        for a18, a19 in a17 do
+            if window.controls[a18] == nil then
+                a12[a18] = a19
             end
         end
     end
 
-    local encodeSuccess, encoded = pcall(variables.httpService.JSONEncode, variables.httpService, flags)
-    if not encodeSuccess then
-        log.warn("Astra: Failed to encode configuration - " .. tostring(encoded))
+    local a20, a21 = pcall(a1.httpService.JSONEncode, a1.httpService, a12)
+    if not a20 then
+        a3.warn("Astra: Failed to encode configuration - " .. tostring(a21))
         return false
     end
 
-    local ok, err = pcall(function()
-        atomic.write(dir, fullPath, encoded)
+    local ok, a22 = pcall(function()
+        a6.write(a10, a11, a21)
     end)
 
     if not ok then
-        log.warn("Astra: Failed to save configuration - " .. tostring(err))
+        a3.warn("Astra: Failed to save configuration - " .. tostring(a22))
         return false
     end
 
-                if window._loadedConfigPath == nil or window._loadedConfigPath == fullPath then
-        window._loadedConfig = flags
-        window._loadedConfigPath = fullPath
+                if window._loadedConfigPath == nil or window._loadedConfigPath == a11 then
+        window._loadedConfig = a12
+        window._loadedConfigPath = a11
     end
 
     return true
 end
 
-local function decodeFile(fullPath: string): ({ [string]: unknown }?, string?)
-    if not filesystem.isfile(fullPath) then
+local function a23(a24: string): ({ [string]: unknown }?, string?)
+    if not a2.isfile(a24) then
         return nil, nil
     end
 
-    local readOk, contents = pcall(filesystem.readfile, fullPath)
-    if not readOk or type(contents) ~= "string" then
-        log.warn("Astra: Failed to read configuration file")
+    local a25, a26 = pcall(a2.readfile, a24)
+    if not a25 or type(a26) ~= "string" then
+        a3.warn("Astra: Failed to read configuration file")
         return nil, nil
     end
 
-    local decodeOk, parsed = pcall(variables.httpService.JSONDecode, variables.httpService, contents)
+    local a27, a28 = pcall(a1.httpService.JSONDecode, a1.httpService, a26)
 
-        if not decodeOk or type(parsed) ~= "table" then
-        return nil, contents
+        if not a27 or type(a28) ~= "table" then
+        return nil, a26
     end
 
-    return parsed :: { [string]: unknown }, contents
+    return a28 :: { [string]: unknown }, a26
 end
 
-local function backupPathFor(fullPath: string): string
-        local stem = path.stripExtension(fullPath, ".rfld")
-    local candidate = stem .. " (Incorrect Format).rfld"
-    local index = 2
-    while index <= 100 and filesystem.isfile(candidate) do
-        candidate = stem .. " (Incorrect Format " .. index .. ").rfld"
-        index += 1
+local function a29(a30: string): string
+        local a31 = a4.stripExtension(a30, ".rfld")
+    local a32 = a31 .. " (Incorrect Format).rfld"
+    local a33 = 2
+    while a33 <= 100 and a2.isfile(a32) do
+        a32 = a31 .. " (Incorrect Format " .. a33 .. ").rfld"
+        a33 += 1
     end
-    return candidate
+    return a32
 end
 
-function persistenceConfig.load(window: ConfigWindow, name: unknown?): boolean
-    local dir, fullPath = persistenceConfig.getPath(window, name)
-    if not dir or not fullPath then
-        log.warn("Astra: configuration name '" .. tostring(name) .. "' has no usable characters")
+function a7.load(window: ConfigWindow, a34: unknown?): boolean
+    local a35, a36 = a7.getPath(window, a34)
+    if not a35 or not a36 then
+        a3.warn("Astra: configuration name '" .. tostring(a34) .. "' has no usable characters")
         return false
     end
 
-        if typeof(filesystem.isfile) ~= "function" then
+        if typeof(a2.isfile) ~= "function" then
         return false
     end
 
-    local parsedFlags, raw = decodeFile(fullPath)
+    local a37, a38 = a23(a36)
 
-            if not parsedFlags and filesystem.isfile(fullPath) then
-        local parked, parkedRaw = decodeFile(atomic.tempPathFor(fullPath))
-        if parked and parkedRaw then
-            parsedFlags = parked
-                        pcall(atomic.write, dir, fullPath, parkedRaw)
+            if not a37 and a2.isfile(a36) then
+        local a39, a40 = a23(a6.tempPathFor(a36))
+        if a39 and a40 then
+            a37 = a39
+                        pcall(a6.write, a35, a36, a40)
         end
     end
 
-    if not parsedFlags then
-        if raw then
-            log.warn("Astra: Configuration file has an invalid format, backing up and resetting")
-            local backupPath = backupPathFor(fullPath)
+    if not a37 then
+        if a38 then
+            a3.warn("Astra: Configuration file has an invalid format, backing up and resetting")
+            local a41 = a29(a36)
             pcall(function()
-                filesystem.ensureDir(dir)
-                filesystem.writefile(backupPath, raw)
-                filesystem.delfile(fullPath)
+                a2.ensureDir(a35)
+                a2.writefile(a41, a38)
+                a2.delfile(a36)
             end)
         end
         return false
     end
 
-    local flags = parsedFlags :: { [string]: unknown }
-    local wasLoading = window._loading
+    local a42 = a37 :: { [string]: unknown }
+    local a43 = window._loading
     window._loading = true
-        local applyOk, applyErr = pcall(function()
-        for flag, control in window.controls do
-            persistenceConfig.applyTo(control, flags[flag])
+        local a44, a45 = pcall(function()
+        for a46, a47 in window.controls do
+            a7.applyTo(a47, a42[a46])
         end
     end)
-            window._loading = wasLoading
-    if not applyOk then
-        log.warn("Astra: Failed to apply configuration - " .. tostring(applyErr))
+            window._loading = a43
+    if not a44 then
+        a3.warn("Astra: Failed to apply configuration - " .. tostring(a45))
     end
 
-                window._loadedConfig = flags
-    window._loadedConfigPath = fullPath
+                window._loadedConfig = a42
+    window._loadedConfigPath = a36
 
     return true
 end
 
-function persistenceConfig.applyTo(control: PersistedControl, value: unknown)
-    if value == nil and not control._canBeNil then
+function a7.applyTo(a48: PersistedControl, a49: unknown)
+    if a49 == nil and not a48._canBeNil then
         return
     end
-    local ok, err = pcall(function()
-        local deserialize = control._deserialize
-        if deserialize then
-            deserialize(control, value)
+    local ok, a50 = pcall(function()
+        local a51 = a48._deserialize
+        if a51 then
+            a51(a48, a49)
         else
-            control:Set(value)
+            a48:Set(a49)
         end
     end)
     if not ok then
-        log.warn("Astra: Failed to restore flag '" .. tostring(control.flag) .. "' - " .. tostring(err))
+        a3.warn("Astra: Failed to restore flag '" .. tostring(a48.flag) .. "' - " .. tostring(a50))
     end
 end
 
-function persistenceConfig.list(window: ConfigWindow): { string }
-    local dir = persistenceConfig.getPath(window)
+function a7.list(window: ConfigWindow): { string }
+    local a52 = a7.getPath(window)
 
-    local names: { string } = {}
-        if not dir then
-        return names
+    local a53: { string } = {}
+        if not a52 then
+        return a53
     end
-    local ok, files = pcall(filesystem.listfiles, dir)
-    if not ok or type(files) ~= "table" then
-        return names
+    local ok, a54 = pcall(a2.listfiles, a52)
+    if not ok or type(a54) ~= "table" then
+        return a53
     end
 
-    for _, filePath in files do
-        local file = path.basename(filePath)
-                        if file:sub(-5) == ".rfld" then
-            local base = path.stripExtension(file, ".rfld")
-            if base and base ~= "" and not base:find(" %(Incorrect Format[^%)]*%)$") then
-                table.insert(names, base)
+    for _, a55 in a54 do
+        local a56 = a4.basename(a55)
+                        if a56:sub(-5) == ".rfld" then
+            local a57 = a4.stripExtension(a56, ".rfld")
+            if a57 and a57 ~= "" and not a57:find(" %(Incorrect Format[^%)]*%)$") then
+                table.insert(a53, a57)
             end
         end
     end
 
-    table.sort(names)
-    return names
+    table.sort(a53)
+    return a53
 end
 
-function persistenceConfig.delete(window: ConfigWindow, name: unknown): boolean
-    if type(name) ~= "string" or name == "" then
+function a7.delete(window: ConfigWindow, a58: unknown): boolean
+    if type(a58) ~= "string" or a58 == "" then
         return false
     end
 
-    local _, fullPath = persistenceConfig.getPath(window, name)
-    if not fullPath then
+    local _, a59 = a7.getPath(window, a58)
+    if not a59 then
         return false
     end
-    if typeof(filesystem.isfile) ~= "function" or not filesystem.isfile(fullPath) then
+    if typeof(a2.isfile) ~= "function" or not a2.isfile(a59) then
         return false
     end
 
-        pcall(filesystem.delfile, atomic.tempPathFor(fullPath))
+        pcall(a2.delfile, a6.tempPathFor(a59))
 
-    return (pcall(filesystem.delfile, fullPath))
+    return (pcall(a2.delfile, a59))
 end
 
-return persistenceConfig
+return a7
