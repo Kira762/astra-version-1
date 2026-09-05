@@ -9,7 +9,7 @@ local loader = {}
 
 local pending: { [string]: boolean } = {}
 
--- Load a module relative to the loader (script.Parent.<name> children).
+-- Load a module from the core module's children via script.Parent[name].
 -- Names are validated against an allowlist to keep the load surface explicit.
 local allowed = {
     state = true,
@@ -23,7 +23,7 @@ function loader.load(name: string)
     end
     pending[name] = true
     local ok, result = pcall(function()
-        return require((script :: any)[name])
+        return require((script :: any).Parent[name])
     end)
     pending[name] = nil
     if not ok then
