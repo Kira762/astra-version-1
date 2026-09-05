@@ -273,7 +273,7 @@ function Toast:_measure()
 end
 
 function Toast:_show()
-    if not self.main.Parent then
+    if self._dismissed or not self.main.Parent then
         return
     end
 
