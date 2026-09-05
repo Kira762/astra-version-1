@@ -17,6 +17,7 @@ type SettingsWindow = {
         showFullUsername: boolean,
         antiWindowDuplicate: boolean,
         layoutMode: string,
+        activeSubTab: number,
     },
 }
 
@@ -27,9 +28,9 @@ type DecodedSettings = {
     welcomeToast: unknown?,
         haptics: unknown?,
         showProfile: unknown?,
-        showFullUsername: unknown?,
-        antiWindowDuplicate: unknown?,
-        layoutMode: unknown?,
+        showFullUsername: unknown?,    antiWindowDuplicate: unknown?,
+    layoutMode: unknown?,
+    activeSubTab: unknown?,
 }
 
 function persistenceSettings.getSettingsPath(): (string, string)
@@ -52,6 +53,7 @@ function persistenceSettings.saveSettings(window: SettingsWindow): boolean
         showFullUsername = window.settings.showFullUsername,
         antiWindowDuplicate = window.settings.antiWindowDuplicate,
         layoutMode = window.settings.layoutMode,
+        activeSubTab = window.settings.activeSubTab,
     }
 
     local ok, encoded = pcall(variables.httpService.JSONEncode, variables.httpService, data)
@@ -157,6 +159,10 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
         or settings.layoutMode == "collapsedSidebar"
     then
         window.settings.layoutMode = settings.layoutMode
+    end
+
+    if type(settings.activeSubTab) == "number" and settings.activeSubTab >= 1 then
+        window.settings.activeSubTab = math.floor(settings.activeSubTab)
     end
 
     return true

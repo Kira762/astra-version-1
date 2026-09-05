@@ -2793,6 +2793,14 @@ local profileBuildGeneration = 0
 -- written onto the instance.
 local avatarGenerations = setmetatable({}, { __mode = "k" })
 
+-- Tracks which avatar ImageLabels currently hold a resolved, non-empty image.
+-- Weak-keyed side table (instances reject custom members).
+local avatarReady = setmetatable({}, { __mode = "k" })
+
+-- Placeholder used when the avatar URI never resolves; the avatar plate shows
+-- a soft themed circle instead of a broken image.
+local fallbackAvatar = "rbxassetid://0"
+
 local function profileVisible(window)
     return window.profile ~= nil
         and window.settings.showProfile
@@ -2849,8 +2857,10 @@ local function buildProfile(window, layout)
         })
 
         window.profileContainer = window:Create("Frame", {
-            Size = UDim2.new(1, -25, 1, -4),
-            Position = UDim2.new(0, 25, 0, 2),
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -10, 0.5, 0),
+            Size = UDim2.new(0, 0, 1, -4),
+            AutomaticSize = Enum.AutomaticSize.X,
             BackgroundTransparency = 1,
             Parent = window.profile,
         })
@@ -2859,15 +2869,8 @@ local function buildProfile(window, layout)
             Padding = UDim.new(0, 12),
             FillDirection = Enum.FillDirection.Horizontal,
             VerticalAlignment = Enum.VerticalAlignment.Center,
-            HorizontalAlignment = Enum.HorizontalAlignment.Left,
+            HorizontalAlignment = Enum.HorizontalAlignment.Right,
             SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = window.profileContainer,
-        })
-
-        window.profileSpacer = window:Create("Frame", {
-            Size = UDim2.new(1, 0, 0, 0),
-            LayoutOrder = 2,
-            BackgroundTransparency = 1,
             Parent = window.profileContainer,
         })
     else
@@ -2951,6 +2954,21 @@ local function buildProfile(window, layout)
 
     avatarGenerations[window.profileAvatar] = generation
 
+    local function applyAvatarUri(target, uri)
+        if avatarGenerations[target] ~= generation then
+            return
+        end
+        if uri ~= nil and uri ~= "" then
+            avatarReady[target] = true
+            image.assign(target, "Image", uri)
+        else
+            -- Permanent fetch failure: keep the plate, drop the image so no
+            -- broken-image icon shows. setProfileShown renders the fallback.
+            avatarReady[target] = nil
+            image.assign(target, "Image", fallbackAvatar)
+        end
+    end
+
     local avatarUri = image.avatar(player.UserId, function(uri)
         if window.unloaded then
             return
@@ -2959,14 +2977,13 @@ local function buildProfile(window, layout)
         if not currentAvatar then
             return
         end
-        if avatarGenerations[currentAvatar] ~= generation then
-            return
-        end
-        image.assign(currentAvatar, "Image", uri)
+        applyAvatarUri(currentAvatar, uri)
     end)
 
+    -- Empty synchronous return means secure mode is still fetching; wait for
+    -- the callback instead of assigning an empty image.
     if avatarUri ~= "" then
-        image.assign(window.profileAvatar, "Image", avatarUri)
+        applyAvatarUri(window.profileAvatar, avatarUri)
     end
 end
 
@@ -3032,6 +3049,9 @@ function sidebar.reflowProfile(window)
         window.tabList.Size = UDim2.new(1, 0, 1, if shown then -layout.footerHeight else 0)
     elseif layout.mode == "top" then
         window.profile.Size = UDim2.new(1, 0, 0, if shown then layout.profileHeight else 0)
+        if window.profileContainer then
+            window.profileContainer.Visible = shown
+        end
     end
 
     if window.profileLabels and window.profileLabels.Visible ~= (layout.mode ~= "collapsedSidebar") then
@@ -3075,25 +3095,47 @@ function sidebar.applyWidth(window, width)
 end
 
 function sidebar.setProfileShown(window, shown, tweenInfo)
-    if not window.profile or not window.profile.Visible then
+    -- `shown` is the source of truth, not profile.Visible: the profile can be
+    -- rebuilt or hidden mid-flow and must still settle into the right state.
+    if not window.profile then
         return
     end
 
+    local avatar = window.profileAvatar
+    local avatarProperties
+    if avatar then
+        local hasImage = avatarReady[avatar] == true
+            or (type(avatar.Image) == "string" and avatar.Image ~= "" and avatar.Image ~= fallbackAvatar)
+        if shown and hasImage then
+            avatarProperties = {
+                ImageTransparency = 0,
+                BackgroundTransparency = avatarPlateTransparency,
+            }
+        else
+            -- No image resolved: show a soft themed plate circle instead of a
+            -- broken/empty image.
+            avatarProperties = {
+                ImageTransparency = 1,
+                BackgroundTransparency = if shown then avatarPlateTransparency else 1,
+                BackgroundColor3 = window.theme.ContentColor,
+            }
+        end
+    end
+
     local targets = {
-        [window.profileAvatar] = {
-            ImageTransparency = if shown then 0 else 1,
-            BackgroundTransparency = if shown then avatarPlateTransparency else 1,
-        },
+        [avatar] = avatarProperties,
         [window.profileName] = { TextTransparency = if shown then nameTransparency else 1 },
         [window.profileSubtitle] = { TextTransparency = if shown then subtitleTransparency else 1 },
     }
 
     for instance, properties in targets do
-        if tweenInfo then
-            variables.tweenService:Create(instance, tweenInfo, properties):Play()
-        else
-            for property, value in properties do
-                instance[property] = value
+        if instance and properties then
+            if tweenInfo then
+                variables.tweenService:Create(instance, tweenInfo, properties):Play()
+            else
+                for property, value in properties do
+                    instance[property] = value
+                end
             end
         end
     end
@@ -3974,6 +4016,9 @@ function Window.new(properties)
         tags = {},
         selectedTab = nil,
         _settingsLayoutActive = false,
+        _settingsCardBuilt = false,
+        _settingsTabs = {},
+        _settingsActiveSubTab = 1,
         theme = resolveTheme(properties.theme or properties.Theme),
 
         controls = {},
@@ -4025,6 +4070,7 @@ function Window.new(properties)
         showFullUsername = false,
         antiWindowDuplicate = true,
         layoutMode = layout.mode,
+        activeSubTab = 1,
     }
         self._layoutTransitioning = false
 
@@ -4385,6 +4431,31 @@ function Window.new(properties)
         sidebar.reflowProfile(self)
         sidebar.setSubtitle(self, self.profileText)
     end
+
+    -- Defensive: if the local player resolves after the profile was built
+    -- (profile stays invisible), reveal it as soon as the player exists.
+    task.defer(function()
+        if self.unloaded or variables.localPlayer or not self.profile then
+            return
+        end
+        local deadline = os.clock() + 2
+        local conn
+        conn = variables.runService.RenderStepped:Connect(function()
+            if self.unloaded then
+                conn:Disconnect()
+                return
+            end
+            if variables.localPlayer or os.clock() > deadline then
+                conn:Disconnect()
+                if variables.localPlayer and self.profile then
+                    sidebar.refreshProfileName(self)
+                    sidebar.reflowProfile(self)
+                    sidebar.setProfileShown(self, true, sidebar.settleInfo)
+                end
+            end
+        end)
+        self:Connect(conn)
+    end)
     hapticEngine.setContainer(self.screenGui)     hapticEngine.setEnabled(self.settings.haptics)     chrome.buildCollapsedFace(self)
     self:_bindKeybind()
     self:_bindMouseOverride()
@@ -5682,6 +5753,234 @@ function Window:_setLayoutMode(mode)
     self._layoutTransitioning = false
     return previousMode ~= mode
 end
+function Window:_buildSettingsCard()
+    if self.settingsCard then
+        return self.settingsCard
+    end
+
+    local isTopMode = self.layout.mode ~= "sidebar"
+    local card = self:Create("Frame", {
+        Name = "SettingsCard",
+        Size = if isTopMode then UDim2.new(1, -20, 1, -10) else UDim2.new(1, -20, 1, -20),
+        Position = UDim2.new(0, 10, 0, 10),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        ZIndex = 1,
+        Parent = self.elements,
+    }, { BackgroundColor3 = "WindowColor", BackgroundTransparency = "ElementTransparency" })
+
+    local stroke = self:StyleElementBody(card)
+
+    self.settingsCard = card
+    self.settingsCardStroke = stroke
+    self._settingsCardBuilt = true
+
+    -- Re-parent the settings page into the card so its content sits on the
+    -- card surface instead of the raw window background.
+    local rfSettings = self.rfSettings
+    if rfSettings and rfSettings.tabPage then
+        rfSettings.tabPage.Parent = card
+    end
+
+    if self.settingsSubTabBar then
+        self.settingsSubTabBar.Parent = card
+    end
+    if self.settingsSubTabPages then
+        self.settingsSubTabPages.Parent = card
+    end
+
+    return card
+end
+
+function Window:_destroySettingsCard()
+    if self.rfSettings and self.rfSettings.tabPage then
+        self.rfSettings.tabPage.Parent = self.elements
+    end
+    if self.settingsCard then
+        self:DestroySubtree(self.settingsCard)
+        self.settingsCard = nil
+        self.settingsCardStroke = nil
+    end
+    self._settingsCardBuilt = false
+end
+
+function Window:_setSettingsSubTabsVisible(visible)
+    local hasTabs = #self._settingsTabs > 0
+    if self.settingsSubTabBar then
+        self.settingsSubTabBar.Visible = visible and hasTabs
+    end
+    if self.settingsSubTabPages then
+        self.settingsSubTabPages.Visible = visible and hasTabs
+    end
+    if visible and hasTabs then
+        self:_selectSettingsSubTab(self._settingsActiveSubTab, true)
+    end
+end
+
+function Window:_selectSettingsSubTab(index, noAnimation)
+    local tabs = self._settingsTabs
+    if #tabs == 0 then
+        return
+    end
+    index = math.clamp(index, 1, #tabs)
+    self._settingsActiveSubTab = index
+    self.settings.activeSubTab = index
+
+    for i, entry in tabs do
+        local selected = i == index
+        if entry.page then
+            entry.page.Visible = selected
+        end
+        if entry.button then
+            local info = if noAnimation then nil else TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+            local target = if selected then 0.25 else 1
+            if info then
+                variables.tweenService:Create(entry.button, info, { BackgroundTransparency = target }):Play()
+            else
+                entry.button.BackgroundTransparency = target
+            end
+            entry.button.TextColor3 = if selected then self.theme.ContentColor else self.theme.TitlingColor
+        end
+    end
+end
+
+-- Creates a sub-tab inside the Settings page. Returns a descriptor exposing
+-- the regular Create* element API; elements are built through the rfSettings
+-- tab's registration pipeline so flags persist like any other control.
+function Window:AddSettingsTab(props)
+    assert(not self.unloaded, "Cannot add a settings tab to an unloaded window.")
+    props = if typeof(props) == "table" then props else {}
+
+    local rfSettings = self.rfSettings
+    if not rfSettings then
+        return nil
+    end
+
+    -- One-time build of the sub-tab strip + page container inside the card.
+    if not self.settingsSubTabBar then
+        self.settingsSubTabBar = self:Create("Frame", {
+            Name = "SettingsSubTabBar",
+            Size = UDim2.new(1, -20, 0, 30),
+            Position = UDim2.new(0, 10, 0, 10),
+            BackgroundTransparency = 1,
+            Visible = false,
+            Parent = self.settingsCard,
+        })
+
+        self:Create("UIListLayout", {
+            Padding = UDim.new(0, 6),
+            FillDirection = Enum.FillDirection.Horizontal,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+            HorizontalAlignment = Enum.HorizontalAlignment.Left,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = self.settingsSubTabBar,
+        })
+
+        self.settingsSubTabPages = self:Create("Frame", {
+            Name = "SettingsSubTabPages",
+            Size = UDim2.new(1, -20, 1, -56),
+            Position = UDim2.new(0, 10, 0, 46),
+            BackgroundTransparency = 1,
+            Visible = false,
+            ZIndex = 2,
+            Parent = self.settingsCard,
+        })
+    end
+
+    local name = locale.resolve(props.name or props.Name or "Settings Tab")
+    local icon = self:ResolveIcon(props.icon or props.Icon)
+    local index = #self._settingsTabs + 1
+
+    local button = self:Create("TextButton", {
+        Name = name,
+        Text = name,
+        TextSize = 13,
+        FontFace = variables.brandFont(Enum.FontWeight.Medium),
+        AutoButtonColor = false,
+        Size = UDim2.new(0, 0, 1, 0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = index,
+        Parent = self.settingsSubTabBar,
+    }, { TextColor3 = "TitlingColor", BackgroundColor3 = "ContentColor" })
+
+    self:Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = button,
+    })
+
+    self:Create("UIPadding", {
+        PaddingLeft = UDim.new(0, 10),
+        PaddingRight = UDim.new(0, 10),
+        Parent = button,
+    })
+
+    local page = self:Create("ScrollingFrame", {
+        Name = name,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 0,
+        ScrollBarImageTransparency = 1,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        Visible = false,
+        ZIndex = 2,
+        Parent = self.settingsSubTabPages,
+    })
+
+    self:Create("UIListLayout", {
+        Padding = UDim.new(0, 7),
+        FillDirection = Enum.FillDirection.Vertical,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = page,
+    })
+
+    self:Create("UIPadding", {
+        PaddingTop = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 10),
+        Parent = page,
+    })
+
+    -- Lightweight virtual tab: reuses the rfSettings tab instance so every
+    -- element's `_register` path (window.controls persistence) keeps working.
+    local entry = {
+        name = name,
+        icon = icon,
+        page = page,
+        button = button,
+        index = index,
+    }
+    table.insert(self._settingsTabs, entry)
+
+    local virtualTab = setmetatable({
+        window = self,
+        name = name,
+        elements = {},
+        connections = {},
+        forgetState = false,
+        -- Elements parent themselves to tabPage; point them at this page.
+        tabPage = page,
+    }, { __index = rfSettings })
+
+    self:Connect(button.MouseButton1Click, function()
+        hapticEngine.click()
+        self:_selectSettingsSubTab(index)
+    end)
+
+    self:_selectSettingsSubTab(index, true)
+    if self._settingsLayoutActive then
+        self:_setSettingsSubTabsVisible(true)
+    end
+
+    return virtualTab
+end
+
 function Window:_applySettingsLayout(isSettings)
     isSettings = isSettings == true
     self._settingsLayoutActive = isSettings
@@ -5690,10 +5989,18 @@ function Window:_applySettingsLayout(isSettings)
     end
     if self.layout.mode ~= "sidebar" then
         if self.tabList then
-            self.tabList.Visible = not isSettings and self.elements.Visible and not self.hidden and not self.minimised
+            self.tabList.Visible = not isSettings and not self.hidden and not self.minimised and self.elements.Visible
         end
         self.elements.Size = UDim2.new(1, 0, 1, -self.layout.chromeHeight)
         self.bottomFade.Size = UDim2.new(1, 0, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
+        if isSettings then
+            self:_buildSettingsCard()
+            if self.settingsSubTabBar then
+                self:_setSettingsSubTabsVisible(true)
+            end
+        else
+            self:_destroySettingsCard()
+        end
         if self.selectedTab and self.selectedTab.tabPage then
             self.selectedTab.tabPage.Size = if isSettings
                 then UDim2.new(1, 0, 1, 0)
@@ -5706,17 +6013,17 @@ function Window:_applySettingsLayout(isSettings)
     local tab = self.selectedTab
 
     if isSettings then
-        -- Settings is a full-width page: hide the whole rail and let the page
+        -- Settings is a full-width page: hide the rail tabs (the sidebar frame
+        -- itself stays visible so the layout does not shift) and let the page
         -- consume the space that was previously reserved for it.
         if self.tabList then
             self.tabList.Visible = false
         end
-        if self.sidebar then
-            self.sidebar.Visible = false
+        self:_buildSettingsCard()
+        if self.settingsSubTabBar then
+            self:_setSettingsSubTabsVisible(true)
         end
         self.elements.Size = UDim2.new(1, 0, 1, -self.layout.chromeHeight)
-        self.elementsCorner.CornerRadius = UDim.new(0, 0)
-        self.elementsStroke.Transparency = 1
         self.bottomFade.Size = UDim2.new(1, 0, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
         if tab and tab.tabPage then
             tab.tabPage.Size = UDim2.new(1, 0, 1, 0)
@@ -5725,17 +6032,18 @@ function Window:_applySettingsLayout(isSettings)
         return
     end
 
-    -- Restore the normal sidebar/content split when leaving Settings.
-    local contentVisible = self.elements.Visible and not self.hidden and not self.minimised
+    self:_destroySettingsCard()
+
+    -- Restore the normal sidebar/content split when leaving Settings. The rail
+    -- visibility is NOT gated on elements.Visible: during show/hide animation
+    -- the content may be hidden while the rail must re-appear immediately.
     if self.tabList then
-        self.tabList.Visible = contentVisible
+        self.tabList.Visible = not self.hidden and not self.minimised
     end
     if self.sidebar then
-        self.sidebar.Visible = contentVisible
+        self.sidebar.Visible = not self.hidden and not self.minimised
     end
     self.elements.Size = UDim2.new(1, -railWidth, 1, -self.layout.chromeHeight)
-    self.elementsCorner.CornerRadius = self.theme.CornerRoundness or UDim.new(0, 8)
-    self.elementsStroke.Transparency = 0
     self.bottomFade.Size = UDim2.new(1, -railWidth, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
     if tab and tab.tabPage then
         tab.tabPage.Size = UDim2.new(1, -35, 1, 0)
@@ -5753,11 +6061,7 @@ function Window:_setContentVisible(visible)
         return
     end
 
-    if self.layout.mode == "sidebar" then
-        self:_applySettingsLayout(self.selectedTab == self.rfSettings)
-    else
-        self:_applySettingsLayout(self.selectedTab == self.rfSettings)
-    end
+    self:_applySettingsLayout(self.selectedTab == self.rfSettings)
 end
 
 function Window:_fadeSurfaces(shown, fadeInfo)
@@ -13837,6 +14141,9 @@ function appearance.validate(key: string, value: any): (boolean, any)
         end
         return false, nil
     end
+    if key == "activeSubTab" then
+        return type(value) == "number" and value >= 1, math.floor(value)
+    end
     return false, nil
 end
 
@@ -13882,6 +14189,7 @@ defaults.values = {
     showFullUsername = false,
     antiWindowDuplicate = true,
     layoutMode = "top", -- replaced by the window's actual initial layout mode
+    activeSubTab = 1,
 }
 
 function defaults.clone(overrides: { [string]: any }?): { [string]: any }
@@ -14154,6 +14462,12 @@ registry.definitions = {
         kind = "enum",
         domain = "appearance",
         description = "Bar layout mode: top, sidebar, or collapsedSidebar.",
+    },
+    activeSubTab = {
+        key = "activeSubTab",
+        kind = "enum",
+        domain = "appearance",
+        description = "Index of the currently selected settings sub-tab.",
     },
 }
 
@@ -28349,6 +28663,7 @@ type SettingsWindow = {
         showFullUsername: boolean,
         antiWindowDuplicate: boolean,
         layoutMode: string,
+        activeSubTab: number,
     },
 }
 
@@ -28359,9 +28674,9 @@ type DecodedSettings = {
     welcomeToast: unknown?,
         haptics: unknown?,
         showProfile: unknown?,
-        showFullUsername: unknown?,
-        antiWindowDuplicate: unknown?,
-        layoutMode: unknown?,
+        showFullUsername: unknown?,    antiWindowDuplicate: unknown?,
+    layoutMode: unknown?,
+    activeSubTab: unknown?,
 }
 
 function persistenceSettings.getSettingsPath(): (string, string)
@@ -28384,6 +28699,7 @@ function persistenceSettings.saveSettings(window: SettingsWindow): boolean
         showFullUsername = window.settings.showFullUsername,
         antiWindowDuplicate = window.settings.antiWindowDuplicate,
         layoutMode = window.settings.layoutMode,
+        activeSubTab = window.settings.activeSubTab,
     }
 
     local ok, encoded = pcall(variables.httpService.JSONEncode, variables.httpService, data)
@@ -28489,6 +28805,10 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
         or settings.layoutMode == "collapsedSidebar"
     then
         window.settings.layoutMode = settings.layoutMode
+    end
+
+    if type(settings.activeSubTab) == "number" and settings.activeSubTab >= 1 then
+        window.settings.activeSubTab = math.floor(settings.activeSubTab)
     end
 
     return true
@@ -28677,84 +28997,84 @@ local LineOffsets = {
     [13] = 1679,
     [14] = 2413,
     [15] = 2757,
-    [16] = 3132,
-    [17] = 3428,
-    [18] = 3802,
-    [20] = 6606,
-    [21] = 6873,
-    [22] = 8004,
-    [23] = 8338,
-    [24] = 8399,
-    [25] = 8544,
-    [26] = 9864,
-    [27] = 10065,
-    [28] = 10326,
-    [29] = 10788,
-    [30] = 11238,
-    [31] = 11325,
-    [32] = 11890,
-    [33] = 12508,
-    [34] = 12856,
-    [35] = 12986,
-    [36] = 13150,
-    [37] = 13304,
-    [39] = 13822,
-    [40] = 13847,
-    [41] = 13868,
-    [42] = 13901,
-    [43] = 14010,
-    [44] = 14029,
-    [45] = 14087,
-    [46] = 13790,
-    [47] = 14193,
-    [48] = 14496,
-    [49] = 14540,
-    [50] = 14177,
-    [51] = 14595,
-    [52] = 14615,
-    [53] = 14647,
-    [54] = 14570,
-    [55] = 14781,
-    [56] = 14946,
-    [57] = 14757,
-    [58] = 15194,
-    [59] = 15491,
-    [60] = 16149,
-    [61] = 17935,
-    [62] = 19078,
-    [63] = 20600,
-    [64] = 15011,
-    [65] = 25846,
-    [66] = 25889,
-    [67] = 25931,
-    [68] = 26003,
-    [69] = 26046,
-    [70] = 26106,
-    [71] = 25740,
-    [72] = 26149,
-    [73] = 26247,
-    [74] = 26425,
-    [75] = 26476,
-    [76] = 26506,
-    [77] = 26757,
-    [78] = 26806,
-    [79] = 27259,
-    [80] = 27279,
-    [81] = 27418,
-    [82] = 27517,
-    [83] = 27539,
-    [84] = 27592,
-    [85] = 27628,
-    [86] = 27646,
-    [87] = 27961,
-    [88] = 27977,
-    [89] = 28028,
-    [90] = 28047,
-    [91] = 28289,
-    [92] = 28333,
-    [93] = 28501,
-    [94] = 28529,
-    [95] = 28540,
+    [16] = 3174,
+    [17] = 3470,
+    [18] = 3844,
+    [20] = 6910,
+    [21] = 7177,
+    [22] = 8308,
+    [23] = 8642,
+    [24] = 8703,
+    [25] = 8848,
+    [26] = 10168,
+    [27] = 10369,
+    [28] = 10630,
+    [29] = 11092,
+    [30] = 11542,
+    [31] = 11629,
+    [32] = 12194,
+    [33] = 12812,
+    [34] = 13160,
+    [35] = 13290,
+    [36] = 13454,
+    [37] = 13608,
+    [39] = 14126,
+    [40] = 14154,
+    [41] = 14175,
+    [42] = 14209,
+    [43] = 14318,
+    [44] = 14337,
+    [45] = 14395,
+    [46] = 14094,
+    [47] = 14507,
+    [48] = 14810,
+    [49] = 14854,
+    [50] = 14491,
+    [51] = 14909,
+    [52] = 14929,
+    [53] = 14961,
+    [54] = 14884,
+    [55] = 15095,
+    [56] = 15260,
+    [57] = 15071,
+    [58] = 15508,
+    [59] = 15805,
+    [60] = 16463,
+    [61] = 18249,
+    [62] = 19392,
+    [63] = 20914,
+    [64] = 15325,
+    [65] = 26160,
+    [66] = 26203,
+    [67] = 26245,
+    [68] = 26317,
+    [69] = 26360,
+    [70] = 26420,
+    [71] = 26054,
+    [72] = 26463,
+    [73] = 26561,
+    [74] = 26739,
+    [75] = 26790,
+    [76] = 26820,
+    [77] = 27071,
+    [78] = 27120,
+    [79] = 27573,
+    [80] = 27593,
+    [81] = 27732,
+    [82] = 27831,
+    [83] = 27853,
+    [84] = 27906,
+    [85] = 27942,
+    [86] = 27960,
+    [87] = 28275,
+    [88] = 28291,
+    [89] = 28342,
+    [90] = 28361,
+    [91] = 28603,
+    [92] = 28647,
+    [93] = 28821,
+    [94] = 28849,
+    [95] = 28860,
 }
 
 -- Misc AOT variable imports

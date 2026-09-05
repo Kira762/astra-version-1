@@ -173,6 +173,9 @@ function Window.new(properties)
         tags = {},
         selectedTab = nil,
         _settingsLayoutActive = false,
+        _settingsCardBuilt = false,
+        _settingsTabs = {},
+        _settingsActiveSubTab = 1,
         theme = resolveTheme(properties.theme or properties.Theme),
 
         controls = {},
@@ -224,6 +227,7 @@ function Window.new(properties)
         showFullUsername = false,
         antiWindowDuplicate = true,
         layoutMode = layout.mode,
+        activeSubTab = 1,
     }
         self._layoutTransitioning = false
 
@@ -584,6 +588,31 @@ function Window.new(properties)
         sidebar.reflowProfile(self)
         sidebar.setSubtitle(self, self.profileText)
     end
+
+    -- Defensive: if the local player resolves after the profile was built
+    -- (profile stays invisible), reveal it as soon as the player exists.
+    task.defer(function()
+        if self.unloaded or variables.localPlayer or not self.profile then
+            return
+        end
+        local deadline = os.clock() + 2
+        local conn
+        conn = variables.runService.RenderStepped:Connect(function()
+            if self.unloaded then
+                conn:Disconnect()
+                return
+            end
+            if variables.localPlayer or os.clock() > deadline then
+                conn:Disconnect()
+                if variables.localPlayer and self.profile then
+                    sidebar.refreshProfileName(self)
+                    sidebar.reflowProfile(self)
+                    sidebar.setProfileShown(self, true, sidebar.settleInfo)
+                end
+            end
+        end)
+        self:Connect(conn)
+    end)
     hapticEngine.setContainer(self.screenGui)     hapticEngine.setEnabled(self.settings.haptics)     chrome.buildCollapsedFace(self)
     self:_bindKeybind()
     self:_bindMouseOverride()
@@ -1881,6 +1910,234 @@ function Window:_setLayoutMode(mode)
     self._layoutTransitioning = false
     return previousMode ~= mode
 end
+function Window:_buildSettingsCard()
+    if self.settingsCard then
+        return self.settingsCard
+    end
+
+    local isTopMode = self.layout.mode ~= "sidebar"
+    local card = self:Create("Frame", {
+        Name = "SettingsCard",
+        Size = if isTopMode then UDim2.new(1, -20, 1, -10) else UDim2.new(1, -20, 1, -20),
+        Position = UDim2.new(0, 10, 0, 10),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        ZIndex = 1,
+        Parent = self.elements,
+    }, { BackgroundColor3 = "WindowColor", BackgroundTransparency = "ElementTransparency" })
+
+    local stroke = self:StyleElementBody(card)
+
+    self.settingsCard = card
+    self.settingsCardStroke = stroke
+    self._settingsCardBuilt = true
+
+    -- Re-parent the settings page into the card so its content sits on the
+    -- card surface instead of the raw window background.
+    local rfSettings = self.rfSettings
+    if rfSettings and rfSettings.tabPage then
+        rfSettings.tabPage.Parent = card
+    end
+
+    if self.settingsSubTabBar then
+        self.settingsSubTabBar.Parent = card
+    end
+    if self.settingsSubTabPages then
+        self.settingsSubTabPages.Parent = card
+    end
+
+    return card
+end
+
+function Window:_destroySettingsCard()
+    if self.rfSettings and self.rfSettings.tabPage then
+        self.rfSettings.tabPage.Parent = self.elements
+    end
+    if self.settingsCard then
+        self:DestroySubtree(self.settingsCard)
+        self.settingsCard = nil
+        self.settingsCardStroke = nil
+    end
+    self._settingsCardBuilt = false
+end
+
+function Window:_setSettingsSubTabsVisible(visible)
+    local hasTabs = #self._settingsTabs > 0
+    if self.settingsSubTabBar then
+        self.settingsSubTabBar.Visible = visible and hasTabs
+    end
+    if self.settingsSubTabPages then
+        self.settingsSubTabPages.Visible = visible and hasTabs
+    end
+    if visible and hasTabs then
+        self:_selectSettingsSubTab(self._settingsActiveSubTab, true)
+    end
+end
+
+function Window:_selectSettingsSubTab(index, noAnimation)
+    local tabs = self._settingsTabs
+    if #tabs == 0 then
+        return
+    end
+    index = math.clamp(index, 1, #tabs)
+    self._settingsActiveSubTab = index
+    self.settings.activeSubTab = index
+
+    for i, entry in tabs do
+        local selected = i == index
+        if entry.page then
+            entry.page.Visible = selected
+        end
+        if entry.button then
+            local info = if noAnimation then nil else TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+            local target = if selected then 0.25 else 1
+            if info then
+                variables.tweenService:Create(entry.button, info, { BackgroundTransparency = target }):Play()
+            else
+                entry.button.BackgroundTransparency = target
+            end
+            entry.button.TextColor3 = if selected then self.theme.ContentColor else self.theme.TitlingColor
+        end
+    end
+end
+
+-- Creates a sub-tab inside the Settings page. Returns a descriptor exposing
+-- the regular Create* element API; elements are built through the rfSettings
+-- tab's registration pipeline so flags persist like any other control.
+function Window:AddSettingsTab(props)
+    assert(not self.unloaded, "Cannot add a settings tab to an unloaded window.")
+    props = if typeof(props) == "table" then props else {}
+
+    local rfSettings = self.rfSettings
+    if not rfSettings then
+        return nil
+    end
+
+    -- One-time build of the sub-tab strip + page container inside the card.
+    if not self.settingsSubTabBar then
+        self.settingsSubTabBar = self:Create("Frame", {
+            Name = "SettingsSubTabBar",
+            Size = UDim2.new(1, -20, 0, 30),
+            Position = UDim2.new(0, 10, 0, 10),
+            BackgroundTransparency = 1,
+            Visible = false,
+            Parent = self.settingsCard,
+        })
+
+        self:Create("UIListLayout", {
+            Padding = UDim.new(0, 6),
+            FillDirection = Enum.FillDirection.Horizontal,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+            HorizontalAlignment = Enum.HorizontalAlignment.Left,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = self.settingsSubTabBar,
+        })
+
+        self.settingsSubTabPages = self:Create("Frame", {
+            Name = "SettingsSubTabPages",
+            Size = UDim2.new(1, -20, 1, -56),
+            Position = UDim2.new(0, 10, 0, 46),
+            BackgroundTransparency = 1,
+            Visible = false,
+            ZIndex = 2,
+            Parent = self.settingsCard,
+        })
+    end
+
+    local name = locale.resolve(props.name or props.Name or "Settings Tab")
+    local icon = self:ResolveIcon(props.icon or props.Icon)
+    local index = #self._settingsTabs + 1
+
+    local button = self:Create("TextButton", {
+        Name = name,
+        Text = name,
+        TextSize = 13,
+        FontFace = variables.brandFont(Enum.FontWeight.Medium),
+        AutoButtonColor = false,
+        Size = UDim2.new(0, 0, 1, 0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = index,
+        Parent = self.settingsSubTabBar,
+    }, { TextColor3 = "TitlingColor", BackgroundColor3 = "ContentColor" })
+
+    self:Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = button,
+    })
+
+    self:Create("UIPadding", {
+        PaddingLeft = UDim.new(0, 10),
+        PaddingRight = UDim.new(0, 10),
+        Parent = button,
+    })
+
+    local page = self:Create("ScrollingFrame", {
+        Name = name,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 0,
+        ScrollBarImageTransparency = 1,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        Visible = false,
+        ZIndex = 2,
+        Parent = self.settingsSubTabPages,
+    })
+
+    self:Create("UIListLayout", {
+        Padding = UDim.new(0, 7),
+        FillDirection = Enum.FillDirection.Vertical,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = page,
+    })
+
+    self:Create("UIPadding", {
+        PaddingTop = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 10),
+        Parent = page,
+    })
+
+    -- Lightweight virtual tab: reuses the rfSettings tab instance so every
+    -- element's `_register` path (window.controls persistence) keeps working.
+    local entry = {
+        name = name,
+        icon = icon,
+        page = page,
+        button = button,
+        index = index,
+    }
+    table.insert(self._settingsTabs, entry)
+
+    local virtualTab = setmetatable({
+        window = self,
+        name = name,
+        elements = {},
+        connections = {},
+        forgetState = false,
+        -- Elements parent themselves to tabPage; point them at this page.
+        tabPage = page,
+    }, { __index = rfSettings })
+
+    self:Connect(button.MouseButton1Click, function()
+        hapticEngine.click()
+        self:_selectSettingsSubTab(index)
+    end)
+
+    self:_selectSettingsSubTab(index, true)
+    if self._settingsLayoutActive then
+        self:_setSettingsSubTabsVisible(true)
+    end
+
+    return virtualTab
+end
+
 function Window:_applySettingsLayout(isSettings)
     isSettings = isSettings == true
     self._settingsLayoutActive = isSettings
@@ -1889,10 +2146,18 @@ function Window:_applySettingsLayout(isSettings)
     end
     if self.layout.mode ~= "sidebar" then
         if self.tabList then
-            self.tabList.Visible = not isSettings and self.elements.Visible and not self.hidden and not self.minimised
+            self.tabList.Visible = not isSettings and not self.hidden and not self.minimised and self.elements.Visible
         end
         self.elements.Size = UDim2.new(1, 0, 1, -self.layout.chromeHeight)
         self.bottomFade.Size = UDim2.new(1, 0, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
+        if isSettings then
+            self:_buildSettingsCard()
+            if self.settingsSubTabBar then
+                self:_setSettingsSubTabsVisible(true)
+            end
+        else
+            self:_destroySettingsCard()
+        end
         if self.selectedTab and self.selectedTab.tabPage then
             self.selectedTab.tabPage.Size = if isSettings
                 then UDim2.new(1, 0, 1, 0)
@@ -1905,17 +2170,17 @@ function Window:_applySettingsLayout(isSettings)
     local tab = self.selectedTab
 
     if isSettings then
-        -- Settings is a full-width page: hide the whole rail and let the page
+        -- Settings is a full-width page: hide the rail tabs (the sidebar frame
+        -- itself stays visible so the layout does not shift) and let the page
         -- consume the space that was previously reserved for it.
         if self.tabList then
             self.tabList.Visible = false
         end
-        if self.sidebar then
-            self.sidebar.Visible = false
+        self:_buildSettingsCard()
+        if self.settingsSubTabBar then
+            self:_setSettingsSubTabsVisible(true)
         end
         self.elements.Size = UDim2.new(1, 0, 1, -self.layout.chromeHeight)
-        self.elementsCorner.CornerRadius = UDim.new(0, 0)
-        self.elementsStroke.Transparency = 1
         self.bottomFade.Size = UDim2.new(1, 0, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
         if tab and tab.tabPage then
             tab.tabPage.Size = UDim2.new(1, 0, 1, 0)
@@ -1924,17 +2189,18 @@ function Window:_applySettingsLayout(isSettings)
         return
     end
 
-    -- Restore the normal sidebar/content split when leaving Settings.
-    local contentVisible = self.elements.Visible and not self.hidden and not self.minimised
+    self:_destroySettingsCard()
+
+    -- Restore the normal sidebar/content split when leaving Settings. The rail
+    -- visibility is NOT gated on elements.Visible: during show/hide animation
+    -- the content may be hidden while the rail must re-appear immediately.
     if self.tabList then
-        self.tabList.Visible = contentVisible
+        self.tabList.Visible = not self.hidden and not self.minimised
     end
     if self.sidebar then
-        self.sidebar.Visible = contentVisible
+        self.sidebar.Visible = not self.hidden and not self.minimised
     end
     self.elements.Size = UDim2.new(1, -railWidth, 1, -self.layout.chromeHeight)
-    self.elementsCorner.CornerRadius = self.theme.CornerRoundness or UDim.new(0, 8)
-    self.elementsStroke.Transparency = 0
     self.bottomFade.Size = UDim2.new(1, -railWidth, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
     if tab and tab.tabPage then
         tab.tabPage.Size = UDim2.new(1, -35, 1, 0)
@@ -1952,11 +2218,7 @@ function Window:_setContentVisible(visible)
         return
     end
 
-    if self.layout.mode == "sidebar" then
-        self:_applySettingsLayout(self.selectedTab == self.rfSettings)
-    else
-        self:_applySettingsLayout(self.selectedTab == self.rfSettings)
-    end
+    self:_applySettingsLayout(self.selectedTab == self.rfSettings)
 end
 
 function Window:_fadeSurfaces(shown, fadeInfo)

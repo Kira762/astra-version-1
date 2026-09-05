@@ -15,6 +15,7 @@ defaults.values = {
     showFullUsername = false,
     antiWindowDuplicate = true,
     layoutMode = "top", -- replaced by the window's actual initial layout mode
+    activeSubTab = 1,
 }
 
 function defaults.clone(overrides: { [string]: any }?): { [string]: any }

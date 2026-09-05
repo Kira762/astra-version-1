@@ -37,6 +37,14 @@ local profileBuildGeneration = 0
 -- written onto the instance.
 local avatarGenerations = setmetatable({}, { __mode = "k" })
 
+-- Tracks which avatar ImageLabels currently hold a resolved, non-empty image.
+-- Weak-keyed side table (instances reject custom members).
+local avatarReady = setmetatable({}, { __mode = "k" })
+
+-- Placeholder used when the avatar URI never resolves; the avatar plate shows
+-- a soft themed circle instead of a broken image.
+local fallbackAvatar = "rbxassetid://0"
+
 local function profileVisible(window)
     return window.profile ~= nil
         and window.settings.showProfile
@@ -93,8 +101,10 @@ local function buildProfile(window, layout)
         })
 
         window.profileContainer = window:Create("Frame", {
-            Size = UDim2.new(1, -25, 1, -4),
-            Position = UDim2.new(0, 25, 0, 2),
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -10, 0.5, 0),
+            Size = UDim2.new(0, 0, 1, -4),
+            AutomaticSize = Enum.AutomaticSize.X,
             BackgroundTransparency = 1,
             Parent = window.profile,
         })
@@ -103,15 +113,8 @@ local function buildProfile(window, layout)
             Padding = UDim.new(0, 12),
             FillDirection = Enum.FillDirection.Horizontal,
             VerticalAlignment = Enum.VerticalAlignment.Center,
-            HorizontalAlignment = Enum.HorizontalAlignment.Left,
+            HorizontalAlignment = Enum.HorizontalAlignment.Right,
             SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = window.profileContainer,
-        })
-
-        window.profileSpacer = window:Create("Frame", {
-            Size = UDim2.new(1, 0, 0, 0),
-            LayoutOrder = 2,
-            BackgroundTransparency = 1,
             Parent = window.profileContainer,
         })
     else
@@ -195,6 +198,21 @@ local function buildProfile(window, layout)
 
     avatarGenerations[window.profileAvatar] = generation
 
+    local function applyAvatarUri(target, uri)
+        if avatarGenerations[target] ~= generation then
+            return
+        end
+        if uri ~= nil and uri ~= "" then
+            avatarReady[target] = true
+            image.assign(target, "Image", uri)
+        else
+            -- Permanent fetch failure: keep the plate, drop the image so no
+            -- broken-image icon shows. setProfileShown renders the fallback.
+            avatarReady[target] = nil
+            image.assign(target, "Image", fallbackAvatar)
+        end
+    end
+
     local avatarUri = image.avatar(player.UserId, function(uri)
         if window.unloaded then
             return
@@ -203,14 +221,13 @@ local function buildProfile(window, layout)
         if not currentAvatar then
             return
         end
-        if avatarGenerations[currentAvatar] ~= generation then
-            return
-        end
-        image.assign(currentAvatar, "Image", uri)
+        applyAvatarUri(currentAvatar, uri)
     end)
 
+    -- Empty synchronous return means secure mode is still fetching; wait for
+    -- the callback instead of assigning an empty image.
     if avatarUri ~= "" then
-        image.assign(window.profileAvatar, "Image", avatarUri)
+        applyAvatarUri(window.profileAvatar, avatarUri)
     end
 end
 
@@ -276,6 +293,9 @@ function sidebar.reflowProfile(window)
         window.tabList.Size = UDim2.new(1, 0, 1, if shown then -layout.footerHeight else 0)
     elseif layout.mode == "top" then
         window.profile.Size = UDim2.new(1, 0, 0, if shown then layout.profileHeight else 0)
+        if window.profileContainer then
+            window.profileContainer.Visible = shown
+        end
     end
 
     if window.profileLabels and window.profileLabels.Visible ~= (layout.mode ~= "collapsedSidebar") then
@@ -319,25 +339,47 @@ function sidebar.applyWidth(window, width)
 end
 
 function sidebar.setProfileShown(window, shown, tweenInfo)
-    if not window.profile or not window.profile.Visible then
+    -- `shown` is the source of truth, not profile.Visible: the profile can be
+    -- rebuilt or hidden mid-flow and must still settle into the right state.
+    if not window.profile then
         return
     end
 
+    local avatar = window.profileAvatar
+    local avatarProperties
+    if avatar then
+        local hasImage = avatarReady[avatar] == true
+            or (type(avatar.Image) == "string" and avatar.Image ~= "" and avatar.Image ~= fallbackAvatar)
+        if shown and hasImage then
+            avatarProperties = {
+                ImageTransparency = 0,
+                BackgroundTransparency = avatarPlateTransparency,
+            }
+        else
+            -- No image resolved: show a soft themed plate circle instead of a
+            -- broken/empty image.
+            avatarProperties = {
+                ImageTransparency = 1,
+                BackgroundTransparency = if shown then avatarPlateTransparency else 1,
+                BackgroundColor3 = window.theme.ContentColor,
+            }
+        end
+    end
+
     local targets = {
-        [window.profileAvatar] = {
-            ImageTransparency = if shown then 0 else 1,
-            BackgroundTransparency = if shown then avatarPlateTransparency else 1,
-        },
+        [avatar] = avatarProperties,
         [window.profileName] = { TextTransparency = if shown then nameTransparency else 1 },
         [window.profileSubtitle] = { TextTransparency = if shown then subtitleTransparency else 1 },
     }
 
     for instance, properties in targets do
-        if tweenInfo then
-            variables.tweenService:Create(instance, tweenInfo, properties):Play()
-        else
-            for property, value in properties do
-                instance[property] = value
+        if instance and properties then
+            if tweenInfo then
+                variables.tweenService:Create(instance, tweenInfo, properties):Play()
+            else
+                for property, value in properties do
+                    instance[property] = value
+                end
             end
         end
     end

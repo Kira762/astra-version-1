@@ -69,6 +69,12 @@ registry.definitions = {
         domain = "appearance",
         description = "Bar layout mode: top, sidebar, or collapsedSidebar.",
     },
+    activeSubTab = {
+        key = "activeSubTab",
+        kind = "enum",
+        domain = "appearance",
+        description = "Index of the currently selected settings sub-tab.",
+    },
 }
 
 function registry.definition(key: string): SettingDefinition?

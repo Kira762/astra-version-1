@@ -16,6 +16,9 @@ function appearance.validate(key: string, value: any): (boolean, any)
         end
         return false, nil
     end
+    if key == "activeSubTab" then
+        return type(value) == "number" and value >= 1, math.floor(value)
+    end
     return false, nil
 end
 

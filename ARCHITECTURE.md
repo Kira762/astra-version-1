@@ -5,6 +5,31 @@ refactor, the dependency rules, and the validation performed. Source modules are
 the source of truth; `version-1.luau` is a generated distribution artifact
 (Phase 11) and must not be hand-edited.
 
+## v1.1 patch set (avatar/profile/settings fixes + settings sub-tabs)
+
+Post-refactor patch set applied on top of the modular tree. Intentionally
+diverging modules relative to the pre-patch snapshot:
+
+- `components/sidebar.luau` — avatar reveal race fix (`setProfileShown` no
+  longer gates on `profile.Visible`; nil-safe targets; themed plate fallback
+  when the avatar URI never resolves, tracked in the weak-keyed `avatarReady`
+  side table). Top-layout profile unified: right-anchored container in the
+  topbar; `profileSubtitle` now created in every layout branch; `reflowProfile`
+  handles top mode visibility.
+- `components/window.luau` — `SettingsCard` overlay (Fix 3): settings pages get
+  an element-styled card (`StyleElementBody`) and the rail no longer gets stuck
+  hidden (`_applySettingsLayout(false)` restores rail visibility independent of
+  `elements.Visible`; the sidebar frame itself stays visible during settings).
+  New public API: `Window:AddSettingsTab({ name, icon })` builds settings
+  sub-tabs (strip + pages inside the card, element registration reusing the
+  rfSettings tab pipeline, persisted active index). Defensive `localPlayer`
+  late-resolution hook after profile build (2s capped RenderStepped poll).
+- `settings/*`, `utilities/persistenceSettings.luau` — new `activeSubTab`
+  setting (registry definition, default 1, appearance-domain validation,
+  persisted/read in the settings JSON).
+- Bundle: regenerated from the modular tree; only the modules above plus
+  LineOffsets differ from the pre-patch bundle.
+
 ## Phase 1 audit summary
 
 Audit covered every existing `.luau` file (68 source modules + entrypoint +
