@@ -28777,694 +28777,696 @@ local WaxVersion = "0.4.1"
 local EnvName = "WaxRuntime"
 
 local ObjectTree = {
-    1,
-    1,
     {
-        "Astra",
-    },
-    {
+        1,
+        1,
         {
-            2,
-            2,
-            {
-                "MainModule",
-            },
+            "Astra",
         },
         {
-            3,
-            2,
             {
-                "Types",
-            },
-        },
-        {
-            4,
-            1,
-            {
-                "assets",
-            },
-            {},
-        },
-        {
-            8,
-            2,
-            {
-                "core",
+                2,
+                2,
+                {
+                    "MainModule",
+                },
             },
             {
+                3,
+                2,
                 {
-                    5,
-                    2,
-                    {
-                        "loader",
-                    },
-                },
-                {
-                    6,
-                    2,
-                    {
-                        "registry",
-                    },
-                },
-                {
-                    7,
-                    2,
-                    {
-                        "state",
-                    },
+                    "Types",
                 },
             },
-        },
-        {
-            19,
-            1,
             {
-                "components",
+                4,
+                1,
+                {
+                    "assets",
+                },
+                {},
             },
             {
+                8,
+                2,
                 {
-                    9,
-                    2,
-                    {
-                        "action",
-                    },
+                    "core",
                 },
                 {
-                    10,
-                    2,
                     {
-                        "chrome",
+                        5,
+                        2,
+                        {
+                            "loader",
+                        },
                     },
-                },
-                {
-                    11,
-                    2,
                     {
-                        "drag",
+                        6,
+                        2,
+                        {
+                            "registry",
+                        },
                     },
-                },
-                {
-                    12,
-                    2,
                     {
-                        "notification",
-                    },
-                },
-                {
-                    13,
-                    2,
-                    {
-                        "popup",
-                    },
-                },
-                {
-                    14,
-                    2,
-                    {
-                        "search",
-                    },
-                },
-                {
-                    15,
-                    2,
-                    {
-                        "sidebar",
-                    },
-                },
-                {
-                    16,
-                    2,
-                    {
-                        "tabSelector",
-                    },
-                },
-                {
-                    17,
-                    2,
-                    {
-                        "toast",
-                    },
-                },
-                {
-                    18,
-                    2,
-                    {
-                        "window",
+                        7,
+                        2,
+                        {
+                            "state",
+                        },
                     },
                 },
             },
-        },
-        {
-            38,
-            1,
             {
-                "elements",
-            },
-            {
+                19,
+                1,
                 {
-                    20,
-                    2,
-                    {
-                        "button",
-                    },
+                    "components",
                 },
                 {
-                    21,
-                    2,
                     {
-                        "colorpicker",
+                        9,
+                        2,
+                        {
+                            "action",
+                        },
                     },
-                },
-                {
-                    22,
-                    2,
                     {
-                        "console",
+                        10,
+                        2,
+                        {
+                            "chrome",
+                        },
                     },
-                },
-                {
-                    23,
-                    2,
                     {
-                        "descriptor",
+                        11,
+                        2,
+                        {
+                            "drag",
+                        },
                     },
-                },
-                {
-                    24,
-                    2,
                     {
-                        "divider",
+                        12,
+                        2,
+                        {
+                            "notification",
+                        },
                     },
-                },
-                {
-                    25,
-                    2,
                     {
-                        "dropdown",
+                        13,
+                        2,
+                        {
+                            "popup",
+                        },
                     },
-                },
-                {
-                    26,
-                    2,
                     {
-                        "group",
+                        14,
+                        2,
+                        {
+                            "search",
+                        },
                     },
-                },
-                {
-                    27,
-                    2,
                     {
-                        "input",
+                        15,
+                        2,
+                        {
+                            "sidebar",
+                        },
                     },
-                },
-                {
-                    28,
-                    2,
                     {
-                        "keybind",
+                        16,
+                        2,
+                        {
+                            "tabSelector",
+                        },
                     },
-                },
-                {
-                    29,
-                    2,
                     {
-                        "progress",
+                        17,
+                        2,
+                        {
+                            "toast",
+                        },
                     },
-                },
-                {
-                    30,
-                    2,
                     {
-                        "section",
-                    },
-                },
-                {
-                    31,
-                    2,
-                    {
-                        "slider",
-                    },
-                },
-                {
-                    32,
-                    2,
-                    {
-                        "stat",
-                    },
-                },
-                {
-                    33,
-                    2,
-                    {
-                        "tab",
-                    },
-                },
-                {
-                    34,
-                    2,
-                    {
-                        "tabSection",
-                    },
-                },
-                {
-                    35,
-                    2,
-                    {
-                        "tag",
-                    },
-                },
-                {
-                    36,
-                    2,
-                    {
-                        "text",
-                    },
-                },
-                {
-                    37,
-                    2,
-                    {
-                        "toggle",
+                        18,
+                        2,
+                        {
+                            "window",
+                        },
                     },
                 },
             },
-        },
-        {
-            46,
-            2,
             {
-                "settings",
-            },
-            {
+                38,
+                1,
                 {
-                    39,
-                    2,
-                    {
-                        "appearance",
-                    },
+                    "elements",
                 },
                 {
-                    40,
-                    2,
                     {
-                        "behavior",
+                        20,
+                        2,
+                        {
+                            "button",
+                        },
                     },
-                },
-                {
-                    41,
-                    2,
                     {
-                        "defaults",
+                        21,
+                        2,
+                        {
+                            "colorpicker",
+                        },
                     },
-                },
-                {
-                    42,
-                    2,
                     {
-                        "manager",
+                        22,
+                        2,
+                        {
+                            "console",
+                        },
                     },
-                },
-                {
-                    43,
-                    2,
                     {
-                        "performance",
+                        23,
+                        2,
+                        {
+                            "descriptor",
+                        },
                     },
-                },
-                {
-                    44,
-                    2,
                     {
-                        "persistence",
+                        24,
+                        2,
+                        {
+                            "divider",
+                        },
                     },
-                },
-                {
-                    45,
-                    2,
                     {
-                        "registry",
+                        25,
+                        2,
+                        {
+                            "dropdown",
+                        },
                     },
-                },
-            },
-        },
-        {
-            50,
-            2,
-            {
-                "cache",
-            },
-            {
-                {
-                    47,
-                    2,
                     {
-                        "imageCache",
+                        26,
+                        2,
+                        {
+                            "group",
+                        },
                     },
-                },
-                {
-                    48,
-                    2,
                     {
-                        "moduleCache",
+                        27,
+                        2,
+                        {
+                            "input",
+                        },
                     },
-                },
-                {
-                    49,
-                    2,
                     {
-                        "persistenceCache",
+                        28,
+                        2,
+                        {
+                            "keybind",
+                        },
                     },
-                },
-            },
-        },
-        {
-            54,
-            2,
-            {
-                "functions",
-            },
-            {
-                {
-                    51,
-                    2,
                     {
-                        "colors",
+                        29,
+                        2,
+                        {
+                            "progress",
+                        },
                     },
-                },
-                {
-                    52,
-                    2,
                     {
-                        "flagNames",
+                        30,
+                        2,
+                        {
+                            "section",
+                        },
                     },
-                },
-                {
-                    53,
-                    2,
                     {
-                        "textMetrics",
+                        31,
+                        2,
+                        {
+                            "slider",
+                        },
                     },
-                },
-            },
-        },
-        {
-            57,
-            2,
-            {
-                "images",
-            },
-            {
-                {
-                    55,
-                    2,
                     {
-                        "image",
+                        32,
+                        2,
+                        {
+                            "stat",
+                        },
                     },
-                },
-                {
-                    56,
-                    2,
                     {
-                        "windowIcons",
+                        33,
+                        2,
+                        {
+                            "tab",
+                        },
+                    },
+                    {
+                        34,
+                        2,
+                        {
+                            "tabSection",
+                        },
+                    },
+                    {
+                        35,
+                        2,
+                        {
+                            "tag",
+                        },
+                    },
+                    {
+                        36,
+                        2,
+                        {
+                            "text",
+                        },
+                    },
+                    {
+                        37,
+                        2,
+                        {
+                            "toggle",
+                        },
                     },
                 },
             },
-        },
-        {
-            64,
-            2,
             {
-                "icons",
-            },
-            {
+                46,
+                2,
                 {
-                    58,
-                    2,
-                    {
-                        "feather",
-                    },
+                    "settings",
                 },
                 {
-                    59,
-                    2,
                     {
-                        "heroicons",
+                        39,
+                        2,
+                        {
+                            "appearance",
+                        },
                     },
-                },
-                {
-                    60,
-                    2,
                     {
-                        "lucide",
+                        40,
+                        2,
+                        {
+                            "behavior",
+                        },
                     },
-                },
-                {
-                    61,
-                    2,
                     {
-                        "material",
+                        41,
+                        2,
+                        {
+                            "defaults",
+                        },
                     },
-                },
-                {
-                    62,
-                    2,
                     {
-                        "phosphor",
+                        42,
+                        2,
+                        {
+                            "manager",
+                        },
                     },
-                },
-                {
-                    63,
-                    2,
                     {
-                        "tabler",
+                        43,
+                        2,
+                        {
+                            "performance",
+                        },
                     },
-                },
-            },
-        },
-        {
-            71,
-            2,
-            {
-                "themes",
-            },
-            {
-                {
-                    65,
-                    2,
                     {
-                        "amethyst",
+                        44,
+                        2,
+                        {
+                            "persistence",
+                        },
                     },
-                },
-                {
-                    66,
-                    2,
                     {
-                        "cobalt",
-                    },
-                },
-                {
-                    67,
-                    2,
-                    {
-                        "default",
-                    },
-                },
-                {
-                    68,
-                    2,
-                    {
-                        "ember",
-                    },
-                },
-                {
-                    69,
-                    2,
-                    {
-                        "frost",
-                    },
-                },
-                {
-                    70,
-                    2,
-                    {
-                        "rose",
+                        45,
+                        2,
+                        {
+                            "registry",
+                        },
                     },
                 },
             },
-        },
-        {
-            96,
-            1,
             {
-                "utilities",
+                50,
+                2,
+                {
+                    "cache",
+                },
+                {
+                    {
+                        47,
+                        2,
+                        {
+                            "imageCache",
+                        },
+                    },
+                    {
+                        48,
+                        2,
+                        {
+                            "moduleCache",
+                        },
+                    },
+                    {
+                        49,
+                        2,
+                        {
+                            "persistenceCache",
+                        },
+                    },
+                },
             },
             {
+                54,
+                2,
                 {
-                    72,
-                    2,
-                    {
-                        "HapticEngine",
-                    },
+                    "functions",
                 },
                 {
-                    73,
-                    2,
                     {
-                        "assetResolver",
+                        51,
+                        2,
+                        {
+                            "colors",
+                        },
+                    },
+                    {
+                        52,
+                        2,
+                        {
+                            "flagNames",
+                        },
+                    },
+                    {
+                        53,
+                        2,
+                        {
+                            "textMetrics",
+                        },
                     },
                 },
+            },
+            {
+                57,
+                2,
                 {
-                    74,
-                    2,
-                    {
-                        "constants",
-                    },
+                    "images",
                 },
                 {
-                    75,
-                    2,
                     {
-                        "enums",
+                        55,
+                        2,
+                        {
+                            "image",
+                        },
+                    },
+                    {
+                        56,
+                        2,
+                        {
+                            "windowIcons",
+                        },
                     },
                 },
+            },
+            {
+                64,
+                2,
                 {
-                    76,
-                    2,
-                    {
-                        "filesystem",
-                    },
+                    "icons",
                 },
                 {
-                    77,
-                    2,
                     {
-                        "filesystemManager",
+                        58,
+                        2,
+                        {
+                            "feather",
+                        },
+                    },
+                    {
+                        59,
+                        2,
+                        {
+                            "heroicons",
+                        },
+                    },
+                    {
+                        60,
+                        2,
+                        {
+                            "lucide",
+                        },
+                    },
+                    {
+                        61,
+                        2,
+                        {
+                            "material",
+                        },
+                    },
+                    {
+                        62,
+                        2,
+                        {
+                            "phosphor",
+                        },
+                    },
+                    {
+                        63,
+                        2,
+                        {
+                            "tabler",
+                        },
                     },
                 },
+            },
+            {
+                71,
+                2,
                 {
-                    78,
-                    2,
-                    {
-                        "fontManager",
-                    },
+                    "themes",
                 },
                 {
-                    79,
-                    2,
                     {
-                        "functions",
+                        65,
+                        2,
+                        {
+                            "amethyst",
+                        },
+                    },
+                    {
+                        66,
+                        2,
+                        {
+                            "cobalt",
+                        },
+                    },
+                    {
+                        67,
+                        2,
+                        {
+                            "default",
+                        },
+                    },
+                    {
+                        68,
+                        2,
+                        {
+                            "ember",
+                        },
+                    },
+                    {
+                        69,
+                        2,
+                        {
+                            "frost",
+                        },
+                    },
+                    {
+                        70,
+                        2,
+                        {
+                            "rose",
+                        },
                     },
                 },
+            },
+            {
+                96,
+                1,
                 {
-                    80,
-                    2,
-                    {
-                        "layouts",
-                    },
+                    "utilities",
                 },
                 {
-                    81,
-                    2,
                     {
-                        "locale",
+                        72,
+                        2,
+                        {
+                            "HapticEngine",
+                        },
                     },
-                },
-                {
-                    82,
-                    2,
                     {
-                        "lockable",
+                        73,
+                        2,
+                        {
+                            "assetResolver",
+                        },
                     },
-                },
-                {
-                    83,
-                    2,
                     {
-                        "log",
+                        74,
+                        2,
+                        {
+                            "constants",
+                        },
                     },
-                },
-                {
-                    84,
-                    2,
                     {
-                        "moveable",
+                        75,
+                        2,
+                        {
+                            "enums",
+                        },
                     },
-                },
-                {
-                    85,
-                    2,
                     {
-                        "network",
+                        76,
+                        2,
+                        {
+                            "filesystem",
+                        },
                     },
-                },
-                {
-                    86,
-                    2,
                     {
-                        "odometer",
+                        77,
+                        2,
+                        {
+                            "filesystemManager",
+                        },
                     },
-                },
-                {
-                    87,
-                    2,
                     {
-                        "ordering",
+                        78,
+                        2,
+                        {
+                            "fontManager",
+                        },
                     },
-                },
-                {
-                    88,
-                    2,
                     {
-                        "path",
+                        79,
+                        2,
+                        {
+                            "functions",
+                        },
                     },
-                },
-                {
-                    89,
-                    2,
                     {
-                        "persistence",
+                        80,
+                        2,
+                        {
+                            "layouts",
+                        },
                     },
-                },
-                {
-                    90,
-                    2,
                     {
-                        "persistenceConfig",
+                        81,
+                        2,
+                        {
+                            "locale",
+                        },
                     },
-                },
-                {
-                    91,
-                    2,
                     {
-                        "persistencePaths",
+                        82,
+                        2,
+                        {
+                            "lockable",
+                        },
                     },
-                },
-                {
-                    92,
-                    2,
                     {
-                        "persistenceSettings",
+                        83,
+                        2,
+                        {
+                            "log",
+                        },
                     },
-                },
-                {
-                    93,
-                    2,
                     {
-                        "persistenceWrite",
+                        84,
+                        2,
+                        {
+                            "moveable",
+                        },
                     },
-                },
-                {
-                    94,
-                    2,
                     {
-                        "services",
+                        85,
+                        2,
+                        {
+                            "network",
+                        },
                     },
-                },
-                {
-                    95,
-                    2,
                     {
-                        "windowSizing",
+                        86,
+                        2,
+                        {
+                            "odometer",
+                        },
+                    },
+                    {
+                        87,
+                        2,
+                        {
+                            "ordering",
+                        },
+                    },
+                    {
+                        88,
+                        2,
+                        {
+                            "path",
+                        },
+                    },
+                    {
+                        89,
+                        2,
+                        {
+                            "persistence",
+                        },
+                    },
+                    {
+                        90,
+                        2,
+                        {
+                            "persistenceConfig",
+                        },
+                    },
+                    {
+                        91,
+                        2,
+                        {
+                            "persistencePaths",
+                        },
+                    },
+                    {
+                        92,
+                        2,
+                        {
+                            "persistenceSettings",
+                        },
+                    },
+                    {
+                        93,
+                        2,
+                        {
+                            "persistenceWrite",
+                        },
+                    },
+                    {
+                        94,
+                        2,
+                        {
+                            "services",
+                        },
+                    },
+                    {
+                        95,
+                        2,
+                        {
+                            "windowSizing",
+                        },
                     },
                 },
             },

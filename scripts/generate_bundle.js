@@ -128,11 +128,12 @@ const rootRefId = makeNode("Astra", CLASS_FOLDER);
 const children = TREE.map(buildNode);
 const allModules = children.flatMap((c) => [c, ...(c.closures || [])]).filter((c) => c.closure);
 
+// ObjectTree must be an ARRAY OF ROOT OBJECTS (the wax runtime iterates it
+// with `for _, Object in next, ObjectTree` and calls CreateRefFromObject on
+// each entry). Wrapping the root object is load-bearing: emitting the root
+// object directly makes the runtime index the raw refId number.
 const objectTree = [
-  rootRefId,
-  CLASS_FOLDER,
-  ["Astra"],
-  children.map((c) => c.tree),
+  [rootRefId, CLASS_FOLDER, ["Astra"], children.map((c) => c.tree)],
 ];
 
 // --- Emit Lua ---
