@@ -167,7 +167,8 @@ function chrome.bindCollapsedDrag(window)
         stopDrag()
 
         if moved then
-            window._collapsedPosition = window.main.Position             return
+            window._collapsedPosition = window.main.Position
+            return
         end
 
         hapticEngine.click()
@@ -208,9 +209,6 @@ end
 
 function chrome.setCollapsedShown(window, shown, tweenInfo)
     local hideTransitionId = window._hideTransitionId
-    if hideTransitionId and hideTransitionId ~= window._hideTransitionId then
-        return
-    end
 
     local targets = {
         [window.collapsedIcon] = { ImageTransparency = if shown then 0 else 1 },
