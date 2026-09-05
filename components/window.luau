@@ -1451,7 +1451,7 @@ function Window:_buildSettingsUI()
         callback = function(state)
             self.settings.showProfile = state == true
             sidebar.reflowProfile(self)
-            sidebar.setProfileShown(self, self.settings.showProfile, settleInfo)
+            sidebar.setProfileShown(self, self.settings.showProfile, sidebar.settleInfo)
             self:SaveSettings()
         end,
     })

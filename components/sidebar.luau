@@ -28,6 +28,7 @@ function sidebar.refreshProfileName(window)
 end
 
 local settleInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+sidebar.settleInfo = settleInfo
 
 local profileBuildGeneration = 0
 

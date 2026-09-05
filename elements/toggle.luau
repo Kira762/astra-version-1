@@ -236,6 +236,10 @@ function Toggle:_buildFull()
 
         task.wait(0.11)
 
+        if self.window.unloaded then
+            return
+        end
+
         variables.tweenService
             :Create(
                 self.main,
@@ -349,6 +353,10 @@ function Toggle:_buildCompact()
         self:_performToggle()
 
         task.wait(0.11)
+
+        if self.window.unloaded then
+            return
+        end
 
         variables.tweenService
             :Create(
