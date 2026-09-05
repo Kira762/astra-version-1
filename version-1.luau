@@ -1066,7 +1066,8 @@ function chrome.bindCollapsedDrag(window)
         stopDrag()
 
         if moved then
-            window._collapsedPosition = window.main.Position             return
+            window._collapsedPosition = window.main.Position
+            return
         end
 
         hapticEngine.click()
@@ -1107,9 +1108,6 @@ end
 
 function chrome.setCollapsedShown(window, shown, tweenInfo)
     local hideTransitionId = window._hideTransitionId
-    if hideTransitionId and hideTransitionId ~= window._hideTransitionId then
-        return
-    end
 
     local targets = {
         [window.collapsedIcon] = { ImageTransparency = if shown then 0 else 1 },
@@ -3704,7 +3702,7 @@ function Toast:_measure()
 end
 
 function Toast:_show()
-    if not self.main.Parent then
+    if self._dismissed or not self.main.Parent then
         return
     end
 
@@ -8386,6 +8384,10 @@ function Descriptor.new(tab, properties)
     })
 
     return self
+end
+
+function Descriptor:Remove()
+    self.main:Destroy()
 end
 
 return Descriptor
@@ -14170,13 +14172,12 @@ return registry
 
 end)() end,
     [50] = function()local wax,script,require=ImportGlobals(50)local ImportGlobals return (function(...)
--- Central cache layer (cache/init.luau).
+-- cache/init.luau — folder module (init.luau semantics).
 --
--- Exposes the module cache plus the moved image cache, and registers the
--- persistence cache factory. Caches here must reduce repeated work without
--- creating stale-state bugs; each submodule documents its invalidation rules.
+-- Exists to anchor the `cache` folder as a single ModuleScript in the Rojo/Wax
+-- tree. Consumers require `cache.imageCache` and `cache.persistenceCache`
+-- directly; this surface only re-exports the module cache.
 
--- This file IS the `cache` ModuleScript (init.luau semantics).
 local moduleCache = require(script.moduleCache)
 
 local cache = {
@@ -14505,7 +14506,6 @@ end)() end,
 local moduleCache = {}
 
 local singletons: { [string]: any } = {}
-local factories: { [string]: () -> any } = {}
 
 function moduleCache.singleton(name: string, factory: () -> any): any
     local existing = singletons[name]
@@ -14529,7 +14529,6 @@ end
 -- factories that are safe to re-run; the library itself never evicts.
 function moduleCache._forget(name: string)
     singletons[name] = nil
-    factories[name] = nil
 end
 
 return moduleCache
@@ -14538,18 +14537,13 @@ end)() end,
     [49] = function()local wax,script,require=ImportGlobals(49)local ImportGlobals return (function(...)
 -- Persistence cache (cache/persistenceCache.luau).
 --
--- Caches decoded persistence payloads so repeated reads of the same file do
--- not re-hit the filesystem. Invalidation rules:
---   - settings: the payload is cached until explicitly invalidated (settings
---     save paths call invalidateSettings() after writing).
---   - configurations: decoded flag tables are cached per absolute file path
---     and invalidated on save/delete of that path (window Save/Load/Delete
---     routes go through noteSaved/noteDeleted).
+-- Caches decoded settings payloads so repeated reads of the same file do not
+-- re-hit the filesystem. The settings payload is cached until explicitly
+-- invalidated; settings save paths call invalidateSettings() after writing.
 
 local persistenceCache = {}
 
 local settingsCache: { [string]: any } = {}
-local configCache: { [string]: any } = {}
 
 function persistenceCache.getSettings(key: string): any?
     return settingsCache[key]
@@ -14565,26 +14559,6 @@ function persistenceCache.invalidateSettings(key: string?)
     else
         table.clear(settingsCache)
     end
-end
-
-function persistenceCache.getConfig(path: string): any?
-    return configCache[path]
-end
-
-function persistenceCache.putConfig(path: string, value: any)
-    configCache[path] = value
-end
-
-function persistenceCache.invalidateConfig(path: string)
-    configCache[path] = nil
-end
-
-function persistenceCache.noteSaved(path: string, value: any)
-    configCache[path] = value
-end
-
-function persistenceCache.noteDeleted(path: string)
-    configCache[path] = nil
 end
 
 return persistenceCache
@@ -14675,12 +14649,23 @@ local textMetrics = {}
 
 local widthCache: { [string]: number } = {}
 local widthCacheCount = 0
-local widthCacheCap = 1024 
+local widthCacheCap = 1024
 local heightCache: { [string]: number } = {}
 local heightCacheCount = 0
 local heightCacheCap = 1024
-local widthParams = Instance.new("GetTextBoundsParams")
-local heightParams = Instance.new("GetTextBoundsParams")
+
+-- A fresh params instance per measurement: GetTextBoundsAsync yields, so a
+-- shared params object would race with any concurrent textWidth/textHeight
+-- call and could measure another call's text.
+local function makeParams(text: string, font: Font, size: number, width: number): GetTextBoundsParams
+	local params = Instance.new("GetTextBoundsParams")
+	params.Text = text
+	params.Font = font
+	params.Size = size
+	params.Width = width
+	return params
+end
+
 local function getTextBounds(params: GetTextBoundsParams): unknown
     local ok, bounds = pcall(function()
         return textService:GetTextBoundsAsync(params)
@@ -14700,7 +14685,7 @@ end
 
 function textMetrics.textWidth(font: Font, size: number, text: any): number
     text = tostring(text)
-        local key = tostring(font.Family)
+    local key = tostring(font.Family)
         .. "|"
         .. tostring(font.Weight)
         .. "|"
@@ -14714,14 +14699,9 @@ function textMetrics.textWidth(font: Font, size: number, text: any): number
         return cached
     end
 
-    widthParams.Text = text
-    widthParams.Font = font
-    widthParams.Size = size
-    widthParams.Width = math.huge
-
-    local measuredWidth = boundAxis(getTextBounds(widthParams), "X")
+    local measuredWidth = boundAxis(getTextBounds(makeParams(text, font, size, math.huge)), "X")
     if not measuredWidth then
-                                local length = utf8.len(text) or #text
+        local length = utf8.len(text) or #text
         return math.ceil(size * 0.55 * length)
     end
 
@@ -14753,12 +14733,7 @@ function textMetrics.textHeight(font: Font, size: number, text: any, width: numb
         return cached
     end
 
-    heightParams.Text = text
-    heightParams.Font = font
-    heightParams.Size = size
-    heightParams.Width = width
-
-    local measuredHeight = boundAxis(getTextBounds(heightParams), "Y")
+    local measuredHeight = boundAxis(getTextBounds(makeParams(text, font, size, width)), "Y")
     if not measuredHeight then
         return size
     end
@@ -14852,8 +14827,14 @@ function image.preload(onSettled: PreloadCallback?): (boolean, number)
 end
 
 function image.avatar(userId: number, onReady: AvatarCallback?): string
+    local uri = `rbxthumb://type=AvatarHeadShot&id={userId}&w=48&h=48`
     if not variables.secureMode then
-        return `rbxthumb://type=AvatarHeadShot&id={userId}&w=48&h=48`
+        -- The URI is immediately usable; still deliver the callback so
+        -- callers that only render on it do not stay blank.
+        if onReady then
+            task.defer(onReady, uri)
+        end
+        return uri
     end
 
     return imageCache.avatar(userId, onReady)
@@ -14876,7 +14857,7 @@ function image.assign(instance: Instance, property: string, value: unknown)
     else
         target[property] = image.resolve(value)
     end
-        if variables.secureMode and not settled then
+    if variables.secureMode and not settled then
         local id = idOf(value)
         if id and not image.rewrites[id] then
             local waiting = image.pending[id]
@@ -27667,9 +27648,11 @@ local odometer = {}
 odometer.__index = odometer
 
 local stripLength = 20
-local measureParams = Instance.new("GetTextBoundsParams")
 
+-- Fresh params per measurement: GetTextBoundsAsync yields, so a shared params
+-- object would race with concurrent measure() calls.
 local function measure(font, size, text)
+    local measureParams = Instance.new("GetTextBoundsParams")
     measureParams.Text = text
     measureParams.Font = font
     measureParams.Size = size
@@ -28320,7 +28303,7 @@ function paths.getConfigPath(window: ConfigWindow, name: unknown?): (string?, st
         dir = path.join(dir, path.sanitizeFolder(window.configuration.customFolder))
     end
     if name ~= nil then
-                        local safe = path.sanitizeFile(name)
+        local safe = path.sanitizeFile(name)
         if safe == "" then
             return nil, nil
         end
@@ -28453,14 +28436,6 @@ local function readSavedSettings(): DecodedSettings?
     return nil
 end
 
-function persistenceSettings.getAntiWindowDuplicate(): boolean
-    local settings = readSavedSettings()
-    if settings and type(settings.antiWindowDuplicate) == "boolean" then
-        return settings.antiWindowDuplicate
-    end
-    return true
-end
-
 function persistenceSettings.loadSettings(window: SettingsWindow): boolean
     local settings = readSavedSettings()
 
@@ -28537,7 +28512,7 @@ function persistenceWrite.write(dir: string, fullPath: string, contents: string)
     filesystem.ensureDir(dir)
     filesystem.writefile(tempPath, contents)
 
-        if filesystem.readfile(tempPath) ~= contents then
+    if filesystem.readfile(tempPath) ~= contents then
         error("parked copy did not write cleanly")
     end
 
@@ -28695,89 +28670,89 @@ local LineOffsets = {
     [8] = 539,
     [9] = 787,
     [10] = 900,
-    [11] = 1147,
-    [12] = 1372,
-    [13] = 1683,
-    [14] = 2417,
-    [15] = 2761,
-    [16] = 3136,
-    [17] = 3432,
-    [18] = 3806,
-    [20] = 6610,
-    [21] = 6877,
-    [22] = 8004,
-    [23] = 8338,
-    [24] = 8395,
-    [25] = 8540,
-    [26] = 9860,
-    [27] = 10061,
-    [28] = 10322,
-    [29] = 10784,
-    [30] = 11234,
-    [31] = 11321,
-    [32] = 11886,
-    [33] = 12504,
-    [34] = 12852,
-    [35] = 12982,
-    [36] = 13146,
-    [37] = 13300,
-    [39] = 13818,
-    [40] = 13843,
-    [41] = 13864,
-    [42] = 13897,
-    [43] = 14006,
-    [44] = 14025,
-    [45] = 14083,
-    [46] = 13786,
-    [47] = 14190,
-    [48] = 14493,
-    [49] = 14539,
-    [50] = 14173,
-    [51] = 14619,
-    [52] = 14639,
-    [53] = 14671,
-    [54] = 14594,
-    [55] = 14804,
-    [56] = 14963,
-    [57] = 14780,
-    [58] = 15211,
-    [59] = 15508,
-    [60] = 16166,
-    [61] = 17952,
-    [62] = 19095,
-    [63] = 20617,
-    [64] = 15028,
-    [65] = 25863,
-    [66] = 25906,
-    [67] = 25948,
-    [68] = 26020,
-    [69] = 26063,
-    [70] = 26123,
-    [71] = 25757,
-    [72] = 26166,
-    [73] = 26264,
-    [74] = 26442,
-    [75] = 26493,
-    [76] = 26523,
-    [77] = 26774,
-    [78] = 26823,
-    [79] = 27276,
-    [80] = 27296,
-    [81] = 27435,
-    [82] = 27534,
-    [83] = 27556,
-    [84] = 27609,
-    [85] = 27645,
-    [86] = 27663,
-    [87] = 27976,
-    [88] = 27992,
-    [89] = 28043,
-    [90] = 28062,
-    [91] = 28304,
-    [92] = 28348,
-    [93] = 28524,
-    [94] = 28552,
-    [95] = 28563,
+    [11] = 1145,
+    [12] = 1370,
+    [13] = 1681,
+    [14] = 2415,
+    [15] = 2759,
+    [16] = 3134,
+    [17] = 3430,
+    [18] = 3804,
+    [20] = 6608,
+    [21] = 6875,
+    [22] = 8002,
+    [23] = 8336,
+    [24] = 8397,
+    [25] = 8542,
+    [26] = 9862,
+    [27] = 10063,
+    [28] = 10324,
+    [29] = 10786,
+    [30] = 11236,
+    [31] = 11323,
+    [32] = 11888,
+    [33] = 12506,
+    [34] = 12854,
+    [35] = 12984,
+    [36] = 13148,
+    [37] = 13302,
+    [39] = 13820,
+    [40] = 13845,
+    [41] = 13866,
+    [42] = 13899,
+    [43] = 14008,
+    [44] = 14027,
+    [45] = 14085,
+    [46] = 13788,
+    [47] = 14191,
+    [48] = 14494,
+    [49] = 14538,
+    [50] = 14175,
+    [51] = 14593,
+    [52] = 14613,
+    [53] = 14645,
+    [54] = 14568,
+    [55] = 14779,
+    [56] = 14944,
+    [57] = 14755,
+    [58] = 15192,
+    [59] = 15489,
+    [60] = 16147,
+    [61] = 17933,
+    [62] = 19076,
+    [63] = 20598,
+    [64] = 15009,
+    [65] = 25844,
+    [66] = 25887,
+    [67] = 25929,
+    [68] = 26001,
+    [69] = 26044,
+    [70] = 26104,
+    [71] = 25738,
+    [72] = 26147,
+    [73] = 26245,
+    [74] = 26423,
+    [75] = 26474,
+    [76] = 26504,
+    [77] = 26755,
+    [78] = 26804,
+    [79] = 27257,
+    [80] = 27277,
+    [81] = 27416,
+    [82] = 27515,
+    [83] = 27537,
+    [84] = 27590,
+    [85] = 27626,
+    [86] = 27644,
+    [87] = 27959,
+    [88] = 27975,
+    [89] = 28026,
+    [90] = 28045,
+    [91] = 28287,
+    [92] = 28331,
+    [93] = 28499,
+    [94] = 28527,
+    [95] = 28538,
 }
 
 -- Misc AOT variable imports
