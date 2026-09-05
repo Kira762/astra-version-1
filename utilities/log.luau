@@ -1,11 +1,18 @@
-local runtime = require(script.Parent.runtime)
-
 local log = {}
 
 type SuppressPredicate = () -> boolean
 
+-- Default secure-mode source reads the same environment flag core/state reads.
+-- Inlined here (instead of requiring core/state) so log stays a leaf module:
+-- core/state registers a richer source through log.setSecureModeSource.
 local function defaultSecureModeSource(): boolean
-    return runtime.secureMode
+    if typeof(getgenv) ~= "function" then
+        return false
+    end
+    local ok, val = pcall(function()
+        return getgenv().ASTRA_SECURE
+    end)
+    return ok and val == true
 end
 
 local secureModeSource: SuppressPredicate = defaultSecureModeSource

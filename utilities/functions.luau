@@ -1,8 +1,11 @@
+-- Compatibility shim for the old utilities/functions.luau surface.
+-- The real modules live in functions/; both paths stay importable.
+
 local functions = {}
 
-local textMetrics = require(script.Parent.textMetrics)
-local colors = require(script.Parent.colors)
-local flags = require(script.Parent.flagNames)
+local textMetrics = require(script.Parent.Parent.functions.textMetrics)
+local colors = require(script.Parent.Parent.functions.colors)
+local flags = require(script.Parent.Parent.functions.flagNames)
 
 functions.textWidth = textMetrics.textWidth
 functions.textHeight = textMetrics.textHeight

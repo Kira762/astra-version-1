@@ -1,4 +1,4 @@
-local variables = require(script.Parent.variables)
+local variables = require(script.Parent.Parent.core.state)
 local TextService = variables.textService
 
 local odometer = {}

@@ -1,4 +1,4 @@
-local variables = require(script.Parent.variables)
+local variables = require(script.Parent.Parent.core.state)
 local log = require(script.Parent.log)
 
 local locale = {}

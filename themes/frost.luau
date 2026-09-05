@@ -1,4 +1,4 @@
-local variables = require(script.Parent.Parent.utilities.variables)
+local variables = require(script.Parent.Parent.core.state)
 
 return {
     WindowColor = ColorSequence.new({

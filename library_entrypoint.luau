@@ -1,9 +1,10 @@
-local variables = require(script.Parent.utilities.variables)
-local image = require(script.Parent.utilities.image)
+local core = require(script.Parent.core)
+local variables = require(script.Parent.core.state)
+local image = require(script.Parent.images.image)
 local locale = require(script.Parent.utilities.locale)
 local constants = require(script.Parent.utilities.constants)
-local icons = require(script.Parent.utilities.icons)
-local persistenceSettings = require(script.Parent.utilities.persistenceSettings)
+local icons = require(script.Parent.icons)
+local settings = require(script.Parent.settings)
 local types = require(script.Parent.Types)
 
 export type Theme = types.Theme
@@ -77,6 +78,10 @@ local shared = sharedEnvironment()
 -- Use astra.Icons.get(name, pack) for explicit pack selection.
 astra.Icons = icons
 
+-- Internal service surface (kept for advanced consumers / tests).
+astra.Core = core
+astra.Settings = settings
+
 function astra:CreateWindow(properties: types.WindowProps): types.Window
     local existing = activeWindow or shared[activeWindowKey]
     activeWindow = existing
@@ -88,10 +93,9 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
                 shared[activeWindowKey] = nil
             end
         else
-            local savedPreference = true
-            pcall(function()
-                savedPreference = persistenceSettings.getAntiWindowDuplicate()
-            end)
+            -- Read the persisted preference through the settings service
+            -- (cached after first read) instead of a bespoke settings module.
+            local savedPreference = settings.readPersisted("antiWindowDuplicate", true)
             if savedPreference and (not state.settings or state.settings.antiWindowDuplicate ~= false) then
                 state:Unload()
                 activeWindow = nil
@@ -103,7 +107,7 @@ function astra:CreateWindow(properties: types.WindowProps): types.Window
     end
 
     local made, result = pcall(function()
-        return (require(script.Parent.ui.window) :: WindowModule).new(properties)
+        return (require(script.Parent.components.window) :: WindowModule).new(properties)
     end)
     if not made then
         error(result, 0)

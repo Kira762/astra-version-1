@@ -1,4 +1,4 @@
-local variables = require(script.Parent.variables)
+local variables = require(script.Parent.Parent.core.state)
 local filesystem = require(script.Parent.filesystem)
 local log = require(script.Parent.log)
 local path = require(script.Parent.path)

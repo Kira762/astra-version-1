@@ -1,4 +1,4 @@
-local variables = require(script.Parent.variables)
+local variables = require(script.Parent.Parent.core.state)
 local filesystem = require(script.Parent.filesystem)
 local paths = require(script.Parent.persistencePaths)
 local atomic = require(script.Parent.persistenceWrite)

@@ -1,4 +1,4 @@
-local windowIcons = require(script.Parent.windowIcons)
+local windowIcons = require(script.Parent.Parent.images.windowIcons)
 local constants = {}
 
 constants.fontAsset = "rbxassetid://12187375716"
