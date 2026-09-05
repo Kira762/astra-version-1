@@ -31,6 +31,11 @@ local settleInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirect
 
 local profileBuildGeneration = 0
 
+-- Avatar ImageLabels reject custom members at runtime, so the per-build
+-- generation marker is kept in a weak-keyed side table instead of being
+-- written onto the instance.
+local avatarGenerations = setmetatable({}, { __mode = "k" })
+
 local function profileVisible(window)
     return window.profile ~= nil
         and window.settings.showProfile
@@ -193,7 +198,7 @@ local function buildProfile(window, layout)
         Parent = window.profileLabels,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 
-    window.profileAvatar._profileGeneration = generation
+    avatarGenerations[window.profileAvatar] = generation
 
     local avatarUri = image.avatar(player.UserId, function(uri)
         if window.unloaded then
@@ -203,7 +208,7 @@ local function buildProfile(window, layout)
         if not currentAvatar then
             return
         end
-        if currentAvatar._profileGeneration ~= generation then
+        if avatarGenerations[currentAvatar] ~= generation then
             return
         end
         image.assign(currentAvatar, "Image", uri)

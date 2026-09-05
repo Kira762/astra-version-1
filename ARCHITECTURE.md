@@ -111,6 +111,19 @@ removed.
    - runtime/variables merge (old[69], old[72]): superseded by `core/state.luau`
    - vendored wax (old[74]): formatting/line-offset realignment only
 
+## Runtime fix: avatar generation marker
+
+The 6db1e08 sidebar fix stored its per-build generation marker directly on the
+avatar ImageLabel (`window.profileAvatar._profileGeneration = ...`). Roblox
+instances reject unknown members, so the first bundle that shipped that code
+crashed in CreateWindow with "_profileGeneration is not a valid member of
+ImageLabel" (the pre-refactor bundle predated that commit, which is why it
+never surfaced there). The marker now lives in a weak-keyed side table
+(`avatarGenerations`) in components/sidebar.luau; the stale-callback guard
+behavior is unchanged. `scripts/check_instance_fields.py` lints this entire
+bug class (custom-field writes on values created via `:Create` /
+`Instance.new`).
+
 ## Rojo/Wax init-folder semantics (late fix)
 
 A folder with an `init.luau` file syncs as a single ModuleScript — the init
