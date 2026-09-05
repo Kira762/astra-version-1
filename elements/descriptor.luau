@@ -51,4 +51,8 @@ function Descriptor.new(tab, properties)
     return self
 end
 
+function Descriptor:Remove()
+    self.main:Destroy()
+end
+
 return Descriptor
