@@ -5,6 +5,10 @@ refactor, the dependency rules, and the validation performed. Source modules are
 the source of truth; `version-1.luau` is a generated distribution artifact
 (Phase 11) and must not be hand-edited.
 
+> Post-refactor updates are documented in `CHANGELOG.md` (v1.1 patch set,
+> Luau minification, settings-card fix). The sections below describe the
+> original modular refactor as performed.
+
 ## v1.1 patch set (avatar/profile/settings fixes + settings sub-tabs)
 
 Post-refactor patch set applied on top of the modular tree. Intentionally

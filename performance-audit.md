@@ -1,5 +1,11 @@
 # Astra Runtime Performance Audit
 
+> Note (2026-09): this audit predates the v1.1 patch set and the Luau
+> minification pass. File counts and line numbers have shifted since it was
+> written (sources were minified, icons split into `icons/`, and settings
+> sub-tabs added). The bottleneck analysis below still applies conceptually;
+> re-run the measurements before acting on the numbers.
+
 ## Scope and baseline
 
 The audit covered all 68 Luau files under `src/`, plus `src/init.luau`, `src/types.luau`, `example.client.luau`, and `version-1.luau`. Baseline syntax compilation passed for all 68 source files, the example, and the bundle. The working tree was clean before optimization.
