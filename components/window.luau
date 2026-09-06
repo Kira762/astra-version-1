@@ -1912,11 +1912,23 @@ function a17:_buildSettingsCard()
         Name = "SettingsCard",
         Size = if a221 then UDim2.new(1, -20, 1, -10) else UDim2.new(1, -20, 1, -20),
         Position = UDim2.new(0, 10, 0, 10),
-        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 1,
         Parent = self.elements,
-    }, { BackgroundColor3 = "CardSurface", BackgroundTransparency = "ElementTransparency" })
+    }, { BackgroundTransparency = "ElementTransparency" })
+
+    -- Internal safe-area inset so Settings controls keep breathing room from
+    -- the card's rounded corners and stroke. Applied at the card level so all
+    -- content (settings page, sub-tab bar, sub-tab pages) inherits it.
+    self:Create("UIPadding", {
+        PaddingLeft = UDim.new(0, 6),
+        PaddingRight = UDim.new(0, 6),
+        PaddingTop = UDim.new(0, 6),
+        PaddingBottom = UDim.new(0, 6),
+
+        Parent = a222,
+    })
 
     local a223 = self:StyleElementBody(a222)
 
