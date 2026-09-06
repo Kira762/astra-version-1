@@ -90,7 +90,24 @@ function a7:save(): boolean
 end
 
 function a7:load(): boolean
-    return a3.load(self.values)
+    local a22 = table.clone(self.values)
+    local ok = a3.load(self.values)
+    if not ok then
+        return ok
+    end
+
+    -- Notify listeners only for values that actually changed, matching the
+    -- (key, newValue, oldValue) contract of :set(). Persisted values are
+    -- written into self.values first; callbacks fire afterwards.
+    for _, a23 in a1.keys() do
+        local a24 = self.values[a23]
+        if a22[a23] ~= a24 then
+            for _, a25 in self.listeners do
+                task.spawn(a25, a23, a24, a22[a23])
+            end
+        end
+    end
+    return ok
 end
 
 return a7
