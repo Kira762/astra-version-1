@@ -2494,7 +2494,13 @@ function a17:Set(a280, a281)
 end
 
 function a17:_jumpTo(a283)
-    if a283 then
+    if not a283 then
+        return
+    end
+    if self._settingsCardBuilt and self.settingsCard and a283.Parent == self.settingsCard then
+        a283 = self.settingsCard
+    end
+    if a283.Parent == self.elements then
         self.elementsLayout:JumpTo(a283)
     end
 end
