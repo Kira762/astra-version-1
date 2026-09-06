@@ -1912,25 +1912,38 @@ function a17:_buildSettingsCard()
         Name = "SettingsCard",
         Size = if a221 then UDim2.new(1, -20, 1, -10) else UDim2.new(1, -20, 1, -20),
         Position = UDim2.new(0, 10, 0, 10),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 1,
         Parent = self.elements,
-    }, { BackgroundTransparency = "ElementTransparency" })
+    }, { BackgroundColor3 = "StatBackground", BackgroundTransparency = "ElementTransparency" })
 
-    -- Internal safe-area inset so Settings controls keep breathing room from
-    -- the card's rounded corners and stroke. Applied at the card level so all
-    -- content (settings page, sub-tab bar, sub-tab pages) inherits it.
+    -- Inset surface: the stat-element recipe (themed StatBackground base with
+    -- element corner + stroke, no gradient multiply) so the card sits one step
+    -- darker than the normal element surface instead of looking like a
+    -- different panel.
+
+    -- Safe-area inset applied at the card level so every child (settings
+    -- page, sub-tab bar, sub-tab pages) inherits it: content width resolves
+    -- against CardWidth - padding, keeping controls clear of the rounded
+    -- corners and stroke at any window size.
     self:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, 6),
-        PaddingRight = UDim.new(0, 6),
-        PaddingTop = UDim.new(0, 6),
-        PaddingBottom = UDim.new(0, 6),
+        PaddingLeft = UDim.new(0, 14),
+        PaddingRight = UDim.new(0, 14),
+        PaddingTop = UDim.new(0, 12),
+        PaddingBottom = UDim.new(0, 12),
 
         Parent = a222,
     })
 
-    local a223 = self:StyleElementBody(a222)
+    self:Create("UICorner", {
+        Parent = a222,
+    }, { CornerRadius = "ElementCornerRadius" })
+
+    local a223 = self:Create("UIStroke", {
+        Transparency = 1,
+
+        Parent = a222,
+    }, { Color = "ElementStroke", Transparency = "ElementStrokeTransparency" })
 
     self.settingsCard = a222
     self.settingsCardStroke = a223
@@ -2234,6 +2247,7 @@ function a17:_fadeSurfaces(a246, a247)
         end
     end
 
+    a14.reflowProfile(self)
     a14.setProfileShown(self, a246, a247)
 end
 

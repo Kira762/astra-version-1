@@ -39,8 +39,13 @@ local a17 = setmetatable({}, { __mode = "k" })
 local a18 = "rbxassetid://0"
 
 local function a19(window)
+    -- Profile.Visible = Window.Visible AND settings.showProfile: the profile
+    -- also hides while the window is minimised to the pill, where the topbar
+    -- remains technically visible but the window content is not shown.
     return window.profile ~= nil
         and window.settings.showProfile
+        and not window.hidden
+        and not window.minimised
         and a2.localPlayer ~= nil
 end
 
@@ -330,6 +335,12 @@ end
 function a7.setProfileShown(window, a44, a45)
     if not window.profile then
         return
+    end
+
+    -- Window visibility wins over the requested state: never fade the
+    -- profile in while the window is hidden or minimised.
+    if a44 and not a19(window) then
+        a44 = false
     end
 
     local a46 = window.profileAvatar

@@ -2759,8 +2759,13 @@ local a17 = setmetatable({}, { __mode = "k" })
 local a18 = "rbxassetid://0"
 
 local function a19(window)
+    -- Profile.Visible = Window.Visible AND settings.showProfile: the profile
+    -- also hides while the window is minimised to the pill, where the topbar
+    -- remains technically visible but the window content is not shown.
     return window.profile ~= nil
         and window.settings.showProfile
+        and not window.hidden
+        and not window.minimised
         and a2.localPlayer ~= nil
 end
 
@@ -3050,6 +3055,12 @@ end
 function a7.setProfileShown(window, a44, a45)
     if not window.profile then
         return
+    end
+
+    -- Window visibility wins over the requested state: never fade the
+    -- profile in while the window is hidden or minimised.
+    if a44 and not a19(window) then
+        a44 = false
     end
 
     local a46 = window.profileAvatar
@@ -5704,25 +5715,38 @@ function a17:_buildSettingsCard()
         Name = "SettingsCard",
         Size = if a221 then UDim2.new(1, -20, 1, -10) else UDim2.new(1, -20, 1, -20),
         Position = UDim2.new(0, 10, 0, 10),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 1,
         Parent = self.elements,
-    }, { BackgroundTransparency = "ElementTransparency" })
+    }, { BackgroundColor3 = "StatBackground", BackgroundTransparency = "ElementTransparency" })
 
-    -- Internal safe-area inset so Settings controls keep breathing room from
-    -- the card's rounded corners and stroke. Applied at the card level so all
-    -- content (settings page, sub-tab bar, sub-tab pages) inherits it.
+    -- Inset surface: the stat-element recipe (themed StatBackground base with
+    -- element corner + stroke, no gradient multiply) so the card sits one step
+    -- darker than the normal element surface instead of looking like a
+    -- different panel.
+
+    -- Safe-area inset applied at the card level so every child (settings
+    -- page, sub-tab bar, sub-tab pages) inherits it: content width resolves
+    -- against CardWidth - padding, keeping controls clear of the rounded
+    -- corners and stroke at any window size.
     self:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, 6),
-        PaddingRight = UDim.new(0, 6),
-        PaddingTop = UDim.new(0, 6),
-        PaddingBottom = UDim.new(0, 6),
+        PaddingLeft = UDim.new(0, 14),
+        PaddingRight = UDim.new(0, 14),
+        PaddingTop = UDim.new(0, 12),
+        PaddingBottom = UDim.new(0, 12),
 
         Parent = a222,
     })
 
-    local a223 = self:StyleElementBody(a222)
+    self:Create("UICorner", {
+        Parent = a222,
+    }, { CornerRadius = "ElementCornerRadius" })
+
+    local a223 = self:Create("UIStroke", {
+        Transparency = 1,
+
+        Parent = a222,
+    }, { Color = "ElementStroke", Transparency = "ElementStrokeTransparency" })
 
     self.settingsCard = a222
     self.settingsCardStroke = a223
@@ -6026,6 +6050,7 @@ function a17:_fadeSurfaces(a246, a247)
         end
     end
 
+    a14.reflowProfile(self)
     a14.setProfileShown(self, a246, a247)
 end
 
@@ -28803,84 +28828,84 @@ local LineOffsets = {
     [13] = 1643,
     [14] = 2377,
     [15] = 2721,
-    [16] = 3123,
-    [17] = 3419,
-    [18] = 3793,
-    [20] = 6853,
-    [21] = 7120,
-    [22] = 8251,
-    [23] = 8585,
-    [24] = 8646,
-    [25] = 8791,
-    [26] = 10111,
-    [27] = 10312,
-    [28] = 10573,
-    [29] = 11035,
-    [30] = 11485,
-    [31] = 11572,
-    [32] = 12137,
-    [33] = 12755,
-    [34] = 13103,
-    [35] = 13233,
-    [36] = 13397,
-    [37] = 13551,
-    [39] = 14062,
-    [40] = 14085,
-    [41] = 14102,
-    [42] = 14131,
-    [43] = 14247,
-    [44] = 14261,
-    [45] = 14310,
-    [46] = 14037,
-    [47] = 14411,
-    [48] = 14714,
-    [49] = 14745,
-    [50] = 14400,
-    [51] = 14788,
-    [52] = 14808,
-    [53] = 14840,
-    [54] = 14770,
-    [55] = 14962,
-    [56] = 15125,
-    [57] = 14947,
-    [58] = 15344,
-    [59] = 15639,
-    [60] = 16295,
-    [61] = 18079,
-    [62] = 19220,
-    [63] = 20740,
-    [64] = 15188,
-    [65] = 25969,
-    [66] = 26013,
-    [67] = 26056,
-    [68] = 26129,
-    [69] = 26173,
-    [70] = 26234,
-    [71] = 25878,
-    [72] = 26278,
-    [73] = 26376,
-    [74] = 26554,
-    [75] = 26605,
-    [76] = 26635,
-    [77] = 26886,
-    [78] = 26935,
-    [79] = 27388,
-    [80] = 27406,
-    [81] = 27546,
-    [82] = 27645,
-    [83] = 27667,
-    [84] = 27717,
-    [85] = 27753,
-    [86] = 27771,
-    [87] = 28084,
-    [88] = 28100,
-    [89] = 28151,
-    [90] = 28170,
-    [91] = 28412,
-    [92] = 28456,
-    [93] = 28629,
-    [94] = 28657,
-    [95] = 28668,
+    [16] = 3134,
+    [17] = 3430,
+    [18] = 3804,
+    [20] = 6878,
+    [21] = 7145,
+    [22] = 8276,
+    [23] = 8610,
+    [24] = 8671,
+    [25] = 8816,
+    [26] = 10136,
+    [27] = 10337,
+    [28] = 10598,
+    [29] = 11060,
+    [30] = 11510,
+    [31] = 11597,
+    [32] = 12162,
+    [33] = 12780,
+    [34] = 13128,
+    [35] = 13258,
+    [36] = 13422,
+    [37] = 13576,
+    [39] = 14087,
+    [40] = 14110,
+    [41] = 14127,
+    [42] = 14156,
+    [43] = 14272,
+    [44] = 14286,
+    [45] = 14335,
+    [46] = 14062,
+    [47] = 14436,
+    [48] = 14739,
+    [49] = 14770,
+    [50] = 14425,
+    [51] = 14813,
+    [52] = 14833,
+    [53] = 14865,
+    [54] = 14795,
+    [55] = 14987,
+    [56] = 15150,
+    [57] = 14972,
+    [58] = 15369,
+    [59] = 15664,
+    [60] = 16320,
+    [61] = 18104,
+    [62] = 19245,
+    [63] = 20765,
+    [64] = 15213,
+    [65] = 25994,
+    [66] = 26038,
+    [67] = 26081,
+    [68] = 26154,
+    [69] = 26198,
+    [70] = 26259,
+    [71] = 25903,
+    [72] = 26303,
+    [73] = 26401,
+    [74] = 26579,
+    [75] = 26630,
+    [76] = 26660,
+    [77] = 26911,
+    [78] = 26960,
+    [79] = 27413,
+    [80] = 27431,
+    [81] = 27571,
+    [82] = 27670,
+    [83] = 27692,
+    [84] = 27742,
+    [85] = 27778,
+    [86] = 27796,
+    [87] = 28109,
+    [88] = 28125,
+    [89] = 28176,
+    [90] = 28195,
+    [91] = 28437,
+    [92] = 28481,
+    [93] = 28654,
+    [94] = 28682,
+    [95] = 28693,
 }
 
 -- Misc AOT variable imports
