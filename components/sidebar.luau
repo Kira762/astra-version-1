@@ -55,6 +55,19 @@ local function a20(window, a21)
         return
     end
 
+    -- Re-layout safety: drop any previous profile before building a new one
+    -- so switching layout modes can never orphan the old instance.
+    if window.profile then
+        window:DestroySubtree(window.profile)
+        window.profile = nil
+        window.profileContainer = nil
+        window.profileLayout = nil
+        window.profileAvatar = nil
+        window.profileName = nil
+        window.profileSubtitle = nil
+        window.profileLabels = nil
+    end
+
     a15 += 1
     local a23 = a15
 

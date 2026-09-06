@@ -117,8 +117,9 @@ local function a16(tab)
     })
 
     tab.window:Create("UICorner", {
+        CornerRadius = UDim.new(0, 14),
         Parent = tab.topbarItem,
-    }, { CornerRadius = UDim.new(0, 14) })
+    })
 
     tab.topbarItemStroke = tab.window:Create("UIStroke", {
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
