@@ -1912,11 +1912,11 @@ function a17:_buildSettingsCard()
         Name = "SettingsCard",
         Size = if a221 then UDim2.new(1, -20, 1, -10) else UDim2.new(1, -20, 1, -20),
         Position = UDim2.new(0, 10, 0, 10),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
         BorderSizePixel = 0,
         ZIndex = 1,
         Parent = self.elements,
-    }, { BackgroundColor3 = "WindowColor", BackgroundTransparency = "ElementTransparency" })
+    }, { BackgroundColor3 = "CardSurface", BackgroundTransparency = "ElementTransparency" })
 
     local a223 = self:StyleElementBody(a222)
 

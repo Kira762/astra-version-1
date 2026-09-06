@@ -11,6 +11,7 @@ return {
 
         ElementTransparency = 0,
     ElementStroke = Color3.fromRGB(218, 224, 228),
+    CardSurface = Color3.fromRGB(255, 255, 255),
     ElementGradient = ColorSequence.new(Color3.fromRGB(255, 255, 255)),
     ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(224, 230, 234), Color3.fromRGB(232, 238, 242)),
     ElementStrokeTransparency = 0.1,

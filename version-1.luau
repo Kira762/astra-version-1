@@ -5704,11 +5704,11 @@ function a17:_buildSettingsCard()
         Name = "SettingsCard",
         Size = if a221 then UDim2.new(1, -20, 1, -10) else UDim2.new(1, -20, 1, -20),
         Position = UDim2.new(0, 10, 0, 10),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
         BorderSizePixel = 0,
         ZIndex = 1,
         Parent = self.elements,
-    }, { BackgroundColor3 = "WindowColor", BackgroundTransparency = "ElementTransparency" })
+    }, { BackgroundColor3 = "CardSurface", BackgroundTransparency = "ElementTransparency" })
 
     local a223 = self:StyleElementBody(a222)
 
@@ -25940,6 +25940,7 @@ return {
     ShadowColor = Color3.fromRGB(12, 6, 22),
 
     ElementStroke = Color3.fromRGB(54, 42, 74),
+    CardSurface = Color3.fromRGB(32, 24, 48),
     ElementGradient = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 24, 48)),
         ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(36, 28, 54)),
@@ -25983,6 +25984,7 @@ return {
     ShadowColor = Color3.fromRGB(6, 8, 20),
 
     ElementStroke = Color3.fromRGB(44, 52, 82),
+    CardSurface = Color3.fromRGB(26, 32, 58),
     ElementGradient = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 32, 58)),
         ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(30, 38, 66)),
@@ -26028,6 +26030,7 @@ return {
     ShadowColor = Color3.fromRGB(20, 20, 20),
 
     ElementStroke = Color3.fromRGB(35, 35, 35),
+    CardSurface = Color3.fromRGB(30, 30, 30),
         ElementGradient = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)),
         ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(35, 35, 35)),
@@ -26097,6 +26100,7 @@ return {
     ShadowColor = Color3.fromRGB(16, 12, 8),
 
     ElementStroke = Color3.fromRGB(54, 46, 40),
+    CardSurface = Color3.fromRGB(32, 27, 23),
     ElementGradient = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 27, 23)),
         ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(38, 32, 27)),
@@ -26144,6 +26148,7 @@ return {
 
         ElementTransparency = 0,
     ElementStroke = Color3.fromRGB(218, 224, 228),
+    CardSurface = Color3.fromRGB(255, 255, 255),
     ElementGradient = ColorSequence.new(Color3.fromRGB(255, 255, 255)),
     ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(224, 230, 234), Color3.fromRGB(232, 238, 242)),
     ElementStrokeTransparency = 0.1,
@@ -26200,6 +26205,7 @@ return {
     ShadowColor = Color3.fromRGB(18, 10, 14),
 
     ElementStroke = Color3.fromRGB(58, 44, 50),
+    CardSurface = Color3.fromRGB(34, 25, 29),
     ElementGradient = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 25, 29)),
         ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(40, 30, 34)),
@@ -28809,36 +28815,36 @@ local LineOffsets = {
     [63] = 20705,
     [64] = 15153,
     [65] = 25934,
-    [66] = 25977,
-    [67] = 26019,
-    [68] = 26091,
-    [69] = 26134,
-    [70] = 26194,
+    [66] = 25978,
+    [67] = 26021,
+    [68] = 26094,
+    [69] = 26138,
+    [70] = 26199,
     [71] = 25843,
-    [72] = 26237,
-    [73] = 26335,
-    [74] = 26513,
-    [75] = 26564,
-    [76] = 26594,
-    [77] = 26845,
-    [78] = 26894,
-    [79] = 27347,
-    [80] = 27365,
-    [81] = 27504,
-    [82] = 27603,
-    [83] = 27625,
-    [84] = 27675,
-    [85] = 27711,
-    [86] = 27729,
-    [87] = 28042,
-    [88] = 28058,
-    [89] = 28109,
-    [90] = 28128,
-    [91] = 28370,
-    [92] = 28414,
-    [93] = 28587,
-    [94] = 28615,
-    [95] = 28626,
+    [72] = 26243,
+    [73] = 26341,
+    [74] = 26519,
+    [75] = 26570,
+    [76] = 26600,
+    [77] = 26851,
+    [78] = 26900,
+    [79] = 27353,
+    [80] = 27371,
+    [81] = 27510,
+    [82] = 27609,
+    [83] = 27631,
+    [84] = 27681,
+    [85] = 27717,
+    [86] = 27735,
+    [87] = 28048,
+    [88] = 28064,
+    [89] = 28115,
+    [90] = 28134,
+    [91] = 28376,
+    [92] = 28420,
+    [93] = 28593,
+    [94] = 28621,
+    [95] = 28632,
 }
 
 -- Misc AOT variable imports

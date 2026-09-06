@@ -10,6 +10,7 @@ return {
     ShadowColor = Color3.fromRGB(20, 20, 20),
 
     ElementStroke = Color3.fromRGB(35, 35, 35),
+    CardSurface = Color3.fromRGB(30, 30, 30),
         ElementGradient = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)),
         ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(35, 35, 35)),
