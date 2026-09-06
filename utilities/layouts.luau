@@ -53,6 +53,7 @@ a1.top = {
     tabStripHeight = a4,
 
     profileHeight = 48,
+    avatarSize = 34,
 
     pageDirection = Enum.FillDirection.Horizontal,
 
