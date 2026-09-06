@@ -71,7 +71,7 @@ function a4.resolve(a20)
         a21[a23] = a4.coerceValue(a23, a24)
     end
     if typeof(a20) == "table" then
-        deriveStrokes(a21, a22)
+        a4.deriveStrokes(a21, a22)
     end
 
     local a25 = if typeof(a20) == "table" then a20 else nil

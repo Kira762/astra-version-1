@@ -1509,7 +1509,7 @@ function a17:_buildSettingsUI()
         collapsedSidebar = "Collapsed Sidebar",
     }
     local a186 = self.settings.layoutMode or self.layout.mode
-    local a187 = self.rfSettings:CreateDropdown({
+    local layoutDropdown = self.rfSettings:CreateDropdown({
         name = "Bar Layout",
         description = "Choose Default Topbar, responsive Sidebar, or an automatic compact Collapsed Sidebar for desktop and mobile.",
         options = { a185.top, a185.sidebar, a185.collapsedSidebar },
