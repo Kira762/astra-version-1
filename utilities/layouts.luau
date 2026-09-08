@@ -78,7 +78,7 @@ a1.sidebar = {
 
             railWidth = 219,
             railCollapsedWidth = 64,
-    railCollapseBelow = 589,
+    railCollapseBelow = 520,
 
     rowHeight = 38,
     rowCornerRadius = 14,
