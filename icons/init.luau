@@ -1,6 +1,6 @@
 
-local fileSystem = require(script.Parent.Parent.utilities.filesystem)
-local state = require(script.Parent.Parent.core.state)
+local fileSystem = require(script.Parent.utilities.filesystem)
+local state = require(script.Parent.core.state)
 
 local icons = {}
 

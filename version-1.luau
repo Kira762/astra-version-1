@@ -15232,8 +15232,8 @@ return a1
 end)() end,
     [64] = function()local wax,script,require=ImportGlobals(64)local ImportGlobals return (function(...)
 
-local fileSystem = require(script.Parent.Parent.utilities.filesystem)
-local state = require(script.Parent.Parent.core.state)
+local fileSystem = require(script.Parent.utilities.filesystem)
+local state = require(script.Parent.core.state)
 
 local icons = {}
 
