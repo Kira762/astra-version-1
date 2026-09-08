@@ -36,6 +36,7 @@ const TREE = [
   { dir: "settings" },
   { dir: "cache" },
   { dir: "functions" },
+  { dir: "layouts" },
   { dir: "images" },
   { dir: "icons" },
   { dir: "themes" },

@@ -14947,7 +14947,180 @@ end
 return a3
 
 end)() end,
+    [55] = function()local wax,script,require=ImportGlobals(55)local ImportGlobals return (function(...)
+local sidebar = require(script.Parent.Parent.components.sidebar)
+
+local Sidebar = {}
+
+local function buildRail(window, layout)
+    window.tabList = window:Create("ScrollingFrame", {
+        Name = "Tabs",
+        Active = true,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 0,
+        ScrollBarImageTransparency = 1,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ClipsDescendants = true,
+        Parent = window.sidebar,
+    })
+    window:Create("UIPadding", {
+        PaddingTop = UDim.new(0, layout.railPadding),
+        PaddingBottom = UDim.new(0, layout.railPadding),
+        Parent = window.tabList,
+    })
+    window.tabListLayout = window:Create("UIListLayout", {
+        Padding = UDim.new(0, layout.rowSpacing),
+        FillDirection = Enum.FillDirection.Vertical,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = window.tabList,
+    })
+end
+
+function Sidebar.Build(window, layout)
+    window.sidebar = window:Create("Frame", {
+        Name = "Sidebar",
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.fromScale(0, 1),
+        Size = UDim2.new(0, layout.railWidth, 1, -layout.chromeHeight),
+        BackgroundTransparency = 1,
+        Visible = false,
+        Parent = window.main,
+    })
+    buildRail(window, layout)
+    sidebar.buildProfile(window, layout)
+    sidebar.reflowProfile(window)
+end
+
+function Sidebar.ApplyWidth(window, width)
+    local layout = window.layout
+    window.sidebar.Size = UDim2.new(0, width, 1, -layout.chromeHeight)
+    window.elements.Size = UDim2.new(1, -width, 1, -layout.chromeHeight)
+    window.bottomFade.Size = UDim2.new(1, -width, layout.fadeSize.Y.Scale, layout.fadeSize.Y.Offset)
+    sidebar.applyRailRows(window, width, layout)
+    sidebar.reflowProfile(window)
+end
+
+return Sidebar
+
+end)() end,
+    [56] = function()local wax,script,require=ImportGlobals(56)local ImportGlobals return (function(...)
+local sidebar = require(script.Parent.Parent.components.sidebar)
+
+local SidebarCollapsed = {}
+
+local function buildRail(window, layout)
+    window.tabList = window:Create("ScrollingFrame", {
+        Name = "CollapsedTabs",
+        Active = true,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 0,
+        ScrollBarImageTransparency = 1,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ClipsDescendants = true,
+        Parent = window.sidebar,
+    })
+    window:Create("UIPadding", {
+        PaddingTop = UDim.new(0, layout.railPadding),
+        PaddingBottom = UDim.new(0, layout.railPadding),
+        Parent = window.tabList,
+    })
+    window.tabListLayout = window:Create("UIListLayout", {
+        Padding = UDim.new(0, layout.rowSpacing),
+        FillDirection = Enum.FillDirection.Vertical,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = window.tabList,
+    })
+end
+
+function SidebarCollapsed.Build(window, layout)
+    window.sidebar = window:Create("Frame", {
+        Name = "CollapsedSidebar",
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.fromScale(0, 1),
+        Size = UDim2.new(0, layout.railCollapsedWidth, 1, -layout.chromeHeight),
+        BackgroundTransparency = 1,
+        Visible = false,
+        Parent = window.main,
+    })
+    buildRail(window, layout)
+    sidebar.buildProfile(window, layout)
+    sidebar.reflowProfile(window)
+end
+
+function SidebarCollapsed.ApplyWidth(window)
+    local layout = window.layout
+    local width = layout.railCollapsedWidth
+    window.sidebar.Size = UDim2.new(0, width, 1, -layout.chromeHeight)
+    window.elements.Size = UDim2.new(1, -width, 1, -layout.chromeHeight)
+    window.bottomFade.Size = UDim2.new(1, -width, layout.fadeSize.Y.Scale, layout.fadeSize.Y.Offset)
+    sidebar.applyRailRows(window, width, layout)
+    sidebar.reflowProfile(window)
+end
+
+return SidebarCollapsed
+
+end)() end,
     [57] = function()local wax,script,require=ImportGlobals(57)local ImportGlobals return (function(...)
+local sidebar = require(script.Parent.Parent.components.sidebar)
+local search = require(script.Parent.Parent.components.search)
+
+local Topbar = {}
+
+function Topbar.Build(window, layout)
+    window.tabList = window:Create("ScrollingFrame", {
+        Name = "Tabs",
+        Active = true,
+        Size = UDim2.new(1, 0, 0, layout.tabStripHeight),
+        Position = UDim2.new(0.5, 0, 0, layout.tabStripTop),
+        AnchorPoint = Vector2.new(0.5, 0),
+        BackgroundTransparency = 1,
+        AutomaticCanvasSize = Enum.AutomaticSize.X,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 0,
+        ScrollBarImageTransparency = 1,
+        ScrollingDirection = Enum.ScrollingDirection.X,
+        Parent = window.main,
+    })
+    window.tabListLayout = window:Create("UIListLayout", {
+        Padding = UDim.new(0, 7),
+        FillDirection = Enum.FillDirection.Horizontal,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = window.tabList,
+    })
+    window:Create("UIPadding", {
+        PaddingLeft = UDim.new(0, 22),
+        PaddingRight = UDim.new(0, 10),
+        Parent = window.tabList,
+    })
+    sidebar.buildProfile(window, layout)
+    sidebar.reflowProfile(window)
+end
+
+function Topbar.ApplyWidth(window)
+    search.railWidth(window, 0)
+    window.elements.Size = UDim2.new(1, 0, 1, -window.layout.chromeHeight)
+    window.bottomFade.Size = UDim2.new(1, 0, window.layout.fadeSize.Y.Scale, window.layout.fadeSize.Y.Offset)
+    sidebar.reflowProfile(window)
+end
+
+return Topbar
+
+end)() end,
+    [61] = function()local wax,script,require=ImportGlobals(61)local ImportGlobals return (function(...)
 
 local a1 = require(script.image)
 
@@ -14962,7 +15135,7 @@ local a2 = {
 return a2
 
 end)() end,
-    [55] = function()local wax,script,require=ImportGlobals(55)local ImportGlobals return (function(...)
+    [59] = function()local wax,script,require=ImportGlobals(59)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.cache.imageCache)
 local a2 = require(script.Parent.Parent.core.state)
 
@@ -15125,7 +15298,7 @@ end
 return a3
 
 end)() end,
-    [56] = function()local wax,script,require=ImportGlobals(56)local ImportGlobals return (function(...)
+    [60] = function()local wax,script,require=ImportGlobals(60)local ImportGlobals return (function(...)
 
 local a1 = {}
 
@@ -15188,7 +15361,7 @@ end
 return a1
 
 end)() end,
-    [64] = function()local wax,script,require=ImportGlobals(64)local ImportGlobals return (function(...)
+    [68] = function()local wax,script,require=ImportGlobals(68)local ImportGlobals return (function(...)
 
 local fileSystem = require(script.Parent.utilities.filesystem)
 local state = require(script.Parent.core.state)
@@ -15407,7 +15580,7 @@ end
 return icons
 
 end)() end,
-    [58] = function()local wax,script,require=ImportGlobals(58)local ImportGlobals return (function(...)
+    [62] = function()local wax,script,require=ImportGlobals(62)local ImportGlobals return (function(...)
 
 local feather = {
     ["activity"] = "assets/icons/feather-pack/a/featherActivity.png",
@@ -15702,7 +15875,7 @@ local feather = {
 return feather
 
 end)() end,
-    [59] = function()local wax,script,require=ImportGlobals(59)local ImportGlobals return (function(...)
+    [63] = function()local wax,script,require=ImportGlobals(63)local ImportGlobals return (function(...)
 
 local heroicons = {
     ["academic-cap"] = "assets/icons/heroicons-pack/a/heroiconsAcademicCap.png",
@@ -16358,7 +16531,7 @@ local heroicons = {
 return heroicons
 
 end)() end,
-    [60] = function()local wax,script,require=ImportGlobals(60)local ImportGlobals return (function(...)
+    [64] = function()local wax,script,require=ImportGlobals(64)local ImportGlobals return (function(...)
 
 local lucide = {
     ["a-arrow-down"] = "assets/icons/lucide-pack/a/lucideAArrowDown.png",
@@ -18142,7 +18315,7 @@ local lucide = {
 return lucide
 
 end)() end,
-    [61] = function()local wax,script,require=ImportGlobals(61)local ImportGlobals return (function(...)
+    [65] = function()local wax,script,require=ImportGlobals(65)local ImportGlobals return (function(...)
 
 local material = {
     ["ac_unit"] = "assets/icons/material-pack/white/a/materialAcUnit.png",
@@ -19283,7 +19456,7 @@ local material = {
 return material
 
 end)() end,
-    [62] = function()local wax,script,require=ImportGlobals(62)local ImportGlobals return (function(...)
+    [66] = function()local wax,script,require=ImportGlobals(66)local ImportGlobals return (function(...)
 
 local phosphor = {
     ["acorn"] = "assets/icons/phosphor-pack/a/phosphorAcorn.png",
@@ -20803,7 +20976,7 @@ local phosphor = {
 return phosphor
 
 end)() end,
-    [63] = function()local wax,script,require=ImportGlobals(63)local ImportGlobals return (function(...)
+    [67] = function()local wax,script,require=ImportGlobals(67)local ImportGlobals return (function(...)
 
 local tabler = {
     ["a-b-2"] = "assets/icons/tabler-pack/a/tablerAB2.png",
@@ -25941,7 +26114,7 @@ local tabler = {
 return tabler
 
 end)() end,
-    [71] = function()local wax,script,require=ImportGlobals(71)local ImportGlobals return (function(...)
+    [75] = function()local wax,script,require=ImportGlobals(75)local ImportGlobals return (function(...)
 
 local a1 = script
 local a2 = require(script.Parent.core.state)
@@ -26032,7 +26205,7 @@ end
 return a4
 
 end)() end,
-    [65] = function()local wax,script,require=ImportGlobals(65)local ImportGlobals return (function(...)
+    [69] = function()local wax,script,require=ImportGlobals(69)local ImportGlobals return (function(...)
 return {
     WindowColor = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 16, 32)),
@@ -26076,7 +26249,7 @@ return {
 }
 
 end)() end,
-    [66] = function()local wax,script,require=ImportGlobals(66)local ImportGlobals return (function(...)
+    [70] = function()local wax,script,require=ImportGlobals(70)local ImportGlobals return (function(...)
 return {
     WindowColor = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 16, 34)),
@@ -26119,7 +26292,7 @@ return {
     NeutralButtonStroke = Color3.fromRGB(120, 138, 195), }
 
 end)() end,
-    [67] = function()local wax,script,require=ImportGlobals(67)local ImportGlobals return (function(...)
+    [71] = function()local wax,script,require=ImportGlobals(71)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.core.state)
 
 return {
@@ -26192,7 +26365,7 @@ return {
 }
 
 end)() end,
-    [68] = function()local wax,script,require=ImportGlobals(68)local ImportGlobals return (function(...)
+    [72] = function()local wax,script,require=ImportGlobals(72)local ImportGlobals return (function(...)
 return {
     WindowColor = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 18, 16)),
@@ -26236,7 +26409,7 @@ return {
 }
 
 end)() end,
-    [69] = function()local wax,script,require=ImportGlobals(69)local ImportGlobals return (function(...)
+    [73] = function()local wax,script,require=ImportGlobals(73)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.core.state)
 
 return {
@@ -26297,7 +26470,7 @@ return {
 }
 
 end)() end,
-    [70] = function()local wax,script,require=ImportGlobals(70)local ImportGlobals return (function(...)
+    [74] = function()local wax,script,require=ImportGlobals(74)local ImportGlobals return (function(...)
 return {
     WindowColor = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 18, 22)),
@@ -26341,7 +26514,7 @@ return {
 }
 
 end)() end,
-    [72] = function()local wax,script,require=ImportGlobals(72)local ImportGlobals return (function(...)
+    [76] = function()local wax,script,require=ImportGlobals(76)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.core.state)
 
 local a2 = {}
@@ -26439,7 +26612,7 @@ end
 return a2
 
 end)() end,
-    [73] = function()local wax,script,require=ImportGlobals(73)local ImportGlobals return (function(...)
+    [77] = function()local wax,script,require=ImportGlobals(77)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.network)
 local a2 = require(script.Parent.log)
 
@@ -26617,7 +26790,7 @@ end
 return a3
 
 end)() end,
-    [74] = function()local wax,script,require=ImportGlobals(74)local ImportGlobals return (function(...)
+    [78] = function()local wax,script,require=ImportGlobals(78)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.images.windowIcons)
 local a2 = {}
 
@@ -26668,7 +26841,7 @@ a2.displayOrder = {
 return a2
 
 end)() end,
-    [75] = function()local wax,script,require=ImportGlobals(75)local ImportGlobals return (function(...)
+    [79] = function()local wax,script,require=ImportGlobals(79)local ImportGlobals return (function(...)
 local a1 = {}
 
 function a1.itemFromValue(a2, a3)
@@ -26698,7 +26871,7 @@ end
 return a1
 
 end)() end,
-    [76] = function()local wax,script,require=ImportGlobals(76)local ImportGlobals return (function(...)
+    [80] = function()local wax,script,require=ImportGlobals(80)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.services)
 local a2 = {}
 
@@ -26949,7 +27122,7 @@ end
 return a2
 
 end)() end,
-    [77] = function()local wax,script,require=ImportGlobals(77)local ImportGlobals return (function(...)
+    [81] = function()local wax,script,require=ImportGlobals(81)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.filesystem)
 local a2 = require(script.Parent.path)
 
@@ -26998,7 +27171,7 @@ end
 return a4
 
 end)() end,
-    [78] = function()local wax,script,require=ImportGlobals(78)local ImportGlobals return (function(...)
+    [82] = function()local wax,script,require=ImportGlobals(82)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.services)
 local a2 = a1.getService("HttpService")
 local a3 = a1.getService("RunService")
@@ -27451,7 +27624,7 @@ end
 return a16
 
 end)() end,
-    [79] = function()local wax,script,require=ImportGlobals(79)local ImportGlobals return (function(...)
+    [83] = function()local wax,script,require=ImportGlobals(83)local ImportGlobals return (function(...)
 
 local a1 = {}
 
@@ -27469,7 +27642,7 @@ a1.contrastText = a3.contrastText
 return a1
 
 end)() end,
-    [80] = function()local wax,script,require=ImportGlobals(80)local ImportGlobals return (function(...)
+    [84] = function()local wax,script,require=ImportGlobals(84)local ImportGlobals return (function(...)
 local a1 = {}
 
 local aTopbar = require(script.Parent.Parent.layouts.Topbar)
@@ -27623,7 +27796,7 @@ end
 return a1
 
 end)() end,
-    [81] = function()local wax,script,require=ImportGlobals(81)local ImportGlobals return (function(...)
+    [85] = function()local wax,script,require=ImportGlobals(85)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.core.state)
 local a2 = require(script.Parent.log)
 
@@ -27722,7 +27895,7 @@ end
 return a3
 
 end)() end,
-    [82] = function()local wax,script,require=ImportGlobals(82)local ImportGlobals return (function(...)
+    [86] = function()local wax,script,require=ImportGlobals(86)local ImportGlobals return (function(...)
 local function a1<T>(a2: T): T
     local a3 = a2 :: any
 
@@ -27744,7 +27917,7 @@ end
 return a1
 
 end)() end,
-    [83] = function()local wax,script,require=ImportGlobals(83)local ImportGlobals return (function(...)
+    [87] = function()local wax,script,require=ImportGlobals(87)local ImportGlobals return (function(...)
 local a1 = {}
 
 type SuppressPredicate = () -> boolean
@@ -27794,7 +27967,7 @@ end
 return a1
 
 end)() end,
-    [84] = function()local wax,script,require=ImportGlobals(84)local ImportGlobals return (function(...)
+    [88] = function()local wax,script,require=ImportGlobals(88)local ImportGlobals return (function(...)
 local function a1<T>(a2: T): T
     local a3 = a2 :: any
 
@@ -27830,7 +28003,7 @@ end
 return a1
 
 end)() end,
-    [85] = function()local wax,script,require=ImportGlobals(85)local ImportGlobals return (function(...)
+    [89] = function()local wax,script,require=ImportGlobals(89)local ImportGlobals return (function(...)
 local a1 = {}
 a1.__index = a1
 
@@ -27848,7 +28021,7 @@ end
 return a1
 
 end)() end,
-    [86] = function()local wax,script,require=ImportGlobals(86)local ImportGlobals return (function(...)
+    [90] = function()local wax,script,require=ImportGlobals(90)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.core.state)
 local a2 = a1.textService
 
@@ -28161,7 +28334,7 @@ end
 return a3
 
 end)() end,
-    [87] = function()local wax,script,require=ImportGlobals(87)local ImportGlobals return (function(...)
+    [91] = function()local wax,script,require=ImportGlobals(91)local ImportGlobals return (function(...)
 type OrderedElement = {
     main: GuiObject,
     descriptor: { main: GuiObject }?,
@@ -28177,7 +28350,7 @@ end
 return a1
 
 end)() end,
-    [88] = function()local wax,script,require=ImportGlobals(88)local ImportGlobals return (function(...)
+    [92] = function()local wax,script,require=ImportGlobals(92)local ImportGlobals return (function(...)
 local a1 = {}
 
 function a1.join(a2: string, a3: string?): string
@@ -28228,7 +28401,7 @@ end
 return a1
 
 end)() end,
-    [89] = function()local wax,script,require=ImportGlobals(89)local ImportGlobals return (function(...)
+    [93] = function()local wax,script,require=ImportGlobals(93)local ImportGlobals return (function(...)
 local a1 = {}
 
 local a2 = require(script.Parent.persistenceConfig)
@@ -28247,7 +28420,7 @@ a1.loadSettings = a3.loadSettings
 return a1
 
 end)() end,
-    [90] = function()local wax,script,require=ImportGlobals(90)local ImportGlobals return (function(...)
+    [94] = function()local wax,script,require=ImportGlobals(94)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.core.state)
 local a2 = require(script.Parent.filesystem)
 local a3 = require(script.Parent.log)
@@ -28489,7 +28662,7 @@ end
 return a7
 
 end)() end,
-    [91] = function()local wax,script,require=ImportGlobals(91)local ImportGlobals return (function(...)
+    [95] = function()local wax,script,require=ImportGlobals(95)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.core.state)
 local a2 = require(script.Parent.path)
 
@@ -28533,7 +28706,7 @@ end
 return a3
 
 end)() end,
-    [92] = function()local wax,script,require=ImportGlobals(92)local ImportGlobals return (function(...)
+    [96] = function()local wax,script,require=ImportGlobals(96)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.core.state)
 local a2 = require(script.Parent.filesystem)
 local a3 = require(script.Parent.persistencePaths)
@@ -28706,7 +28879,7 @@ end
 return a6
 
 end)() end,
-    [93] = function()local wax,script,require=ImportGlobals(93)local ImportGlobals return (function(...)
+    [97] = function()local wax,script,require=ImportGlobals(97)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.filesystem)
 
 local a2 = {}
@@ -28734,7 +28907,7 @@ end
 return a2
 
 end)() end,
-    [94] = function()local wax,script,require=ImportGlobals(94)local ImportGlobals return (function(...)
+    [98] = function()local wax,script,require=ImportGlobals(98)local ImportGlobals return (function(...)
 local a1 = {}
 
 function a1.getService(a2)
@@ -28745,7 +28918,7 @@ end
 return a1
 
 end)() end,
-    [95] = function()local wax,script,require=ImportGlobals(95)local ImportGlobals return (function(...)
+    [99] = function()local wax,script,require=ImportGlobals(99)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.layouts)
 
 local a2 = {}
@@ -28945,47 +29118,50 @@ local LineOffsets = {
     [52] = 14812,
     [53] = 14844,
     [54] = 14774,
-    [55] = 14966,
-    [56] = 15129,
-    [57] = 14951,
-    [58] = 15411,
-    [59] = 15706,
-    [60] = 16362,
-    [61] = 18146,
-    [62] = 19287,
-    [63] = 20807,
-    [64] = 15192,
-    [65] = 26036,
-    [66] = 26080,
-    [67] = 26123,
-    [68] = 26196,
-    [69] = 26240,
-    [70] = 26301,
-    [71] = 25945,
-    [72] = 26345,
-    [73] = 26443,
-    [74] = 26621,
-    [75] = 26672,
-    [76] = 26702,
-    [77] = 26953,
-    [78] = 27002,
-    [79] = 27455,
-    [80] = 27473,
-    [81] = 27627,
-    [82] = 27726,
-    [83] = 27748,
-    [84] = 27798,
-    [85] = 27834,
-    [86] = 27852,
-    [87] = 28165,
-    [88] = 28181,
-    [89] = 28232,
-    [90] = 28251,
-    [91] = 28493,
-    [92] = 28537,
-    [93] = 28710,
-    [94] = 28738,
-    [95] = 28749,
+    [55] = 14951,
+    [56] = 15013,
+    [57] = 15076,
+    [59] = 15139,
+    [60] = 15302,
+    [61] = 15124,
+    [62] = 15584,
+    [63] = 15879,
+    [64] = 16535,
+    [65] = 18319,
+    [66] = 19460,
+    [67] = 20980,
+    [68] = 15365,
+    [69] = 26209,
+    [70] = 26253,
+    [71] = 26296,
+    [72] = 26369,
+    [73] = 26413,
+    [74] = 26474,
+    [75] = 26118,
+    [76] = 26518,
+    [77] = 26616,
+    [78] = 26794,
+    [79] = 26845,
+    [80] = 26875,
+    [81] = 27126,
+    [82] = 27175,
+    [83] = 27628,
+    [84] = 27646,
+    [85] = 27800,
+    [86] = 27899,
+    [87] = 27921,
+    [88] = 27971,
+    [89] = 28007,
+    [90] = 28025,
+    [91] = 28338,
+    [92] = 28354,
+    [93] = 28405,
+    [94] = 28424,
+    [95] = 28666,
+    [96] = 28710,
+    [97] = 28883,
+    [98] = 28911,
+    [99] = 28922,
 }
 
 -- Misc AOT variable imports
@@ -29385,21 +29561,51 @@ local ObjectTree = {
                 },
             },
             {
-                57,
-                2,
+                58,
+                1,
                 {
-                    "images",
+                    "layouts",
                 },
                 {
                     {
                         55,
                         2,
                         {
-                            "image",
+                            "Sidebar",
                         },
                     },
                     {
                         56,
+                        2,
+                        {
+                            "SidebarCollapsed",
+                        },
+                    },
+                    {
+                        57,
+                        2,
+                        {
+                            "Topbar",
+                        },
+                    },
+                },
+            },
+            {
+                61,
+                2,
+                {
+                    "images",
+                },
+                {
+                    {
+                        59,
+                        2,
+                        {
+                            "image",
+                        },
+                    },
+                    {
+                        60,
                         2,
                         {
                             "windowIcons",
@@ -29408,49 +29614,49 @@ local ObjectTree = {
                 },
             },
             {
-                64,
+                68,
                 2,
                 {
                     "icons",
                 },
                 {
                     {
-                        58,
+                        62,
                         2,
                         {
                             "feather",
                         },
                     },
                     {
-                        59,
+                        63,
                         2,
                         {
                             "heroicons",
                         },
                     },
                     {
-                        60,
+                        64,
                         2,
                         {
                             "lucide",
                         },
                     },
                     {
-                        61,
+                        65,
                         2,
                         {
                             "material",
                         },
                     },
                     {
-                        62,
+                        66,
                         2,
                         {
                             "phosphor",
                         },
                     },
                     {
-                        63,
+                        67,
                         2,
                         {
                             "tabler",
@@ -29459,49 +29665,49 @@ local ObjectTree = {
                 },
             },
             {
-                71,
+                75,
                 2,
                 {
                     "themes",
                 },
                 {
                     {
-                        65,
+                        69,
                         2,
                         {
                             "amethyst",
                         },
                     },
                     {
-                        66,
+                        70,
                         2,
                         {
                             "cobalt",
                         },
                     },
                     {
-                        67,
+                        71,
                         2,
                         {
                             "default",
                         },
                     },
                     {
-                        68,
+                        72,
                         2,
                         {
                             "ember",
                         },
                     },
                     {
-                        69,
+                        73,
                         2,
                         {
                             "frost",
                         },
                     },
                     {
-                        70,
+                        74,
                         2,
                         {
                             "rose",
@@ -29510,175 +29716,175 @@ local ObjectTree = {
                 },
             },
             {
-                96,
+                100,
                 1,
                 {
                     "utilities",
                 },
                 {
                     {
-                        72,
+                        76,
                         2,
                         {
                             "HapticEngine",
                         },
                     },
                     {
-                        73,
+                        77,
                         2,
                         {
                             "assetResolver",
                         },
                     },
                     {
-                        74,
+                        78,
                         2,
                         {
                             "constants",
                         },
                     },
                     {
-                        75,
+                        79,
                         2,
                         {
                             "enums",
                         },
                     },
                     {
-                        76,
+                        80,
                         2,
                         {
                             "filesystem",
                         },
                     },
                     {
-                        77,
+                        81,
                         2,
                         {
                             "filesystemManager",
                         },
                     },
                     {
-                        78,
+                        82,
                         2,
                         {
                             "fontManager",
                         },
                     },
                     {
-                        79,
+                        83,
                         2,
                         {
                             "functions",
                         },
                     },
                     {
-                        80,
+                        84,
                         2,
                         {
                             "layouts",
                         },
                     },
                     {
-                        81,
+                        85,
                         2,
                         {
                             "locale",
                         },
                     },
                     {
-                        82,
+                        86,
                         2,
                         {
                             "lockable",
                         },
                     },
                     {
-                        83,
+                        87,
                         2,
                         {
                             "log",
                         },
                     },
                     {
-                        84,
+                        88,
                         2,
                         {
                             "moveable",
                         },
                     },
                     {
-                        85,
+                        89,
                         2,
                         {
                             "network",
                         },
                     },
                     {
-                        86,
+                        90,
                         2,
                         {
                             "odometer",
                         },
                     },
                     {
-                        87,
+                        91,
                         2,
                         {
                             "ordering",
                         },
                     },
                     {
-                        88,
+                        92,
                         2,
                         {
                             "path",
                         },
                     },
                     {
-                        89,
+                        93,
                         2,
                         {
                             "persistence",
                         },
                     },
                     {
-                        90,
+                        94,
                         2,
                         {
                             "persistenceConfig",
                         },
                     },
                     {
-                        91,
+                        95,
                         2,
                         {
                             "persistencePaths",
                         },
                     },
                     {
-                        92,
+                        96,
                         2,
                         {
                             "persistenceSettings",
                         },
                     },
                     {
-                        93,
+                        97,
                         2,
                         {
                             "persistenceWrite",
                         },
                     },
                     {
-                        94,
+                        98,
                         2,
                         {
                             "services",
                         },
                     },
                     {
-                        95,
+                        99,
                         2,
                         {
                             "windowSizing",
