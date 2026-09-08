@@ -188,7 +188,7 @@ export type WindowProps = {
     IconPack: IconPack?,
     showName: string?,
     showIcon: (string | number)?,
-    showIconOnly: boolean?,     sidebarLayout: boolean?,     profile: string?,     configuration: WindowConfiguration?,
+    showIconOnly: boolean?,     profile: string?,     configuration: WindowConfiguration?,
     fallbackFont: (Font | Enum.Font)?,     locale: string?,     translations: Translations?,     translator: Translator?, }
 
 export type TabProps = {
@@ -3957,7 +3957,7 @@ function a17.new(a54)
         a15.setFallbackFont(a55)
     end
 
-        local a56 = a40(a54.sidebarLayout or a54.SidebarLayout)
+        local a56 = a11.top -- layout is controlled via Settings (Astra Settings → Bar Layout); CreateWindow no longer takes sidebarLayout
     local a57 = a54.iconPack
     local a58 = a54.IconPack
     if a57 ~= nil and a58 ~= nil then

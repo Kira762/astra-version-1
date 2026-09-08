@@ -85,7 +85,6 @@ local window = Astra:CreateWindow({
 	name = "Astra",
 	subtitle = "Example UI - Lucide Icons",
 	iconPack = "lucide",
-	sidebarLayout = true,
 	configuration = {
 		autoSave = true,
 		autoLoad = true,

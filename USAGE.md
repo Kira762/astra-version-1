@@ -45,7 +45,6 @@ local window = Astra:CreateWindow({
     icon = "house",              -- topbar icon (pack name or asset id)
     iconPack = "lucide",         -- "lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather"
     theme = "default",           -- "default" | "amethyst" | "cobalt" | "ember" | "frost" | "rose" | custom table
-    sidebarLayout = true,        -- true: sidebar rail; false: top tab bar
     profile = "Display Name",    -- optional profile (avatar + name) in the sidebar/topbar
     locale = "en",               -- default locale id
     translations = { ... },      -- optional translation table
