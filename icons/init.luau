@@ -112,7 +112,28 @@ function icons.resolve(value: (string | number)?, pack: string?): (string | numb
             end
         end
     end
-    return icons.get(value, pack) or value
+    -- Mapped pack icon: name -> pack mapping -> local PNG path -> custom asset URI.
+    -- The mapping value (e.g. "assets/icons/lucide-pack/a/lucideActivity.png") is a
+    -- workspace-relative PNG path; convert it through getcustomasset so the UI
+    -- receives a renderable local asset instead of a raw relative path.
+    local mapped = icons.get(value, pack)
+    if type(mapped) == "string" and mapped ~= "" then
+        local cachedUri = customAssetCache[mapped]
+        if cachedUri then
+            return cachedUri
+        end
+        if type(env.getcustomasset) == "function" then
+            local ok, uri = pcall(env.getcustomasset, mapped)
+            if ok and type(uri) == "string" and uri ~= "" then
+                customAssetCache[mapped] = uri
+                customAssetCache[value] = uri
+                return uri
+            end
+        end
+        -- Graceful fallback: hand back the mapped path rather than breaking the UI.
+        return mapped
+    end
+    return value
 end
 
 function icons.getByPack(pack: string, name: string): string?

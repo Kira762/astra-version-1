@@ -15345,7 +15345,28 @@ function icons.resolve(value: (string | number)?, pack: string?): (string | numb
             end
         end
     end
-    return icons.get(value, pack) or value
+    -- Mapped pack icon: name -> pack mapping -> local PNG path -> custom asset URI.
+    -- The mapping value (e.g. "assets/icons/lucide-pack/a/lucideActivity.png") is a
+    -- workspace-relative PNG path; convert it through getcustomasset so the UI
+    -- receives a renderable local asset instead of a raw relative path.
+    local mapped = icons.get(value, pack)
+    if type(mapped) == "string" and mapped ~= "" then
+        local cachedUri = customAssetCache[mapped]
+        if cachedUri then
+            return cachedUri
+        end
+        if type(env.getcustomasset) == "function" then
+            local ok, uri = pcall(env.getcustomasset, mapped)
+            if ok and type(uri) == "string" and uri ~= "" then
+                customAssetCache[mapped] = uri
+                customAssetCache[value] = uri
+                return uri
+            end
+        end
+        -- Graceful fallback: hand back the mapped path rather than breaking the UI.
+        return mapped
+    end
+    return value
 end
 
 function icons.getByPack(pack: string, name: string): string?
@@ -28913,44 +28934,44 @@ local LineOffsets = {
     [55] = 15008,
     [56] = 15171,
     [57] = 14993,
-    [58] = 15390,
-    [59] = 15685,
-    [60] = 16341,
-    [61] = 18125,
-    [62] = 19266,
-    [63] = 20786,
+    [58] = 15411,
+    [59] = 15706,
+    [60] = 16362,
+    [61] = 18146,
+    [62] = 19287,
+    [63] = 20807,
     [64] = 15234,
-    [65] = 26015,
-    [66] = 26059,
-    [67] = 26102,
-    [68] = 26175,
-    [69] = 26219,
-    [70] = 26280,
-    [71] = 25924,
-    [72] = 26324,
-    [73] = 26422,
-    [74] = 26600,
-    [75] = 26651,
-    [76] = 26681,
-    [77] = 26932,
-    [78] = 26981,
-    [79] = 27434,
-    [80] = 27452,
-    [81] = 27592,
-    [82] = 27691,
-    [83] = 27713,
-    [84] = 27763,
-    [85] = 27799,
-    [86] = 27817,
-    [87] = 28130,
-    [88] = 28146,
-    [89] = 28197,
-    [90] = 28216,
-    [91] = 28458,
-    [92] = 28502,
-    [93] = 28675,
-    [94] = 28703,
-    [95] = 28714,
+    [65] = 26036,
+    [66] = 26080,
+    [67] = 26123,
+    [68] = 26196,
+    [69] = 26240,
+    [70] = 26301,
+    [71] = 25945,
+    [72] = 26345,
+    [73] = 26443,
+    [74] = 26621,
+    [75] = 26672,
+    [76] = 26702,
+    [77] = 26953,
+    [78] = 27002,
+    [79] = 27455,
+    [80] = 27473,
+    [81] = 27613,
+    [82] = 27712,
+    [83] = 27734,
+    [84] = 27784,
+    [85] = 27820,
+    [86] = 27838,
+    [87] = 28151,
+    [88] = 28167,
+    [89] = 28218,
+    [90] = 28237,
+    [91] = 28479,
+    [92] = 28523,
+    [93] = 28696,
+    [94] = 28724,
+    [95] = 28735,
 }
 
 -- Misc AOT variable imports
