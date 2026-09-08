@@ -1280,6 +1280,7 @@ function a17:_bindTopbarDrag()
     local a154 = false
     local a155 = Vector2.zero
     local a156
+    local a179 = Vector2.zero
 
             local a157 = Vector2.zero
     if self.screenGui and self.screenGui.IgnoreGuiInset then
@@ -1317,6 +1318,13 @@ function a17:_bindTopbarDrag()
         end
         if self.unloaded or not self:_interactive() then
             a165()
+            return
+        end
+
+        -- Do not reposition the window for a simple click/tap. Wait until
+        -- the pointer has actually moved before treating the gesture as drag.
+        local pointer = a153:GetMouseLocation()
+        if (pointer - a179).Magnitude < 4 then
             return
         end
 
@@ -1375,6 +1383,7 @@ function a17:_bindTopbarDrag()
             a157 = a15.guiService:GetGuiInset()
         end
 
+        a179 = a153:GetMouseLocation()
         a155 = self.main.AbsolutePosition + self.main.AbsoluteSize * self.main.AnchorPoint - a153:GetMouseLocation()
     end)
 
