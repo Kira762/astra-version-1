@@ -1,7 +1,7 @@
 
 local icons = {}
 
-icons.BASE = "https://raw.githubusercontent.com/Haijo12/sisys_ididh/main"
+icons.BASE = ""
 
 local packLoaders = {
     lucide = function()
