@@ -85,7 +85,11 @@ local function a18(a19: Profile, a20: number, a21: number): UDim2
 end
 
 local function a25(a26: Profile, a27: number, a28: number): UDim2
-	local a29 = math.min(math.clamp(a27, a26.minSize.X, a26.defaultSize.X), a27)
+    -- The Sidebar keeps its historical 540px minimum for user resizing, while
+    -- its requested base width is 520px. Keep clamp bounds ordered for the
+    -- responsive fit calculation without changing the declared minimum.
+    local a29Min = math.min(a26.minSize.X, a26.defaultSize.X)
+    local a29 = math.min(math.clamp(a27, a29Min, a26.defaultSize.X), a27)
 	local a30 = math.min(math.clamp(a28, a26.minSize.Y, a26.defaultSize.Y), a28)
 	a30 = math.floor(math.min(a30, a29 / (a26.minAspectRatio :: number)))
 	a29 = math.floor(math.min(a29, a30 * a26.maxAspectRatio))
