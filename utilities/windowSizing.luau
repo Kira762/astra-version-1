@@ -24,7 +24,7 @@ local a3 = 200
 -- while desktop gets a premium large window (same perceived weight).
 local a4 = {
 	top = {
-		defaultSize = Vector2.new(720, 480),
+		defaultSize = Vector2.new(520, 480),
 		minSize = Vector2.new(500, 330),
 		maxSize = Vector2.new(860, 580),
 		maxOccupancyX = 0.88,
@@ -36,7 +36,7 @@ local a4 = {
 		chromeHeight = a1.top.chromeHeight,
 	} :: Profile,
 	sidebar = {
-		defaultSize = Vector2.new(800, 520),
+		defaultSize = Vector2.new(520, 480),
 		minSize = Vector2.new(540, 360),
 		maxSize = Vector2.new(880, 600),
 		maxOccupancyX = 0.92,
