@@ -2,28 +2,28 @@
 -- Works like any other file connection: tries DataModel require first (Studio/Rojo),
 -- then local filesystem readfile+loadstring (executor), no HttpGet at all.
 
-local a4: any = nil
+local Astra: any = nil
 do
 	-- 1) Studio / Rojo: Astra lives in ReplicatedStorage as ModuleScript (library_entrypoint)
 	local ok, mod = pcall(function()
 		return game:GetService("ReplicatedStorage"):FindFirstChild("Astra")
 	end)
 	if ok and mod and mod:IsA("ModuleScript") then
-		local ok2, res = pcall(require, mod)
-		if ok2 and type(res) == "table" then
-			a4 = res
+		local ok2, result = pcall(require, mod)
+		if ok2 and type(result) == "table" then
+			Astra = result
 		end
 	end
 
 	-- 2) Sibling ModuleScript: version-1 placed next to this LocalScript
-	if not a4 then
-		local sib = script.Parent:FindFirstChild("version-1")
+	if not Astra then
+		local sibling = script.Parent:FindFirstChild("version-1")
 			or script.Parent:FindFirstChild("version_1")
 			or script:FindFirstChild("version-1")
-		if sib and sib:IsA("ModuleScript") then
-			local ok2, res = pcall(require, sib)
-			if ok2 and type(res) == "table" then
-				a4 = res
+		if sibling and sibling:IsA("ModuleScript") then
+			local ok2, result = pcall(require, sibling)
+			if ok2 and type(result) == "table" then
+				Astra = result
 			else
 				-- Wax bundle is a loadstring bundle, not a normal ModuleScript.
 				-- Fall through to readfile+loadstring path.
@@ -32,8 +32,8 @@ do
 	end
 
 	-- 3) Filesystem: read version-1.luau from same folder and loadstring it (exploit / plain Lua)
-	if not a4 then
-		local src: string? = nil
+	if not Astra then
+		local source: string? = nil
 
 		-- Executor readfile/isfile
 		if typeof(readfile) == "function" and typeof(isfile) == "function" then
@@ -42,7 +42,7 @@ do
 				if ok2 and exists then
 					local ok3, content = pcall(readfile, path)
 					if ok3 and type(content) == "string" and #content > 0 then
-						src = content
+						source = content
 						break
 					end
 				end
@@ -50,38 +50,38 @@ do
 		end
 
 		-- Plain Lua io fallback (for testing outside Roblox)
-		if not src and typeof(io) == "table" and io.open then
+		if not source and typeof(io) == "table" and io.open then
 			for _, path in { "version-1.luau", "./version-1.luau" } do
-				local f = (pcall(io.open, path, "r") and io.open(path, "r")) :: any
-				if f then
+				local file = (pcall(io.open, path, "r") and io.open(path, "r")) :: any
+				if file then
 					local ok2, content = pcall(function()
-						return (f :: any):read("*a")
+						return (file :: any):read("*a")
 					end)
 					pcall(function()
-						(f :: any):close()
+						(file :: any):close()
 					end)
 					if ok2 and type(content) == "string" and #content > 0 then
-						src = content
+						source = content
 						break
 					end
 				end
 			end
 		end
 
-		assert(src, "[Astra] Could not find version-1.luau locally. Place version-1.luau next to example.client.luau or put the Astra ModuleScript in ReplicatedStorage.")
+		assert(source, "[Astra] Could not find version-1.luau locally. Place version-1.luau next to example.client.luau or put the Astra ModuleScript in ReplicatedStorage.")
 
-		local a2, a3 = loadstring(src :: string)
-		assert(type(a2) == "function", "Astra bundle failed to compile: " .. tostring(a3))
-		local ok2, res = pcall(a2 :: any)
-		assert(ok2, "Astra bundle failed to run: " .. tostring(res))
-		a4 = res
+		local loadFn, loadErr = loadstring(source :: string)
+		assert(type(loadFn) == "function", "Astra bundle failed to compile: " .. tostring(loadErr))
+		local ok2, result = pcall(loadFn :: any)
+		assert(ok2, "Astra bundle failed to run: " .. tostring(result))
+		Astra = result
 	end
 end
 
-assert(type(a4) == "table", "Astra bundle did not return its API table")
-assert(a4.Icons and a4.Icons.lucide, "Astra bundle is missing the lucide icon pack")
+assert(type(Astra) == "table", "Astra bundle did not return its API table")
+assert(Astra.Icons and Astra.Icons.lucide, "Astra bundle is missing the lucide icon pack")
 
-local window = a4:CreateWindow({
+local window = Astra:CreateWindow({
 	name = "Astra",
 	subtitle = "Example UI - Lucide Icons",
 	iconPack = "lucide",
@@ -95,11 +95,11 @@ local window = a4:CreateWindow({
 
 window:CreateSection({ name = "Main" })
 
-local a5 = window:CreateTab({ name = "Home", icon = "house" })
+local homeTab = window:CreateTab({ name = "Home", icon = "house" })
 
-a5:CreateSection({ name = "Buttons" })
+homeTab:CreateSection({ name = "Buttons" })
 
-a5:CreateButton({
+homeTab:CreateButton({
 	name = "Click Me",
 	icon = "play",
 	callback = function()
@@ -107,7 +107,7 @@ a5:CreateButton({
 	end,
 })
 
-a5:CreateButton({
+homeTab:CreateButton({
 	name = "With Icon",
 	icon = "settings",
 	callback = function()
@@ -115,7 +115,7 @@ a5:CreateButton({
 	end,
 })
 
-a5:CreateButton({
+homeTab:CreateButton({
 	name = "With Description",
 	description = "This button has a description below it.",
 	callback = function()
@@ -123,36 +123,36 @@ a5:CreateButton({
 	end,
 })
 
-a5:CreateSection({ name = "Toggles" })
+homeTab:CreateSection({ name = "Toggles" })
 
-a5:CreateToggle({
+homeTab:CreateToggle({
 	name = "Basic Toggle",
 	icon = "toggle-right",
 	value = true,
 })
 
-a5:CreateToggle({
+homeTab:CreateToggle({
 	name = "Described Toggle",
 	icon = "bell",
 	description = "This toggle has a description.",
 })
 
-a5:CreateToggle({
+homeTab:CreateToggle({
 	name = "Flagged Toggle",
 	icon = "flag",
 	flag = "MyFlag",
 	value = false,
 })
 
-a5:CreateSection({ name = "Sliders" })
+homeTab:CreateSection({ name = "Sliders" })
 
-a5:CreateSlider({
+homeTab:CreateSlider({
 	name = "Basic Slider",
 	range = { 0, 100 },
 	value = 50,
 })
 
-a5:CreateSlider({
+homeTab:CreateSlider({
 	name = "With Suffix",
 	range = { 0, 360 },
 	value = 180,
@@ -160,22 +160,22 @@ a5:CreateSlider({
 	suffix = "°",
 })
 
-a5:CreateSlider({
+homeTab:CreateSlider({
 	name = "With Description",
 	description = "This slider has a description.",
 	range = { 1, 10 },
 	value = 5,
 })
 
-a5:CreateSection({ name = "Dropdowns" })
+homeTab:CreateSection({ name = "Dropdowns" })
 
-a5:CreateDropdown({
+homeTab:CreateDropdown({
 	name = "Basic Dropdown",
 	options = { "Option 1", "Option 2", "Option 3" },
 	value = "Option 1",
 })
 
-a5:CreateDropdown({
+homeTab:CreateDropdown({
 	name = "Multi Select",
 	multiSelect = true,
 	options = { "A", "B", "C", "D" },
@@ -183,132 +183,132 @@ a5:CreateDropdown({
 	placeholder = "Pick items",
 })
 
-a5:CreateDropdown({
+homeTab:CreateDropdown({
 	name = "With Description",
 	description = "This dropdown has a description.",
 	options = { "Low", "Medium", "High" },
 	value = "Medium",
 })
 
-local a6 = window:CreateTab({ name = "Inputs", icon = "keyboard" })
+local inputsTab = window:CreateTab({ name = "Inputs", icon = "keyboard" })
 
-a6:CreateSection({ name = "Text Inputs" })
+inputsTab:CreateSection({ name = "Text Inputs" })
 
-a6:CreateInput({
+inputsTab:CreateInput({
 	name = "Basic Input",
 	placeholder = "Type here",
 })
 
-a6:CreateInput({
+inputsTab:CreateInput({
 	name = "Numeric Input",
 	numeric = true,
 	value = "42",
 })
 
-a6:CreateInput({
+inputsTab:CreateInput({
 	name = "With Description",
 	description = "This input has a description.",
 	placeholder = "Enter value",
 })
 
-a6:CreateSection({ name = "Keybinds" })
+inputsTab:CreateSection({ name = "Keybinds" })
 
-a6:CreateKeybind({
+inputsTab:CreateKeybind({
 	name = "Basic Keybind",
 	value = Enum.KeyCode.F,
 })
 
-a6:CreateKeybind({
+inputsTab:CreateKeybind({
 	name = "Hold Mode",
 	hold = true,
 	value = Enum.KeyCode.LeftShift,
 })
 
-a6:CreateSection({ name = "Color Pickers" })
+inputsTab:CreateSection({ name = "Color Pickers" })
 
-a6:CreateColorPicker({
+inputsTab:CreateColorPicker({
 	name = "Basic Color",
 	color = Color3.fromRGB(96, 205, 255),
 })
 
-a6:CreateColorPicker({
+inputsTab:CreateColorPicker({
 	name = "With Alpha",
 	color = Color3.fromRGB(255, 100, 100),
 	alpha = 0.8,
 })
 
-local a7 = window:CreateTab({ name = "Display", icon = "layout-dashboard" })
+local displayTab = window:CreateTab({ name = "Display", icon = "layout-dashboard" })
 
-a7:CreateSection({ name = "Stats" })
+displayTab:CreateSection({ name = "Stats" })
 
-local a8 = a7:CreateStat({
+local revenueStat = displayTab:CreateStat({
 	name = "Revenue",
 	prefix = "$",
 	value = 12400,
 })
 
-local a9 = a7:CreateStat({
+local killsStat = displayTab:CreateStat({
 	name = "Kills",
 	value = 128,
 })
 
-a7:CreateButton({
+displayTab:CreateButton({
 	name = "Update Stats",
 	callback = function()
-		a8:Set(a8.value + math.random(500, 3000))
-		a9:Set(a9.value + math.random(1, 20))
+		revenueStat:Set(revenueStat.value + math.random(500, 3000))
+		killsStat:Set(killsStat.value + math.random(1, 20))
 	end,
 })
 
-a7:CreateSection({ name = "Progress" })
+displayTab:CreateSection({ name = "Progress" })
 
-a7:CreateProgress({
+displayTab:CreateProgress({
 	name = "Download",
 	range = { 0, 100 },
 	value = 35,
 })
 
-a7:CreateProgress({
+displayTab:CreateProgress({
 	name = "Steps",
 	steps = 5,
 	value = 2,
 })
 
-a7:CreateProgress({
+displayTab:CreateProgress({
 	name = "Loading",
 	indeterminate = true,
 })
 
-a7:CreateSection({ name = "Text" })
+displayTab:CreateSection({ name = "Text" })
 
-a7:CreateText({
+displayTab:CreateText({
 	name = "Title",
 	text = "This is a text element with a title and body.",
 })
 
-a7:CreateText({
+displayTab:CreateText({
 	text = "This is body text only.",
 })
 
-a7:CreateText({
+displayTab:CreateText({
 	name = "With Icon",
 	text = "This text has an icon.",
 	icon = "house",
 })
 
-a7:CreateSection({ name = "Dividers" })
+displayTab:CreateSection({ name = "Dividers" })
 
-a7:CreateDivider()
+displayTab:CreateDivider()
 
-a7:CreateDivider({ text = "or" })
+displayTab:CreateDivider({ text = "or" })
 
-a7:CreateDivider({ text = "spaced", spacing = 24 })
+displayTab:CreateDivider({ text = "spaced", spacing = 24 })
 
-a7:CreateDivider({ line = false, spacing = 20 })
+displayTab:CreateDivider({ line = false, spacing = 20 })
 
-a7:CreateSection({ name = "Console" })
+displayTab:CreateSection({ name = "Console" })
 
-local a10 = a7:CreateConsole({
+local displayConsole = displayTab:CreateConsole({
 	name = "Console",
 	text = "-- output lands here",
 	height = 130,
@@ -316,37 +316,37 @@ local a10 = a7:CreateConsole({
 	maxLines = 50,
 })
 
-a7:CreateButton({
+displayTab:CreateButton({
 	name = "Log Line",
 	callback = function()
-		a10:Append(string.format("[%s] New entry", os.date("%H:%M:%S")))
+		displayConsole:Append(string.format("[%s] New entry", os.date("%H:%M:%S")))
 	end,
 })
 
-a7:CreateButton({
+displayTab:CreateButton({
 	name = "Clear Console",
 	callback = function()
-		a10:Clear()
+		displayConsole:Clear()
 	end,
 })
 
-a7:CreateSection({ name = "Groups" })
+displayTab:CreateSection({ name = "Groups" })
 
-local a11 = a7:CreateGroup()
+local groupRow = displayTab:CreateGroup()
 
-local a12 = a11:CreateGroup({ direction = "column" })
-a12:CreateToggle({ name = "Left Toggle 1", value = true })
-a12:CreateToggle({ name = "Left Toggle 2" })
+local leftColumn = groupRow:CreateGroup({ direction = "column" })
+leftColumn:CreateToggle({ name = "Left Toggle 1", value = true })
+leftColumn:CreateToggle({ name = "Left Toggle 2" })
 
-local a13 = a11:CreateGroup({ direction = "column" })
-a13:CreateToggle({ name = "Right Toggle 1", value = true })
-a13:CreateToggle({ name = "Right Toggle 2" })
+local rightColumn = groupRow:CreateGroup({ direction = "column" })
+rightColumn:CreateToggle({ name = "Right Toggle 1", value = true })
+rightColumn:CreateToggle({ name = "Right Toggle 2" })
 
-local a14 = window:CreateTab({ name = "Utility", icon = "search" })
+local utilityTab = window:CreateTab({ name = "Utility", icon = "search" })
 
-a14:CreateSection({ name = "Notifications" })
+utilityTab:CreateSection({ name = "Notifications" })
 
-a14:CreateButton({
+utilityTab:CreateButton({
 	name = "Send Notification",
 	callback = function()
 		window:Notify({
@@ -357,7 +357,7 @@ a14:CreateButton({
 	end,
 })
 
-a14:CreateButton({
+utilityTab:CreateButton({
 	name = "Send Toast",
 	callback = function()
 		window:Toast({
@@ -367,7 +367,7 @@ a14:CreateButton({
 	end,
 })
 
-a14:CreateButton({
+utilityTab:CreateButton({
 	name = "Open Popup",
 	callback = function()
 		window:Popup({
@@ -382,7 +382,7 @@ a14:CreateButton({
 	end,
 })
 
-a14:CreateSection({ name = "Tags" })
+utilityTab:CreateSection({ name = "Tags" })
 
 window:CreateTag({
 	text = "v1.0.0",
@@ -390,64 +390,64 @@ window:CreateTag({
 	color = Color3.fromRGB(96, 205, 255),
 })
 
-a14:CreateSection({ name = "Window Controls" })
+utilityTab:CreateSection({ name = "Window Controls" })
 
-a14:CreateButton({
+utilityTab:CreateButton({
 	name = "Hide Window",
 	callback = function()
 		window:Hide()
 	end,
 })
 
-a14:CreateButton({
+utilityTab:CreateButton({
 	name = "Save Config",
 	callback = function()
 		window:Save()
 	end,
 })
 
-a14:CreateButton({
+utilityTab:CreateButton({
 	name = "Load Config",
 	callback = function()
 		window:Load()
 	end,
 })
 
-a14:CreateButton({
+utilityTab:CreateButton({
 	name = "List Configs",
 	callback = function()
-		local a15 = window:ListConfigs()
-		for _, a16 in a15 do
+		local configs = window:ListConfigs()
+		for _, configName in configs do
 		end
 	end,
 })
 
-local a17 = window:CreateTab({ name = "Advanced", icon = "sliders-horizontal" })
+local advancedTab = window:CreateTab({ name = "Advanced", icon = "sliders-horizontal" })
 
-a17:CreateSection({ name = "Runtime Controls" })
+advancedTab:CreateSection({ name = "Runtime Controls" })
 
-a17:CreateToggle({
+advancedTab:CreateToggle({
 	name = "Performance Mode",
 	icon = "gauge",
 	description = "Prefer lower visual overhead while keeping the interface responsive.",
 	value = false,
 })
 
-a17:CreateToggle({
+advancedTab:CreateToggle({
 	name = "Auto Refresh",
 	icon = "refresh-cw",
 	description = "Refresh placeholder data automatically every few seconds.",
 	value = true,
 })
 
-a17:CreateDropdown({
+advancedTab:CreateDropdown({
 	name = "Refresh Interval",
 	icon = "timer",
 	options = { "5 seconds", "15 seconds", "30 seconds", "1 minute" },
 	value = "15 seconds",
 })
 
-a17:CreateSlider({
+advancedTab:CreateSlider({
 	name = "Update Frequency",
 	icon = "activity",
 	description = "Adjust how often the example would poll for new data.",
@@ -457,65 +457,65 @@ a17:CreateSlider({
 	suffix = " sec",
 })
 
-a17:CreateSection({ name = "Developer Tools" })
+advancedTab:CreateSection({ name = "Developer Tools" })
 
-a17:CreateInput({
+advancedTab:CreateInput({
 	name = "Workspace Name",
 	icon = "folder-open",
 	description = "A placeholder input for a project or workspace identifier.",
 	placeholder = "example-workspace",
 })
 
-a17:CreateKeybind({
+advancedTab:CreateKeybind({
 	name = "Toggle Developer Panel",
 	icon = "terminal",
 	value = Enum.KeyCode.F3,
 })
 
-a17:CreateColorPicker({
+advancedTab:CreateColorPicker({
 	name = "Accent Preview",
 	icon = "palette",
 	color = Color3.fromRGB(96, 205, 255),
 	alpha = 0.9,
 })
 
-a17:CreateSection({ name = "Execution" })
+advancedTab:CreateSection({ name = "Execution" })
 
-local a18 = a17:CreateProgress({
+local taskProgress = advancedTab:CreateProgress({
 	name = "Task Progress",
 	icon = "loader-circle",
 	range = { 0, 100 },
 	value = 68,
 })
 
-a17:CreateButton({
+advancedTab:CreateButton({
 	name = "Run Placeholder Task",
 	icon = "circle-play",
 	description = "Simulates a task and advances the progress indicator.",
 	callback = function()
-		a18:Set(math.min(100, a18.value + 8))
+		taskProgress:Set(math.min(100, taskProgress.value + 8))
 	end,
 })
 
-a17:CreateButton({
+advancedTab:CreateButton({
 	name = "Reset Task",
 	icon = "rotate-ccw",
 	callback = function()
-		a18:Set(0)
+		taskProgress:Set(0)
 	end,
 })
 
-local a19 = window:CreateTab({ name = "Activity", icon = "activity" })
+local activityTab = window:CreateTab({ name = "Activity", icon = "activity" })
 
-a19:CreateSection({ name = "Recent Activity" })
+activityTab:CreateSection({ name = "Recent Activity" })
 
-a19:CreateText({
+activityTab:CreateText({
 	name = "Today",
 	icon = "calendar-days",
 	text = "Your placeholder activity feed can show events, status changes, and recent actions here.",
 })
 
-local a20 = a19:CreateConsole({
+local eventConsole = activityTab:CreateConsole({
 	name = "Event Stream",
 	icon = "radio-tower",
 	text = "[system] Waiting for activity...",
@@ -524,56 +524,56 @@ local a20 = a19:CreateConsole({
 	maxLines = 80,
 })
 
-a19:CreateButton({
+activityTab:CreateButton({
 	name = "Add Activity Event",
 	icon = "circle-plus",
 	callback = function()
-		a20:Append(string.format("[%s] Placeholder event received", os.date("%H:%M:%S")))
+		eventConsole:Append(string.format("[%s] Placeholder event received", os.date("%H:%M:%S")))
 	end,
 })
 
-a19:CreateButton({
+activityTab:CreateButton({
 	name = "Clear Activity",
 	icon = "trash-2",
 	callback = function()
-		a20:Clear()
+		eventConsole:Clear()
 	end,
 })
 
-a19:CreateSection({ name = "Filters" })
+activityTab:CreateSection({ name = "Filters" })
 
-a19:CreateToggle({
+activityTab:CreateToggle({
 	name = "Show System Events",
 	icon = "server",
 	value = true,
 })
 
-a19:CreateToggle({
+activityTab:CreateToggle({
 	name = "Show User Events",
 	icon = "user-round",
 	value = true,
 })
 
-a19:CreateDropdown({
+activityTab:CreateDropdown({
 	name = "Activity Range",
 	icon = "calendar-range",
 	options = { "Today", "This week", "This month", "All time" },
 	value = "Today",
 })
 
-local a21 = window:CreateTab({ name = "About", icon = "info" })
+local aboutTab = window:CreateTab({ name = "About", icon = "info" })
 
-a21:CreateSection({ name = "Astra Example" })
+aboutTab:CreateSection({ name = "Astra Example" })
 
-a21:CreateText({
+aboutTab:CreateText({
 	name = "Component Showcase",
 	icon = "sparkles",
 	text = "A detailed placeholder window demonstrating tabs, actions, forms, progress, statistics, notifications, groups, tags, and console output with the Lucide icon pack.",
 })
 
-a21:CreateDivider({ text = "Resources" })
+aboutTab:CreateDivider({ text = "Resources" })
 
-a21:CreateButton({
+aboutTab:CreateButton({
 	name = "View Documentation",
 	icon = "book-open",
 	description = "Placeholder action for opening the project documentation.",
@@ -586,7 +586,7 @@ a21:CreateButton({
 	end,
 })
 
-a21:CreateButton({
+aboutTab:CreateButton({
 	name = "Check for Updates",
 	icon = "cloud-download",
 	callback = function()
@@ -598,30 +598,30 @@ a21:CreateButton({
 	end,
 })
 
-a21:CreateSection({ name = "Environment" })
+aboutTab:CreateSection({ name = "Environment" })
 
-local a22 = a21:CreateGroup({ direction = "column" })
+local aboutGroup = aboutTab:CreateGroup({ direction = "column" })
 
-a22:CreateStat({
+aboutGroup:CreateStat({
 	name = "Version",
 	value = 100,
 	prefix = "v",
 	suffix = ".0.0",
 	icon = "tag",
 })
-a22:CreateText({
+aboutGroup:CreateText({
 	name = "Icon Pack",
 	text = "Lucide",
 	icon = "library",
 })
-a22:CreateStat({
+aboutGroup:CreateStat({
 	name = "Status",
 	value = 1,
 	suffix = " ready",
 	icon = "circle-check",
 })
 
-a21:CreateSection({ name = "Tags" })
+aboutTab:CreateSection({ name = "Tags" })
 
 window:CreateTag({
 	text = "Lucide",

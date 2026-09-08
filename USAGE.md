@@ -9,17 +9,32 @@ All props accept the `camelCase` names shown below (most also accept
 
 ## Loading the library
 
+`version-1.luau` and `example.client.luau` live in the same repo — no external
+links. Pick the loader that matches your environment (behaviour is identical):
+
 ```lua
--- Typical executor / LocalScript usage:
-local source = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
-local load, err = loadstring(source)
-assert(load, "Astra failed to compile: " .. tostring(err))
-local Astra = load()
+-- Studio / Rojo: Astra is a ModuleScript in ReplicatedStorage (from library_entrypoint.luau)
+local Astra = require(game:GetService("ReplicatedStorage"):FindFirstChild("Astra"))
+local window = Astra:CreateWindow({ name = "My UI", subtitle = "v1.0" })
 ```
 
-In Rojo/source form, require `library_entrypoint.luau` directly. Only one
-window may be alive at a time; creating a new window unloads the previous one
-unless `antiWindowDuplicate` is disabled (see Settings below).
+```lua
+-- Executor / LocalScript: version-1.luau sits next to this script (local file)
+local Astra: any = nil
+if typeof(readfile) == "function" and typeof(isfile) == "function" and isfile("version-1.luau") then
+    local source = readfile("version-1.luau")
+    local loadFn = assert(loadstring(source))
+    Astra = assert(loadFn())
+end
+local window = Astra:CreateWindow({ name = "My UI", subtitle = "v1.0" })
+```
+
+The bundled example `example.client.luau` already does the local-first
+resolution chain (`ReplicatedStorage` → sibling `version-1` ModuleScript →
+`readfile+loadstring`/`io.open`) with zero `HttpGet` — just copy that header
+if you need a standalone loader. Only one window may be alive at a time;
+creating a new window unloads the previous one unless `antiWindowDuplicate` is
+disabled (see Settings below).
 
 ## CreateWindow
 
