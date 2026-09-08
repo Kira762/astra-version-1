@@ -163,8 +163,7 @@ end
 local function a17(tab, a18)
     tab.topbarItem = tab.window:Create("Frame", {
         Name = tab.name,
-        Size = UDim2.fromOffset(0, a18.rowHeight),
-        AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.new(1, -a18.rowInset * 2, 0, a18.rowHeight),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
 
@@ -213,9 +212,8 @@ local function a17(tab, a18)
     })
 
     tab.topbarItemContainer = tab.window:Create("Frame", {
-        Size = UDim2.fromOffset(0, 24),
-        AutomaticSize = Enum.AutomaticSize.X,
-        Position = UDim2.new(0, 0, 0.5, 0),
+        Size = UDim2.new(1, -a18.rowPadding, 0, 24),
+        Position = UDim2.new(0, a18.rowPadding, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -230,12 +228,6 @@ local function a17(tab, a18)
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
 
-        Parent = tab.topbarItemContainer,
-    })
-
-    tab.topbarItemPadding = tab.window:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, a18.rowPadding),
-        PaddingRight = UDim.new(0, a18.rowPadding),
         Parent = tab.topbarItemContainer,
     })
 
@@ -262,12 +254,8 @@ function a5.setRowCollapsed(tab, a20, a21)
         tab.topbarItemInitial.Visible = a20
     end
     local a22 = if a20 then 0 else a21.rowPadding
-    if tab.topbarItemPadding then
-        tab.topbarItemPadding.PaddingLeft = UDim.new(0, a22)
-        tab.topbarItemPadding.PaddingRight = UDim.new(0, a22)
-    end
-    tab.topbarItemContainer.Size = UDim2.fromOffset(0, 24)
-    tab.topbarItemContainer.Position = UDim2.new(0, 0, 0.5, 0)
+    tab.topbarItemContainer.Size = UDim2.new(1, -a22, 0, 24)
+    tab.topbarItemContainer.Position = UDim2.new(0, a22, 0.5, 0)
     tab.topbarItemLayout.HorizontalAlignment = if a20
         then Enum.HorizontalAlignment.Center
         else Enum.HorizontalAlignment.Left
