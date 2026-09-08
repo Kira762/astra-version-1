@@ -10,6 +10,7 @@
     "settings": { "$path": "settings" },
     "cache": { "$path": "cache" },
     "functions": { "$path": "functions" },
+    "layouts": { "$path": "layouts" },
     "images": { "$path": "images" },
     "icons": { "$path": "icons" },
     "themes": { "$path": "themes" },

@@ -1,5 +1,9 @@
 local a1 = {}
 
+local aTopbar = require(script.Parent.Parent.layouts.Topbar)
+local aSidebar = require(script.Parent.Parent.layouts.Sidebar)
+local aSidebarCollapsed = require(script.Parent.Parent.layouts.SidebarCollapsed)
+
 local a2 = 64
 
 local a3 = a2 - 1
@@ -112,6 +116,12 @@ a1.sidebar = {
 local a6 = table.clone(a1.sidebar)
 a6.forceCollapsed = true
 
+local aImplementations = {
+    top = aTopbar,
+    sidebar = aSidebar,
+    collapsedSidebar = aSidebarCollapsed,
+}
+
 function a1.get(a7: unknown): Layout?
     if a7 == "sidebar" then
         return a1.sidebar
@@ -121,6 +131,10 @@ function a1.get(a7: unknown): Layout?
         return a1.top
     end
     return nil
+end
+
+function a1.implementation(a7: unknown)
+    return aImplementations[a7]
 end
 
 function a1.railWidthFor(a8: Layout, a9: number): number

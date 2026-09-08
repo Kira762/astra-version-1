@@ -2769,7 +2769,7 @@ local function a19(window)
         and a2.localPlayer ~= nil
 end
 
-local function a20(window, a21)
+function a7.buildProfile(window, a21)
     local a22 = a2.localPlayer
     if not a22 then
         return
@@ -2791,8 +2791,8 @@ local function a20(window, a21)
     a15 += 1
     local a23 = a15
 
-    local a24 = a21.mode == "sidebar"
-    local a25 = a21.mode == "collapsedSidebar"
+    local a24 = a21.mode == "sidebar" and not a21.forceCollapsed
+    local a25 = a21.forceCollapsed == true
     local a26 = a21.mode == "top"
 
     if a24 then
@@ -2958,11 +2958,58 @@ local function a20(window, a21)
     end
 end
 
-function a7.build(window, a34)
-    local a35 = a34.mode == "sidebar"
-    local a36 = a34.mode == "collapsedSidebar"
+function a7.buildTabRail(window, a34, collapsed)
+    window.tabList = window:Create("ScrollingFrame", {
+        Name = if collapsed then "CollapsedTabs" else "Tabs",
+        Active = true,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 0,
+        ScrollBarImageTransparency = 1,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ClipsDescendants = true,
+        Parent = window.sidebar,
+    })
+    window:Create("UIPadding", {
+        PaddingTop = UDim.new(0, a34.railPadding),
+        PaddingBottom = UDim.new(0, a34.railPadding),
+        Parent = window.tabList,
+    })
+    window.tabListLayout = window:Create("UIListLayout", {
+        Padding = UDim.new(0, a34.rowSpacing),
+        FillDirection = Enum.FillDirection.Vertical,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = window.tabList,
+    })
+end
 
-    if a35 or a36 then
+function a7.applyRailRows(window, a41, a42)
+    a6.railWidth(window, a41)
+    local a43 = a41 < (a42.railWidth :: number)
+    for _, tab in window.tabs do
+        if not tab.neglectSelector then
+            a5.setRowCollapsed(tab, a43, a42)
+        end
+    end
+    if window.profileContainer and a42.mode == "sidebar" then
+        window.profileContainer.Position = UDim2.new(0, if a43 then 0 else a42.rowInset, 0.5, 0)
+        window.profileContainer.Size = UDim2.new(1, if a43 then 0 else -a42.rowInset, 1, 0)
+        window.profileLayout.HorizontalAlignment = if a43
+            then Enum.HorizontalAlignment.Center
+            else Enum.HorizontalAlignment.Left
+        if window.profileLabels then
+            window.profileLabels.Visible = not a43 and not a42.forceCollapsed
+        end
+    end
+end
+
+function a7.build(window, a34)
+    if a34.mode == "sidebar" then
         window.sidebar = window:Create("Frame", {
             Name = "Sidebar",
             AnchorPoint = Vector2.new(0, 1),
@@ -2972,39 +3019,9 @@ function a7.build(window, a34)
             Visible = false,
             Parent = window.main,
         })
-
-        window.tabList = window:Create("ScrollingFrame", {
-            Name = "Tabs",
-            Active = true,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            AutomaticCanvasSize = Enum.AutomaticSize.Y,
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            ScrollBarThickness = 0,
-            ScrollBarImageTransparency = 1,
-            ScrollingDirection = Enum.ScrollingDirection.Y,
-            ClipsDescendants = true,
-            Parent = window.sidebar,
-        })
-
-        window:Create("UIPadding", {
-            PaddingTop = UDim.new(0, a34.railPadding),
-            PaddingBottom = UDim.new(0, a34.railPadding),
-            Parent = window.tabList,
-        })
-
-        window.tabListLayout = window:Create("UIListLayout", {
-            Padding = UDim.new(0, a34.rowSpacing),
-            FillDirection = Enum.FillDirection.Vertical,
-            VerticalAlignment = Enum.VerticalAlignment.Top,
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = window.tabList,
-        })
+        a7.buildTabRail(window, a34, a34.forceCollapsed == true)
     end
-
-    a20(window, a34)
+    a7.buildProfile(window, a34)
     a7.reflowProfile(window)
 end
 
@@ -3016,7 +3033,7 @@ function a7.reflowProfile(window)
         window.profile.Visible = a38
     end
 
-    if a37.mode == "sidebar" then
+    if a37.mode == "sidebar" and not a37.forceCollapsed then
         window.tabList.Size = UDim2.new(1, 0, 1, if a38 then -a37.footerHeight else 0)
     elseif a37.mode == "top" then
         window.profile.Size = UDim2.new(1, 0, 0, if a38 then a37.profileHeight else 0)
@@ -3025,8 +3042,8 @@ function a7.reflowProfile(window)
         end
     end
 
-    if window.profileLabels and window.profileLabels.Visible ~= (a37.mode ~= "collapsedSidebar") then
-        window.profileLabels.Visible = a37.mode ~= "collapsedSidebar"
+    if window.profileLabels and window.profileLabels.Visible ~= (not a37.forceCollapsed) then
+        window.profileLabels.Visible = not a37.forceCollapsed
     end
 
     if window.profileContainer and a37.mode == "sidebar" then
@@ -3046,23 +3063,7 @@ function a7.applyWidth(window, a41)
     window.sidebar.Size = UDim2.new(0, a41, 1, -a42.chromeHeight)
     window.elements.Size = UDim2.new(1, -a41, 1, -a42.chromeHeight)
     window.bottomFade.Size = UDim2.new(1, -a41, a42.fadeSize.Y.Scale, a42.fadeSize.Y.Offset)
-    a6.railWidth(window, a41)
-
-    local a43 = a41 < (a42.railWidth :: number)
-    for _, tab in window.tabs do
-        if not tab.neglectSelector then
-            a5.setRowCollapsed(tab, a43, a42)
-        end
-    end
-
-    if window.profileContainer and a42.mode == "sidebar" then
-        window.profileContainer.Position = UDim2.new(0, if a43 then 0 else a42.rowInset, 0.5, 0)
-        window.profileContainer.Size = UDim2.new(1, if a43 then 0 else -a42.rowInset, 1, 0)
-        window.profileLayout.HorizontalAlignment = if a43
-            then Enum.HorizontalAlignment.Center
-            else Enum.HorizontalAlignment.Left
-        window.profileLabels.Visible = not a43
-    end
+    a7.applyRailRows(window, a41, a42)
 end
 
 function a7.setProfileShown(window, a44, a45)
@@ -3864,36 +3865,6 @@ local function a33(a34): UDim2
     return a10.fit(a35 and a35.ViewportSize, a34)
 end
 
-local function a36(window)
-    window.tabList = window:Create("ScrollingFrame", {
-        Name = "Tabs",
-        Active = true,
-        Size = UDim2.new(1, 0, 0, window.layout.tabStripHeight),
-        Position = UDim2.new(0.5, 0, 0, window.layout.tabStripTop),
-        AnchorPoint = Vector2.new(0.5, 0),
-        BackgroundTransparency = 1,
-        AutomaticCanvasSize = Enum.AutomaticSize.X,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        ScrollBarThickness = 0,
-        ScrollBarImageTransparency = 1,
-        ScrollingDirection = Enum.ScrollingDirection.X,
-        Parent = window.main,
-    })
-    window.tabListLayout = window:Create("UIListLayout", {
-        Padding = UDim.new(0, 7),
-        FillDirection = Enum.FillDirection.Horizontal,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        HorizontalAlignment = Enum.HorizontalAlignment.Left,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = window.tabList,
-    })
-    window:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, 22),
-        PaddingRight = UDim.new(0, 10),
-        Parent = window.tabList,
-    })
-end
-
 local a37 = { "TopLeftRadius", "TopRightRadius", "BottomLeftRadius", "BottomRightRadius" }
 
 local a38 = (function()
@@ -4288,17 +4259,9 @@ function a17.new(a54)
         Parent = self.elements,
     })
 
-            if self.layout.mode == "sidebar" then
-        a14.build(self, self.layout)
-        a14.applyWidth(self, a11.railWidthFor(self.layout, self.size.X.Offset))
-    else
-        a36(self)
-        if self.layout.mode == "top" then
-            a14.build(self, self.layout)
-        elseif self.layout.mode == "collapsedSidebar" then
-            a14.build(self, self.layout)
-        end
-    end
+            local initialLayout = a11.implementation(a42(self.layout))
+    initialLayout.Build(self, self.layout)
+    initialLayout.ApplyWidth(self, a11.railWidthFor(self.layout, self.size.X.Offset))
 
         self.actionContainer = self:Create("Frame", {
 
@@ -5036,12 +4999,9 @@ function a17:_applyWindowSize()
 end
 
 function a17:_applyRailWidth()
-    if self.layout.mode ~= "sidebar" then
-        return
-    end
-
     local a139 = a11.railWidthFor(self.layout, self.size.X.Offset)
-    a14.applyWidth(self, a139)
+    local implementation = a11.implementation(a42(self.layout))
+    implementation.ApplyWidth(self, a139)
 
     if self._settingsLayoutActive or self.selectedTab == self.rfSettings then
         self:_applySettingsLayout(true)
@@ -5673,8 +5633,9 @@ function a17:_setLayoutMode(a215)
     elseif self.tabList then
         self:DestroySubtree(self.tabList)
     end
+    local implementation = a11.implementation(a215)
+    implementation.Build(self, a216)
     if a216.mode == "sidebar" then
-        a14.build(self, a216)
         if not self.elementsCorner then
             self.elementsCorner = self:_roundCorners(self.elements, a216.cardCorners)
             self.elementsStroke = self:Create("UIStroke", {
@@ -5688,10 +5649,7 @@ function a17:_setLayoutMode(a215)
                 Parent = self.elementsStroke,
             })
         end
-        a14.applyWidth(self, a11.railWidthFor(a216, self.size.X.Offset))
     else
-        a36(self)
-        a14.build(self, a216)
         if self.elementsCorner then
             self.elementsCorner.CornerRadius = UDim.new(0, 0)
         end
@@ -5700,8 +5658,8 @@ function a17:_setLayoutMode(a215)
         end
         self.elements.Size = UDim2.new(1, 0, 1, -a216.chromeHeight)
         self.bottomFade.Size = UDim2.new(1, 0, a216.fadeSize.Y.Scale, a216.fadeSize.Y.Offset)
-        a13.railWidth(self, 0)
     end
+    implementation.ApplyWidth(self, a11.railWidthFor(a216, self.size.X.Offset))
     self.elementsLayout.FillDirection = a216.pageDirection
 
     for _, tab in self.tabs do
@@ -27514,6 +27472,10 @@ end)() end,
     [80] = function()local wax,script,require=ImportGlobals(80)local ImportGlobals return (function(...)
 local a1 = {}
 
+local aTopbar = require(script.Parent.Parent.layouts.Topbar)
+local aSidebar = require(script.Parent.Parent.layouts.Sidebar)
+local aSidebarCollapsed = require(script.Parent.Parent.layouts.SidebarCollapsed)
+
 local a2 = 64
 
 local a3 = a2 - 1
@@ -27626,6 +27588,12 @@ a1.sidebar = {
 local a6 = table.clone(a1.sidebar)
 a6.forceCollapsed = true
 
+local aImplementations = {
+    top = aTopbar,
+    sidebar = aSidebar,
+    collapsedSidebar = aSidebarCollapsed,
+}
+
 function a1.get(a7: unknown): Layout?
     if a7 == "sidebar" then
         return a1.sidebar
@@ -27635,6 +27603,10 @@ function a1.get(a7: unknown): Layout?
         return a1.top
     end
     return nil
+end
+
+function a1.implementation(a7: unknown)
+    return aImplementations[a7]
 end
 
 function a1.railWidthFor(a8: Layout, a9: number): number
@@ -28936,84 +28908,84 @@ local LineOffsets = {
     [13] = 1643,
     [14] = 2377,
     [15] = 2721,
-    [16] = 3147,
-    [17] = 3444,
-    [18] = 3818,
-    [20] = 6899,
-    [21] = 7166,
-    [22] = 8297,
-    [23] = 8631,
-    [24] = 8692,
-    [25] = 8837,
-    [26] = 10157,
-    [27] = 10358,
-    [28] = 10619,
-    [29] = 11081,
-    [30] = 11531,
-    [31] = 11618,
-    [32] = 12183,
-    [33] = 12801,
-    [34] = 13149,
-    [35] = 13279,
-    [36] = 13443,
-    [37] = 13597,
-    [39] = 14108,
-    [40] = 14131,
-    [41] = 14148,
-    [42] = 14177,
-    [43] = 14293,
-    [44] = 14307,
-    [45] = 14356,
-    [46] = 14083,
-    [47] = 14457,
-    [48] = 14760,
-    [49] = 14791,
-    [50] = 14446,
-    [51] = 14834,
-    [52] = 14854,
-    [53] = 14886,
-    [54] = 14816,
-    [55] = 15008,
-    [56] = 15171,
-    [57] = 14993,
-    [58] = 15453,
-    [59] = 15748,
-    [60] = 16404,
-    [61] = 18188,
-    [62] = 19329,
-    [63] = 20849,
-    [64] = 15234,
-    [65] = 26078,
-    [66] = 26122,
-    [67] = 26165,
-    [68] = 26238,
-    [69] = 26282,
-    [70] = 26343,
-    [71] = 25987,
-    [72] = 26387,
-    [73] = 26485,
-    [74] = 26663,
-    [75] = 26714,
-    [76] = 26744,
-    [77] = 26995,
-    [78] = 27044,
-    [79] = 27497,
-    [80] = 27515,
-    [81] = 27655,
-    [82] = 27754,
-    [83] = 27776,
-    [84] = 27826,
-    [85] = 27862,
-    [86] = 27880,
-    [87] = 28193,
-    [88] = 28209,
-    [89] = 28260,
-    [90] = 28279,
-    [91] = 28521,
-    [92] = 28565,
-    [93] = 28738,
-    [94] = 28766,
-    [95] = 28777,
+    [16] = 3148,
+    [17] = 3445,
+    [18] = 3819,
+    [20] = 6857,
+    [21] = 7124,
+    [22] = 8255,
+    [23] = 8589,
+    [24] = 8650,
+    [25] = 8795,
+    [26] = 10115,
+    [27] = 10316,
+    [28] = 10577,
+    [29] = 11039,
+    [30] = 11489,
+    [31] = 11576,
+    [32] = 12141,
+    [33] = 12759,
+    [34] = 13107,
+    [35] = 13237,
+    [36] = 13401,
+    [37] = 13555,
+    [39] = 14066,
+    [40] = 14089,
+    [41] = 14106,
+    [42] = 14135,
+    [43] = 14251,
+    [44] = 14265,
+    [45] = 14314,
+    [46] = 14041,
+    [47] = 14415,
+    [48] = 14718,
+    [49] = 14749,
+    [50] = 14404,
+    [51] = 14792,
+    [52] = 14812,
+    [53] = 14844,
+    [54] = 14774,
+    [55] = 14966,
+    [56] = 15129,
+    [57] = 14951,
+    [58] = 15411,
+    [59] = 15706,
+    [60] = 16362,
+    [61] = 18146,
+    [62] = 19287,
+    [63] = 20807,
+    [64] = 15192,
+    [65] = 26036,
+    [66] = 26080,
+    [67] = 26123,
+    [68] = 26196,
+    [69] = 26240,
+    [70] = 26301,
+    [71] = 25945,
+    [72] = 26345,
+    [73] = 26443,
+    [74] = 26621,
+    [75] = 26672,
+    [76] = 26702,
+    [77] = 26953,
+    [78] = 27002,
+    [79] = 27455,
+    [80] = 27473,
+    [81] = 27627,
+    [82] = 27726,
+    [83] = 27748,
+    [84] = 27798,
+    [85] = 27834,
+    [86] = 27852,
+    [87] = 28165,
+    [88] = 28181,
+    [89] = 28232,
+    [90] = 28251,
+    [91] = 28493,
+    [92] = 28537,
+    [93] = 28710,
+    [94] = 28738,
+    [95] = 28749,
 }
 
 -- Misc AOT variable imports

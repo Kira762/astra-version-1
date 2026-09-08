@@ -47,36 +47,6 @@ local function a33(a34): UDim2
     return a10.fit(a35 and a35.ViewportSize, a34)
 end
 
-local function a36(window)
-    window.tabList = window:Create("ScrollingFrame", {
-        Name = "Tabs",
-        Active = true,
-        Size = UDim2.new(1, 0, 0, window.layout.tabStripHeight),
-        Position = UDim2.new(0.5, 0, 0, window.layout.tabStripTop),
-        AnchorPoint = Vector2.new(0.5, 0),
-        BackgroundTransparency = 1,
-        AutomaticCanvasSize = Enum.AutomaticSize.X,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        ScrollBarThickness = 0,
-        ScrollBarImageTransparency = 1,
-        ScrollingDirection = Enum.ScrollingDirection.X,
-        Parent = window.main,
-    })
-    window.tabListLayout = window:Create("UIListLayout", {
-        Padding = UDim.new(0, 7),
-        FillDirection = Enum.FillDirection.Horizontal,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        HorizontalAlignment = Enum.HorizontalAlignment.Left,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = window.tabList,
-    })
-    window:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, 22),
-        PaddingRight = UDim.new(0, 10),
-        Parent = window.tabList,
-    })
-end
-
 local a37 = { "TopLeftRadius", "TopRightRadius", "BottomLeftRadius", "BottomRightRadius" }
 
 local a38 = (function()
@@ -471,17 +441,9 @@ function a17.new(a54)
         Parent = self.elements,
     })
 
-            if self.layout.mode == "sidebar" then
-        a14.build(self, self.layout)
-        a14.applyWidth(self, a11.railWidthFor(self.layout, self.size.X.Offset))
-    else
-        a36(self)
-        if self.layout.mode == "top" then
-            a14.build(self, self.layout)
-        elseif self.layout.mode == "collapsedSidebar" then
-            a14.build(self, self.layout)
-        end
-    end
+            local initialLayout = a11.implementation(a42(self.layout))
+    initialLayout.Build(self, self.layout)
+    initialLayout.ApplyWidth(self, a11.railWidthFor(self.layout, self.size.X.Offset))
 
         self.actionContainer = self:Create("Frame", {
 
@@ -1219,12 +1181,9 @@ function a17:_applyWindowSize()
 end
 
 function a17:_applyRailWidth()
-    if self.layout.mode ~= "sidebar" then
-        return
-    end
-
     local a139 = a11.railWidthFor(self.layout, self.size.X.Offset)
-    a14.applyWidth(self, a139)
+    local implementation = a11.implementation(a42(self.layout))
+    implementation.ApplyWidth(self, a139)
 
     if self._settingsLayoutActive or self.selectedTab == self.rfSettings then
         self:_applySettingsLayout(true)
@@ -1856,8 +1815,9 @@ function a17:_setLayoutMode(a215)
     elseif self.tabList then
         self:DestroySubtree(self.tabList)
     end
+    local implementation = a11.implementation(a215)
+    implementation.Build(self, a216)
     if a216.mode == "sidebar" then
-        a14.build(self, a216)
         if not self.elementsCorner then
             self.elementsCorner = self:_roundCorners(self.elements, a216.cardCorners)
             self.elementsStroke = self:Create("UIStroke", {
@@ -1871,10 +1831,7 @@ function a17:_setLayoutMode(a215)
                 Parent = self.elementsStroke,
             })
         end
-        a14.applyWidth(self, a11.railWidthFor(a216, self.size.X.Offset))
     else
-        a36(self)
-        a14.build(self, a216)
         if self.elementsCorner then
             self.elementsCorner.CornerRadius = UDim.new(0, 0)
         end
@@ -1883,8 +1840,8 @@ function a17:_setLayoutMode(a215)
         end
         self.elements.Size = UDim2.new(1, 0, 1, -a216.chromeHeight)
         self.bottomFade.Size = UDim2.new(1, 0, a216.fadeSize.Y.Scale, a216.fadeSize.Y.Offset)
-        a13.railWidth(self, 0)
     end
+    implementation.ApplyWidth(self, a11.railWidthFor(a216, self.size.X.Offset))
     self.elementsLayout.FillDirection = a216.pageDirection
 
     for _, tab in self.tabs do

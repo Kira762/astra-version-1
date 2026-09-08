@@ -49,7 +49,7 @@ local function a19(window)
         and a2.localPlayer ~= nil
 end
 
-local function a20(window, a21)
+function a7.buildProfile(window, a21)
     local a22 = a2.localPlayer
     if not a22 then
         return
@@ -71,8 +71,8 @@ local function a20(window, a21)
     a15 += 1
     local a23 = a15
 
-    local a24 = a21.mode == "sidebar"
-    local a25 = a21.mode == "collapsedSidebar"
+    local a24 = a21.mode == "sidebar" and not a21.forceCollapsed
+    local a25 = a21.forceCollapsed == true
     local a26 = a21.mode == "top"
 
     if a24 then
@@ -238,11 +238,58 @@ local function a20(window, a21)
     end
 end
 
-function a7.build(window, a34)
-    local a35 = a34.mode == "sidebar"
-    local a36 = a34.mode == "collapsedSidebar"
+function a7.buildTabRail(window, a34, collapsed)
+    window.tabList = window:Create("ScrollingFrame", {
+        Name = if collapsed then "CollapsedTabs" else "Tabs",
+        Active = true,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 0,
+        ScrollBarImageTransparency = 1,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ClipsDescendants = true,
+        Parent = window.sidebar,
+    })
+    window:Create("UIPadding", {
+        PaddingTop = UDim.new(0, a34.railPadding),
+        PaddingBottom = UDim.new(0, a34.railPadding),
+        Parent = window.tabList,
+    })
+    window.tabListLayout = window:Create("UIListLayout", {
+        Padding = UDim.new(0, a34.rowSpacing),
+        FillDirection = Enum.FillDirection.Vertical,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = window.tabList,
+    })
+end
 
-    if a35 or a36 then
+function a7.applyRailRows(window, a41, a42)
+    a6.railWidth(window, a41)
+    local a43 = a41 < (a42.railWidth :: number)
+    for _, tab in window.tabs do
+        if not tab.neglectSelector then
+            a5.setRowCollapsed(tab, a43, a42)
+        end
+    end
+    if window.profileContainer and a42.mode == "sidebar" then
+        window.profileContainer.Position = UDim2.new(0, if a43 then 0 else a42.rowInset, 0.5, 0)
+        window.profileContainer.Size = UDim2.new(1, if a43 then 0 else -a42.rowInset, 1, 0)
+        window.profileLayout.HorizontalAlignment = if a43
+            then Enum.HorizontalAlignment.Center
+            else Enum.HorizontalAlignment.Left
+        if window.profileLabels then
+            window.profileLabels.Visible = not a43 and not a42.forceCollapsed
+        end
+    end
+end
+
+function a7.build(window, a34)
+    if a34.mode == "sidebar" then
         window.sidebar = window:Create("Frame", {
             Name = "Sidebar",
             AnchorPoint = Vector2.new(0, 1),
@@ -252,39 +299,9 @@ function a7.build(window, a34)
             Visible = false,
             Parent = window.main,
         })
-
-        window.tabList = window:Create("ScrollingFrame", {
-            Name = "Tabs",
-            Active = true,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            AutomaticCanvasSize = Enum.AutomaticSize.Y,
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            ScrollBarThickness = 0,
-            ScrollBarImageTransparency = 1,
-            ScrollingDirection = Enum.ScrollingDirection.Y,
-            ClipsDescendants = true,
-            Parent = window.sidebar,
-        })
-
-        window:Create("UIPadding", {
-            PaddingTop = UDim.new(0, a34.railPadding),
-            PaddingBottom = UDim.new(0, a34.railPadding),
-            Parent = window.tabList,
-        })
-
-        window.tabListLayout = window:Create("UIListLayout", {
-            Padding = UDim.new(0, a34.rowSpacing),
-            FillDirection = Enum.FillDirection.Vertical,
-            VerticalAlignment = Enum.VerticalAlignment.Top,
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = window.tabList,
-        })
+        a7.buildTabRail(window, a34, a34.forceCollapsed == true)
     end
-
-    a20(window, a34)
+    a7.buildProfile(window, a34)
     a7.reflowProfile(window)
 end
 
@@ -296,7 +313,7 @@ function a7.reflowProfile(window)
         window.profile.Visible = a38
     end
 
-    if a37.mode == "sidebar" then
+    if a37.mode == "sidebar" and not a37.forceCollapsed then
         window.tabList.Size = UDim2.new(1, 0, 1, if a38 then -a37.footerHeight else 0)
     elseif a37.mode == "top" then
         window.profile.Size = UDim2.new(1, 0, 0, if a38 then a37.profileHeight else 0)
@@ -305,8 +322,8 @@ function a7.reflowProfile(window)
         end
     end
 
-    if window.profileLabels and window.profileLabels.Visible ~= (a37.mode ~= "collapsedSidebar") then
-        window.profileLabels.Visible = a37.mode ~= "collapsedSidebar"
+    if window.profileLabels and window.profileLabels.Visible ~= (not a37.forceCollapsed) then
+        window.profileLabels.Visible = not a37.forceCollapsed
     end
 
     if window.profileContainer and a37.mode == "sidebar" then
@@ -326,23 +343,7 @@ function a7.applyWidth(window, a41)
     window.sidebar.Size = UDim2.new(0, a41, 1, -a42.chromeHeight)
     window.elements.Size = UDim2.new(1, -a41, 1, -a42.chromeHeight)
     window.bottomFade.Size = UDim2.new(1, -a41, a42.fadeSize.Y.Scale, a42.fadeSize.Y.Offset)
-    a6.railWidth(window, a41)
-
-    local a43 = a41 < (a42.railWidth :: number)
-    for _, tab in window.tabs do
-        if not tab.neglectSelector then
-            a5.setRowCollapsed(tab, a43, a42)
-        end
-    end
-
-    if window.profileContainer and a42.mode == "sidebar" then
-        window.profileContainer.Position = UDim2.new(0, if a43 then 0 else a42.rowInset, 0.5, 0)
-        window.profileContainer.Size = UDim2.new(1, if a43 then 0 else -a42.rowInset, 1, 0)
-        window.profileLayout.HorizontalAlignment = if a43
-            then Enum.HorizontalAlignment.Center
-            else Enum.HorizontalAlignment.Left
-        window.profileLabels.Visible = not a43
-    end
+    a7.applyRailRows(window, a41, a42)
 end
 
 function a7.setProfileShown(window, a44, a45)
