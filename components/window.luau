@@ -241,6 +241,12 @@ function a17.new(a54)
 
         Parent = a15.guiContainer,
     })
+        -- Responsive: UIScale keeps desktop/mobile same perceived size (tiered occupancy + scale)
+        self.uiScale = self:Create("UIScale", {
+                Scale = a10.scaleForViewport(a15.workspace.CurrentCamera and a15.workspace.CurrentCamera.ViewportSize),
+                Parent = self.screenGui,
+        })
+
 
         self.main = self:Create("Frame", {
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -248,7 +254,7 @@ function a17.new(a54)
         ZIndex = 1,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0.5, 0),
-                Size = UDim2.fromOffset((self.size.X.Offset - 50), 0),
+                Size = self.size,
         BackgroundTransparency = 1,         Visible = false,
         Parent = self.screenGui,
     })
@@ -1189,23 +1195,24 @@ function a17:_applyWindowSize()
     if self.unloaded then
         return
     end
-
+    local vp = a15.workspace.CurrentCamera and a15.workspace.CurrentCamera.ViewportSize or nil
     local a137 = a33(self.layout.mode)
+    local newScale = a10.scaleForViewport(vp)
     local a138 = a137 ~= self.size
+    local scaleChanged = self.uiScale and self.uiScale.Scale ~= newScale
     self.size = a137
-
-            self:_applyRailWidth()
-
-            if self.hidden or self.minimised or self.animating or self._revealing then
-        self._pendingResize = self._pendingResize or a138
+    if self.uiScale and scaleChanged then
+        self.uiScale.Scale = newScale
+    end
+    self:_applyRailWidth()
+    if self.hidden or self.minimised or self.animating or self._revealing then
+        self._pendingResize = self._pendingResize or a138 or (scaleChanged or false)
         return
     end
-
-    if not a138 and not self._pendingResize then
+    if not a138 and not self._pendingResize and not scaleChanged then
         return
     end
     self._pendingResize = false
-
     self.main.Size = a137
     self:_clampToScreen()
     self:_syncDragBar()
