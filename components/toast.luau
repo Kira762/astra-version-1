@@ -101,10 +101,8 @@ function a1.new(window, a31, a32)
     }, { Color = { "WindowColor", a4.toColorSequence } })
 
     self.window:Create("UICorner", {
-        CornerRadius = UDim.new(1, 0),
-
         Parent = self.body,
-    })
+    }, { CornerRadius = "CornerRoundness" })
 
     self.stroke = self.window:Create("UIStroke", {
         Transparency = 1,
