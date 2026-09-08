@@ -15232,6 +15232,9 @@ return a1
 end)() end,
     [64] = function()local wax,script,require=ImportGlobals(64)local ImportGlobals return (function(...)
 
+local fileSystem = require(script.Parent.Parent.utilities.filesystem)
+local state = require(script.Parent.Parent.core.state)
+
 local icons = {}
 
 icons.BASE = ""
@@ -15314,6 +15317,51 @@ end
 
 local customAssetFolder = "custom_asset"
 local customAssetCache: { [string]: string } = {}
+local localPngCache: { [string]: string } = {}
+local repositoryAssetRoot = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/"
+local pngSignature = "\137PNG\r\n\26\n"
+
+local function normalizeMappedPath(mappedPath: string): string
+    local normalized = mappedPath:gsub("\\", "/"):gsub("^/+", ""):gsub("/+", "/")
+    normalized = normalized:gsub("^%./", "")
+    return normalized
+end
+
+local function localPngPath(mappedPath: string): string
+    return state.fileSystemManager:getAssetsFolder("icons") .. "/" .. normalizeMappedPath(mappedPath)
+end
+
+local function resolveMappedPng(mappedPath: string, env: { [any]: any }): string?
+    local normalized = normalizeMappedPath(mappedPath)
+    local cachedUri = localPngCache[normalized]
+    if cachedUri then
+        return cachedUri
+    end
+    if type(env.getcustomasset) ~= "function" or typeof(fileSystem.isfile) ~= "function" then
+        return nil
+    end
+
+    local filePath = localPngPath(normalized)
+    if not fileSystem.isfile(filePath) then
+        pcall(fileSystem.ensureDir, filePath:match("^(.+)/[^/]+$") or state.fileSystemManager:getAssetsFolder("icons"))
+        local sourceUrl = repositoryAssetRoot .. normalized
+        local content = state.assetResolver:getAssetContentFromUrl(sourceUrl, "icon:" .. normalized, false)
+        if type(content) ~= "string" or content:sub(1, #pngSignature) ~= pngSignature then
+            return nil
+        end
+        local ok = pcall(fileSystem.writefile, filePath, content)
+        if not ok or not fileSystem.isfile(filePath) then
+            return nil
+        end
+    end
+
+    local ok, uri = pcall(env.getcustomasset, filePath)
+    if ok and type(uri) == "string" and uri ~= "" then
+        localPngCache[normalized] = uri
+        return uri
+    end
+    return nil
+end
 
 function icons.resolve(value: (string | number)?, pack: string?): (string | number)?
     if value == nil or value == 0 or value == "" then
@@ -15329,11 +15377,26 @@ function icons.resolve(value: (string | number)?, pack: string?): (string | numb
     then
         return value
     end
+    local env = getfenv and getfenv() or _G
+
+    -- Pack mappings are repository-relative paths. Download the PNG into the
+    -- executor filesystem before asking getcustomasset to create its URI.
+    local mapped = icons.get(value, pack)
+    if type(mapped) == "string" and mapped ~= "" then
+        local uri = resolveMappedPng(mapped, env)
+        if uri then
+            customAssetCache[mapped] = uri
+            customAssetCache[value] = uri
+            return uri
+        end
+        -- Never return a repository-relative path to ImageLabel.Image.
+        return value
+    end
+
     local cached = customAssetCache[value]
     if cached then
         return cached
     end
-    local env = getfenv and getfenv() or _G
     if type(env.getcustomasset) == "function" then
         local exts = { ".png", ".jpg", ".jpeg", ".webp", "" }
         for _, ext in exts do
@@ -15344,27 +15407,6 @@ function icons.resolve(value: (string | number)?, pack: string?): (string | numb
                 return uri
             end
         end
-    end
-    -- Mapped pack icon: name -> pack mapping -> local PNG path -> custom asset URI.
-    -- The mapping value (e.g. "assets/icons/lucide-pack/a/lucideActivity.png") is a
-    -- workspace-relative PNG path; convert it through getcustomasset so the UI
-    -- receives a renderable local asset instead of a raw relative path.
-    local mapped = icons.get(value, pack)
-    if type(mapped) == "string" and mapped ~= "" then
-        local cachedUri = customAssetCache[mapped]
-        if cachedUri then
-            return cachedUri
-        end
-        if type(env.getcustomasset) == "function" then
-            local ok, uri = pcall(env.getcustomasset, mapped)
-            if ok and type(uri) == "string" and uri ~= "" then
-                customAssetCache[mapped] = uri
-                customAssetCache[value] = uri
-                return uri
-            end
-        end
-        -- Graceful fallback: hand back the mapped path rather than breaking the UI.
-        return mapped
     end
     return value
 end
@@ -28934,44 +28976,44 @@ local LineOffsets = {
     [55] = 15008,
     [56] = 15171,
     [57] = 14993,
-    [58] = 15411,
-    [59] = 15706,
-    [60] = 16362,
-    [61] = 18146,
-    [62] = 19287,
-    [63] = 20807,
+    [58] = 15453,
+    [59] = 15748,
+    [60] = 16404,
+    [61] = 18188,
+    [62] = 19329,
+    [63] = 20849,
     [64] = 15234,
-    [65] = 26036,
-    [66] = 26080,
-    [67] = 26123,
-    [68] = 26196,
-    [69] = 26240,
-    [70] = 26301,
-    [71] = 25945,
-    [72] = 26345,
-    [73] = 26443,
-    [74] = 26621,
-    [75] = 26672,
-    [76] = 26702,
-    [77] = 26953,
-    [78] = 27002,
-    [79] = 27455,
-    [80] = 27473,
-    [81] = 27613,
-    [82] = 27712,
-    [83] = 27734,
-    [84] = 27784,
-    [85] = 27820,
-    [86] = 27838,
-    [87] = 28151,
-    [88] = 28167,
-    [89] = 28218,
-    [90] = 28237,
-    [91] = 28479,
-    [92] = 28523,
-    [93] = 28696,
-    [94] = 28724,
-    [95] = 28735,
+    [65] = 26078,
+    [66] = 26122,
+    [67] = 26165,
+    [68] = 26238,
+    [69] = 26282,
+    [70] = 26343,
+    [71] = 25987,
+    [72] = 26387,
+    [73] = 26485,
+    [74] = 26663,
+    [75] = 26714,
+    [76] = 26744,
+    [77] = 26995,
+    [78] = 27044,
+    [79] = 27497,
+    [80] = 27515,
+    [81] = 27655,
+    [82] = 27754,
+    [83] = 27776,
+    [84] = 27826,
+    [85] = 27862,
+    [86] = 27880,
+    [87] = 28193,
+    [88] = 28209,
+    [89] = 28260,
+    [90] = 28279,
+    [91] = 28521,
+    [92] = 28565,
+    [93] = 28738,
+    [94] = 28766,
+    [95] = 28777,
 }
 
 -- Misc AOT variable imports

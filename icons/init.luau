@@ -1,4 +1,7 @@
 
+local fileSystem = require(script.Parent.Parent.utilities.filesystem)
+local state = require(script.Parent.Parent.core.state)
+
 local icons = {}
 
 icons.BASE = ""
@@ -81,6 +84,51 @@ end
 
 local customAssetFolder = "custom_asset"
 local customAssetCache: { [string]: string } = {}
+local localPngCache: { [string]: string } = {}
+local repositoryAssetRoot = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/"
+local pngSignature = "\137PNG\r\n\26\n"
+
+local function normalizeMappedPath(mappedPath: string): string
+    local normalized = mappedPath:gsub("\\", "/"):gsub("^/+", ""):gsub("/+", "/")
+    normalized = normalized:gsub("^%./", "")
+    return normalized
+end
+
+local function localPngPath(mappedPath: string): string
+    return state.fileSystemManager:getAssetsFolder("icons") .. "/" .. normalizeMappedPath(mappedPath)
+end
+
+local function resolveMappedPng(mappedPath: string, env: { [any]: any }): string?
+    local normalized = normalizeMappedPath(mappedPath)
+    local cachedUri = localPngCache[normalized]
+    if cachedUri then
+        return cachedUri
+    end
+    if type(env.getcustomasset) ~= "function" or typeof(fileSystem.isfile) ~= "function" then
+        return nil
+    end
+
+    local filePath = localPngPath(normalized)
+    if not fileSystem.isfile(filePath) then
+        pcall(fileSystem.ensureDir, filePath:match("^(.+)/[^/]+$") or state.fileSystemManager:getAssetsFolder("icons"))
+        local sourceUrl = repositoryAssetRoot .. normalized
+        local content = state.assetResolver:getAssetContentFromUrl(sourceUrl, "icon:" .. normalized, false)
+        if type(content) ~= "string" or content:sub(1, #pngSignature) ~= pngSignature then
+            return nil
+        end
+        local ok = pcall(fileSystem.writefile, filePath, content)
+        if not ok or not fileSystem.isfile(filePath) then
+            return nil
+        end
+    end
+
+    local ok, uri = pcall(env.getcustomasset, filePath)
+    if ok and type(uri) == "string" and uri ~= "" then
+        localPngCache[normalized] = uri
+        return uri
+    end
+    return nil
+end
 
 function icons.resolve(value: (string | number)?, pack: string?): (string | number)?
     if value == nil or value == 0 or value == "" then
@@ -96,11 +144,26 @@ function icons.resolve(value: (string | number)?, pack: string?): (string | numb
     then
         return value
     end
+    local env = getfenv and getfenv() or _G
+
+    -- Pack mappings are repository-relative paths. Download the PNG into the
+    -- executor filesystem before asking getcustomasset to create its URI.
+    local mapped = icons.get(value, pack)
+    if type(mapped) == "string" and mapped ~= "" then
+        local uri = resolveMappedPng(mapped, env)
+        if uri then
+            customAssetCache[mapped] = uri
+            customAssetCache[value] = uri
+            return uri
+        end
+        -- Never return a repository-relative path to ImageLabel.Image.
+        return value
+    end
+
     local cached = customAssetCache[value]
     if cached then
         return cached
     end
-    local env = getfenv and getfenv() or _G
     if type(env.getcustomasset) == "function" then
         local exts = { ".png", ".jpg", ".jpeg", ".webp", "" }
         for _, ext in exts do
@@ -111,27 +174,6 @@ function icons.resolve(value: (string | number)?, pack: string?): (string | numb
                 return uri
             end
         end
-    end
-    -- Mapped pack icon: name -> pack mapping -> local PNG path -> custom asset URI.
-    -- The mapping value (e.g. "assets/icons/lucide-pack/a/lucideActivity.png") is a
-    -- workspace-relative PNG path; convert it through getcustomasset so the UI
-    -- receives a renderable local asset instead of a raw relative path.
-    local mapped = icons.get(value, pack)
-    if type(mapped) == "string" and mapped ~= "" then
-        local cachedUri = customAssetCache[mapped]
-        if cachedUri then
-            return cachedUri
-        end
-        if type(env.getcustomasset) == "function" then
-            local ok, uri = pcall(env.getcustomasset, mapped)
-            if ok and type(uri) == "string" and uri ~= "" then
-                customAssetCache[mapped] = uri
-                customAssetCache[value] = uri
-                return uri
-            end
-        end
-        -- Graceful fallback: hand back the mapped path rather than breaking the UI.
-        return mapped
     end
     return value
 end
