@@ -9,7 +9,11 @@ Load Astra and build your first window in a few lines.
 Add one line at the top of your script to pull in Astra. It's in the same repo — just require it like any other file, no links.
 
 ```lua
-local Astra = require(game:GetService("ReplicatedStorage"):FindFirstChild("Astra"))
+-- Studio / Rojo (recommended): Astra is a ModuleScript in ReplicatedStorage
+local Astra = require(game:GetService("ReplicatedStorage").Astra)
+-- If Astra isn't there yet, the example loader falls back automatically:
+-- sibling version-1 ModuleScript -> or local file readfile("version-1.luau") + loadstring
+-- No HttpGet needed — everything is same-repo.
 ```
 
 ---

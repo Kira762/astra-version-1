@@ -1,4 +1,40 @@
-local Astra = require(game:GetService("ReplicatedStorage"):FindFirstChild("Astra"))
+-- Astra example — same repo, no external links.
+-- Tries ReplicatedStorage (Studio/Rojo) then sibling ModuleScript then local file.
+
+local Astra: any = nil
+do
+	local ok, mod = pcall(function()
+		return game:GetService("ReplicatedStorage"):FindFirstChild("Astra")
+	end)
+	local inst = if ok then mod else nil
+	if inst and typeof(inst) == "Instance" and inst:IsA("ModuleScript") then
+		local ok2, res = pcall(require, inst)
+		if ok2 and type(res) == "table" then Astra = res end
+	end
+	if not Astra then
+		local sib = script.Parent:FindFirstChild("version-1") or script.Parent:FindFirstChild("version_1") or script:FindFirstChild("version-1")
+		if sib and sib:IsA("ModuleScript") then
+			local ok2, res = pcall(require, sib)
+			if ok2 and type(res) == "table" then Astra = res end
+		end
+	end
+	if not Astra and typeof(readfile) == "function" and typeof(isfile) == "function" then
+		for _, path in { "version-1.luau", "./version-1.luau" } do
+			local ok2, exists = pcall(isfile, path)
+			if ok2 and exists then
+				local ok3, src = pcall(readfile, path)
+				if ok3 and type(src) == "string" and #src > 0 then
+					local fn = loadstring(src :: string)
+					if type(fn) == "function" then
+						local ok4, res = pcall(fn :: any)
+						if ok4 and type(res) == "table" then Astra = res; break end
+					end
+				end
+			end
+		end
+	end
+end
+assert(typeof(Astra) == "table" and Astra.CreateWindow, "[Astra] Could not load Astra. Put Astra in ReplicatedStorage (Rojo) or place version-1.luau next to this script.")
 
 local window = Astra:CreateWindow({
 	name = "Astra",
