@@ -3946,9 +3946,9 @@ function a17.new(a54)
         connections = {},
 
         iconPack = a59,
-        icon = a3.resolve(a4.icons.window, a59),
+        icon = a3.resolve(a6.icons.window, a59),
         showName = a54.showName or a54.ShowName or "Astra",
-        showIcon = a3.resolve(a4.icons.window, a59),
+        showIcon = a3.resolve(a6.icons.window, a59),
                 showIconOnly = a54.showIconOnly or a54.ShowIconOnly or false,
                 profileText = nil,
 
