@@ -5599,7 +5599,7 @@ function a17:_updateWindowTitle()
             text ..= " • General"
         end
     end
-    self.title.Text = a7.t(text)
+    self.title.Text = a7.resolve(text)
 end
 
 function a17:_setContentVisible(a245)
