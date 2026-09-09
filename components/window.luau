@@ -467,6 +467,7 @@ function a17.new(a54)
 
     self.rfSettings = self:CreateTab({
         name = "General",
+        icon = "sliders-horizontal",
         customOrder = 1000,
         forgetState = true,
         isSettingsTab = true,
@@ -1401,10 +1402,10 @@ function a17:_bindTopbarDrag()
 end
 
 function a17:_buildSettingsUI()
-    local appearance = self:CreateTab({ name = "Appearance", customOrder = 1001, forgetState = true, isSettingsTab = true })
-    local behavior = self:CreateTab({ name = "Behavior", customOrder = 1002, forgetState = true, isSettingsTab = true })
-    local performance = self:CreateTab({ name = "Performance", customOrder = 1003, forgetState = true, isSettingsTab = true })
-    local persistence = self:CreateTab({ name = "Persistence", customOrder = 1004, forgetState = true, isSettingsTab = true })
+    local appearance = self:CreateTab({ name = "Appearance", icon = "palette", customOrder = 1001, forgetState = true, isSettingsTab = true })
+    local behavior = self:CreateTab({ name = "Behavior", icon = "shield-check", customOrder = 1002, forgetState = true, isSettingsTab = true })
+    local performance = self:CreateTab({ name = "Performance", icon = "gauge", customOrder = 1003, forgetState = true, isSettingsTab = true })
+    local persistence = self:CreateTab({ name = "Persistence", icon = "save", customOrder = 1004, forgetState = true, isSettingsTab = true })
     for _, tab in { appearance, behavior, performance, persistence } do
         tab._isSettingsTab = true
         table.insert(self._settingsTabs, tab)
