@@ -27,7 +27,7 @@ function a7.buildCollapsedFace(window)
 
     window:Create("UICorner", {
         Parent = window.collapsedIcon,
-    }, { CornerRadius = "PillCornerRadius" })
+    }, { CornerRadius = "CornerRoundness" })
 
     local a10 = window:Create("Frame", {
         Name = "CollapsedText",
