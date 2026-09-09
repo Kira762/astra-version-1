@@ -143,9 +143,8 @@ function a17.new(a54)
         tags = {},
         selectedTab = nil,
         _settingsLayoutActive = false,
-        _settingsCardBuilt = false,
         _settingsTabs = {},
-        _settingsActiveSubTab = 1,
+        _settingsMode = false,
         theme = a47(a54.theme or a54.Theme),
 
         controls = {},
@@ -467,12 +466,13 @@ function a17.new(a54)
     })
 
     self.rfSettings = self:CreateTab({
-        name = "Astra Settings",
+        name = "General",
         customOrder = 1000,
-
-        neglectSelector = true,
-                        forgetState = true,
+        forgetState = true,
+        isSettingsTab = true,
     })
+    self.rfSettings._isSettingsTab = true
+    self._settingsTabs = { self.rfSettings }
 
     require(script.Parent.action).new(self, {
         name = "Close",
@@ -514,15 +514,15 @@ function a17.new(a54)
         linkedTab = self.rfSettings,
 
         callback = function()
-            if self.selectedTab == self.rfSettings then
+            if self._settingsMode then
                 local a69 = self._previousTab
                 self._previousTab = nil
-                if a69 and a69.window == self and a69.tabPage then
+                if a69 and a69.window == self and a69.tabPage and not a69._isSettingsTab then
                     a69:Select()
                     return
                 end
                 for _, tab in self.tabs do
-                    if tab ~= self.rfSettings and tab.window == self and tab.tabPage then
+                    if not tab._isSettingsTab and tab.window == self and tab.tabPage then
                         tab:Select()
                         return
                     end
@@ -585,6 +585,7 @@ function a17.new(a54)
     self:_bindTopbarDrag()
     self:_watchViewport()
     self:_buildSettingsUI()
+    self:_updateWindowTitle()
 
     self:_syncLiveAnimation()
 
@@ -675,7 +676,7 @@ function a17:CreateTab(a85)
     if not a86.neglectSelector then
         local a87 = true
         for _, tab in self.tabs do
-            if tab ~= a86 and not tab.neglectSelector then
+            if tab ~= a86 and not tab.neglectSelector and tab._isSettingsTab == a86._isSettingsTab then
                 a87 = false
                 break
             end
@@ -1400,282 +1401,143 @@ function a17:_bindTopbarDrag()
 end
 
 function a17:_buildSettingsUI()
-    self.rfSettings:CreateSection({ name = "General" })
+    local appearance = self:CreateTab({ name = "Appearance", customOrder = 1001, forgetState = true, isSettingsTab = true })
+    local behavior = self:CreateTab({ name = "Behavior", customOrder = 1002, forgetState = true, isSettingsTab = true })
+    local performance = self:CreateTab({ name = "Performance", customOrder = 1003, forgetState = true, isSettingsTab = true })
+    local persistence = self:CreateTab({ name = "Persistence", customOrder = 1004, forgetState = true, isSettingsTab = true })
+    for _, tab in { appearance, behavior, performance, persistence } do
+        tab._isSettingsTab = true
+        table.insert(self._settingsTabs, tab)
+    end
 
+    self.rfSettings:CreateSection({ name = "General" })
     self.rfSettings:CreateKeybind({
-        name = "Toggle Keybind",
-        icon = a6.icons.search,
-        value = self.settings.toggleKeybind,
-        isMenuToggle = true,         onChanged = function(a178)
-            self.settings.toggleKeybind = a178
+        name = "Toggle Keybind", icon = a6.icons.search, value = self.settings.toggleKeybind,
+        isMenuToggle = true, onChanged = function(value)
+            self.settings.toggleKeybind = value
             self:SaveSettings()
         end,
     })
-
     self.rfSettings:CreateToggle({
         name = "Unlock cursor while open",
         description = "Unlocks the cursor while the menu is open so you can configure in FPS games that lock it.",
         value = self.settings.mouseOverride,
-        callback = function(a179)
-            self.settings.mouseOverride = a179
-            self:SaveSettings()
-        end,
+        callback = function(value) self.settings.mouseOverride = value; self:SaveSettings() end,
     })
-
     self.rfSettings:CreateToggle({
         name = "Welcome toast",
         description = "Shows a 'Signed in as' toast the first time you open the menu on a new account.",
         value = self.settings.welcomeToast,
-        callback = function(a180)
-            self.settings.welcomeToast = a180
-            self:SaveSettings()
-        end,
+        callback = function(value) self.settings.welcomeToast = value; self:SaveSettings() end,
     })
 
-    self.rfSettings:CreateToggle({
-        name = "Haptics",
-        description = "A subtle tap as you interact, on devices that support haptics.",
-        value = self.settings.haptics,
-        callback = function(a181)
-            self.settings.haptics = a181
-            a9.setEnabled(a181)
-            self:SaveSettings()
-        end,
-    })
-
-    self.rfSettings:CreateToggle({
-        name = "Show profile",
-        description = "Shows your account profile in the active bar layout.",
-        value = self.settings.showProfile,
-        callback = function(a182)
-            self.settings.showProfile = a182 == true
-            a14.reflowProfile(self)
-            a14.setProfileShown(self, self.settings.showProfile, a14.settleInfo)
-            self:SaveSettings()
-        end,
-    })
-
-    self.rfSettings:CreateToggle({
-        name = "Reveal full username",
-        description = "Shows your full Roblox username in the sidebar instead of the masked version.",
-        value = self.settings.showFullUsername,
-        callback = function(a183)
-            self.settings.showFullUsername = a183 == true
-            a14.refreshProfileName(self)
-            self:SaveSettings()
-        end,
-    })
-
-    self.rfSettings:CreateToggle({
-        name = "Prevent duplicate windows",
-        description = "Prevents Astra from creating another window while this window is active.",
-        value = self.settings.antiWindowDuplicate,
-        callback = function(a184)
-            self.settings.antiWindowDuplicate = a184
-            self:SaveSettings()
-        end,
-    })
-
-    self.rfSettings:CreateSection({ name = "Layout" })
-
-    local a185 = {
-        top = "Default Topbar",
-        sidebar = "Sidebar (Responsive)",
-        collapsedSidebar = "Collapsed Sidebar",
-    }
-    local a186 = self.settings.layoutMode or self.layout.mode
-    local layoutDropdown = self.rfSettings:CreateDropdown({
+    appearance:CreateSection({ name = "Layout" })
+    local layouts = { top = "Default Topbar", sidebar = "Sidebar (Responsive)", collapsedSidebar = "Collapsed Sidebar" }
+    local layoutDropdown
+    local currentLayout = self.settings.layoutMode or self.layout.mode
+    layoutDropdown = appearance:CreateDropdown({
         name = "Bar Layout",
         description = "Choose Default Topbar, responsive Sidebar, or an automatic compact Collapsed Sidebar for desktop and mobile.",
-        options = { a185.top, a185.sidebar, a185.collapsedSidebar },
-        value = a185[a186],
-        callback = function(a188)
-            local a189
-            for a190, a191 in a185 do
-                if a188 == a191 then
-                    a189 = a190
-                    break
-                end
-            end
-            if not a189 then
+        options = { layouts.top, layouts.sidebar, layouts.collapsedSidebar },
+        value = layouts[currentLayout],
+        callback = function(choice)
+            local requested
+            for key, label in layouts do if choice == label then requested = key break end end
+            if not requested then return end
+            local active = a42(self.layout)
+            if requested == active then
+                self:Notify({ title = "Bar layout", content = "The " .. choice .. " layout is already active." })
+                layoutDropdown:Set(layouts[active], true)
                 return
             end
-
-            local a192 = a42(self.layout)
-            if a189 == a192 then
-                self:Notify({
-                    title = "Bar layout",
-                    content = "The " .. a188 .. " layout is already active.",
-                })
-                if layoutDropdown then
-                    layoutDropdown:Set(a185[a192], true)
-                end
-                return
-            end
-
-            if layoutDropdown then
-                layoutDropdown:Set(a185[a192], true)
-            end
+            layoutDropdown:Set(layouts[active], true)
             self:Popup({
                 title = "Apply bar layout?",
-                content = "Are you sure you want to change the layout to " .. a188 .. "?",
+                content = "Are you sure you want to change the layout to " .. choice .. "?",
                 options = {
                     { text = "Cancel" },
-                    {
-                        text = "Apply",
-                        style = "primary",
-                        callback = function()
-                            if self:_setLayoutMode(a189) then
-                                a186 = a189
-                                self.settings.layoutMode = a189
-                                self:SaveSettings()
-                                self:Notify({
-                                    title = "Bar layout changed",
-                                    content = "Switched to the " .. a185[a189] .. " layout.",
-                                })
-                                if layoutDropdown then
-                                    layoutDropdown:Set(a185[a189], true)
-                                end
-                            else
-                                a186 = a42(self.layout)
-                                if layoutDropdown and a185[a186] then
-                                    layoutDropdown:Set(a185[a186], true)
-                                end
-                                self:Notify({
-                                    title = "Bar layout",
-                                    content = "The selected bar layout could not be applied right now.",
-                                })
-                            end
-                        end,
-                    },
+                    { text = "Apply", style = "primary", callback = function()
+                        if self:_setLayoutMode(requested) then
+                            currentLayout = requested
+                            self.settings.layoutMode = requested
+                            self:SaveSettings()
+                            layoutDropdown:Set(layouts[requested], true)
+                            self:Notify({ title = "Bar layout changed", content = "Switched to the " .. layouts[requested] .. " layout." })
+                        else
+                            currentLayout = a42(self.layout)
+                            layoutDropdown:Set(layouts[currentLayout], true)
+                            self:Notify({ title = "Bar layout", content = "The selected bar layout could not be applied right now." })
+                        end
+                    end },
                 },
             })
         end,
     })
-
-    self.rfSettings:CreateSection({ name = "Window" })
-
-    self.rfSettings:CreateToggle({
-        name = "Keep window on screen",
-        description = "Stops the window being dragged off the edge of the screen and lost.",
-        value = self.settings.keepOnScreen,
-        callback = function(a193)
-            self.settings.keepOnScreen = a193
-            self:SaveSettings()
+    appearance:CreateSection({ name = "Profile" })
+    appearance:CreateToggle({
+        name = "Show profile", description = "Shows your account profile in the active bar layout.", value = self.settings.showProfile,
+        callback = function(value)
+            self.settings.showProfile = value == true
+            a14.reflowProfile(self); a14.setProfileShown(self, self.settings.showProfile, a14.settleInfo); self:SaveSettings()
+        end,
+    })
+    appearance:CreateToggle({
+        name = "Reveal full username", description = "Shows your full Roblox username in the sidebar instead of the masked version.", value = self.settings.showFullUsername,
+        callback = function(value)
+            self.settings.showFullUsername = value == true
+            a14.refreshProfileName(self); self:SaveSettings()
         end,
     })
 
-    self.rfSettings:CreateButton({
-        name = "Reset Window Position",
-        callback = function()
-            a15.tweenService
-                :Create(self.main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {
-                    Position = UDim2.new(0.5, 0, 0.5, 0),
-                })
-                :Play()
-            a15.tweenService
-                :Create(self.drag.drag, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {
-                    Position = UDim2.new(0.5, 0, 0.5, self.size.Y.Offset / 2 + 15),
-                })
-                :Play()
+    behavior:CreateSection({ name = "Window behavior" })
+    behavior:CreateToggle({
+        name = "Prevent duplicate windows", description = "Prevents Astra from creating another window while this window is active.", value = self.settings.antiWindowDuplicate,
+        callback = function(value) self.settings.antiWindowDuplicate = value; self:SaveSettings() end,
+    })
+    performance:CreateSection({ name = "Performance" })
+    performance:CreateToggle({
+        name = "Haptics", description = "A subtle tap as you interact, on devices that support haptics.", value = self.settings.haptics,
+        callback = function(value) self.settings.haptics = value; a9.setEnabled(value); self:SaveSettings() end,
+    })
+
+    appearance:CreateSection({ name = "Window" })
+    appearance:CreateToggle({
+        name = "Keep window on screen", description = "Stops the window being dragged off the edge of the screen and lost.", value = self.settings.keepOnScreen,
+        callback = function(value) self.settings.keepOnScreen = value; self:SaveSettings() end,
+    })
+    appearance:CreateButton({
+        name = "Reset Window Position", callback = function()
+            a15.tweenService:Create(self.main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
+            a15.tweenService:Create(self.drag.drag, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, self.size.Y.Offset / 2 + 15) }):Play()
         end,
     })
 
-            if next(self.configuration) ~= nil then
-        self.rfSettings:CreateSection({ name = "Configurations" })
-
-        local a194 = self:ListConfigs()[1]
-        local a195, a196
-
-        local function a197()
-            local a198 = self:ListConfigs()
-            a195:Refresh(a198)
-            if a194 and not table.find(a198, a194) then
-                a194 = a198[1]
-            end
-            if a194 then
-                a195:Set(a194, true)
-            end
+    if next(self.configuration) ~= nil then
+        persistence:CreateSection({ name = "Configurations" })
+        local selected = self:ListConfigs()[1]
+        local configDropdown, configName
+        local function refresh()
+            local configs = self:ListConfigs(); configDropdown:Refresh(configs)
+            if selected and not table.find(configs, selected) then selected = configs[1] end
+            if selected then configDropdown:Set(selected, true) end
         end
-
-        a195 = self.rfSettings:CreateDropdown({
-            name = "Saved Configurations",
-            icon = a6.icons.config,
-            options = self:ListConfigs(),
-            value = a194,
-            placeholder = "No saved configurations",
-            callback = function(a199)
-                a194 = a199
-            end,
-        })
-
-        a196 = self.rfSettings:CreateInput({
-            name = "Configuration Name",
-            description = "Name a new configuration, or leave blank to overwrite the selected one.",
-            placeholder = "e.g. PvP Loadout",
-            clearOnFocus = false,
-        })
-
-        local a200 = self.rfSettings:CreateGroup()
-
-        a200:CreateButton({
-            name = "Save",
-            icon = a6.icons.config,
-            callback = function()
-                local a201 = a196.value
-                if a201 == "" then
-                    a201 = a194
-                end
-                if not a201 or a201 == "" then
-                    self:Toast({ title = a7.resolve("Name your configuration first") })
-                    return
-                end
-                if self:Save(a201) then
-                    a196:Set("")
-                    a194 = a201
-                    a197()
-                    self:Toast({
-                        title = a7.resolve("Saved configuration"),
-                        subtitle = a201,
-                        icon = a6.icons.config,
-                    })
-                else
-                    self:Toast({ title = a7.resolve("Couldn't save configuration"), subtitle = a201 })
-                end
-            end,
-        })
-
-        a200:CreateButton({
-            name = "Load",
-            callback = function()
-                if not a194 or a194 == "" then
-                    self:Toast({ title = a7.resolve("Pick a configuration to load") })
-                    return
-                end
-                if self:_applyNamedConfig(a194) then
-                    self:Toast({ title = a7.resolve("Loaded configuration"), subtitle = a194 })
-                else
-                    self:Toast({ title = a7.resolve("Couldn't load configuration"), subtitle = a194 })
-                end
-            end,
-        })
-
-        a200:CreateButton({
-            name = "Delete",
-            callback = function()
-                local a202 = a194
-                if not a202 or a202 == "" then
-                    self:Toast({ title = a7.resolve("Pick a configuration to delete") })
-                    return
-                end
-                if self:DeleteConfig(a202) then
-                    a197()
-                    self:Toast({ title = a7.resolve("Deleted configuration"), subtitle = a202 })
-                else
-                    self:Toast({ title = a7.resolve("Couldn't delete configuration"), subtitle = a202 })
-                end
-            end,
-        })
+        configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = a6.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
+        configName = persistence:CreateInput({ name = "Configuration Name", description = "Name a new configuration, or leave blank to overwrite the selected one.", placeholder = "e.g. PvP Loadout", clearOnFocus = false })
+        local group = persistence:CreateGroup()
+        group:CreateButton({ name = "Save", icon = a6.icons.config, callback = function()
+            local name = configName.value; if name == "" then name = selected end
+            if not name or name == "" then self:Toast({ title = a7.resolve("Name your configuration first") }); return end
+            if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = a7.resolve("Saved configuration"), subtitle = name, icon = a6.icons.config }) else self:Toast({ title = a7.resolve("Couldn't save configuration"), subtitle = name }) end
+        end })
+        group:CreateButton({ name = "Load", callback = function()
+            if not selected or selected == "" then self:Toast({ title = a7.resolve("Pick a configuration to load") }); return end
+            if self:_applyNamedConfig(selected) then self:Toast({ title = a7.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = a7.resolve("Couldn't load configuration"), subtitle = selected }) end
+        end })
+        group:CreateButton({ name = "Delete", callback = function()
+            local name = selected
+            if not name or name == "" then self:Toast({ title = a7.resolve("Pick a configuration to delete") }); return end
+            if self:DeleteConfig(name) then refresh(); self:Toast({ title = a7.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = a7.resolve("Couldn't delete configuration"), subtitle = name }) end
+        end })
     end
 end
 
@@ -1860,7 +1722,7 @@ function a17:_setLayoutMode(a215)
             tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected")
         end
     end
-    self:_applySettingsLayout(self.selectedTab == self.rfSettings)
+    self:_applySettingsLayout(self._settingsMode)
     if self.selectedTab then
         self:_jumpTo(self.selectedTab.tabPage)
         self.selectedTab:_applyVisual("selected")
@@ -1875,312 +1737,53 @@ function a17:_setLayoutMode(a215)
     self._layoutTransitioning = false
     return a220 ~= a215
 end
-function a17:_buildSettingsCard()
-    if self.settingsCard then
-        return self.settingsCard
-    end
-
-    local a221 = self.layout.mode ~= "sidebar"
-    local a222 = self:Create("Frame", {
-        Name = "SettingsCard",
-        Size = if a221 then UDim2.new(1, -20, 1, -10) else UDim2.new(1, -20, 1, -20),
-        Position = UDim2.new(0, 10, 0, 10),
-        BorderSizePixel = 0,
-        ZIndex = 1,
-        Parent = self.elements,
-    }, { BackgroundColor3 = "StatBackground", BackgroundTransparency = "ElementTransparency" })
-
-    -- Inset surface: the stat-element recipe (themed StatBackground base with
-    -- element corner + stroke, no gradient multiply) so the card sits one step
-    -- darker than the normal element surface instead of looking like a
-    -- different panel.
-
-    -- Safe-area inset applied at the card level so every child (settings
-    -- page, sub-tab bar, sub-tab pages) inherits it: content width resolves
-    -- against CardWidth - padding, keeping controls clear of the rounded
-    -- corners and stroke at any window size.
-    self:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, 14),
-        PaddingRight = UDim.new(0, 14),
-        PaddingTop = UDim.new(0, 12),
-        PaddingBottom = UDim.new(0, 12),
-
-        Parent = a222,
-    })
-
-    self:Create("UICorner", {
-        Parent = a222,
-    }, { CornerRadius = "ElementCornerRadius" })
-
-    local a223 = self:Create("UIStroke", {
-        Transparency = 1,
-
-        Parent = a222,
-    }, { Color = "ElementStroke", Transparency = "ElementStrokeTransparency" })
-
-    self.settingsCard = a222
-    self.settingsCardStroke = a223
-    self._settingsCardBuilt = true
-
-    local a224 = self.rfSettings
-    if a224 and a224.tabPage then
-        a224.tabPage.Parent = a222
-    end
-
-    if self.settingsSubTabBar then
-        self.settingsSubTabBar.Parent = a222
-    end
-    if self.settingsSubTabPages then
-        self.settingsSubTabPages.Parent = a222
-    end
-
-    return a222
-end
-
-function a17:_destroySettingsCard()
-    if self.rfSettings and self.rfSettings.tabPage then
-        self.rfSettings.tabPage.Parent = self.elements
-    end
-    if self.settingsCard then
-        self:DestroySubtree(self.settingsCard)
-        self.settingsCard = nil
-        self.settingsCardStroke = nil
-    end
-    self._settingsCardBuilt = false
-end
-
-function a17:_setSettingsSubTabsVisible(a225)
-    local a226 = #self._settingsTabs > 0
-    if self.settingsSubTabBar then
-        self.settingsSubTabBar.Visible = a225 and a226
-    end
-    if self.settingsSubTabPages then
-        self.settingsSubTabPages.Visible = a225 and a226
-    end
-    if a225 and a226 then
-        self:_selectSettingsSubTab(self._settingsActiveSubTab, true)
-    end
-end
-
-function a17:_selectSettingsSubTab(a227, a228)
-    local a229 = self._settingsTabs
-    if #a229 == 0 then
-        return
-    end
-    a227 = math.clamp(a227, 1, #a229)
-    self._settingsActiveSubTab = a227
-    self.settings.activeSubTab = a227
-
-    for i, a230 in a229 do
-        local a231 = i == a227
-        if a230.page then
-            a230.page.Visible = a231
-        end
-        if a230.button then
-            local a232 = if a228 then nil else TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-            local a233 = if a231 then 0.25 else 1
-            if a232 then
-                a15.tweenService:Create(a230.button, a232, { BackgroundTransparency = a233 }):Play()
-            else
-                a230.button.BackgroundTransparency = a233
-            end
-            a230.button.TextColor3 = if a231 then self.theme.ContentColor else self.theme.TitlingColor
-        end
-    end
-end
-
-function a17:AddSettingsTab(a234)
-    assert(not self.unloaded, "Cannot add a settings tab to an unloaded window.")
-    a234 = if typeof(a234) == "table" then a234 else {}
-
-    local a235 = self.rfSettings
-    if not a235 then
-        return nil
-    end
-
-    if not self.settingsSubTabBar then
-        self.settingsSubTabBar = self:Create("Frame", {
-            Name = "SettingsSubTabBar",
-            Size = UDim2.new(1, -20, 0, 30),
-            Position = UDim2.new(0, 10, 0, 10),
-            BackgroundTransparency = 1,
-            Visible = false,
-            Parent = self.settingsCard,
-        })
-
-        self:Create("UIListLayout", {
-            Padding = UDim.new(0, 6),
-            FillDirection = Enum.FillDirection.Horizontal,
-            VerticalAlignment = Enum.VerticalAlignment.Center,
-            HorizontalAlignment = Enum.HorizontalAlignment.Left,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = self.settingsSubTabBar,
-        })
-
-        self.settingsSubTabPages = self:Create("Frame", {
-            Name = "SettingsSubTabPages",
-            Size = UDim2.new(1, -20, 1, -56),
-            Position = UDim2.new(0, 10, 0, 46),
-            BackgroundTransparency = 1,
-            Visible = false,
-            ZIndex = 2,
-            Parent = self.settingsCard,
-        })
-    end
-
-    local a236 = a7.resolve(a234.name or a234.Name or "Settings Tab")
-    local a237 = self:ResolveIcon(a234.icon or a234.Icon)
-    local a238 = #self._settingsTabs + 1
-
-    local a239 = self:Create("TextButton", {
-        Name = a236,
-        Text = a236,
-        TextSize = 13,
-        FontFace = a15.brandFont(Enum.FontWeight.Medium),
-        AutoButtonColor = false,
-        Size = UDim2.new(0, 0, 1, 0),
-        AutomaticSize = Enum.AutomaticSize.X,
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        LayoutOrder = a238,
-        Parent = self.settingsSubTabBar,
-    }, { TextColor3 = "TitlingColor", BackgroundColor3 = "ContentColor" })
-
-    self:Create("UICorner", {
-        CornerRadius = UDim.new(0, 6),
-        Parent = a239,
-    })
-
-    self:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, 10),
-        PaddingRight = UDim.new(0, 10),
-        Parent = a239,
-    })
-
-    local a240 = self:Create("ScrollingFrame", {
-        Name = a236,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        ScrollBarThickness = 0,
-        ScrollBarImageTransparency = 1,
-        ScrollingDirection = Enum.ScrollingDirection.Y,
-        Visible = false,
-        ZIndex = 2,
-        Parent = self.settingsSubTabPages,
-    })
-
-    self:Create("UIListLayout", {
-        Padding = UDim.new(0, 7),
-        FillDirection = Enum.FillDirection.Vertical,
-        VerticalAlignment = Enum.VerticalAlignment.Top,
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = a240,
-    })
-
-    self:Create("UIPadding", {
-        PaddingTop = UDim.new(0, 10),
-        PaddingBottom = UDim.new(0, 10),
-        Parent = a240,
-    })
-
-    local a241 = {
-        name = a236,
-        icon = a237,
-        page = a240,
-        button = a239,
-        index = a238,
-    }
-    table.insert(self._settingsTabs, a241)
-
-    local a242 = setmetatable({
-        window = self,
-        name = a236,
-        elements = {},
-        connections = {},
-        forgetState = false,
-        tabPage = a240,
-    }, { __index = a235 })
-
-    self:Connect(a239.MouseButton1Click, function()
-        a9.click()
-        self:_selectSettingsSubTab(a238)
-    end)
-
-    self:_selectSettingsSubTab(a238, true)
-    if self._settingsLayoutActive then
-        self:_setSettingsSubTabsVisible(true)
-    end
-
-    return a242
-end
-
-function a17:_applySettingsLayout(a243)
-    a243 = a243 == true
-    self._settingsLayoutActive = a243
-    if self.settingsAction then
-        a2.assign(self.settingsAction.iconLabel, "Image", a6.icons.settings)
-    end
-    if self.layout.mode ~= "sidebar" then
-        if self.tabList then
-            self.tabList.Visible = not a243 and not self.hidden and not self.minimised and self.elements.Visible
-        end
-        self.elements.Size = UDim2.new(1, 0, 1, -self.layout.chromeHeight)
-        self.bottomFade.Size = UDim2.new(1, 0, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
-        if a243 then
-            self:_buildSettingsCard()
-            if self.settingsSubTabBar then
-                self:_setSettingsSubTabsVisible(true)
-            end
-        else
-            self:_destroySettingsCard()
-        end
-        if self.selectedTab and self.selectedTab.tabPage then
-            self.selectedTab.tabPage.Size = if a243
-                then UDim2.new(1, 0, 1, 0)
-                else UDim2.new(1, -20, 1, 0)
-            self.selectedTab.tabPage.Position = UDim2.new(0, 0, 0, 0)
-        end
-        return
-    end
-    local a244 = a11.railWidthFor(self.layout, self.size.X.Offset)
-    local tab = self.selectedTab
-
-    if a243 then
-        if self.tabList then
-            self.tabList.Visible = false
-        end
-        self:_buildSettingsCard()
-        if self.settingsSubTabBar then
-            self:_setSettingsSubTabsVisible(true)
-        end
-        self.elements.Size = UDim2.new(1, 0, 1, -self.layout.chromeHeight)
-        self.bottomFade.Size = UDim2.new(1, 0, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
-        if tab and tab.tabPage then
-            tab.tabPage.Size = UDim2.new(1, 0, 1, 0)
-            tab.tabPage.Position = UDim2.new(0, 0, 0, 0)
-        end
-        return
-    end
-
-    self:_destroySettingsCard()
-
+function a17:_applySettingsLayout(isSettings)
+    self._settingsLayoutActive = isSettings == true
     if self.tabList then
         self.tabList.Visible = not self.hidden and not self.minimised
     end
     if self.sidebar then
         self.sidebar.Visible = not self.hidden and not self.minimised
     end
-    self.elements.Size = UDim2.new(1, -a244, 1, -self.layout.chromeHeight)
-    self.bottomFade.Size = UDim2.new(1, -a244, self.layout.fadeSize.Y.Scale, self.layout.fadeSize.Y.Offset)
-    if tab and tab.tabPage then
-        tab.tabPage.Size = UDim2.new(1, -35, 1, 0)
-        tab.tabPage.Position = UDim2.new(0, 35, 0, 0)
+    for _, tab in self.tabs do
+        if tab.topbarItem then
+            tab.topbarItem.Visible = not self.hidden and not self.minimised
+                and (self._settingsMode == (tab._isSettingsTab == true))
+        end
     end
+    if self.selectedTab and self.selectedTab.tabPage then
+        self.selectedTab.tabPage.Size = if self.layout.mode == "sidebar" then UDim2.new(1, -35, 1, 0) else UDim2.new(1, -20, 1, 0)
+        self.selectedTab.tabPage.Position = if self.layout.mode == "sidebar" then UDim2.new(0, 35, 0, 0) else UDim2.new(0, 0, 0, 0)
+    end
+end
+
+function a17:_setSettingsMode(active)
+    active = active == true
+    self._settingsMode = active
+    if active and self._previousTab == nil and self.selectedTab and not self.selectedTab._isSettingsTab then
+        self._previousTab = self.selectedTab
+    end
+    for _, tab in self.tabs do
+        if tab.topbarItem then
+            tab.topbarItem.Visible = not self.hidden and not self.minimised and (active == (tab._isSettingsTab == true))
+        end
+    end
+    self:_applySettingsLayout(active)
+    self:_updateWindowTitle()
+end
+
+function a17:_updateWindowTitle()
+    if not self.title then return end
+    local text = self.name
+    if self._settingsMode then
+        text ..= " • Settings"
+        if self.selectedTab and self.selectedTab._isSettingsTab and self.selectedTab ~= self.rfSettings then
+            text ..= " • " .. self.selectedTab.name
+        elseif self.selectedTab == self.rfSettings then
+            text ..= " • General"
+        end
+    end
+    self.title.Text = a7.t(text)
 end
 
 function a17:_setContentVisible(a245)
@@ -2193,7 +1796,7 @@ function a17:_setContentVisible(a245)
         return
     end
 
-    self:_applySettingsLayout(self.selectedTab == self.rfSettings)
+    self:_applySettingsLayout(self._settingsMode)
 end
 
 function a17:_fadeSurfaces(a246, a247)
@@ -2495,9 +2098,6 @@ end
 function a17:_jumpTo(a283)
     if not a283 then
         return
-    end
-    if self._settingsCardBuilt and self.settingsCard and a283.Parent == self.settingsCard then
-        a283 = self.settingsCard
     end
     if a283.Parent == self.elements then
         self.elementsLayout:JumpTo(a283)

@@ -66,6 +66,7 @@ function a1.new(window, a17)
         neglectSelector = a17.neglectSelector or a17.NeglectSelector or false,
         customOrder = a17.customOrder or a17.CustomOrder or 0,
                 forgetState = a17.forgetState or a17.ForgetState or false,
+        _isSettingsTab = a17.isSettingsTab == true or a17.IsSettingsTab == true,
 
         elements = {},
         connections = {},     }, a1)
@@ -183,7 +184,9 @@ function a1:Select(a24)
     end
 
     self.window.selectedTab = self
-    if self.window._applySettingsLayout then
+    if self.window._setSettingsMode then
+        self.window:_setSettingsMode(self._isSettingsTab == true)
+    elseif self.window._applySettingsLayout then
         self.window:_applySettingsLayout(self == self.window.rfSettings)
     end
     self.window:_jumpTo(self.tabPage)
