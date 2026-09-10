@@ -1364,6 +1364,13 @@ function Window:_bindTopbarDrag()
             return
         end
 
+        if self.minimised
+            and self.settings
+            and self.settings.dragMinimisedBar ~= true
+        then
+            return
+        end
+
         local inputType = input.UserInputType.Name
         if inputType ~= "MouseButton1" and inputType ~= "Touch" then
             return
@@ -1564,7 +1571,7 @@ function Window:_buildSettingsUI()
         callback = function(value) self.settings.keepOnScreen = value; self:SaveSettings() end,
     })
     appearance:CreateToggle({
-        name = "Draggable minimized bar", description = "Allows the minimized window capsule to be dragged to a new position. When off, it stays where it was left.", value = self.settings.dragMinimisedBar,
+        name = "Draggable capsule", description = "Allows the minimized capsule to be dragged to a new position. When off, it stays where it was left.", value = self.settings.dragMinimisedBar,
         callback = function(value) self.settings.dragMinimisedBar = value == true; self:SaveSettings() end,
     })
     appearance:CreateButton({
