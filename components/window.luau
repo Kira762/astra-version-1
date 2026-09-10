@@ -120,6 +120,7 @@ function Window.new(props)
     if not icons.isPack(iconPack) then
         error("Astra: iconPack must be exactly one supported pack: lucide, material, tabler, phosphor, heroicons, or feather.", 2)
     end
+    local providedIcon = props.icon or props.Icon
 
     local self = setmetatable({
         name = props.name or props.Name or "Astra Window",
@@ -130,9 +131,9 @@ function Window.new(props)
         connections = {},
 
         iconPack = iconPack,
-        icon = icons.resolve(props.icon or props.Icon or constants.icons.window, iconPack),
+        icon = icons.resolve(providedIcon or "Sirius", iconPack),
         showName = props.showName or props.ShowName or "Astra",
-        showIcon = icons.resolve(props.icon or props.Icon or constants.icons.window, iconPack),
+        showIcon = icons.resolve(providedIcon or "Astra", iconPack),
         showHeader = props.showHeader ~= false and props.ShowHeader ~= false,
                 showIconOnly = props.showIconOnly or props.ShowIconOnly or false,
                 profileText = nil,
