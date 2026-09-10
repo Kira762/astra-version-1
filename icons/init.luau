@@ -101,6 +101,7 @@ function icons.get(name: string, pack: string?): string?
 end
 
 local customAssetFolder = "custom_asset"
+local assetBase = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/"
 local customAssetCache: { [string]: string } = {}
 
 -- Resolve a component icon. Checks custom_asset folder first, then icon packs, then passes through existing URLs.
@@ -135,7 +136,11 @@ function icons.resolve(value: (string | number)?, pack: string?): (string | numb
             end
         end
     end
-    return icons.get(value, pack) or value
+    local resolved = icons.get(value, pack)
+    if type(resolved) == "string" and string.sub(resolved, 1, 7) == "assets/" then
+        return assetBase .. resolved
+    end
+    return resolved or value
 end
 
 -- Get icon URL by pack and name

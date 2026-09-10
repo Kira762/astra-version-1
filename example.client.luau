@@ -1,9 +1,9 @@
 -- Astra multi-tab supported-usage example.
--- This example pins the bundle that contains the tab/window nil-reference fix.
+-- This example loads the current bundle with remote icon asset resolution.
 
 local Astra = loadstring(
     game:HttpGet(
-        "https://raw.githubusercontent.com/Kira762/astra-version-1/895006a/version-1.luau"
+        "https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"
     )
 )()
 
@@ -38,7 +38,10 @@ home:CreateToggle({
     name = "Enable feature",
     value = true,
     callback = function(value)
-        print("Feature enabled:", value)
+        window:Notify({
+            title = "Feature",
+            content = if value then "Feature enabled." else "Feature disabled.",
+        })
     end,
 })
 
@@ -52,7 +55,7 @@ controls:CreateSlider({
     value = 50,
     increment = 1,
     callback = function(value)
-        print("Volume:", value)
+        window:Toast({ title = "Volume", subtitle = tostring(value) })
     end,
 })
 controls:CreateDropdown({
@@ -60,14 +63,14 @@ controls:CreateDropdown({
     options = { "Default", "Performance", "Visual" },
     value = "Default",
     callback = function(value)
-        print("Mode:", value)
+        window:Notify({ title = "Mode changed", content = tostring(value) })
     end,
 })
 controls:CreateInput({
     name = "Display name",
     placeholder = "Enter a name",
     callback = function(value)
-        print("Name:", value)
+        window:Toast({ title = "Name updated", subtitle = tostring(value) })
     end,
 })
 
@@ -79,7 +82,7 @@ appearance:CreateColorPicker({
     name = "Accent color",
     color = Color3.fromRGB(96, 205, 255),
     callback = function(value)
-        print("Accent color changed:", value)
+        window:Toast({ title = "Accent color updated", subtitle = tostring(value) })
     end,
 })
 appearance:CreateDivider()
@@ -105,4 +108,3 @@ information:CreateButton({
 
 -- Select the first tab explicitly so the example is deterministic on startup.
 home:Select()
-print("[Astra] Multi-tab example loaded successfully.")

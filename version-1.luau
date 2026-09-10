@@ -15023,6 +15023,7 @@ function icons.get(name: string, pack: string?): string?
 end
 
 local customAssetFolder = "custom_asset"
+local assetBase = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/"
 local customAssetCache: { [string]: string } = {}
 
 -- Resolve a component icon. Checks custom_asset folder first, then icon packs, then passes through existing URLs.
@@ -15057,7 +15058,11 @@ function icons.resolve(value: (string | number)?, pack: string?): (string | numb
             end
         end
     end
-    return icons.get(value, pack) or value
+    local resolved = icons.get(value, pack)
+    if type(resolved) == "string" and string.sub(resolved, 1, 7) == "assets/" then
+        return assetBase .. resolved
+    end
+    return resolved or value
 end
 
 -- Get icon URL by pack and name
@@ -28665,44 +28670,44 @@ local LineOffsets = {
     [59] = 14694,
     [60] = 14859,
     [61] = 14679,
-    [62] = 15106,
-    [63] = 15401,
-    [64] = 16057,
-    [65] = 17841,
-    [66] = 18982,
-    [67] = 20502,
+    [62] = 15111,
+    [63] = 15406,
+    [64] = 16062,
+    [65] = 17846,
+    [66] = 18987,
+    [67] = 20507,
     [68] = 14923,
-    [69] = 25746,
-    [70] = 25790,
-    [71] = 25833,
-    [72] = 25906,
-    [73] = 25950,
-    [74] = 26011,
-    [75] = 25640,
-    [76] = 26055,
-    [77] = 26153,
-    [78] = 26331,
-    [79] = 26382,
-    [80] = 26412,
-    [81] = 26663,
-    [82] = 26712,
-    [83] = 27165,
-    [84] = 27183,
-    [85] = 27337,
-    [86] = 27436,
-    [87] = 27458,
-    [88] = 27508,
-    [89] = 27544,
-    [90] = 27562,
-    [91] = 27875,
-    [92] = 27891,
-    [93] = 27942,
-    [94] = 27961,
-    [95] = 28203,
-    [96] = 28247,
-    [97] = 28420,
-    [98] = 28448,
-    [99] = 28459,
+    [69] = 25751,
+    [70] = 25795,
+    [71] = 25838,
+    [72] = 25911,
+    [73] = 25955,
+    [74] = 26016,
+    [75] = 25645,
+    [76] = 26060,
+    [77] = 26158,
+    [78] = 26336,
+    [79] = 26387,
+    [80] = 26417,
+    [81] = 26668,
+    [82] = 26717,
+    [83] = 27170,
+    [84] = 27188,
+    [85] = 27342,
+    [86] = 27441,
+    [87] = 27463,
+    [88] = 27513,
+    [89] = 27549,
+    [90] = 27567,
+    [91] = 27880,
+    [92] = 27896,
+    [93] = 27947,
+    [94] = 27966,
+    [95] = 28208,
+    [96] = 28252,
+    [97] = 28425,
+    [98] = 28453,
+    [99] = 28464,
 }
 
 -- Misc AOT variable imports
