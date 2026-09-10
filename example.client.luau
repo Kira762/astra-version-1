@@ -13,20 +13,22 @@ assert(
 local window = Astra:CreateWindow({
     name = "Astra Example",
     subtitle = "Multi-tab supported API example",
+    icon = "sparkles",
     showHeader = false,
 })
 
+-- Window tags are rendered beside the window title and remain available in the chrome.
 window:CreateTag({
     icon = "tag",
-    text = "0.0.10",
+    text = "0.0.11",
 })
 
--- Home: overview content and basic controls.
+-- Home: use a tab for overview content and simple state controls.
 local home = window:CreateTab({ icon = "house" })
 home:CreateSection({ name = "Overview" })
 home:CreateText({
     name = "Welcome",
-    text = "This window demonstrates several independent Astra tabs.",
+    text = "Create tabs from the Window, then create elements from each Tab.",
 })
 home:CreateButton({
     name = "Say hello",
@@ -45,8 +47,9 @@ home:CreateToggle({
     end,
 })
 
--- Controls: sliders, dropdowns, and text input.
+-- Controls: use input elements for values, choices, and user text.
 local controls = window:CreateTab({ icon = "sliders-horizontal" })
+controls:CreateSection({ name = "Input elements" })
 controls:CreateSlider({
     name = "Volume",
     range = { 0, 100 },
@@ -72,8 +75,9 @@ controls:CreateInput({
     end,
 })
 
--- Appearance: visual and theme-related controls.
+-- Appearance: use visual elements for colors, dividers, and explanatory text.
 local appearance = window:CreateTab({ icon = "palette" })
+appearance:CreateSection({ name = "Visual elements" })
 appearance:CreateColorPicker({
     name = "Accent color",
     color = Color3.fromRGB(96, 205, 255),
@@ -87,11 +91,20 @@ appearance:CreateText({
     text = "Use this tab for visual and theme-related controls.",
 })
 
--- Information: usage notes and notifications.
+-- Information: document the Window, Tab, and element creation pattern.
 local information = window:CreateTab({ icon = "info" })
+information:CreateSection({ name = "Usage" })
 information:CreateText({
-    name = "Supported usage",
-    text = "Tabs are created with window:CreateTab, and controls with tab:Create... methods.",
+    name = "Create a tab",
+    text = 'local tab = window:CreateTab({ icon = "settings" })',
+})
+information:CreateText({
+    name = "Create an element",
+    text = 'tab:CreateButton({ name = "Action", callback = function() end })',
+})
+information:CreateText({
+    name = "Select a tab",
+    text = "Call tab:Select() to display a tab. This example selects Home on startup.",
 })
 information:CreateButton({
     name = "Show notification",

@@ -3893,9 +3893,9 @@ function Window.new(props)
         connections = {},
 
         iconPack = iconPack,
-        icon = icons.resolve(constants.icons.window, iconPack),
+        icon = icons.resolve(props.icon or props.Icon or constants.icons.window, iconPack),
         showName = props.showName or props.ShowName or "Astra",
-        showIcon = icons.resolve(constants.icons.window, iconPack),
+        showIcon = icons.resolve(props.icon or props.Icon or constants.icons.window, iconPack),
         showHeader = props.showHeader ~= false and props.ShowHeader ~= false,
                 showIconOnly = props.showIconOnly or props.ShowIconOnly or false,
                 profileText = nil,
