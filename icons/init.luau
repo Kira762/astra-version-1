@@ -89,8 +89,16 @@ function icons.isPack(pack: string?): boolean
     return pack ~= nil and type(pack) == "string" and packLoaders[pack] ~= nil
 end
 
+local namedAssets = {
+    Astra = "assets/Astra.png",
+    Sirius = "assets/Sirius.png",
+}
+
 -- Get icon URL by name (defaults to lucide pack)
 function icons.get(name: string, pack: string?): string?
+    if namedAssets[name] then
+        return namedAssets[name]
+    end
     pack = pack or "lucide"
     local data = packTable(pack)
     if not data then
