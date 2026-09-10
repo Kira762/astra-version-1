@@ -125,6 +125,11 @@ function chrome.bindCollapsedDrag(window)
         if not hasMoved and (mousePos - startMousePos).Magnitude < dragThreshold then
             return
         end
+        if not (window.settings and window.settings.dragMinimisedBar == true) then
+            hasMoved = true
+            cleanupDrag()
+            return
+        end
         hasMoved = true
 
         local newPos = mousePos + dragOffset + getGuiInset()
