@@ -5836,6 +5836,14 @@ function Window:_firstShow()
     self.main.Visible = true
     self.main.ClipsDescendants = true
     self.main.BackgroundTransparency = 1
+    local openingSize = UDim2.new(
+        self.size.X.Scale * 0.88,
+        math.floor(self.size.X.Offset * 0.88),
+        self.size.Y.Scale * 0.88,
+        math.floor(self.size.Y.Offset * 0.88)
+    )
+    self.main.Size = openingSize
+    self.windowCorner.CornerRadius = UDim.new(1, 0)
     self:_setContentVisible(true)
     self:_setTabSectionsVisible(true)
     self:_setTabSectionsShown(true)
@@ -5849,24 +5857,32 @@ function Window:_firstShow()
         end
     end
     for _, tag in self.tags do
-        tag:_setShown(true, false)
+        tag:_setShown(false, false)
     end
-    local tweenInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local tweenInfo = TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut)
     if self.topbarIcon then
-        self.topbarIcon.ImageTransparency = 0
+        self.topbarIcon.ImageTransparency = 1
+        state.tweenService:Create(self.topbarIcon, tweenInfo, { ImageTransparency = 0 }):Play()
     end
     if self.title then
-        self.title.TextTransparency = 0
+        self.title.TextTransparency = 1
+        state.tweenService:Create(self.title, tweenInfo, { TextTransparency = 0 }):Play()
     end
     if self.subtitle then
-        self.subtitle.TextTransparency = 0.7
+        self.subtitle.TextTransparency = 1
+        state.tweenService:Create(self.subtitle, tweenInfo, { TextTransparency = 0.7 }):Play()
     end
     for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
         if actionFrame:IsA("Frame") and actionFrame.ImageLabel then
-            actionFrame.ImageLabel.ImageTransparency = 0.6
+            actionFrame.ImageLabel.ImageTransparency = 1
+            state.tweenService:Create(actionFrame.ImageLabel, tweenInfo, { ImageTransparency = 0.6 }):Play()
         end
     end
 
+    for _, tag in self.tags do
+        tag:_setShown(true, tweenInfo)
+    end
+    self:_fadeSurfaces(true, tweenInfo)
     local tween = state.tweenService:Create(self.main, tweenInfo, {
         BackgroundTransparency = 0,
         Size = self.size,
@@ -28751,84 +28767,84 @@ local LineOffsets = {
     [16] = 3114,
     [17] = 3392,
     [18] = 3769,
-    [20] = 6506,
-    [21] = 6773,
-    [22] = 7904,
-    [23] = 8238,
-    [24] = 8299,
-    [25] = 8444,
-    [26] = 9764,
-    [27] = 9965,
-    [28] = 10226,
-    [29] = 10688,
-    [30] = 11138,
-    [31] = 11225,
-    [32] = 11790,
-    [33] = 12408,
-    [34] = 12764,
-    [35] = 12894,
-    [36] = 13058,
-    [37] = 13212,
-    [39] = 13723,
-    [40] = 13746,
-    [41] = 13763,
-    [42] = 13792,
-    [43] = 13908,
-    [44] = 13922,
-    [45] = 13971,
-    [46] = 13698,
-    [47] = 14072,
-    [48] = 14375,
-    [49] = 14406,
-    [50] = 14061,
-    [51] = 14449,
-    [52] = 14469,
-    [53] = 14501,
-    [54] = 14431,
-    [55] = 14608,
-    [56] = 14670,
-    [57] = 14733,
-    [59] = 14796,
-    [60] = 14961,
-    [61] = 14781,
-    [62] = 15213,
-    [63] = 15508,
-    [64] = 16164,
-    [65] = 17948,
-    [66] = 19089,
-    [67] = 20609,
-    [68] = 15025,
-    [69] = 25853,
-    [70] = 25897,
-    [71] = 25940,
-    [72] = 26013,
-    [73] = 26057,
-    [74] = 26118,
-    [75] = 25747,
-    [76] = 26162,
-    [77] = 26260,
-    [78] = 26438,
-    [79] = 26489,
-    [80] = 26519,
-    [81] = 26770,
-    [82] = 26819,
-    [83] = 27272,
-    [84] = 27290,
-    [85] = 27444,
-    [86] = 27543,
-    [87] = 27565,
-    [88] = 27615,
-    [89] = 27651,
-    [90] = 27669,
-    [91] = 27982,
-    [92] = 27998,
-    [93] = 28049,
-    [94] = 28068,
-    [95] = 28310,
-    [96] = 28354,
-    [97] = 28546,
-    [98] = 28574,
-    [99] = 28585,
+    [20] = 6522,
+    [21] = 6789,
+    [22] = 7920,
+    [23] = 8254,
+    [24] = 8315,
+    [25] = 8460,
+    [26] = 9780,
+    [27] = 9981,
+    [28] = 10242,
+    [29] = 10704,
+    [30] = 11154,
+    [31] = 11241,
+    [32] = 11806,
+    [33] = 12424,
+    [34] = 12780,
+    [35] = 12910,
+    [36] = 13074,
+    [37] = 13228,
+    [39] = 13739,
+    [40] = 13762,
+    [41] = 13779,
+    [42] = 13808,
+    [43] = 13924,
+    [44] = 13938,
+    [45] = 13987,
+    [46] = 13714,
+    [47] = 14088,
+    [48] = 14391,
+    [49] = 14422,
+    [50] = 14077,
+    [51] = 14465,
+    [52] = 14485,
+    [53] = 14517,
+    [54] = 14447,
+    [55] = 14624,
+    [56] = 14686,
+    [57] = 14749,
+    [59] = 14812,
+    [60] = 14977,
+    [61] = 14797,
+    [62] = 15229,
+    [63] = 15524,
+    [64] = 16180,
+    [65] = 17964,
+    [66] = 19105,
+    [67] = 20625,
+    [68] = 15041,
+    [69] = 25869,
+    [70] = 25913,
+    [71] = 25956,
+    [72] = 26029,
+    [73] = 26073,
+    [74] = 26134,
+    [75] = 25763,
+    [76] = 26178,
+    [77] = 26276,
+    [78] = 26454,
+    [79] = 26505,
+    [80] = 26535,
+    [81] = 26786,
+    [82] = 26835,
+    [83] = 27288,
+    [84] = 27306,
+    [85] = 27460,
+    [86] = 27559,
+    [87] = 27581,
+    [88] = 27631,
+    [89] = 27667,
+    [90] = 27685,
+    [91] = 27998,
+    [92] = 28014,
+    [93] = 28065,
+    [94] = 28084,
+    [95] = 28326,
+    [96] = 28370,
+    [97] = 28562,
+    [98] = 28590,
+    [99] = 28601,
 }
 
 -- Misc AOT variable imports

@@ -2068,6 +2068,14 @@ function Window:_firstShow()
     self.main.Visible = true
     self.main.ClipsDescendants = true
     self.main.BackgroundTransparency = 1
+    local openingSize = UDim2.new(
+        self.size.X.Scale * 0.88,
+        math.floor(self.size.X.Offset * 0.88),
+        self.size.Y.Scale * 0.88,
+        math.floor(self.size.Y.Offset * 0.88)
+    )
+    self.main.Size = openingSize
+    self.windowCorner.CornerRadius = UDim.new(1, 0)
     self:_setContentVisible(true)
     self:_setTabSectionsVisible(true)
     self:_setTabSectionsShown(true)
@@ -2081,24 +2089,32 @@ function Window:_firstShow()
         end
     end
     for _, tag in self.tags do
-        tag:_setShown(true, false)
+        tag:_setShown(false, false)
     end
-    local tweenInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local tweenInfo = TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut)
     if self.topbarIcon then
-        self.topbarIcon.ImageTransparency = 0
+        self.topbarIcon.ImageTransparency = 1
+        state.tweenService:Create(self.topbarIcon, tweenInfo, { ImageTransparency = 0 }):Play()
     end
     if self.title then
-        self.title.TextTransparency = 0
+        self.title.TextTransparency = 1
+        state.tweenService:Create(self.title, tweenInfo, { TextTransparency = 0 }):Play()
     end
     if self.subtitle then
-        self.subtitle.TextTransparency = 0.7
+        self.subtitle.TextTransparency = 1
+        state.tweenService:Create(self.subtitle, tweenInfo, { TextTransparency = 0.7 }):Play()
     end
     for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
         if actionFrame:IsA("Frame") and actionFrame.ImageLabel then
-            actionFrame.ImageLabel.ImageTransparency = 0.6
+            actionFrame.ImageLabel.ImageTransparency = 1
+            state.tweenService:Create(actionFrame.ImageLabel, tweenInfo, { ImageTransparency = 0.6 }):Play()
         end
     end
 
+    for _, tag in self.tags do
+        tag:_setShown(true, tweenInfo)
+    end
+    self:_fadeSurfaces(true, tweenInfo)
     local tween = state.tweenService:Create(self.main, tweenInfo, {
         BackgroundTransparency = 0,
         Size = self.size,
