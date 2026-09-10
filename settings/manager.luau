@@ -1,14 +1,14 @@
 
-local a1 = require(script.Parent.registry)
-local a2 = require(script.Parent.defaults)
-local a3 = require(script.Parent.persistence)
-local a4 = require(script.Parent.appearance)
-local a5 = require(script.Parent.behavior)
-local a6 = require(script.Parent.performance)
+local manager = require(script.Parent.registry)
+local values = require(script.Parent.defaults)
+local listeners = require(script.Parent.persistence)
+local validate = require(script.Parent.appearance)
+local dirty = require(script.Parent.behavior)
+local performanceDomain = require(script.Parent.performance)
 
-local a7 = {}
+local SettingsManager = {}
 
-a7.__index = a7
+SettingsManager.__index = SettingsManager
 
 export type SettingsManager = {
     values: { [string]: any },
@@ -21,77 +21,77 @@ export type SettingsManager = {
     load: (self: SettingsManager) -> boolean,
 }
 
-local a8 = {
-    appearance = a4,
-    behavior = a5,
-    performance = a6,
+local domains = {
+    appearance = validate,
+    behavior = dirty,
+    performance = performanceDomain,
 }
 
-function a7.new(a9: { [string]: any }?): SettingsManager
+function SettingsManager.new(overrides: { [string]: any }?): SettingsManager
     local self = setmetatable({
-        values = a2.clone(a9),
+        values = values.clone(overrides),
         listeners = {},
-    }, a7)
+    }, SettingsManager)
     return self
 end
 
-function a7:get(a10: string): any
-    return self.values[a10]
+function SettingsManager:get(key: string): any
+    return self.values[key]
 end
 
-function a7:set(a11: string, a12: any): boolean
-    local a13 = a1.definition(a11)
-    if not a13 then
+function SettingsManager:set(key: string, value: any): boolean
+    local definition = manager.definition(key)
+    if not definition then
         return false
     end
 
-    local a14 = a8[a13.domain]
-    local a15, a16
-    if a14 then
-        a15, a16 = a14.validate(a11, a12)
+    local domainValidator = domains[definition.domain]
+    local ok, validated
+    if domainValidator then
+        ok, validated = domainValidator.validate(key, value)
     else
-        a15, a16 = true, a12
+        ok, validated = true, value
     end
-    if not a15 then
+    if not ok then
         return false
     end
 
-    local a17 = self.values[a11]
-    if a17 == a16 then
+    local oldValue = self.values[key]
+    if oldValue == validated then
         return true
     end
 
-    self.values[a11] = a16
-    for _, a18 in self.listeners do
-        task.spawn(a18, a11, a16, a17)
+    self.values[key] = validated
+    for _, listener in self.listeners do
+        task.spawn(listener, key, validated, oldValue)
     end
     return true
 end
 
-function a7:reset(a19: string?): boolean
-    if a19 then
-        if not a1.definition(a19) then
+function SettingsManager:reset(key: string?): boolean
+    if key then
+        if not manager.definition(key) then
             return false
         end
-        return self:set(a19, a2.values[a19])
+        return self:set(key, values.values[key])
     end
-    for _, a20 in a1.keys() do
-        self:reset(a20)
+    for _, key in manager.keys() do
+        self:reset(key)
     end
     return true
 end
 
-function a7:onChange(a21: (string, any, any) -> ())
-    table.insert(self.listeners, a21)
+function SettingsManager:onChange(listener: (string, any, any) -> ())
+    table.insert(self.listeners, listener)
 end
 
-function a7:save(): boolean
-    return a3.save(self.values)
+function SettingsManager:save(): boolean
+    return listeners.save(self.values)
 end
 
-function a7:load(): boolean
-    local a22 = table.clone(self.values)
-    local ok = a3.load(self.values)
+function SettingsManager:load(): boolean
+    local snapshot = table.clone(self.values)
+    local ok = listeners.load(self.values)
     if not ok then
         return ok
     end
@@ -99,15 +99,15 @@ function a7:load(): boolean
     -- Notify listeners only for values that actually changed, matching the
     -- (key, newValue, oldValue) contract of :set(). Persisted values are
     -- written into self.values first; callbacks fire afterwards.
-    for _, a23 in a1.keys() do
-        local a24 = self.values[a23]
-        if a22[a23] ~= a24 then
-            for _, a25 in self.listeners do
-                task.spawn(a25, a23, a24, a22[a23])
+    for _, key in manager.keys() do
+        local newValue = self.values[key]
+        if snapshot[key] ~= newValue then
+            for _, listener in self.listeners do
+                task.spawn(listener, key, newValue, snapshot[key])
             end
         end
     end
     return ok
 end
 
-return a7
+return SettingsManager

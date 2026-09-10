@@ -1,36 +1,36 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Keybind"
+local state = {}
+state.__index = state
+state.__type = "Keybind"
 
-local a2 = script.Parent.Parent.utilities
+local constants = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.moveable)
-local a6 = require(a2.lockable)
-local a7 = require(a2.locale)
-local a8 = require(a2.constants)
-local a9 = require(a2.HapticEngine)
-local a10 = require(a2.enums)
-local a11 = require(a2.log)
+local Keybind = require(constants.Parent.core.state)
+local tab = require(script.Parent.Parent.functions)
+local props = require(constants.moveable)
+local name = require(constants.lockable)
+local flag = require(constants.locale)
+local value = require(constants.constants)
+local isMenuToggle = require(constants.HapticEngine)
+local hold = require(constants.enums)
+local holdThreshold = require(constants.log)
 
-local a12 = a8.pillResizeInfo
-local a13 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local callback = value.pillResizeInfo
+local onChanged = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local a14 = {
+local element = {
     [Enum.UserInputType.MouseButton1] = "MB1",
     [Enum.UserInputType.MouseButton2] = "MB2",
     [Enum.UserInputType.MouseButton3] = "MB3",
 }
 
-local function a15(a16)
-    if typeof(a16) ~= "EnumItem" or a16 == Enum.KeyCode.Unknown then
+local function frame(isRecording)
+    if typeof(isRecording) ~= "EnumItem" or isRecording == Enum.KeyCode.Unknown then
         return "None"
     end
-    return a14[a16] or a16.Name
+    return element[isRecording] or isRecording.Name
 end
 
-local function a17(a18)
+local function connection(a18)
     if typeof(a18) == "EnumItem" then
         return a18
     end
@@ -44,14 +44,14 @@ local function a17(a18)
         local a20, a21 = pcall(function()
             return Enum.UserInputType[a18]
         end)
-        if a20 and a21 and a14[a21] then
+        if a20 and a21 and element[a21] then
             return a21
         end
     end
     return Enum.KeyCode.Unknown
 end
 
-function a1.new(tab, a22)
+function state.new(tab, a22)
     a22 = if typeof(a22) == "table" then a22 else {}
 
     local self = setmetatable({
@@ -71,13 +71,13 @@ function a1.new(tab, a22)
         holdThreshold = a22.holdThreshold or a22.HoldThreshold or 0.2,
 
         recording = false,
-    }, a1)
+    }, state)
 
-    self.value = a17(a22.value or a22.Value or a22.default or a22.Default)
+    self.value = connection(a22.value or a22.Value or a22.default or a22.Default)
 
     self.flag = a22.flag
         or a22.Flag
-        or (not self.forgetState and a4.deriveFlagFromName(self.name) or nil)
+        or (not self.forgetState and tab.deriveFlagFromName(self.name) or nil)
     self.window:_registerControl(self)
 
     self.main = self.window:Create("Frame", {
@@ -126,7 +126,7 @@ function a1.new(tab, a22)
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a7.t(self.name),
+        Text = flag.t(self.name),
         Size = UDim2.fromOffset(150, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -165,7 +165,7 @@ function a1.new(tab, a22)
         self.glow = self.window:CreateGlow(self.box, "FieldGlow", 20, 1)
     self._glowIdle = 0.9
     self.keyLabel = self.window:Create("TextLabel", {
-        Text = a15(self.value),
+        Text = frame(self.value),
         Size = UDim2.fromScale(1, 1),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -178,7 +178,7 @@ function a1.new(tab, a22)
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
     self.window:ConnectFor(self, self.box.MouseButton1Click, function()
-        a9.click()
+        isMenuToggle.click()
         if self.recording then
             self:_stopRecording()
         else
@@ -186,7 +186,7 @@ function a1.new(tab, a22)
         end
     end)
 
-                    self.window:ConnectFor(self, a3.userInputService.InputBegan, function(a23, a24)
+                    self.window:ConnectFor(self, Keybind.userInputService.InputBegan, function(a23, a24)
         if a24 then
             return
         end
@@ -216,28 +216,28 @@ function a1.new(tab, a22)
     return self
 end
 
-function a1:_sizeBox(a25)
-    local a26 = math.clamp(a4.textWidth(self.window.theme.Font, 15, self.keyLabel.Text) + 28, 40, 200)
+function state:_sizeBox(a25)
+    local a26 = math.clamp(tab.textWidth(self.window.theme.Font, 15, self.keyLabel.Text) + 28, 40, 200)
     if a25 then
-        a3.tweenService:Create(self.box, a12, { Size = UDim2.fromOffset(a26, 30) }):Play()
+        Keybind.tweenService:Create(self.box, callback, { Size = UDim2.fromOffset(a26, 30) }):Play()
     else
         self.box.Size = UDim2.fromOffset(a26, 30)
     end
 end
 
-function a1:_startRecording()
+function state:_startRecording()
         local a27 = self.window._recordingKeybind
     if a27 and a27 ~= self then
         a27:_stopRecording()
     end
     self.recording = true
-    self.window._recordingKeybind = self     self.keyLabel.Text = a7.resolve("Recording")
+    self.window._recordingKeybind = self     self.keyLabel.Text = flag.resolve("Recording")
     self:_sizeBox(true)
-    a3.tweenService:Create(self.glow, a13, { Transparency = 0.7 }):Play()
-    a3.tweenService:Create(self.keyLabel, a13, { TextTransparency = 0 }):Play()
+    Keybind.tweenService:Create(self.glow, onChanged, { Transparency = 0.7 }):Play()
+    Keybind.tweenService:Create(self.keyLabel, onChanged, { TextTransparency = 0 }):Play()
 end
 
-function a1:_stopRecording()
+function state:_stopRecording()
     self.recording = false
                 if self.window._recordingKeybind == self then
         local window = self.window
@@ -247,13 +247,13 @@ function a1:_stopRecording()
             end
         end)
     end
-    self.keyLabel.Text = a15(self.value)
+    self.keyLabel.Text = frame(self.value)
     self:_sizeBox(true)
-    a3.tweenService:Create(self.glow, a13, { Transparency = 0.9 }):Play()
-    a3.tweenService:Create(self.keyLabel, a13, { TextTransparency = 0.6 }):Play()
+    Keybind.tweenService:Create(self.glow, onChanged, { Transparency = 0.9 }):Play()
+    Keybind.tweenService:Create(self.keyLabel, onChanged, { TextTransparency = 0.6 }):Play()
 end
 
-function a1:_capture(a28)
+function state:_capture(a28)
     local a29
     if a28.UserInputType == Enum.UserInputType.Keyboard then
         if a28.KeyCode == Enum.KeyCode.Escape then
@@ -279,12 +279,12 @@ function a1:_capture(a28)
                         local a30 = self.window:_keybindUsing(a29, self)
         if a30 then
             self.window:Notify({
-                title = a7.resolve("Keybind unavailable"),
+                title = flag.resolve("Keybind unavailable"),
                 content = string.format(
-                    a7.resolve("%s is bound to %s. Kept %s."),
-                    a15(a29),
+                    flag.resolve("%s is bound to %s. Kept %s."),
+                    frame(a29),
                     a30.name,
-                    a15(self.value)
+                    frame(self.value)
                 ),
             })
             self:_stopRecording()
@@ -292,11 +292,11 @@ function a1:_capture(a28)
         end
     elseif a29 == self.window.settings.toggleKeybind then
                         self.window:Notify({
-            title = a7.resolve("Keybind unavailable"),
+            title = flag.resolve("Keybind unavailable"),
             content = string.format(
-                a7.resolve("%s is the menu toggle key. Kept %s."),
-                a15(a29),
-                a15(self.value)
+                flag.resolve("%s is the menu toggle key. Kept %s."),
+                frame(a29),
+                frame(self.value)
             ),
         })
         self:_stopRecording()
@@ -306,7 +306,7 @@ function a1:_capture(a28)
     self:_bind(a29)
 end
 
-function a1:_bind(a31)
+function state:_bind(a31)
     self.value = a31
     self:_stopRecording()
     self.window:_runGuarded(self, self.onChanged, a31)
@@ -314,7 +314,7 @@ function a1:_bind(a31)
 
     self.window:_flashResult(self, true) end
 
-function a1:_matches(a32)
+function state:_matches(a32)
     local v = self.value
     if typeof(v) ~= "EnumItem" or v == Enum.KeyCode.Unknown then
         return false
@@ -327,7 +327,7 @@ function a1:_matches(a32)
     return false
 end
 
-function a1:_beginHold(a33)
+function state:_beginHold(a33)
     if self._holding or self._holdPress then
         return     end
     local a34 = {}
@@ -347,7 +347,7 @@ function a1:_beginHold(a33)
     end)
 
                 local a37
-    a37 = self.window:ConnectFor(self, a3.userInputService.InputEnded, function(a38)
+    a37 = self.window:ConnectFor(self, Keybind.userInputService.InputEnded, function(a38)
         local a39 = if a35 ~= Enum.KeyCode.Unknown
             then a38.KeyCode == a35
             else a38.UserInputType == a36
@@ -371,25 +371,25 @@ function a1:_beginHold(a33)
     end)
 end
 
-function a1:Set(a41, a42)
-    local a43 = a17(a41)
+function state:Set(a41, a42)
+    local a43 = connection(a41)
 
             if a43 ~= Enum.KeyCode.Unknown then
         if self.isMenuToggle then
             local a44 = self.window:_keybindUsing(a43, self)
             if a44 then
-                a11.warn(
+                holdThreshold.warn(
                     "Astra: "
-                        .. a15(a43)
+                        .. frame(a43)
                         .. " is bound to '"
                         .. tostring(a44.name)
                         .. "'; kept "
-                        .. a15(self.value)
+                        .. frame(self.value)
                 )
                 return
             end
         elseif a43 == self.window.settings.toggleKeybind then
-            a11.warn("Astra: " .. a15(a43) .. " is the menu toggle key; kept " .. a15(self.value))
+            holdThreshold.warn("Astra: " .. frame(a43) .. " is the menu toggle key; kept " .. frame(self.value))
             return
         end
     end
@@ -397,7 +397,7 @@ function a1:Set(a41, a42)
     self.value = a43
     if self.recording then
         self:_stopRecording()     else
-        self.keyLabel.Text = a15(self.value)
+        self.keyLabel.Text = frame(self.value)
         self:_sizeBox(true)
     end
 
@@ -407,11 +407,11 @@ function a1:Set(a41, a42)
     end
 end
 
-function a1:_serialize()
+function state:_serialize()
     return { tostring(self.value.EnumType), self.value.Value }
 end
 
-function a1:_deserialize(a45)
+function state:_deserialize(a45)
         local a46 = tostring(a45[1]):gsub("^Enum%.", "")
     local a47, a48 = pcall(function()
         return Enum[a46]
@@ -420,13 +420,13 @@ function a1:_deserialize(a45)
         return
     end
 
-    local a49 = a10.itemFromValue(a48, a45[2])
+    local a49 = hold.itemFromValue(a48, a45[2])
     if a49 then
         self:Set(a49)
     end
 end
 
-function a1:_setShown(a50, a51)
+function state:_setShown(a50, a51)
     local w = self.window
     if a50 then
         w:_revealCommon(self, a51)
@@ -443,8 +443,8 @@ function a1:_setShown(a50, a51)
     end
 end
 
-function a1:_refreshTheme()
-    a3.tweenService
+function state:_refreshTheme()
+    Keybind.tweenService
         :Create(
             self.box,
             TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -453,7 +453,7 @@ function a1:_refreshTheme()
         :Play()
 end
 
-a5(a1)
-a6(a1)
+props(state)
+name(state)
 
-return a1
+return state

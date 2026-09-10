@@ -1,17 +1,17 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "TabSection"
+local state = {}
+state.__index = state
+state.__type = "TabSection"
 
-local a2 = require(script.Parent.Parent.utilities.locale)
-local a3 = require(script.Parent.Parent.utilities.log)
+local constants = require(script.Parent.Parent.utilities.locale)
+local TabSection = require(script.Parent.Parent.utilities.log)
 
-local a4 = 20
+local tab = 20
 
-local a5 = 6
+local props = 6
 
-local a6 = 3
+local name = 3
 
-local function a7(window)
+local function icon(window)
     for _, tab in window.tabs do
         if not tab.neglectSelector then
             return true
@@ -20,19 +20,19 @@ local function a7(window)
     return #window.tabSections > 0
 end
 
-function a1.new(window, a8)
-    a8 = if typeof(a8) == "table" then a8 else {}
+function state.new(window, element)
+    element = if typeof(element) == "table" then element else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        name = a8.name or a8.Name or "Section",
-        icon = window:ResolveIcon(a8.icon or a8.Icon),
-    }, a1)
+        name = element.name or element.Name or "Section",
+        icon = window:ResolveIcon(element.icon or element.Icon),
+    }, state)
 
             if window.layout.mode ~= "sidebar" then
         if not window._warnedTabSection then
             window._warnedTabSection = true
-            a3.warn("Astra: Window:CreateSection needs the sidebar layout; it does nothing on the top strip.")
+            TabSection.warn("Astra: Window:CreateSection needs the sidebar layout; it does nothing on the top strip.")
         end
         self.inert = true
         return self
@@ -40,7 +40,7 @@ function a1.new(window, a8)
 
         self.main = window:Create("Frame", {
         Name = self.name,
-        Size = UDim2.new(1, -a4 * 2, 0, 0),
+        Size = UDim2.new(1, -tab * 2, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -50,8 +50,8 @@ function a1.new(window, a8)
     })
 
     self.padding = window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, if a7(window) then a5 else 0),
-        PaddingBottom = UDim.new(0, a6),
+        PaddingTop = UDim.new(0, if icon(window) then props else 0),
+        PaddingBottom = UDim.new(0, name),
 
         Parent = self.main,
     })
@@ -80,7 +80,7 @@ function a1.new(window, a8)
     end
 
     self.title = window:Create("TextLabel", {
-        Text = a2.t(self.name),
+        Text = constants.t(self.name),
 
         Size = UDim2.fromOffset(0, 15),
         AutomaticSize = Enum.AutomaticSize.X,
@@ -99,23 +99,23 @@ function a1.new(window, a8)
     return self
 end
 
-function a1:_setShown(a9, a10)
+function state:_setShown(frame, a10)
     if not self.main then
         return     end
     local w = self.window
-    w:_reveal(self.title, { TextTransparency = if a9 then 0.6 else 1 }, a10)
+    w:_reveal(self.title, { TextTransparency = if frame then 0.6 else 1 }, a10)
     if self.iconLabel then
-        w:_reveal(self.iconLabel, { ImageTransparency = if a9 then 0.65 else 1 }, a10)
+        w:_reveal(self.iconLabel, { ImageTransparency = if frame then 0.65 else 1 }, a10)
     end
 end
 
-function a1:_setVisible(a11)
+function state:_setVisible(a11)
     if self.main then
         self.main.Visible = a11
     end
 end
 
-function a1:Remove()
+function state:Remove()
     local a12 = table.find(self.window.tabSections, self)
     if a12 then
         table.remove(self.window.tabSections, a12)
@@ -124,4 +124,4 @@ function a1:Remove()
     self.main = nil
 end
 
-return a1
+return state

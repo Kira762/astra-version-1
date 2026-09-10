@@ -1,6 +1,6 @@
-local a1 = {}
+local enums = {}
 
-function a1.itemFromValue(a2, a3)
+function enums.itemFromValue(a2, a3)
     local ok, a4 = pcall(function()
         return a2:FromValue(a3)
     end)
@@ -24,4 +24,4 @@ function a1.itemFromValue(a2, a3)
     return nil
 end
 
-return a1
+return enums

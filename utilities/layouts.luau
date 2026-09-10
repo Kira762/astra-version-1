@@ -1,12 +1,12 @@
-local a1 = {}
+local layouts = {}
 
 local aTopbar = require(script.Parent.Parent.layouts.Topbar)
 local aSidebar = require(script.Parent.Parent.layouts.Sidebar)
 local aSidebarCollapsed = require(script.Parent.Parent.layouts.SidebarCollapsed)
 
-local a2 = 64
+local implementations = 64
 
-local a3 = a2 - 1
+local a3 = implementations - 1
 local a4 = 38
 local a5 = 3
 
@@ -47,10 +47,10 @@ export type Layout = {
     forceCollapsed: boolean?,
 }
 
-a1.top = {
+layouts.top = {
     mode = "top" :: Mode,
 
-    topbarHeight = a2,
+    topbarHeight = implementations,
     chromeHeight = a3 + a4 + a5,
 
     tabStripTop = a3,
@@ -70,11 +70,11 @@ a1.top = {
     }),
 } :: Layout
 
-a1.sidebar = {
+layouts.sidebar = {
     mode = "sidebar" :: Mode,
 
-    topbarHeight = a2,
-    chromeHeight = a2,
+    topbarHeight = implementations,
+    chromeHeight = implementations,
 
             railWidth = 219,
             railCollapsedWidth = 64,
@@ -113,7 +113,7 @@ a1.sidebar = {
         fadeCorners = { "BottomLeftRadius", "BottomRightRadius" },
 } :: Layout
 
-local a6 = table.clone(a1.sidebar)
+local a6 = table.clone(layouts.sidebar)
 a6.forceCollapsed = true
 
 local aImplementations = {
@@ -122,22 +122,22 @@ local aImplementations = {
     collapsedSidebar = aSidebarCollapsed,
 }
 
-function a1.get(a7: unknown): Layout?
+function layouts.get(a7: unknown): Layout?
     if a7 == "sidebar" then
-        return a1.sidebar
+        return layouts.sidebar
     elseif a7 == "collapsedSidebar" then
         return a6
     elseif a7 == "top" then
-        return a1.top
+        return layouts.top
     end
     return nil
 end
 
-function a1.implementation(a7: unknown)
+function layouts.implementation(a7: unknown)
     return aImplementations[a7]
 end
 
-function a1.railWidthFor(a8: Layout, a9: number): number
+function layouts.railWidthFor(a8: Layout, a9: number): number
     if a8.mode ~= "sidebar" then
         return 0
     end
@@ -148,4 +148,4 @@ function a1.railWidthFor(a8: Layout, a9: number): number
     return a10
 end
 
-return a1
+return layouts

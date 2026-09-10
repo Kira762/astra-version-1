@@ -1,12 +1,11 @@
+local state = require(script.state)
+local registry = require(script.registry)
+local loader = require(script.loader)
 
-local a1 = require(script.state)
-local a2 = require(script.registry)
-local a3 = require(script.loader)
-
-local a4 = {
-    state = a1,
-    registry = a2,
-    loader = a3,
+local core = {
+    state = state,
+    registry = registry,
+    loader = loader,
 }
 
-return a4
+return core

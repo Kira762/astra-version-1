@@ -1,33 +1,32 @@
+local loader = {}
 
-local a1 = {}
+local loading: { [string]: boolean } = {}
 
-local a2: { [string]: boolean } = {}
-
-local a3 = {
-    state = true,
-    registry = true,
+local knownModules = {
+	state = true,
+	registry = true,
 }
 
-function a1.load(a4: string)
-    assert(a3[a4], "Astra core loader: unknown module '" .. tostring(a4) .. "'")
-    if a2[a4] then
-        return nil
-    end
-    a2[a4] = true
-    local ok, a5 = pcall(function()
-        return require((script :: any).Parent[a4])
-    end)
-    a2[a4] = nil
-    if not ok then
-        error(a5, 0)
-    end
-    return a5
+function loader.load(name: string)
+	assert(knownModules[name], "Astra core loader: unknown module '" .. tostring(name) .. "'")
+	if loading[name] then
+		return nil
+	end
+	loading[name] = true
+	local ok, result = pcall(function()
+		return require((script :: any).Parent[name])
+	end)
+	loading[name] = nil
+	if not ok then
+		error(result, 0)
+	end
+	return result
 end
 
-function a1.service(a6: string, a7: () -> any)
-    local a8 = a1.load("registry")
-    a8.registerFactory(a6, a7)
-    return a8
+function loader.service(name: string, factory: () -> any)
+	local reg = loader.load("registry")
+	reg.registerFactory(name, factory)
+	return reg
 end
 
-return a1
+return loader

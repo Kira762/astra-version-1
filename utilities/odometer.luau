@@ -1,5 +1,5 @@
-local a1 = require(script.Parent.Parent.core.state)
-local a2 = a1.textService
+local odometer = require(script.Parent.Parent.core.state)
+local a2 = odometer.textService
 
 local a3 = {}
 a3.__index = a3
@@ -195,10 +195,10 @@ function a3:_reelRoll(a36, a37, up)
     a36.strip.Position = UDim2.new(0.5, 0, 0, -a38 * self.height)
     a36.target = a37
 
-        local a40 = a1.tweenService:Create(a36.strip, self.roll, {
+        local a40 = odometer.tweenService:Create(a36.strip, self.roll, {
         Position = UDim2.new(0.5, 0, 0, -a39 * self.height),
     })
-    local a41 = a1.tweenService:Create(a36.cell, self.roll, {
+    local a41 = odometer.tweenService:Create(a36.cell, self.roll, {
         Size = UDim2.fromOffset(self.advance[a37], self.height),
     })
     a36.stripTween = a40

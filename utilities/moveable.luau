@@ -1,5 +1,5 @@
-local function a1<T>(a2: T): T
-    local a3 = a2 :: any
+local function moveable<T>(dragState: T): T
+    local a3 = dragState :: any
 
     function a3:MoveTo(a4: number)
         self.tab:_moveElement(self, a4)
@@ -27,7 +27,7 @@ local function a1<T>(a2: T): T
         end
     end
 
-    return a2
+    return dragState
 end
 
-return a1
+return moveable

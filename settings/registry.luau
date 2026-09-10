@@ -1,5 +1,5 @@
 
-local a1 = {}
+local registry = {}
 
 export type SettingDefinition = {
     key: string,
@@ -8,7 +8,7 @@ export type SettingDefinition = {
     description: string?,
 }
 
-a1.definitions = {
+registry.definitions = {
     toggleKeybind = {
         key = "toggleKeybind",
         kind = "keybind",
@@ -71,17 +71,17 @@ a1.definitions = {
     },
 }
 
-function a1.definition(a2: string): SettingDefinition?
-    return a1.definitions[a2]
+function registry.definition(definitions: string): SettingDefinition?
+    return registry.definitions[definitions]
 end
 
-function a1.keys(): { string }
-    local a3 = {}
-    for a4 in a1.definitions do
-        table.insert(a3, a4)
+function registry.keys(): { string }
+    local list = {}
+    for key in registry.definitions do
+        table.insert(list, key)
     end
-    table.sort(a3)
-    return a3
+    table.sort(list)
+    return list
 end
 
-return a1
+return registry

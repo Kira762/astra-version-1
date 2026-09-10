@@ -1,33 +1,33 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Section"
+local state = {}
+state.__index = state
+state.__type = "Section"
 
-local a2 = require(script.Parent.Parent.utilities.moveable)
-local a3 = require(script.Parent.Parent.utilities.locale)
+local constants = require(script.Parent.Parent.utilities.moveable)
+local Section = require(script.Parent.Parent.utilities.locale)
 
-function a1.new(tab, a4)
-    a4 = if typeof(a4) == "table" then a4 else {}
+function state.new(tab, tab)
+    tab = if typeof(tab) == "table" then tab else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a4.name or a4.Name or "Section",
-        icon = tab.window:ResolveIcon(a4.icon or a4.Icon),
-    }, a1)
+        name = tab.name or tab.Name or "Section",
+        icon = tab.window:ResolveIcon(tab.icon or tab.Icon),
+    }, state)
 
-            local a5 = if #self.tab.elements == 0 then 0 else 13
+            local props = if #self.tab.elements == 0 then 0 else 13
 
     self.main = self.window:Create("Frame", {
-        Size = UDim2.new(1, -40, 0, 20 + a5),
+        Size = UDim2.new(1, -40, 0, 20 + props),
         BorderSizePixel = 0,
         Name = self.name,
         BackgroundTransparency = 1,
         Parent = self.tab.tabPage,
     })
 
-    if a5 > 0 then
+    if props > 0 then
         self.window:Create("UIPadding", {
-            PaddingTop = UDim.new(0, a5),
+            PaddingTop = UDim.new(0, props),
             Parent = self.main,
         })
     end
@@ -53,7 +53,7 @@ function a1.new(tab, a4)
     end
 
     self.title = self.window:Create("TextLabel", {
-                Text = a3.t(self.name),
+                Text = Section.t(self.name),
 
         Size = UDim2.fromOffset(0, 16),
         BorderSizePixel = 0,
@@ -71,14 +71,14 @@ function a1.new(tab, a4)
     return self
 end
 
-function a1:_setShown(a6, a7)
+function state:_setShown(name, icon)
     local w = self.window
-    w:_reveal(self.title, { TextTransparency = if a6 then 0.6 else 1 }, a7)
+    w:_reveal(self.title, { TextTransparency = if name then 0.6 else 1 }, icon)
     if self.iconLabel then
-        w:_reveal(self.iconLabel, { ImageTransparency = if a6 then 0.65 else 1 }, a7)
+        w:_reveal(self.iconLabel, { ImageTransparency = if name then 0.65 else 1 }, icon)
     end
 end
 
-a2(a1)
+constants(state)
 
-return a1
+return state

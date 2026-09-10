@@ -1,8 +1,8 @@
-local a1 = {}
+local services = {}
 
-function a1.getService(a2)
-    local a3 = game:GetService(a2)
+function services.getService(cache)
+    local a3 = game:GetService(cache)
     return if cloneref then cloneref(a3) else a3
 end
 
-return a1
+return services

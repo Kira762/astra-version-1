@@ -1,46 +1,46 @@
 
-local a1 = require(script.Parent.Parent.utilities.persistenceSettings)
-local a2 = require(script.Parent.Parent.cache.persistenceCache)
+local state = require(script.Parent.Parent.utilities.persistenceSettings)
+local persistenceSettings = require(script.Parent.Parent.cache.persistenceCache)
 
-local a3 = {}
+local persistenceWrite = {}
 
-function a3.path(): (string, string)
-    return a1.getSettingsPath()
+function persistenceWrite.path(): (string, string)
+    return state.getSettingsPath()
 end
 
-function a3.save(a4: { [string]: any }): boolean
-    local ok = a1.saveSettings({ settings = a4 })
-    a2.invalidateSettings()
+function persistenceWrite.save(persistence: { [string]: any }): boolean
+    local ok = state.saveSettings({ settings = persistence })
+    persistenceSettings.invalidateSettings()
     return ok
 end
 
-function a3.load(a5: { [string]: any }): boolean
-    return a1.loadSettings({ settings = a5 })
+function persistenceWrite.load(values: { [string]: any }): boolean
+    return state.loadSettings({ settings = values })
 end
 
-function a3.read(a6: string, a7: any): any
-    local _, a8 = a1.getSettingsPath()
-    local a9 = a2.getSettings(a8)
-    if a9 == nil then
-        local a10 = nil :: any?
-        local a11 = require(script.Parent.Parent.utilities.filesystem)
-        local a12 = (require(script.Parent.Parent.core.state)).httpService
+function persistenceWrite.read(key: string, default: any): any
+    local _, path = state.getSettingsPath()
+    local cached = persistenceSettings.getSettings(path)
+    if cached == nil then
+        local data = nil :: any?
+        local fs = require(script.Parent.Parent.utilities.filesystem)
+        local httpService = (require(script.Parent.Parent.core.state)).httpService
         pcall(function()
-            if a11.isfile(a8) then
-                local a13 = a11.readfile(a8)
-                local ok, a14 = pcall(a12.JSONDecode, a12, a13)
-                if ok and type(a14) == "table" then
-                    a10 = a14 :: any
+            if fs.isfile(path) then
+                local raw = fs.readfile(path)
+                local ok, decoded = pcall(httpService.JSONDecode, httpService, raw)
+                if ok and type(decoded) == "table" then
+                    data = decoded :: any
                 end
             end
         end)
-        a2.putSettings(a8, a10 or false)
-        a9 = a2.getSettings(a8)
+        persistenceSettings.putSettings(path, data or false)
+        cached = persistenceSettings.getSettings(path)
     end
-    if type(a9) == "table" and (a9 :: any)[a6] ~= nil then
-        return (a9 :: any)[a6]
+    if type(cached) == "table" and (cached :: any)[key] ~= nil then
+        return (cached :: any)[key]
     end
-    return a7
+    return default
 end
 
-return a3
+return persistenceWrite

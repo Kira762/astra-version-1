@@ -1,15 +1,15 @@
 
-local a1 = require(script.textMetrics)
-local a2 = require(script.colors)
-local a3 = require(script.flagNames)
+local textMetrics = require(script.textMetrics)
+local colors = require(script.colors)
+local flagNames = require(script.flagNames)
 
-local a4 = {}
+local functions = {}
 
-a4.textWidth = a1.textWidth
-a4.textHeight = a1.textHeight
-a4.deriveFlagFromName = a3.deriveFlagFromName
-a4.contrastColor = a2.contrastColor
-a4.toColorSequence = a2.toColorSequence
-a4.contrastText = a2.contrastText
+functions.textWidth = textMetrics.textWidth
+functions.textHeight = textMetrics.textHeight
+functions.deriveFlagFromName = flagNames.deriveFlagFromName
+functions.contrastColor = colors.contrastColor
+functions.toColorSequence = colors.toColorSequence
+functions.contrastText = colors.contrastText
 
-return a4
+return functions

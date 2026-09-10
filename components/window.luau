@@ -1,139 +1,139 @@
-local a1 = script.Parent.Parent.utilities
-local a2 = require(script.Parent.Parent.images.image)
-local a3 = require(script.Parent.Parent.icons)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a1.persistence)
-local a6 = require(a1.constants)
-local a7 = require(a1.locale)
-local a8 = require(a1.log)
-local a9 = require(a1.HapticEngine)
-local a10 = require(a1.windowSizing)
-local a11 = require(a1.layouts)
-local a12 = require(script.Parent.chrome)
-local a13 = require(script.Parent.search)
-local a14 = require(script.Parent.sidebar)
+local utilities = script.Parent.Parent.utilities
+local image = require(script.Parent.Parent.images.image)
+local icons = require(script.Parent.Parent.icons)
+local functions = require(script.Parent.Parent.functions)
+local persistence = require(utilities.persistence)
+local constants = require(utilities.constants)
+local locale = require(utilities.locale)
+local log = require(utilities.log)
+local haptic = require(utilities.HapticEngine)
+local windowSizing = require(utilities.windowSizing)
+local layouts = require(utilities.layouts)
+local chrome = require(script.Parent.chrome)
+local search = require(script.Parent.search)
+local sidebar = require(script.Parent.sidebar)
 
-local a15 = require(a1.Parent.core.state)
+local state = require(utilities.Parent.core.state)
 
-local a16 = require(script.Parent.Parent.themes)
+local themes = require(script.Parent.Parent.themes)
 
-local a17 = {}
-a17.__index = a17
+local Window = {}
+Window.__index = Window
 
-local a18 = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local a19 = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local revealTween = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local tweenStyle = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local a20 = UDim2.fromOffset(185, 50)
-local a21 = UDim2.fromOffset(50, 50)
-local a22 = UDim2.new(0.5, 0, 0, 20)
-local a23 = UDim2.new(0.5, 0, 0, 12)
-local a24 = UDim2.new(0.5, 0, 0, a22.Y.Offset + a20.Y.Offset + 12)
-local a25 = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local collapsedWideSize = UDim2.fromOffset(185, 50)
+local collapsedIconOnlySize = UDim2.fromOffset(50, 50)
+local collapsedPosition = UDim2.new(0.5, 0, 0, 20)
+local toastsTopPosition = UDim2.new(0.5, 0, 0, 12)
+local toastsTopWhenCollapsed = UDim2.new(0.5, 0, 0, collapsedPosition.Y.Offset + collapsedWideSize.Y.Offset + 12)
+local toastPositionTween = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local a26 = 320
+local toastWidth = 320
 
-local a27 = 41
+local compactRowHeight = 41
 
-local a28 = 0.55
-local a29 = 0.55
+local lockScrimTransparency = 0.55
+local lockedTextTransparency = 0.55
 
-local a30 = 0.04
-local a31 = 8
+local epsilon = 0.04
+local scrollbarWidth = 8
 
-local a32 = 2
+local viewportCheckInterval = 2
 
-local function a33(a34): UDim2
-    local a35 = a15.workspace.CurrentCamera
-    return a10.fit(a35 and a35.ViewportSize, a34)
+local function computeSize(mode): UDim2
+    local size = state.workspace.CurrentCamera
+    return windowSizing.fit(size and size.ViewportSize, mode)
 end
 
-local a37 = { "TopLeftRadius", "TopRightRadius", "BottomLeftRadius", "BottomRightRadius" }
+local cornerKeys = { "TopLeftRadius", "TopRightRadius", "BottomLeftRadius", "BottomRightRadius" }
 
-local a38 = (function()
+local hasPerCornerRadius = (function()
     return (
         pcall(function()
-            local a39 = Instance.new("UICorner")
-            a39.TopLeftRadius = UDim.new(0, 1)
-            a39:Destroy()
+            local instance = Instance.new("UICorner")
+            instance.TopLeftRadius = UDim.new(0, 1)
+            instance:Destroy()
         end)
     )
 end)()
 
-local function a40(a41)
-    return if a41 then a11.sidebar else a11.top
+local function layoutFor(isSidebar)
+    return if isSidebar then layouts.sidebar else layouts.top
 end
 
-local function a42(a43)
-    if a43.mode == "sidebar" and a43.forceCollapsed then
+local function layoutKey(layout)
+    if layout.mode == "sidebar" and layout.forceCollapsed then
         return "collapsedSidebar"
     end
-    return a43.mode
+    return layout.mode
 end
 
-local a44 = a16.coerceValue
-local a45 = a16.firstColor
-local a46 = a16.deriveStrokes
-local a47 = a16.resolve
+local coerceValue = themes.coerceValue
+local firstColor = themes.firstColor
+local deriveStrokes = themes.deriveStrokes
+local resolveTheme = themes.resolve
 
-local function a48(window, a49)
-    local a50 = window._toastsTop
-    if not a50 then
+local function updateToastPosition(window, animate)
+    local toastsTop = window._toastsTop
+    if not toastsTop then
         return
     end
 
-    local a51 = if window._collapsedShown then a24 else a23
-    if not a49 or a50.Position == a51 then
-        a50.Position = a51
+    local targetPos = if window._collapsedShown then toastsTopWhenCollapsed else toastsTopPosition
+    if not animate or toastsTop.Position == targetPos then
+        toastsTop.Position = targetPos
         return
     end
 
-    a15.tweenService:Create(a50, a25, { Position = a51 }):Play()
+    state.tweenService:Create(toastsTop, toastPositionTween, { Position = targetPos }):Play()
 end
 
-function a17:ResolveIcon(a52, a53)
-    return a3.resolve(a52, a53 or self.iconPack)
+function Window:ResolveIcon(value, pack)
+    return icons.resolve(value, pack or self.iconPack)
 end
 
-function a17.new(a54)
-    a54 = if typeof(a54) == "table" then a54 else {}
+function Window.new(props)
+    props = if typeof(props) == "table" then props else {}
 
-                if a54.translations or a54.Translations then
-        a7.register(a54.translations or a54.Translations)
+                if props.translations or props.Translations then
+        locale.register(props.translations or props.Translations)
     end
-    if a54.translator or a54.Translator then
-        a7.translator = a54.translator or a54.Translator
+    if props.translator or props.Translator then
+        locale.translator = props.translator or props.Translator
     end
-    a7.setActive(a54.locale or a54.Locale or a7.detect())
+    locale.setActive(props.locale or props.Locale or locale.detect())
 
-            local a55 = a54.fallbackFont or a54.FallbackFont
-    if a55 then
-        a15.setFallbackFont(a55)
+            local fallbackFont = props.fallbackFont or props.FallbackFont
+    if fallbackFont then
+        state.setFallbackFont(fallbackFont)
     end
 
-        local a56 = a11.top -- layout is controlled via Settings (Astra Settings → Bar Layout); CreateWindow no longer takes sidebarLayout
-    local a57 = a54.iconPack
-    local a58 = a54.IconPack
-    if a57 ~= nil and a58 ~= nil then
+        local layout = layouts.top -- layout is controlled via Settings (Astra Settings → Bar Layout); CreateWindow no longer takes sidebarLayout
+    local iconPackLower = props.iconPack
+    local iconPackUpper = props.IconPack
+    if iconPackLower ~= nil and iconPackUpper ~= nil then
         error("Astra: choose exactly one icon pack; provide either iconPack or IconPack, not both.", 2)
     end
-    local a59 = a57 or a58 or a3.Lucide
-    if not a3.isPack(a59) then
+    local iconPack = iconPackLower or iconPackUpper or icons.Lucide
+    if not icons.isPack(iconPack) then
         error("Astra: iconPack must be exactly one supported pack: lucide, material, tabler, phosphor, heroicons, or feather.", 2)
     end
 
     local self = setmetatable({
-        name = a54.name or a54.Name or "Astra Window",
-        subheading = a54.subtitle or a54.Subtitle,
-        layout = a56,
-        size = a33(a56.mode),
+        name = props.name or props.Name or "Astra Window",
+        subheading = props.subtitle or props.Subtitle,
+        layout = layout,
+        size = computeSize(layout.mode),
         instances = {},
         connections = {},
 
-        iconPack = a59,
-        icon = a3.resolve(a6.icons.window, a59),
-        showName = a54.showName or a54.ShowName or "Astra",
-        showIcon = a3.resolve(a6.icons.window, a59),
-                showIconOnly = a54.showIconOnly or a54.ShowIconOnly or false,
+        iconPack = iconPack,
+        icon = icons.resolve(constants.icons.window, iconPack),
+        showName = props.showName or props.ShowName or "Astra",
+        showIcon = icons.resolve(constants.icons.window, iconPack),
+                showIconOnly = props.showIconOnly or props.ShowIconOnly or false,
                 profileText = nil,
 
         themeProperties = {},
@@ -145,44 +145,44 @@ function a17.new(a54)
         _settingsLayoutActive = false,
         _settingsTabs = {},
         _settingsMode = false,
-        theme = a47(a54.theme or a54.Theme),
+        theme = resolveTheme(props.theme or props.Theme),
 
         controls = {},
 
         configuration = (function()
-            local a60 = a54.configuration or a54.Configuration
-            if not a60 then
+            local config = props.configuration or props.Configuration
+            if not config then
                 return {}
             end
             return {
-                autoSave = a60.autoSave or a60.AutoSave,
-                autoLoad = a60.autoLoad or a60.AutoLoad,
-                fileName = a60.fileName or a60.FileName,
-                customFolder = a60.customFolder or a60.CustomFolder,
+                autoSave = config.autoSave or config.AutoSave,
+                autoLoad = config.autoLoad or config.AutoLoad,
+                fileName = config.fileName or config.FileName,
+                customFolder = config.customFolder or config.CustomFolder,
             }
         end)(),
-    }, a17)
+    }, Window)
 
             self.Flags = setmetatable({}, {
-        __index = function(_, a61)
-            local a62 = self.controls[a61]
-            return a62 and a62.value
+        __index = function(_, key)
+            local control = self.controls[key]
+            return control and control.value
         end,
-        __newindex = function(_, a63, a64)
-            local a65 = self.controls[a63]
-            if not a65 then
-                a8.warn("Astra: no flag '" .. tostring(a63) .. "' to set")
+        __newindex = function(_, key, value)
+            local control = self.controls[key]
+            if not control then
+                log.warn("Astra: no flag '" .. tostring(key) .. "' to set")
                 return
             end
-            a65:Set(a64)
+            control:Set(value)
         end,
         __iter = function()
-            local a66
+            local key
             return function()
-                local a67
-                a66, a67 = next(self.controls, a66)
-                if a66 then
-                    return a66, a67.value
+                local value
+                key, value = next(self.controls, key)
+                if key then
+                    return key, value.value
                 end
                 return nil
             end
@@ -195,24 +195,24 @@ function a17.new(a54)
         showProfile = true,
         showFullUsername = false,
         antiWindowDuplicate = true,
-        layoutMode = a56.mode,
+        layoutMode = layout.mode,
         activeSubTab = 1,
     }
         self._layoutTransitioning = false
 
         self.screenGui = self:Create("ScreenGui", {
-        Name = a15.httpService:GenerateGUID(false),
+        Name = state.httpService:GenerateGUID(false),
         IgnoreGuiInset = true,
         ResetOnSpawn = false,
         Enabled = true,
-        DisplayOrder = a6.displayOrder.window,
+        DisplayOrder = constants.displayOrder.window,
         ZIndexBehavior = Enum.ZIndexBehavior.Global,
 
-        Parent = a15.guiContainer,
+        Parent = state.guiContainer,
     })
         -- Responsive: UIScale keeps desktop/mobile same perceived size (tiered occupancy + scale)
         self.uiScale = self:Create("UIScale", {
-                Scale = a10.scaleForViewport(a15.workspace.CurrentCamera and a15.workspace.CurrentCamera.ViewportSize),
+                Scale = windowSizing.scaleForViewport(state.workspace.CurrentCamera and state.workspace.CurrentCamera.ViewportSize),
                 Parent = self.screenGui,
         })
 
@@ -245,7 +245,7 @@ function a17.new(a54)
         Offset = Vector2.new(0, -0.1),
 
         Parent = self.main,
-    }, { Color = { "WindowColor", a4.toColorSequence } })
+    }, { Color = { "WindowColor", functions.toColorSequence } })
 
                 self.bottomFade = self:Create("Frame", {
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -253,7 +253,7 @@ function a17.new(a54)
         AnchorPoint = Vector2.new(1, 1),
         Position = UDim2.fromScale(1, 1),
         Size = self.layout.fadeSize,
-        ZIndex = a6.zIndex.bottomFade,
+        ZIndex = constants.zIndex.bottomFade,
 
                 BackgroundTransparency = 1,
         Parent = self.main,
@@ -270,8 +270,8 @@ function a17.new(a54)
     }, {
                         Color = {
             "WindowColor",
-            function(a68)
-                return ColorSequence.new(a4.toColorSequence(a68).Keypoints[1].Value)
+            function(color)
+                return ColorSequence.new(functions.toColorSequence(color).Keypoints[1].Value)
             end,
         },
     })
@@ -327,8 +327,8 @@ function a17.new(a54)
 
     if self.name then
         self.title = self:Create("TextLabel", {
-                        Text = a7.t(self.name),
-            FontFace = a15.brandFont(Enum.FontWeight.Medium),
+                        Text = locale.t(self.name),
+            FontFace = state.brandFont(Enum.FontWeight.Medium),
 
             Size = UDim2.fromOffset(50, 20),
             AutomaticSize = Enum.AutomaticSize.X,
@@ -357,7 +357,7 @@ function a17.new(a54)
 
     if self.subheading then
         self.subtitle = self:Create("TextLabel", {
-                        Text = a7.t(self.subheading),
+                        Text = locale.t(self.subheading),
             Size = UDim2.fromOffset(50, 12),
             AutomaticSize = Enum.AutomaticSize.X,
             BackgroundTransparency = 1,
@@ -440,9 +440,9 @@ function a17.new(a54)
         Parent = self.elements,
     })
 
-            local initialLayout = a11.implementation(a42(self.layout))
+            local initialLayout = layouts.implementation(layoutKey(self.layout))
     initialLayout.Build(self, self.layout)
-    initialLayout.ApplyWidth(self, a11.railWidthFor(self.layout, self.size.X.Offset))
+    initialLayout.ApplyWidth(self, layouts.railWidthFor(self.layout, self.size.X.Offset))
 
         self.actionContainer = self:Create("Frame", {
 
@@ -477,7 +477,7 @@ function a17.new(a54)
 
     require(script.Parent.action).new(self, {
         name = "Close",
-        icon = a6.icons.close,
+        icon = constants.icons.close,
         order = 1,
 
         callback = function()
@@ -500,7 +500,7 @@ function a17.new(a54)
 
     self.minimiseAction = require(script.Parent.action).new(self, {
         name = "Minimise",
-        icon = a6.icons.minimise,
+        icon = constants.icons.minimise,
         order = 2,
 
         callback = function()
@@ -510,16 +510,16 @@ function a17.new(a54)
 
     self.settingsAction = require(script.Parent.action).new(self, {
         name = "Settings",
-        icon = a6.icons.settings,
+        icon = constants.icons.settings,
         order = 3,
         linkedTab = self.rfSettings,
 
         callback = function()
             if self._settingsMode then
-                local a69 = self._previousTab
+                local previousTab = self._previousTab
                 self._previousTab = nil
-                if a69 and a69.window == self and a69.tabPage and not a69._isSettingsTab then
-                    a69:Select()
+                if previousTab and previousTab.window == self and previousTab.tabPage and not previousTab._isSettingsTab then
+                    previousTab:Select()
                     return
                 end
                 for _, tab in self.tabs do
@@ -536,7 +536,7 @@ function a17.new(a54)
         end,
     })
 
-    a13.build(self)
+    search.build(self)
         self:_applyRailWidth()
 
     self.unloaded = false
@@ -554,33 +554,33 @@ function a17.new(a54)
         self:_setLayoutMode(self.settings.layoutMode)
     end
     if self.layout.mode == "sidebar" then
-        a14.reflowProfile(self)
-        a14.setSubtitle(self, self.profileText)
+        sidebar.reflowProfile(self)
+        sidebar.setSubtitle(self, self.profileText)
     end
 
     task.defer(function()
-        if self.unloaded or a15.localPlayer or not self.profile then
+        if self.unloaded or state.localPlayer or not self.profile then
             return
         end
-        local a70 = os.clock() + 2
-        local a71
-        a71 = a15.runService.RenderStepped:Connect(function()
+        local deadline = os.clock() + 2
+        local connection
+        connection = state.runService.RenderStepped:Connect(function()
             if self.unloaded then
-                a71:Disconnect()
+                connection:Disconnect()
                 return
             end
-            if a15.localPlayer or os.clock() > a70 then
-                a71:Disconnect()
-                if a15.localPlayer and self.profile then
-                    a14.refreshProfileName(self)
-                    a14.reflowProfile(self)
-                    a14.setProfileShown(self, true, a14.settleInfo)
+            if state.localPlayer or os.clock() > deadline then
+                connection:Disconnect()
+                if state.localPlayer and self.profile then
+                    sidebar.refreshProfileName(self)
+                    sidebar.reflowProfile(self)
+                    sidebar.setProfileShown(self, true, sidebar.settleInfo)
                 end
             end
         end)
-        self:Connect(a71)
+        self:Connect(connection)
     end)
-    a9.setContainer(self.screenGui)     a9.setEnabled(self.settings.haptics)     a12.buildCollapsedFace(self)
+    haptic.setContainer(self.screenGui)     haptic.setEnabled(self.settings.haptics)     chrome.buildCollapsedFace(self)
     self:_bindKeybind()
     self:_bindMouseOverride()
     self:_bindTopbarDrag()
@@ -593,7 +593,7 @@ function a17.new(a54)
     return self
 end
 
-function a17:_syncLiveAnimation()
+function Window:_syncLiveAnimation()
     if not self.theme.LiveAnimation then
         self._liveAnimating = false         return
     end
@@ -602,49 +602,49 @@ function a17:_syncLiveAnimation()
 
     self._liveAnimating = true
             self._liveGeneration = (self._liveGeneration or 0) + 1
-    local a72 = self._liveGeneration
+    local generation = self._liveGeneration
     task.spawn(function()
-        local a73 = true
-        local a74 = TweenInfo.new(10, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local forward = true
+        local liveTweenInfo = TweenInfo.new(10, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-        while self._liveGeneration == a72 and self._liveAnimating and not self.unloaded do
-            local a75 = a15.tweenService:Create(self.windowGradient, a74, {
-                Offset = Vector2.new(if a73 then 0.4 else -0.2, 0),
-                Rotation = (if a73 then 220 else 280),
+        while self._liveGeneration == generation and self._liveAnimating and not self.unloaded do
+            local tween = state.tweenService:Create(self.windowGradient, liveTweenInfo, {
+                Offset = Vector2.new(if forward then 0.4 else -0.2, 0),
+                Rotation = (if forward then 220 else 280),
             })
 
-            self._liveTween = a75
-            a75:Play()
-            a75.Completed:Wait()
-            a73 = not a73
+            self._liveTween = tween
+            tween:Play()
+            tween.Completed:Wait()
+            forward = not forward
         end
-        if self._liveGeneration == a72 then
+        if self._liveGeneration == generation then
             self._liveAnimating = false
             self._liveTween = nil
         end
     end)
 end
 
-function a17:ChangeTheme(a76)
-            local a77 = if typeof(a76) == "table" then a76 else a47(a76)
-    for a78, a79 in a77 do
-        self.theme[a78] = a44(a78, a79)
+function Window:ChangeTheme(themeInput)
+            local themeTable = if typeof(themeInput) == "table" then themeInput else resolveTheme(themeInput)
+    for key, value in themeTable do
+        self.theme[key] = coerceValue(key, value)
     end
-        if typeof(a76) == "table" then
-        a46(self.theme, a77)
+        if typeof(themeInput) == "table" then
+        deriveStrokes(self.theme, themeTable)
     end
 
-    for a80, a81 in self.themeProperties do
-        for a82, a83 in a81 do
-            local a84 = if typeof(a83) == "table" then a83[2](self.theme[a83[1]]) else self.theme[a83]
+    for instance, properties in self.themeProperties do
+        for prop, binding in properties do
+            local resolvedValue = if typeof(binding) == "table" then binding[2](self.theme[binding[1]]) else self.theme[binding]
 
-            if a80[a82] == a84 then
+            if instance[prop] == resolvedValue then
                 continue
             end
-            if typeof(a84) == "Color3" or typeof(a84) == "number" then
-                a15.tweenService:Create(a80, a19, { [a82] = a84 }):Play()
+            if typeof(resolvedValue) == "Color3" or typeof(resolvedValue) == "number" then
+                state.tweenService:Create(instance, tweenStyle, { [prop] = resolvedValue }):Play()
             else
-                a80[a82] = a84
+                instance[prop] = resolvedValue
             end
         end
     end
@@ -658,7 +658,7 @@ function a17:ChangeTheme(a76)
     self:_syncLiveAnimation()
 end
 
-function a17:_refreshElementThemes()
+function Window:_refreshElementThemes()
     for _, tab in self.tabs do
         for _, element in tab.elements do
             if element._refreshTheme then
@@ -668,116 +668,116 @@ function a17:_refreshElementThemes()
     end
 end
 
-function a17:CreateTab(a85)
+function Window:CreateTab(props)
     assert(not self.unloaded, "Cannot create a tab on an unloaded window.")
-    local a86 = require(script.Parent.Parent.elements.tab).new(self, a85)
+    local tab = require(script.Parent.Parent.elements.tab).new(self, props)
 
-    table.insert(self.tabs, a86)
+    table.insert(self.tabs, tab)
 
-    if not a86.neglectSelector then
-        local a87 = true
+    if not tab.neglectSelector then
+        local isFirst = true
         for _, tab in self.tabs do
-            if tab ~= a86 and not tab.neglectSelector and tab._isSettingsTab == a86._isSettingsTab then
-                a87 = false
+            if tab ~= tab and not tab.neglectSelector and tab._isSettingsTab == tab._isSettingsTab then
+                isFirst = false
                 break
             end
         end
-        if a87 then
-            a86:Select(true)
+        if isFirst then
+            tab:Select(true)
         end
 
                         if not self.hidden and not self.minimised then
-            a86.topbarItem.Visible = true
-            a86:_applyVisual(
-                if self.selectedTab == a86 then "selected" else "unselected",
+            tab.topbarItem.Visible = true
+            tab:_applyVisual(
+                if self.selectedTab == tab then "selected" else "unselected",
                 TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
             )
         end
     end
 
-    return a86
+    return tab
 end
 
-function a17:CreateSection(a88)
+function Window:CreateSection(props)
     assert(not self.unloaded, "Cannot create a section on an unloaded window.")
-    local a89 = require(script.Parent.Parent.elements.tabSection).new(self, a88)
-    table.insert(self.tabSections, a89)
+    local section = require(script.Parent.Parent.elements.tabSection).new(self, props)
+    table.insert(self.tabSections, section)
 
-            if not a89.inert and not self.hidden and not self.minimised then
-        a89:_setVisible(true)
-        a89:_setShown(true, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out))
+            if not section.inert and not self.hidden and not self.minimised then
+        section:_setVisible(true)
+        section:_setShown(true, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out))
     end
 
-    return a89
+    return section
 end
 
-function a17:_setTabSectionsShown(a90, a91)
-    for _, a92 in self.tabSections do
-        a92:_setShown(a90, a91)
-    end
-end
-
-function a17:_setTabSectionsVisible(a93)
-    for _, a94 in self.tabSections do
-        a94:_setVisible(a93)
+function Window:_setTabSectionsShown(shown, tweenInfo)
+    for _, section in self.tabSections do
+        section:_setShown(shown, tweenInfo)
     end
 end
 
-function a17:CreateTag(a95)
+function Window:_setTabSectionsVisible(visible)
+    for _, section in self.tabSections do
+        section:_setVisible(visible)
+    end
+end
+
+function Window:CreateTag(props)
     assert(not self.unloaded, "Cannot create a tag on an unloaded window.")
-    local a96 = require(script.Parent.Parent.elements.tag).new(self, a95)
-    table.insert(self.tags, a96)
-    return a96
+    local tag = require(script.Parent.Parent.elements.tag).new(self, props)
+    table.insert(self.tags, tag)
+    return tag
 end
 
-function a17:_registerControl(a97)
-    if not a97.flag or a97.flag == "" or a97.forgetState then
+function Window:_registerControl(element)
+    if not element.flag or element.flag == "" or element.forgetState then
         return
     end
 
-    local a98 = a97.flag
-    if self.controls[a98] then
+    local flag = element.flag
+    if self.controls[flag] then
         local n = 2
-        while self.controls[a98 .. n] do
+        while self.controls[flag .. n] do
             n += 1
         end
-        a98 = a98 .. n
+        flag = flag .. n
     end
 
-    a97.flag = a98
-    self.controls[a98] = a97
-    return a98
+    element.flag = flag
+    self.controls[flag] = element
+    return flag
 end
 
-function a17:_restoreLate(element)
+function Window:_restoreLate(element)
     if not self._loadedConfig or not element.flag or element.forgetState then
         return
     end
 
-    local a99 = self._loading
-    self._loading = true     a5.applyTo(element, self._loadedConfig[element.flag])
-    self._loading = a99
+    local wasLoading = self._loading
+    self._loading = true     persistence.applyTo(element, self._loadedConfig[element.flag])
+    self._loading = wasLoading
 end
 
-function a17:_persist(a100)
-            if a100.flag and not a100.forgetState and self.configuration.autoSave and not self._loading then
+function Window:_persist(element)
+            if element.flag and not element.forgetState and self.configuration.autoSave and not self._loading then
         task.spawn(self.Save, self)
     end
 end
 
-function a17:_unregisterControl(a101)
-    if a101.flag and self.controls[a101.flag] == a101 then
-        self.controls[a101.flag] = nil
+function Window:_unregisterControl(element)
+    if element.flag and self.controls[element.flag] == element then
+        self.controls[element.flag] = nil
     end
 end
 
-function a17:_keybindUsing(a102, a103)
-    if typeof(a102) ~= "EnumItem" or a102 == Enum.KeyCode.Unknown then
+function Window:_keybindUsing(keybind, source)
+    if typeof(keybind) ~= "EnumItem" or keybind == Enum.KeyCode.Unknown then
         return nil
     end
     for _, tab in self.tabs do
         for _, element in tab.elements do
-            if element ~= a103 and element.__type == "Keybind" and element.value == a102 then
+            if element ~= source and element.__type == "Keybind" and element.value == keybind then
                 return element
             end
         end
@@ -785,7 +785,7 @@ function a17:_keybindUsing(a102, a103)
     return nil
 end
 
-function a17:Notify(a104)
+function Window:Notify(props)
     if self.unloaded then
         return     end
     if not self.notifications then
@@ -810,61 +810,61 @@ function a17:Notify(a104)
         })
     end
 
-    return require(script.Parent.Parent.components.notification).new(self, a104)
+    return require(script.Parent.Parent.components.notification).new(self, props)
 end
 
-function a17:Toast(a105)
+function Window:Toast(props)
     if self.unloaded then
         return
     end
 
-        a105 = if typeof(a105) == "table" then a105 else {}
-    local a106 = a105.position or a105.Position or "Top"
-    local a107 = typeof(a106) ~= "string" or a106:lower() ~= "bottom"
-    a105.position = if a107 then "Top" else "Bottom"
-    local a108 = if a107 then "_toastsTop" else "_toastsBottom"
-    local a109 = self[a108]
+        props = if typeof(props) == "table" then props else {}
+    local position = props.position or props.Position or "Top"
+    local isTop = typeof(position) ~= "string" or position:lower() ~= "bottom"
+    props.position = if isTop then "Top" else "Bottom"
+    local toastKey = if isTop then "_toastsTop" else "_toastsBottom"
+    local container = self[toastKey]
 
-    if not a109 then
-        a109 = self:Create("Frame", {
+    if not container then
+        container = self:Create("Frame", {
             Name = "Toasts",
-            Size = UDim2.new(0, a26, 1, -24),
-            Position = if a107 then a23 else UDim2.new(0.5, 0, 1, -12),
-            AnchorPoint = if a107 then Vector2.new(0.5, 0) else Vector2.new(0.5, 1),
+            Size = UDim2.new(0, toastWidth, 1, -24),
+            Position = if isTop then toastsTopPosition else UDim2.new(0.5, 0, 1, -12),
+            AnchorPoint = if isTop then Vector2.new(0.5, 0) else Vector2.new(0.5, 1),
             BackgroundTransparency = 1,
-            ZIndex = a6.zIndex.toast,
+            ZIndex = constants.zIndex.toast,
 
             Parent = self.screenGui,
         })
 
         self:Create("UIListLayout", {
             FillDirection = Enum.FillDirection.Vertical,
-            VerticalAlignment = if a107 then Enum.VerticalAlignment.Top else Enum.VerticalAlignment.Bottom,
+            VerticalAlignment = if isTop then Enum.VerticalAlignment.Top else Enum.VerticalAlignment.Bottom,
             HorizontalAlignment = Enum.HorizontalAlignment.Center,
             SortOrder = Enum.SortOrder.LayoutOrder,
                         Padding = UDim.new(0, 0),
 
-            Parent = a109,
+            Parent = container,
         })
 
-        self[a108] = a109
+        self[toastKey] = container
 
-                        if a107 then
-            a48(self, false)
+                        if isTop then
+            updateToastPosition(self, false)
         end
     end
 
-    return require(script.Parent.Parent.components.toast).new(self, a105, a109)
+    return require(script.Parent.Parent.components.toast).new(self, props, container)
 end
 
-function a17:Popup(a110)
+function Window:Popup(props)
     if self.unloaded then
         return
     end
-    return require(script.Parent.Parent.components.popup).new(self, a110)
+    return require(script.Parent.Parent.components.popup).new(self, props)
 end
 
-function a17:Close()
+function Window:Close()
     if self.animating or self.unloaded then
         return
     end
@@ -872,43 +872,43 @@ function a17:Close()
     self.hidden = true
     self.collapsedInteract.Visible = false
     self._closeTransitionId = (self._closeTransitionId or 0) + 1
-    local a111 = self._closeTransitionId
-    local a112 = self.main.Size
-    local a113 = self.main.Position
-    local a114 = UDim2.new(
-        a113.X.Scale,
-        a113.X.Offset,
-        a113.Y.Scale - a112.Y.Scale / 2,
-        a113.Y.Offset - a112.Y.Offset / 2
+    local transitionId = self._closeTransitionId
+    local originalSize = self.main.Size
+    local originalPosition = self.main.Position
+    local topPosition = UDim2.new(
+        originalPosition.X.Scale,
+        originalPosition.X.Offset,
+        originalPosition.Y.Scale - originalSize.Y.Scale / 2,
+        originalPosition.Y.Offset - originalSize.Y.Offset / 2
     )
-    local a115 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+    local closeTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 
     self.main.ClipsDescendants = true
     self.main.AnchorPoint = Vector2.new(0.5, 0)
-    self.main.Position = a114
+    self.main.Position = topPosition
     self.drag.drag.Visible = false
-    a15.tweenService:Create(self.windowShadow, a115, { Transparency = 1 }):Play()
-    a15.tweenService:Create(self.windowStroke, a115, { Transparency = 1 }):Play()
-    local a116 = a15.tweenService:Create(self.main, a115, {
-        Size = UDim2.new(a112.X.Scale, a112.X.Offset, 0, 0),
+    state.tweenService:Create(self.windowShadow, closeTweenInfo, { Transparency = 1 }):Play()
+    state.tweenService:Create(self.windowStroke, closeTweenInfo, { Transparency = 1 }):Play()
+    local tween = state.tweenService:Create(self.main, closeTweenInfo, {
+        Size = UDim2.new(originalSize.X.Scale, originalSize.X.Offset, 0, 0),
     })
-    a116.Completed:Connect(function()
-        if not self.unloaded and self._closeTransitionId == a111 then
+    tween.Completed:Connect(function()
+        if not self.unloaded and self._closeTransitionId == transitionId then
             self.drag.drag.Visible = false
             self:Unload()
         end
     end)
-    a116:Play()
-    a15.tweenService:Create(self.windowCorner, a115, { CornerRadius = UDim.new(1, 0) }):Play()
+    tween:Play()
+    state.tweenService:Create(self.windowCorner, closeTweenInfo, { CornerRadius = UDim.new(1, 0) }):Play()
 end
 
-function a17:Hide()
+function Window:Hide()
             if self.animating or self.hidden then
         return
     end
 
             if self._searching then
-        a13.close(self, { showTabs = false, jumpTo = self.selectedTab and self.selectedTab.tabPage })
+        search.close(self, { showTabs = false, jumpTo = self.selectedTab and self.selectedTab.tabPage })
     end
 
             if self._recordingKeybind then
@@ -921,88 +921,88 @@ function a17:Hide()
     self.collapsedInteract.Visible = false
                 if self.minimised then
         self.minimised = false
-        a2.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(a6.icons.minimise))     end
+        image.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(constants.icons.minimise))     end
 
         self._restorePosition = self.main.Position
 
-    local a117, a118 = self:_collapsedRect()
+    local collapsedPos, collapsedSize = self:_collapsedRect()
 
-    local a119 = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-            local a120 = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
-    local a121 = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
-    local a122 = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local hideTween = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+            local surfaceTween = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
+    local cornerTween = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
+    local collapseShowTween = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
             self._hideTransitionId = (self._hideTransitionId or 0) + 1
-    local a123 = self._hideTransitionId
+    local transitionId = self._hideTransitionId
 
-            a15.tweenService
-        :Create(self.drag.dragCosmetic, a119, { Size = UDim2.fromOffset(0, 4), BackgroundTransparency = 1 })
+            state.tweenService
+        :Create(self.drag.dragCosmetic, hideTween, { Size = UDim2.fromOffset(0, 4), BackgroundTransparency = 1 })
         :Play()
     task.delay(0.18, function()
-        if self.unloaded or not self.hidden or self._hideTransitionId ~= a123 then
+        if self.unloaded or not self.hidden or self._hideTransitionId ~= transitionId then
             return
         end
         self.drag.drag.Visible = false
     end)
 
-            self:_fadeSurfaces(false, a119)
+            self:_fadeSurfaces(false, hideTween)
 
     if self.title then
-        a15.tweenService:Create(self.title, a119, { TextTransparency = 1 }):Play()
+        state.tweenService:Create(self.title, hideTween, { TextTransparency = 1 }):Play()
     end
     if self.subtitle then
-        a15.tweenService:Create(self.subtitle, a119, { TextTransparency = 1 }):Play()
+        state.tweenService:Create(self.subtitle, hideTween, { TextTransparency = 1 }):Play()
     end
     if self.topbarIcon then
-        a15.tweenService:Create(self.topbarIcon, a119, { ImageTransparency = 1 }):Play()
+        state.tweenService:Create(self.topbarIcon, hideTween, { ImageTransparency = 1 }):Play()
     end
 
-    for _, a124 in ipairs(self.actionContainer:GetChildren()) do
-        if a124:IsA("Frame") then
-            a15.tweenService:Create(a124.ImageLabel, a119, { ImageTransparency = 1 }):Play()
+    for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
+        if actionFrame:IsA("Frame") then
+            state.tweenService:Create(actionFrame.ImageLabel, hideTween, { ImageTransparency = 1 }):Play()
         end
     end
 
-    for _, a125 in self.tags do
-        a125:_setShown(false, a119)
+    for _, tag in self.tags do
+        tag:_setShown(false, hideTween)
     end
 
     for _, tab in pairs(self.tabs) do
         if not tab.neglectSelector and tab.topbarItem then
-            tab:_applyVisual("hidden", a119)
+            tab:_applyVisual("hidden", hideTween)
         end
     end
-    self:_setTabSectionsShown(false, a119)
+    self:_setTabSectionsShown(false, hideTween)
 
     self:_fadeSelectedElementsOut()
 
-            local a126 = a15.tweenService:Create(self.main, a120, { Size = a118, Position = a117 })
-    a126.Completed:Connect(function()
-                        if self.unloaded or not self.hidden or self._hideTransitionId ~= a123 then
+            local tween = state.tweenService:Create(self.main, surfaceTween, { Size = collapsedSize, Position = collapsedPos })
+    tween.Completed:Connect(function()
+                        if self.unloaded or not self.hidden or self._hideTransitionId ~= transitionId then
             return
         end
 
                         self._collapsedShown = true
-        a48(self, true)
+        updateToastPosition(self, true)
         self.collapsedInteract.Visible = true
         self.animating = false
         self._revealing = false
     end)
-    a126:Play()
-    a15.tweenService:Create(self.windowCorner, a121, { CornerRadius = UDim.new(1, 0) }):Play()
+    tween:Play()
+    state.tweenService:Create(self.windowCorner, cornerTween, { CornerRadius = UDim.new(1, 0) }):Play()
 
             task.delay(0.18, function()
-        if self.unloaded or not self.hidden or self._hideTransitionId ~= a123 then
+        if self.unloaded or not self.hidden or self._hideTransitionId ~= transitionId then
             return
         end
         self.topbar.Visible = false
         self:_setContentVisible(false)
 
-        a12.setCollapsedShown(self, true, a122)
+        chrome.setCollapsedShown(self, true, collapseShowTween)
     end)
 end
 
-function a17:ToggleHide()
+function Window:ToggleHide()
     if self.animating then
         return
     end
@@ -1013,33 +1013,33 @@ function a17:ToggleHide()
     end
 end
 
-function a17:ToggleMinimise()
+function Window:ToggleMinimise()
     if self.animating or self.hidden then
         return
     end
 
         if self._searching then
-        a13.close(self, { showTabs = true })
+        search.close(self, { showTabs = true })
     end
 
     self.animating = true
     self.drag.drag.Visible = false
     self.collapsedInteract.Visible = false
 
-    local a127 = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-    local a128 = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+    local expandTween = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+    local surfaceTween = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
     self._hideTransitionId = (self._hideTransitionId or 0) + 1
 
     if self.minimised then
         self.minimised = false
         self.drag.drag.Visible = false
-        a2.assign(self.minimiseAction.iconLabel, "Image", a6.icons.minimise)
-        a15.tweenService:Create(self.main, a127, { Size = self.size }):Play()
-        self:_fadeSurfaces(true, a128)	a12.setCollapsedShown(self, false, a128)
+        image.assign(self.minimiseAction.iconLabel, "Image", constants.icons.minimise)
+        state.tweenService:Create(self.main, expandTween, { Size = self.size }):Play()
+        self:_fadeSurfaces(true, surfaceTween)	chrome.setCollapsedShown(self, false, surfaceTween)
 
-        a15.tweenService
-            :Create(self.drag.drag, a127, {
+        state.tweenService
+            :Create(self.drag.drag, expandTween, {
                 Position = UDim2.new(
                     self.main.Position.X.Scale,
                     self.main.Position.X.Offset,
@@ -1057,11 +1057,11 @@ function a17:ToggleMinimise()
             for _, tab in pairs(self.tabs) do
                 if not tab.neglectSelector and tab.topbarItem then
                     tab.topbarItem.Visible = true
-                    tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected", a128)
+                    tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected", surfaceTween)
                 end
             end
             self:_setTabSectionsVisible(true)
-            self:_setTabSectionsShown(true, a128)
+            self:_setTabSectionsShown(true, surfaceTween)
 
             self:_revealElements(0.035, 0.4)
         end)
@@ -1072,14 +1072,14 @@ function a17:ToggleMinimise()
     else
         self.minimised = true
         self.drag.drag.Visible = false
-        a2.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(a6.icons.maximise))
+        image.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(constants.icons.maximise))
                         self:_fadeSelectedElementsOut()
         for _, tab in pairs(self.tabs) do
             if not tab.neglectSelector and tab.topbarItem then
-                tab:_applyVisual("hidden", a128)
+                tab:_applyVisual("hidden", surfaceTween)
             end
         end
-        self:_setTabSectionsShown(false, a128)
+        self:_setTabSectionsShown(false, surfaceTween)
 
         task.delay(0.3, function()
             if self.unloaded or not self.minimised then
@@ -1093,13 +1093,13 @@ function a17:ToggleMinimise()
             self:_setTabSectionsVisible(false)
         end)
 
-        self:_fadeSurfaces(false, a128)	a12.setCollapsedShown(self, true, a128)
-        a15.tweenService
-            :Create(self.main, a127, { Size = UDim2.fromOffset(self.size.X.Offset, self.layout.topbarHeight) })
+        self:_fadeSurfaces(false, surfaceTween)	chrome.setCollapsedShown(self, true, surfaceTween)
+        state.tweenService
+            :Create(self.main, expandTween, { Size = UDim2.fromOffset(self.size.X.Offset, self.layout.topbarHeight) })
             :Play()
 
-        a15.tweenService
-            :Create(self.drag.drag, a127, {
+        state.tweenService
+            :Create(self.drag.drag, expandTween, {
                 Position = UDim2.new(
                     self.main.Position.X.Scale,
                     self.main.Position.X.Offset,
@@ -1122,251 +1122,251 @@ function a17:ToggleMinimise()
     end
 end
 
-function a17:_syncDragBar()
-    local a129 = self.drag and self.drag.drag
-    if not a129 then
+function Window:_syncDragBar()
+    local dragFrame = self.drag and self.drag.drag
+    if not dragFrame then
         return
     end
-    local a130 = self.main.Position
-    local a131 = if self.minimised then self.layout.topbarHeight / 2 + 15 else self.size.Y.Offset / 2 + 15
-    a129.Position = UDim2.new(a130.X.Scale, a130.X.Offset, a130.Y.Scale, a130.Y.Offset + a131)
+    local pos = self.main.Position
+    local dragOffset = if self.minimised then self.layout.topbarHeight / 2 + 15 else self.size.Y.Offset / 2 + 15
+    dragFrame.Position = UDim2.new(pos.X.Scale, pos.X.Offset, pos.Y.Scale, pos.Y.Offset + dragOffset)
 end
 
-function a17:_clampedPosition(a132: UDim2): UDim2
+function Window:_clampedPosition(position: UDim2): UDim2
     if not self.settings or not self.settings.keepOnScreen then
-        return a132
+        return position
     end
-            if a132.X.Scale ~= 0 or a132.Y.Scale ~= 0 then
-        return a132
+            if position.X.Scale ~= 0 or position.Y.Scale ~= 0 then
+        return position
     end
 
-    local a133 = self.screenGui.AbsoluteSize
-    local a134, a135 = self.size.X.Offset / 2, self.size.Y.Offset / 2
-    local a136 = 8
-        local x = math.clamp(a132.X.Offset, a134 + a136, math.max(a134 + a136, a133.X - a134 - a136))
-    local y = math.clamp(a132.Y.Offset, a135 + a136, math.max(a135 + a136, a133.Y - a135 - a136))
-    if x == a132.X.Offset and y == a132.Y.Offset then
-        return a132
+    local screenSize = self.screenGui.AbsoluteSize
+    local halfW, halfH = self.size.X.Offset / 2, self.size.Y.Offset / 2
+    local margin = 8
+        local x = math.clamp(position.X.Offset, halfW + margin, math.max(halfW + margin, screenSize.X - halfW - margin))
+    local y = math.clamp(position.Y.Offset, halfH + margin, math.max(halfH + margin, screenSize.Y - halfH - margin))
+    if x == position.X.Offset and y == position.Y.Offset then
+        return position
     end
     return UDim2.fromOffset(x, y)
 end
 
-function a17:_clampToScreen()
+function Window:_clampToScreen()
     self.main.Position = self:_clampedPosition(self.main.Position)
 end
 
-function a17:_applyWindowSize()
+function Window:_applyWindowSize()
     if self.unloaded then
         return
     end
-    local vp = a15.workspace.CurrentCamera and a15.workspace.CurrentCamera.ViewportSize or nil
-    local a137 = a33(self.layout.mode)
-    local newScale = a10.scaleForViewport(vp)
-    local a138 = a137 ~= self.size
+    local vp = state.workspace.CurrentCamera and state.workspace.CurrentCamera.ViewportSize or nil
+    local newSize = computeSize(self.layout.mode)
+    local newScale = windowSizing.scaleForViewport(vp)
+    local sizeChanged = newSize ~= self.size
     local scaleChanged = self.uiScale and self.uiScale.Scale ~= newScale
-    self.size = a137
+    self.size = newSize
     if self.uiScale and scaleChanged then
         self.uiScale.Scale = newScale
     end
     self:_applyRailWidth()
     if self.hidden or self.minimised or self.animating or self._revealing then
-        self._pendingResize = self._pendingResize or a138 or (scaleChanged or false)
+        self._pendingResize = self._pendingResize or sizeChanged or (scaleChanged or false)
         return
     end
-    if not a138 and not self._pendingResize and not scaleChanged then
+    if not sizeChanged and not self._pendingResize and not scaleChanged then
         return
     end
     self._pendingResize = false
-    self.main.Size = a137
+    self.main.Size = newSize
     self:_clampToScreen()
     self:_syncDragBar()
 end
 
-function a17:_applyRailWidth()
-    local a139 = a11.railWidthFor(self.layout, self.size.X.Offset)
-    local implementation = a11.implementation(a42(self.layout))
-    implementation.ApplyWidth(self, a139)
+function Window:_applyRailWidth()
+    local railWidth = layouts.railWidthFor(self.layout, self.size.X.Offset)
+    local implementation = layouts.implementation(layoutKey(self.layout))
+    implementation.ApplyWidth(self, railWidth)
 
     if self._settingsLayoutActive or self.selectedTab == self.rfSettings then
         self:_applySettingsLayout(true)
     end
 end
 
-function a17:_watchViewport()
-    local a140: RBXScriptConnection? = nil
-    local a141 = false
+function Window:_watchViewport()
+    local cameraConnection: RBXScriptConnection? = nil
+    local pending = false
 
-    local function a142()
-                if a141 then
+    local function scheduleUpdate()
+                if pending then
             return
         end
-        a141 = true
+        pending = true
         task.defer(function()
-            a141 = false
+            pending = false
             self:_applyWindowSize()
         end)
     end
 
-    local function a143()
-        if a140 then
-            self:Disconnect(a140)
-            a140 = nil
+    local function rebindCamera()
+        if cameraConnection then
+            self:Disconnect(cameraConnection)
+            cameraConnection = nil
         end
-        local a144 = a15.workspace.CurrentCamera
-        if a144 then
-            a140 = self:Connect(a144:GetPropertyChangedSignal("ViewportSize"), a142)
+        local camera = state.workspace.CurrentCamera
+        if camera then
+            cameraConnection = self:Connect(camera:GetPropertyChangedSignal("ViewportSize"), scheduleUpdate)
         end
-        a142()
+        scheduleUpdate()
     end
 
-    self:Connect(a15.workspace:GetPropertyChangedSignal("CurrentCamera"), a143)
-    a143()
+    self:Connect(state.workspace:GetPropertyChangedSignal("CurrentCamera"), rebindCamera)
+    rebindCamera()
 
-            local a145 = 0
-    self:Connect(a15.runService.Heartbeat, function(a146: number)
-        a145 += a146
-        if a145 < a32 then
+            local elapsed = 0
+    self:Connect(state.runService.Heartbeat, function(dt: number)
+        elapsed += dt
+        if elapsed < viewportCheckInterval then
             return
         end
-        a145 = 0
+        elapsed = 0
         self:_applyWindowSize()
     end)
 end
 
-function a17:_bindKeybind()
-    self:Connect(a15.userInputService.InputBegan, function(a147, a148)
-        if a148 or self._recordingKeybind then
+function Window:_bindKeybind()
+    self:Connect(state.userInputService.InputBegan, function(input, gameProcessed)
+        if gameProcessed or self._recordingKeybind then
             return         end
-        if a147.KeyCode == self.settings.toggleKeybind or a147.UserInputType == self.settings.toggleKeybind then
+        if input.KeyCode == self.settings.toggleKeybind or input.UserInputType == self.settings.toggleKeybind then
             self:ToggleHide()
         end
     end)
 end
 
-function a17:_bindMouseOverride()
-    local a149 = a15.userInputService
+function Window:_bindMouseOverride()
+    local inputService = state.userInputService
 
-    local function a150()
+    local function shouldOverride()
         return self.settings.mouseOverride and not self.hidden and not self.minimised
     end
 
-    local function a151()
-        if not a150() then
+    local function restoreMouse()
+        if not shouldOverride() then
             return
         end
-                        if a149:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+                        if inputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             return
         end
-        if a149.MouseBehavior ~= Enum.MouseBehavior.Default then
-            a149.MouseBehavior = Enum.MouseBehavior.Default
+        if inputService.MouseBehavior ~= Enum.MouseBehavior.Default then
+            inputService.MouseBehavior = Enum.MouseBehavior.Default
         end
-        if not a149.MouseIconEnabled then
-            a149.MouseIconEnabled = true
+        if not inputService.MouseIconEnabled then
+            inputService.MouseIconEnabled = true
         end
     end
 
-            self:Connect(a149:GetPropertyChangedSignal("MouseBehavior"), a151)
-    self:Connect(a149:GetPropertyChangedSignal("MouseIconEnabled"), a151)
+            self:Connect(inputService:GetPropertyChangedSignal("MouseBehavior"), restoreMouse)
+    self:Connect(inputService:GetPropertyChangedSignal("MouseIconEnabled"), restoreMouse)
 
-            self:Connect(a149.InputEnded, function(a152)
-        if a152.UserInputType == Enum.UserInputType.MouseButton2 then
-            a151()
+            self:Connect(inputService.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton2 then
+            restoreMouse()
         end
     end)
 
-        self._freeMouse = a151
+        self._freeMouse = restoreMouse
 end
 
-function a17:_bindTopbarDrag()
-    local a153 = a15.userInputService
-    local a154 = false
-    local a155 = Vector2.zero
-    local a156
-    local a179 = Vector2.zero
+function Window:_bindTopbarDrag()
+    local inputService = state.userInputService
+    local isDragging = false
+    local dragOffset = Vector2.zero
+    local renderConnection
+    local startMousePos = Vector2.zero
 
-            local a157 = Vector2.zero
+            local guiInset = Vector2.zero
     if self.screenGui and self.screenGui.IgnoreGuiInset then
-        a157 = a15.guiService:GetGuiInset()
+        guiInset = state.guiService:GetGuiInset()
     end
 
-    local function a158()
-        local a159 = a153:GetMouseLocation() + a155 + a157
-        local x, y = a159.X, a159.Y
+    local function getConstrainedPosition()
+        local rawPos = inputService:GetMouseLocation() + dragOffset + guiInset
+        local x, y = rawPos.X, rawPos.Y
 
         if self.settings and self.settings.keepOnScreen then
-            local a160 = self.main.AbsoluteSize
-            local a161 = self.screenGui.AbsoluteSize
-            local a162 = 8
-            local a163, a164 = a160.X / 2, a160.Y / 2
-            x = math.clamp(x, a163 + a162, math.max(a163 + a162, a161.X - a163 - a162))
-            y = math.clamp(y, a164 + a162, math.max(a164 + a162, a161.Y - a164 - a162))
+            local mainSize = self.main.AbsoluteSize
+            local screenSize = self.screenGui.AbsoluteSize
+            local margin = 8
+            local halfW, halfH = mainSize.X / 2, mainSize.Y / 2
+            x = math.clamp(x, halfW + margin, math.max(halfW + margin, screenSize.X - halfW - margin))
+            y = math.clamp(y, halfH + margin, math.max(halfH + margin, screenSize.Y - halfH - margin))
         end
 
         return UDim2.fromOffset(x, y)
     end
 
-    local function a165()
-        a154 = false
-        if a156 then
-            self:Disconnect(a156)
-            a156 = nil
+    local function endDrag()
+        isDragging = false
+        if renderConnection then
+            self:Disconnect(renderConnection)
+            renderConnection = nil
         end
     end
 
-    local function a166()
-        if not a154 then
-            a165()
+    local function updateDrag()
+        if not isDragging then
+            endDrag()
             return
         end
         if self.unloaded or not self:_interactive() then
-            a165()
+            endDrag()
             return
         end
 
         -- Do not reposition the window for a simple click/tap. Wait until
         -- the pointer has actually moved before treating the gesture as drag.
-        local pointer = a153:GetMouseLocation()
-        if (pointer - a179).Magnitude < 4 then
+        local pointer = inputService:GetMouseLocation()
+        if (pointer - startMousePos).Magnitude < 4 then
             return
         end
 
-        local a167 = a158()
-        if self.main.Position == a167 then
+        local constrainedPos = getConstrainedPosition()
+        if self.main.Position == constrainedPos then
             return
         end
-        self.main.Position = a167
+        self.main.Position = constrainedPos
         if self.drag and self.drag.drag then
-            local a168 = self.main.Position
+            local mainPos = self.main.Position
             self.drag.drag.Position = UDim2.new(
-                a168.X.Scale,
-                a168.X.Offset,
-                a168.Y.Scale,
-                a168.Y.Offset + (self.main.Size.Y.Offset / 2 + 15)
+                mainPos.X.Scale,
+                mainPos.X.Offset,
+                mainPos.Y.Scale,
+                mainPos.Y.Offset + (self.main.Size.Y.Offset / 2 + 15)
             )
         end
     end
 
-                local function a169(x, y)
-        for _, a170 in { self.tabList, self.actionContainer } do
-            local a171, a172 = a170.AbsolutePosition, a170.AbsoluteSize
-            if x >= a171.X and x <= a171.X + a172.X and y >= a171.Y and y <= a171.Y + a172.Y then
+                local function isOverInteractive(x, y)
+        for _, region in { self.tabList, self.actionContainer } do
+            local absPos, absSize = region.AbsolutePosition, region.AbsoluteSize
+            if x >= absPos.X and x <= absPos.X + absSize.X and y >= absPos.Y and y <= absPos.Y + absSize.Y then
                 return true
             end
         end
         return false
     end
 
-    self:Connect(self.topbar.InputBegan, function(a173, a174)
-        if a174 then
+    self:Connect(self.topbar.InputBegan, function(input, gameProcessed)
+        if gameProcessed then
             return
         end
 
-        local a175 = a173.UserInputType.Name
-        if a175 ~= "MouseButton1" and a175 ~= "Touch" then
+        local inputType = input.UserInputType.Name
+        if inputType ~= "MouseButton1" and inputType ~= "Touch" then
             return
         end
 
-        if a169(a173.Position.X, a173.Position.Y) then
+        if isOverInteractive(input.Position.X, input.Position.Y) then
             return
         end
 
@@ -1374,34 +1374,34 @@ function a17:_bindTopbarDrag()
             return
         end
 
-        a154 = true
-        if a156 then
-            self:Disconnect(a156)
-            a156 = nil
+        isDragging = true
+        if renderConnection then
+            self:Disconnect(renderConnection)
+            renderConnection = nil
         end
-        a156 = self:Connect(a15.runService.RenderStepped, a166)
+        renderConnection = self:Connect(state.runService.RenderStepped, updateDrag)
 
         if self.screenGui and self.screenGui.IgnoreGuiInset then
-            a157 = a15.guiService:GetGuiInset()
+            guiInset = state.guiService:GetGuiInset()
         end
 
-        a179 = a153:GetMouseLocation()
-        a155 = self.main.AbsolutePosition + self.main.AbsoluteSize * self.main.AnchorPoint - a153:GetMouseLocation()
+        startMousePos = inputService:GetMouseLocation()
+        dragOffset = self.main.AbsolutePosition + self.main.AbsoluteSize * self.main.AnchorPoint - inputService:GetMouseLocation()
     end)
 
-    self:Connect(a153.InputEnded, function(a176)
-        local a177 = a176.UserInputType.Name
-        if a177 == "MouseButton1" or a177 == "Touch" then
-            a165()
+    self:Connect(inputService.InputEnded, function(input)
+        local inputType = input.UserInputType.Name
+        if inputType == "MouseButton1" or inputType == "Touch" then
+            endDrag()
         end
     end)
 
-            self:Connect(a153.WindowFocusReleased, function()
-        a165()
+            self:Connect(inputService.WindowFocusReleased, function()
+        endDrag()
     end)
 end
 
-function a17:_buildSettingsUI()
+function Window:_buildSettingsUI()
     local appearance = self:CreateTab({ name = "Appearance", icon = "palette", customOrder = 1001, forgetState = true, isSettingsTab = true })
     local behavior = self:CreateTab({ name = "Behavior", icon = "shield-check", customOrder = 1002, forgetState = true, isSettingsTab = true })
     local performance = self:CreateTab({ name = "Performance", icon = "gauge", customOrder = 1003, forgetState = true, isSettingsTab = true })
@@ -1413,7 +1413,7 @@ function a17:_buildSettingsUI()
 
     self.rfSettings:CreateSection({ name = "General" })
     self.rfSettings:CreateKeybind({
-        name = "Toggle Keybind", icon = a6.icons.search, value = self.settings.toggleKeybind,
+        name = "Toggle Keybind", icon = constants.icons.search, value = self.settings.toggleKeybind,
         isMenuToggle = true, onChanged = function(value)
             self.settings.toggleKeybind = value
             self:SaveSettings()
@@ -1445,7 +1445,7 @@ function a17:_buildSettingsUI()
             local requested
             for key, label in layouts do if choice == label then requested = key break end end
             if not requested then return end
-            local active = a42(self.layout)
+            local active = layoutKey(self.layout)
             if requested == active then
                 self:Notify({ title = "Bar layout", content = "The " .. choice .. " layout is already active." })
                 layoutDropdown:Set(layouts[active], true)
@@ -1465,7 +1465,7 @@ function a17:_buildSettingsUI()
                             layoutDropdown:Set(layouts[requested], true)
                             self:Notify({ title = "Bar layout changed", content = "Switched to the " .. layouts[requested] .. " layout." })
                         else
-                            currentLayout = a42(self.layout)
+                            currentLayout = layoutKey(self.layout)
                             layoutDropdown:Set(layouts[currentLayout], true)
                             self:Notify({ title = "Bar layout", content = "The selected bar layout could not be applied right now." })
                         end
@@ -1479,14 +1479,14 @@ function a17:_buildSettingsUI()
         name = "Show profile", description = "Shows your account profile in the active bar layout.", value = self.settings.showProfile,
         callback = function(value)
             self.settings.showProfile = value == true
-            a14.reflowProfile(self); a14.setProfileShown(self, self.settings.showProfile, a14.settleInfo); self:SaveSettings()
+            sidebar.reflowProfile(self); sidebar.setProfileShown(self, self.settings.showProfile, sidebar.settleInfo); self:SaveSettings()
         end,
     })
     appearance:CreateToggle({
         name = "Reveal full username", description = "Shows your full Roblox username in the sidebar instead of the masked version.", value = self.settings.showFullUsername,
         callback = function(value)
             self.settings.showFullUsername = value == true
-            a14.refreshProfileName(self); self:SaveSettings()
+            sidebar.refreshProfileName(self); self:SaveSettings()
         end,
     })
 
@@ -1498,7 +1498,7 @@ function a17:_buildSettingsUI()
     performance:CreateSection({ name = "Performance" })
     performance:CreateToggle({
         name = "Haptics", description = "A subtle tap as you interact, on devices that support haptics.", value = self.settings.haptics,
-        callback = function(value) self.settings.haptics = value; a9.setEnabled(value); self:SaveSettings() end,
+        callback = function(value) self.settings.haptics = value; haptic.setEnabled(value); self:SaveSettings() end,
     })
 
     appearance:CreateSection({ name = "Window" })
@@ -1508,8 +1508,8 @@ function a17:_buildSettingsUI()
     })
     appearance:CreateButton({
         name = "Reset Window Position", callback = function()
-            a15.tweenService:Create(self.main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
-            a15.tweenService:Create(self.drag.drag, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, self.size.Y.Offset / 2 + 15) }):Play()
+            state.tweenService:Create(self.main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
+            state.tweenService:Create(self.drag.drag, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, self.size.Y.Offset / 2 + 15) }):Play()
         end,
     })
 
@@ -1522,108 +1522,108 @@ function a17:_buildSettingsUI()
             if selected and not table.find(configs, selected) then selected = configs[1] end
             if selected then configDropdown:Set(selected, true) end
         end
-        configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = a6.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
+        configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = constants.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
         configName = persistence:CreateInput({ name = "Configuration Name", description = "Name a new configuration, or leave blank to overwrite the selected one.", placeholder = "e.g. PvP Loadout", clearOnFocus = false })
         local group = persistence:CreateGroup()
-        group:CreateButton({ name = "Save", icon = a6.icons.config, callback = function()
+        group:CreateButton({ name = "Save", icon = constants.icons.config, callback = function()
             local name = configName.value; if name == "" then name = selected end
-            if not name or name == "" then self:Toast({ title = a7.resolve("Name your configuration first") }); return end
-            if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = a7.resolve("Saved configuration"), subtitle = name, icon = a6.icons.config }) else self:Toast({ title = a7.resolve("Couldn't save configuration"), subtitle = name }) end
+            if not name or name == "" then self:Toast({ title = locale.resolve("Name your configuration first") }); return end
+            if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = locale.resolve("Saved configuration"), subtitle = name, icon = constants.icons.config }) else self:Toast({ title = locale.resolve("Couldn't save configuration"), subtitle = name }) end
         end })
         group:CreateButton({ name = "Load", callback = function()
-            if not selected or selected == "" then self:Toast({ title = a7.resolve("Pick a configuration to load") }); return end
-            if self:_applyNamedConfig(selected) then self:Toast({ title = a7.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = a7.resolve("Couldn't load configuration"), subtitle = selected }) end
+            if not selected or selected == "" then self:Toast({ title = locale.resolve("Pick a configuration to load") }); return end
+            if self:_applyNamedConfig(selected) then self:Toast({ title = locale.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = locale.resolve("Couldn't load configuration"), subtitle = selected }) end
         end })
         group:CreateButton({ name = "Delete", callback = function()
             local name = selected
-            if not name or name == "" then self:Toast({ title = a7.resolve("Pick a configuration to delete") }); return end
-            if self:DeleteConfig(name) then refresh(); self:Toast({ title = a7.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = a7.resolve("Couldn't delete configuration"), subtitle = name }) end
+            if not name or name == "" then self:Toast({ title = locale.resolve("Pick a configuration to delete") }); return end
+            if self:DeleteConfig(name) then refresh(); self:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name }) end
         end })
     end
 end
 
-function a17:SetProfile(a203)
-    self.profileText = a203
-    a14.setSubtitle(self, a203)
+function Window:SetProfile(text)
+    self.profileText = text
+    sidebar.setSubtitle(self, text)
 end
 
-function a17:SaveSettings()
-    return a5.saveSettings(self)
+function Window:SaveSettings()
+    return persistence.saveSettings(self)
 end
 
-function a17:LoadSettings()
-    return a5.loadSettings(self)
+function Window:LoadSettings()
+    return persistence.loadSettings(self)
 end
 
-function a17:_roundCorners(a204, a205)
-    if not a205 or not a38 then
+function Window:_roundCorners(frame, corners)
+    if not corners or not hasPerCornerRadius then
         return self:Create("UICorner", {
-            Parent = a204,
+            Parent = frame,
         }, { CornerRadius = "CornerRoundness" })
     end
 
-    local a206 = { Parent = a204 }
-    local a207 = {}
-    for _, a208 in a37 do
-        a206[a208] = UDim.new(0, 0)
+    local props = { Parent = frame }
+    local themeMap = {}
+    for _, key in cornerKeys do
+        props[key] = UDim.new(0, 0)
     end
-    for _, a209 in a205 do
-        a206[a209] = nil         a207[a209] = "CornerRoundness"
+    for _, corner in corners do
+        props[corner] = nil         themeMap[corner] = "CornerRoundness"
     end
 
-    return self:Create("UICorner", a206, a207)
+    return self:Create("UICorner", props, themeMap)
 end
 
-function a17:_setElementLocked(element, a210, a211)
-    a210 = a210 == true
-                local a212 = element.locked == true
-    if a212 == a210 and not (a210 and a211) then
+function Window:_setElementLocked(element, locked, message)
+    locked = locked == true
+                local wasLocked = element.locked == true
+    if wasLocked == locked and not (locked and message) then
         return
     end
-    element.locked = a210
+    element.locked = locked
 
     if not element.lockScrim then
         self:_buildLockScrim(element)
     end
 
-    local a213 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-    if a210 then
+    if locked then
         element.lockScrim.Visible = true
     end
-    a15.tweenService
-        :Create(element.lockScrim, a213, {
-            BackgroundTransparency = if a210 then a28 else 1,
+    state.tweenService
+        :Create(element.lockScrim, tweenInfo, {
+            BackgroundTransparency = if locked then lockScrimTransparency else 1,
         })
         :Play()
-    if not a210 then
-        task.delay(a213.Time, function()
+    if not locked then
+        task.delay(tweenInfo.Time, function()
             if not element.locked and element.lockScrim and element.lockScrim.Parent then
                 element.lockScrim.Visible = false             end
         end)
     end
 
-        local a214 = element.descriptor
-    if not a214 then
+        local descriptor = element.descriptor
+    if not descriptor then
         return
     end
 
-    if a210 then
-                        element._descriptionBefore = element._descriptionBefore or a214.titleLabel.Text
-        a214.titleLabel.Text = a7.resolve(a211 or "This element is locked.")
+    if locked then
+                        element._descriptionBefore = element._descriptionBefore or descriptor.titleLabel.Text
+        descriptor.titleLabel.Text = locale.resolve(message or "This element is locked.")
     elseif element._descriptionBefore then
-        a214.titleLabel.Text = element._descriptionBefore
+        descriptor.titleLabel.Text = element._descriptionBefore
         element._descriptionBefore = nil
     end
 
-    a15.tweenService
-        :Create(a214.titleLabel, a213, {
-            TextTransparency = if a210 then a29 else 0.7,
+    state.tweenService
+        :Create(descriptor.titleLabel, tweenInfo, {
+            TextTransparency = if locked then lockedTextTransparency else 0.7,
         })
         :Play()
 end
 
-function a17:_buildLockScrim(element)
+function Window:_buildLockScrim(element)
     element.lockScrim = self:Create("TextButton", {
         Name = "ElementLock",
         Active = true,
@@ -1632,28 +1632,28 @@ function a17:_buildLockScrim(element)
         BorderSizePixel = 0,
         Text = "",
         TextTransparency = 1,
-        ZIndex = a6.zIndex.elementLock,
+        ZIndex = constants.zIndex.elementLock,
         Visible = false,
 
                         BackgroundTransparency = 1,
         Parent = element.main,
-    }, { BackgroundColor3 = { "WindowColor", a45 } })
+    }, { BackgroundColor3 = { "WindowColor", firstColor } })
 
     self:Create("UICorner", {
         Parent = element.lockScrim,
     }, { CornerRadius = "ElementCornerRadius" })
 end
 
-function a17:_setLayoutMode(a215)
+function Window:_setLayoutMode(modeName)
     if self.unloaded then
         return false
     end
     if self.animating or self.minimised or (self.hidden and self.hasShownOnce) then
         return false
     end
-    local a216 = a11.get(a215)
-    local a217 = a42(self.layout)
-    if not a216 or a215 == a217 then
+    local newLayout = layouts.get(modeName)
+    local oldKey = layoutKey(self.layout)
+    if not newLayout or modeName == oldKey then
         return false
     end
     if self._layoutTransitioning then
@@ -1661,13 +1661,13 @@ function a17:_setLayoutMode(a215)
     end
     self._layoutTransitioning = true
     self._layoutTransitionId = (self._layoutTransitionId or 0) + 1
-    local a218 = self._layoutTransitionId
-    local a219 = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    self:_fadeSurfaces(false, a219)
+    local transitionId = self._layoutTransitionId
+    local tweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    self:_fadeSurfaces(false, tweenInfo)
     self:_fadeSelectedElementsOut()
     for _, tab in self.tabs do
         if not tab.neglectSelector and tab.topbarItem then
-            tab:_applyVisual("hidden", a219)
+            tab:_applyVisual("hidden", tweenInfo)
         end
     end
     task.wait(0.12)
@@ -1676,30 +1676,30 @@ function a17:_setLayoutMode(a215)
         return false
     end
     if self._searching then
-        a13.close(self, { showTabs = true, jumpTo = self.selectedTab and self.selectedTab.tabPage })
+        search.close(self, { showTabs = true, jumpTo = self.selectedTab and self.selectedTab.tabPage })
     end
-    local a220 = a42(self.layout)
-    self.layout = a216
-    self.settings.layoutMode = a215
+    local oldKey = layoutKey(self.layout)
+    self.layout = newLayout
+    self.settings.layoutMode = modeName
     if self.sidebar then
         self:DestroySubtree(self.sidebar)
         self.sidebar = nil
     elseif self.tabList then
         self:DestroySubtree(self.tabList)
     end
-    local implementation = a11.implementation(a215)
-    implementation.Build(self, a216)
-    if a216.mode == "sidebar" then
+    local implementation = layouts.implementation(modeName)
+    implementation.Build(self, newLayout)
+    if newLayout.mode == "sidebar" then
         if not self.elementsCorner then
-            self.elementsCorner = self:_roundCorners(self.elements, a216.cardCorners)
+            self.elementsCorner = self:_roundCorners(self.elements, newLayout.cardCorners)
             self.elementsStroke = self:Create("UIStroke", {
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
                 Transparency = 1,
                 Parent = self.elements,
             }, { Color = "SurfaceStroke" })
             self:Create("UIGradient", {
-                Rotation = a216.cardStrokeRotation,
-                Transparency = a216.cardStrokeTransparency,
+                Rotation = newLayout.cardStrokeRotation,
+                Transparency = newLayout.cardStrokeTransparency,
                 Parent = self.elementsStroke,
             })
         end
@@ -1710,11 +1710,11 @@ function a17:_setLayoutMode(a215)
         if self.elementsStroke then
             self.elementsStroke.Transparency = 1
         end
-        self.elements.Size = UDim2.new(1, 0, 1, -a216.chromeHeight)
-        self.bottomFade.Size = UDim2.new(1, 0, a216.fadeSize.Y.Scale, a216.fadeSize.Y.Offset)
+        self.elements.Size = UDim2.new(1, 0, 1, -newLayout.chromeHeight)
+        self.bottomFade.Size = UDim2.new(1, 0, newLayout.fadeSize.Y.Scale, newLayout.fadeSize.Y.Offset)
     end
-    implementation.ApplyWidth(self, a11.railWidthFor(a216, self.size.X.Offset))
-    self.elementsLayout.FillDirection = a216.pageDirection
+    implementation.ApplyWidth(self, layouts.railWidthFor(newLayout, self.size.X.Offset))
+    self.elementsLayout.FillDirection = newLayout.pageDirection
 
     for _, tab in self.tabs do
         if not tab.neglectSelector then
@@ -1728,17 +1728,17 @@ function a17:_setLayoutMode(a215)
         self:_jumpTo(self.selectedTab.tabPage)
         self.selectedTab:_applyVisual("selected")
     end
-    self:_fadeSurfaces(true, a219)
-    self:_setTabSectionsShown(true, a219)
+    self:_fadeSurfaces(true, tweenInfo)
+    self:_setTabSectionsShown(true, tweenInfo)
     task.spawn(function()
-        if not self.unloaded and self._layoutTransitionId == a218 then
-            self:_revealElements(0.02, 0.5, a218)
+        if not self.unloaded and self._layoutTransitionId == transitionId then
+            self:_revealElements(0.02, 0.5, transitionId)
         end
     end)
     self._layoutTransitioning = false
-    return a220 ~= a215
+    return oldKey ~= modeName
 end
-function a17:_applySettingsLayout(isSettings)
+function Window:_applySettingsLayout(isSettings)
     self._settingsLayoutActive = isSettings == true
     if self.tabList then
         self.tabList.Visible = not self.hidden and not self.minimised
@@ -1758,7 +1758,7 @@ function a17:_applySettingsLayout(isSettings)
     end
 end
 
-function a17:_setSettingsMode(active)
+function Window:_setSettingsMode(active)
     active = active == true
     self._settingsMode = active
     if active and self._previousTab == nil and self.selectedTab and not self.selectedTab._isSettingsTab then
@@ -1773,7 +1773,7 @@ function a17:_setSettingsMode(active)
     self:_updateWindowTitle()
 end
 
-function a17:_updateWindowTitle()
+function Window:_updateWindowTitle()
     if not self.title then return end
     local text = self.name
     if self._settingsMode then
@@ -1784,12 +1784,12 @@ function a17:_updateWindowTitle()
             text ..= " • General"
         end
     end
-    self.title.Text = a7.resolve(text)
+    self.title.Text = locale.resolve(text)
 end
 
-function a17:_setContentVisible(a245)
-    self.elements.Visible = a245
-    if not a245 then
+function Window:_setContentVisible(visible)
+    self.elements.Visible = visible
+    if not visible then
         self.tabList.Visible = false
         if self.sidebar then
             self.sidebar.Visible = false
@@ -1800,35 +1800,35 @@ function a17:_setContentVisible(a245)
     self:_applySettingsLayout(self._settingsMode)
 end
 
-function a17:_fadeSurfaces(a246, a247)
-    local a248 = {
-        [self.windowShadow] = { Transparency = if a246 then 0.6 else 1 },
-        [self.windowStroke] = { Transparency = if a246 then 0.95 else 1 },
-        [self.bottomFade] = { BackgroundTransparency = if a246 then 0 else 1 },
+function Window:_fadeSurfaces(shown, tweenInfo)
+    local targets = {
+        [self.windowShadow] = { Transparency = if shown then 0.6 else 1 },
+        [self.windowStroke] = { Transparency = if shown then 0.95 else 1 },
+        [self.bottomFade] = { BackgroundTransparency = if shown then 0 else 1 },
     }
 
     if self.elementsStroke then
-        a248[self.elements] = {
-            BackgroundTransparency = if a246 then self.layout.cardTransparency else 1,
+        targets[self.elements] = {
+            BackgroundTransparency = if shown then self.layout.cardTransparency else 1,
         }
-        a248[self.elementsStroke] = { Transparency = if a246 then 0 else 1 }
+        targets[self.elementsStroke] = { Transparency = if shown then 0 else 1 }
     end
 
-    for a249, a250 in a248 do
-        if a247 then
-            a15.tweenService:Create(a249, a247, a250):Play()
+    for instance, props in targets do
+        if tweenInfo then
+            state.tweenService:Create(instance, tweenInfo, props):Play()
         else
-            for a251, a252 in a250 do
-                a249[a251] = a252
+            for prop, value in props do
+                instance[prop] = value
             end
         end
     end
 
-    a14.reflowProfile(self)
-    a14.setProfileShown(self, a246, a247)
+    sidebar.reflowProfile(self)
+    sidebar.setProfileShown(self, shown, tweenInfo)
 end
 
-function a17:_fadeSelectedElementsOut()
+function Window:_fadeSelectedElementsOut()
     if self.selectedTab then
         for _, element in ipairs(self.selectedTab.elements) do
             element:_setShown(false, true)
@@ -1836,21 +1836,21 @@ function a17:_fadeSelectedElementsOut()
     end
 end
 
-function a17:_revealElements(a253, a254, a255)
-    local function a256()
+function Window:_revealElements(stepDelay, totalDuration, layoutTransitionId)
+    local function isStillValid()
         return not self.unloaded
             and not self.hidden
             and not self.minimised
-            and (a255 == nil or self._layoutTransitionId == a255)
+            and (layoutTransitionId == nil or self._layoutTransitionId == layoutTransitionId)
     end
 
-    if not a256() then
+    if not isStillValid() then
         return
     end
     for _, tab in pairs(self.tabs) do
         if tab ~= self.selectedTab then
             for _, element in ipairs(tab.elements) do
-                if not a256() then
+                if not isStillValid() then
                     return
                 end
                 element:_setShown(true, false)
@@ -1863,24 +1863,24 @@ function a17:_revealElements(a253, a254, a255)
         return
     end
 
-    local a257 = tab.tabPage
-    local a258 = a257.AbsolutePosition.Y
-    local a259 = a258 + a257.AbsoluteWindowSize.Y
+    local page = tab.tabPage
+    local viewTop = page.AbsolutePosition.Y
+    local viewBottom = viewTop + page.AbsoluteWindowSize.Y
 
-    local a260 = math.floor(a254 / a253)
-    local a261 = 0
+    local maxReveals = math.floor(totalDuration / stepDelay)
+    local revealed = 0
     for _, element in ipairs(tab.elements) do
-        if not a256() then
+        if not isStillValid() then
             return
         end
-        local a262 = element.main.AbsolutePosition.Y
-        local a263 = (a262 + element.main.AbsoluteSize.Y) > a258 and a262 < a259
-        if a263 then
+        local elemTop = element.main.AbsolutePosition.Y
+        local isVisible = (elemTop + element.main.AbsoluteSize.Y) > viewTop and elemTop < viewBottom
+        if isVisible then
             element:_setShown(true, true)
-            a261 += 1
-            if a261 <= a260 then
-                task.wait(a253)
-                if not a256() then
+            revealed += 1
+            if revealed <= maxReveals then
+                task.wait(stepDelay)
+                if not isStillValid() then
                     return
                 end
             end
@@ -1889,7 +1889,7 @@ function a17:_revealElements(a253, a254, a255)
     end
 end
 
-function a17:Show()
+function Window:Show()
         if self.animating or not self.hidden then
         return
     end
@@ -1899,16 +1899,16 @@ function a17:Show()
 
                 if self.configuration.autoLoad and not self._autoLoaded then
         self._autoLoaded = true
-        local ok, a264 = pcall(self.Load, self)
+        local ok, err = pcall(self.Load, self)
         if not ok then
-            a8.warn("Astra: Failed to load configuration - " .. tostring(a264))
+            log.warn("Astra: Failed to load configuration - " .. tostring(err))
         end
     end
 
     self.hidden = false
     self.minimised = false
     self._collapsedShown = false
-    a12.setCollapsedShown(self, false)
+    chrome.setCollapsedShown(self, false)
 
         if self._themeRefreshPending then
         self._themeRefreshPending = false
@@ -1931,10 +1931,10 @@ function a17:Show()
     end
 end
 
-function a17:_quickRestore()
-    local a265 = self:_clampedPosition(self._restorePosition or UDim2.new(0.5, 0, 0.5, 0))
-    self._restorePosition = a265
-    local a266 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+function Window:_quickRestore()
+    local targetPos = self:_clampedPosition(self._restorePosition or UDim2.new(0.5, 0, 0.5, 0))
+    self._restorePosition = targetPos
+    local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
     self.main.ClipsDescendants = true
     self.main.BackgroundTransparency = 0
@@ -1962,14 +1962,14 @@ function a17:_quickRestore()
     if self.subtitle then
         self.subtitle.TextTransparency = 0.7
     end
-    for _, a267 in ipairs(self.actionContainer:GetChildren()) do
-        if a267:IsA("Frame") and a267.ImageLabel then
-            a267.ImageLabel.ImageTransparency = 0.6
+    for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
+        if actionFrame:IsA("Frame") and actionFrame.ImageLabel then
+            actionFrame.ImageLabel.ImageTransparency = 0.6
         end
     end
 
-    local a268 = a15.tweenService:Create(self.main, a266, { Size = self.size, Position = a265 })
-    a268.Completed:Connect(function()
+    local tween = state.tweenService:Create(self.main, tweenInfo, { Size = self.size, Position = targetPos })
+    tween.Completed:Connect(function()
         if self.hidden or self.unloaded then
             return
         end
@@ -1979,12 +1979,12 @@ function a17:_quickRestore()
         self.drag.drag.Visible = false
         self.animating = false
         self._revealing = false
-        a48(self, true)
+        updateToastPosition(self, true)
     end)
-    a268:Play()
-    a15.tweenService:Create(self.windowCorner, a266, { CornerRadius = self.theme.CornerRoundness }):Play()
+    tween:Play()
+    state.tweenService:Create(self.windowCorner, tweenInfo, { CornerRadius = self.theme.CornerRoundness }):Play()
 end
-function a17:_firstShow()
+function Window:_firstShow()
     self.drag.drag.Visible = false
     self.main.Visible = true
     self.main.ClipsDescendants = true
@@ -2001,7 +2001,7 @@ function a17:_firstShow()
             element:_setShown(true, false)
         end
     end
-    local a269 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     if self.topbarIcon then
         self.topbarIcon.ImageTransparency = 0
     end
@@ -2011,17 +2011,17 @@ function a17:_firstShow()
     if self.subtitle then
         self.subtitle.TextTransparency = 0.7
     end
-    for _, a270 in ipairs(self.actionContainer:GetChildren()) do
-        if a270:IsA("Frame") and a270.ImageLabel then
-            a270.ImageLabel.ImageTransparency = 0.6
+    for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
+        if actionFrame:IsA("Frame") and actionFrame.ImageLabel then
+            actionFrame.ImageLabel.ImageTransparency = 0.6
         end
     end
 
-    local a271 = a15.tweenService:Create(self.main, a269, {
+    local tween = state.tweenService:Create(self.main, tweenInfo, {
         BackgroundTransparency = 0,
         Size = self.size,
     })
-    a271.Completed:Connect(function()
+    tween.Completed:Connect(function()
         if self.unloaded then
             return
         end
@@ -2031,314 +2031,314 @@ function a17:_firstShow()
         self.animating = false
         self._revealing = false
     end)
-    a271:Play()
-    a15.tweenService:Create(self.windowCorner, a269, { CornerRadius = self.theme.CornerRoundness }):Play()
+    tween:Play()
+    state.tweenService:Create(self.windowCorner, tweenInfo, { CornerRadius = self.theme.CornerRoundness }):Play()
 
-    local a272 = a15.localPlayer
-    if a272 and self.settings.welcomeToast and a12.isNewUser() then
+    local player = state.localPlayer
+    if player and self.settings.welcomeToast and chrome.isNewUser() then
         self:Toast({
-            title = a272.DisplayName,
-            subtitle = a7.resolve("Signed in as"),
+            title = player.DisplayName,
+            subtitle = locale.resolve("Signed in as"),
             subtitleAbove = true,
-            avatar = a272.UserId,
+            avatar = player.UserId,
             minWidth = 220,
         })
     end
 end
 
-function a17:GetPath()
-    return a5.getPath(self)
+function Window:GetPath()
+    return persistence.getPath(self)
 end
 
-function a17:Save(a273)
-    if a273 ~= nil and (type(a273) ~= "string" or a273 == "") then
+function Window:Save(name)
+    if name ~= nil and (type(name) ~= "string" or name == "") then
         return false
     end
-    return a5.save(self, a273)
+    return persistence.save(self, name)
 end
 
-function a17:Load(a274)
-    if a274 ~= nil and (type(a274) ~= "string" or a274 == "") then
+function Window:Load(name)
+    if name ~= nil and (type(name) ~= "string" or name == "") then
         return false
     end
-    return a5.load(self, a274)
+    return persistence.load(self, name)
 end
 
-function a17:_applyNamedConfig(a275)
-    if not self:Load(a275) then
+function Window:_applyNamedConfig(name)
+    if not self:Load(name) then
         return false
     end
-            local _, a276 = a5.getPath(self)
-    self._loadedConfigPath = a276
+            local _, path = persistence.getPath(self)
+    self._loadedConfigPath = path
     self:Save()
     return true
 end
 
-function a17:ListConfigs()
-    return a5.list(self)
+function Window:ListConfigs()
+    return persistence.list(self)
 end
 
-function a17:DeleteConfig(a277)
-    return a5.delete(self, a277)
+function Window:DeleteConfig(name)
+    return persistence.delete(self, name)
 end
 
-function a17:Get(a278)
-    local a279 = self.controls[a278]
-    return a279 and a279.value
+function Window:Get(flag)
+    local control = self.controls[flag]
+    return control and control.value
 end
 
-function a17:Set(a280, a281)
-    local a282 = self.controls[a280]
-    if not a282 then
+function Window:Set(flag, value)
+    local control = self.controls[flag]
+    if not control then
         return false
     end
-    a282:Set(a281)
+    control:Set(value)
     return true
 end
 
-function a17:_jumpTo(a283)
-    if not a283 then
+function Window:_jumpTo(page)
+    if not page then
         return
     end
-    if a283.Parent == self.elements then
-        self.elementsLayout:JumpTo(a283)
+    if page.Parent == self.elements then
+        self.elementsLayout:JumpTo(page)
     end
 end
 
-function a17:Navigate(tab)
+function Window:Navigate(tab)
     if tab == nil then
         return
     end
 
-    local a284
-    for _, a285 in self.tabs do
-                if a285 == tab or a285.name == tab or a285.tabPage == tab then
-            a284 = a285
+    local found
+    for _, tab in self.tabs do
+                if tab == tab or tab.name == tab or tab.tabPage == tab then
+            found = tab
             break
         end
     end
 
-    if not a284 then
+    if not found then
         return
     end
-    a284:Select()
+    found:Select()
 end
 
-function a17:Create(a286, a287, a288)
-    assert(typeof(a286) == "string", "Invalid argument #1 (string expected)")
-    local a289 = Instance.new(a286)
+function Window:Create(className, props, themeBindings)
+    assert(typeof(className) == "string", "Invalid argument #1 (string expected)")
+    local instance = Instance.new(className)
 
-            if a288 and self.theme then
-        for a290, a291 in a288 do
-            a289[a290] = (
-                if typeof(a291) == "table" then a291[2](self.theme[a291[1]]) else self.theme[a291]
+            if themeBindings and self.theme then
+        for prop, binding in themeBindings do
+            instance[prop] = (
+                if typeof(binding) == "table" then binding[2](self.theme[binding[1]]) else self.theme[binding]
             )
         end
 
-        self.themeProperties[a289] = a288
+        self.themeProperties[instance] = themeBindings
     end
 
-    if a287 then
-        for a292, a293 in a287 do
-            if a7.isToken(a293) then
-                self:_bindLocale(a289, a292, a7.sourceOf(a293))
+    if props then
+        for prop, value in props do
+            if locale.isToken(value) then
+                self:_bindLocale(instance, prop, locale.sourceOf(value))
             else
-                a2.assign(a289, a292, a293)
+                image.assign(instance, prop, value)
             end
         end
     end
 
-    table.insert(self.instances, a289)
-    return a289
+    table.insert(self.instances, instance)
+    return instance
 end
 
-function a17:_bindLocale(a294, a295, a296)
-    a294[a295] = a7.resolve(a296)
+function Window:_bindLocale(instance, prop, token)
+    instance[prop] = locale.resolve(token)
 
-    local a297 = self.localeProperties[a294]
-    if not a297 then
-        a297 = {}
-        self.localeProperties[a294] = a297
+    local bindings = self.localeProperties[instance]
+    if not bindings then
+        bindings = {}
+        self.localeProperties[instance] = bindings
     end
-    a297[a295] = a296
+    bindings[prop] = token
 end
 
-function a17:SetLocale(a298)
-    a7.setActive(a298)
-    for a299, a300 in self.localeProperties do
-        for a301, a302 in a300 do
-            a299[a301] = a7.resolve(a302)
+function Window:SetLocale(localeId)
+    locale.setActive(localeId)
+    for instance, bindings in self.localeProperties do
+        for prop, token in bindings do
+            instance[prop] = locale.resolve(token)
         end
     end
 end
 
-function a17:SetTranslator(a303)
-    a7.translator = a303
+function Window:SetTranslator(translator)
+    locale.translator = translator
 end
 
-function a17:RegisterTranslations(a304)
-    a7.register(a304)
-    self:SetLocale(a7.current)
+function Window:RegisterTranslations(translations)
+    locale.register(translations)
+    self:SetLocale(locale.current)
 end
 
-function a17:CreateGlow(a305, a306, a307, a308)
-    local a309 = {
-        BlurRadius = UDim.new(0, a307),
-        Transparency = a308,
+function Window:CreateGlow(parent, color, blurRadius, transparency)
+    local props = {
+        BlurRadius = UDim.new(0, blurRadius),
+        Transparency = transparency,
         ZIndex = -1,
 
-        Parent = a305,
+        Parent = parent,
     }
 
-    if typeof(a306) == "string" then
-        return self:Create("UIShadow", a309, {
+    if typeof(color) == "string" then
+        return self:Create("UIShadow", props, {
             Color = {
-                a306,
-                function(a310)
-                    return if typeof(a310) == "ColorSequence" then a310.Keypoints[1].Value else a310
+                color,
+                function(color)
+                    return if typeof(color) == "ColorSequence" then color.Keypoints[1].Value else color
                 end,
             },
         })
     end
 
-    a309.Color = a306
-    return self:Create("UIShadow", a309)
+    props.Color = color
+    return self:Create("UIShadow", props)
 end
 
-function a17:_flashResult(element, ok)
-    local a311 = element.box
-    if not a311 then
+function Window:_flashResult(element, ok)
+    local box = element.box
+    if not box then
         return
     end
-    local a312 = element.glow
-    local a313 = element.boxStroke
-    local a314 = ok and a6.accent.on or self.theme.ErrorColor
-    local a315 = ok and a6.accent.onStroke or self.theme.ErrorStrokeColor
-    local a316 = TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local a317 = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local glow = element.glow
+    local boxStroke = element.boxStroke
+    local flashColor = ok and constants.accent.on or self.theme.ErrorColor
+    local flashStroke = ok and constants.accent.onStroke or self.theme.ErrorStrokeColor
+    local flashTween = TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local restoreTween = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-        a15.tweenService:Create(a311, a316, { BackgroundColor3 = a314 }):Play()
-    if a313 then
-        a15.tweenService:Create(a313, a316, { Color = a315, Transparency = 0.4 }):Play()
+        state.tweenService:Create(box, flashTween, { BackgroundColor3 = flashColor }):Play()
+    if boxStroke then
+        state.tweenService:Create(boxStroke, flashTween, { Color = flashStroke, Transparency = 0.4 }):Play()
     end
-    if a312 then
-        a15.tweenService:Create(a312, a316, { Color = a315, Transparency = 0.6 }):Play()
+    if glow then
+        state.tweenService:Create(glow, flashTween, { Color = flashStroke, Transparency = 0.6 }):Play()
     end
 
         element._flashToken = (element._flashToken or 0) + 1
-    local a318 = element._flashToken
+    local token = element._flashToken
     task.delay(0.22, function()
-        if element._flashToken ~= a318 then
+        if element._flashToken ~= token then
             return
         end
-        a15.tweenService:Create(a311, a317, { BackgroundColor3 = self.theme.FieldBackground }):Play()
-        if a313 then
-            a15.tweenService
-                :Create(a313, a317, { Color = self.theme.SurfaceStroke, Transparency = 0.85 })
+        state.tweenService:Create(box, restoreTween, { BackgroundColor3 = self.theme.FieldBackground }):Play()
+        if boxStroke then
+            state.tweenService
+                :Create(boxStroke, restoreTween, { Color = self.theme.SurfaceStroke, Transparency = 0.85 })
                 :Play()
         end
-        if a312 then
-            a15.tweenService
-                :Create(a312, a317, { Color = self.theme.FieldGlow, Transparency = element._glowIdle or 1 })
+        if glow then
+            state.tweenService
+                :Create(glow, restoreTween, { Color = self.theme.FieldGlow, Transparency = element._glowIdle or 1 })
                 :Play()
         end
     end)
 end
 
-function a17:CreateHoverOverlay(a319)
-    local a320 = self:Create("Frame", {
+function Window:CreateHoverOverlay(parent)
+    local overlay = self:Create("Frame", {
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
         BorderSizePixel = 0,
         ZIndex = 1,
 
-        Parent = a319,
+        Parent = parent,
     })
 
     self:Create("UICorner", {
-        Parent = a320,
+        Parent = overlay,
     }, { CornerRadius = "ElementCornerRadius" })
 
-    return a320
+    return overlay
 end
 
-function a17:_wireElementHover(element)
-    local a321 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local a322 = self.theme
+function Window:_wireElementHover(element)
+    local hoverTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local theme = self.theme
 
     self:ConnectFor(element, element.main.MouseEnter, function()
         if not self:_interactive() then
             return         end
-        a15.tweenService
+        state.tweenService
             :Create(
                 element.stroke,
-                a321,
-                { Transparency = a322.ElementStrokeHoverTransparency, Color = a322.ElementStrokeHover }
+                hoverTween,
+                { Transparency = theme.ElementStrokeHoverTransparency, Color = theme.ElementStrokeHover }
             )
             :Play()
-        a15.tweenService:Create(element.title, a321, { TextColor3 = a322.ElementTextHoverColor }):Play()
+        state.tweenService:Create(element.title, hoverTween, { TextColor3 = theme.ElementTextHoverColor }):Play()
         if element.hoverOverlay then
-            a15.tweenService:Create(element.hoverOverlay, a321, { BackgroundTransparency = 0.97 }):Play()
+            state.tweenService:Create(element.hoverOverlay, hoverTween, { BackgroundTransparency = 0.97 }):Play()
         end
     end)
 
     self:ConnectFor(element, element.main.MouseLeave, function()
-        a15.tweenService
+        state.tweenService
             :Create(
                 element.stroke,
-                a321,
-                { Transparency = a322.ElementStrokeTransparency, Color = a322.ElementStroke }
+                hoverTween,
+                { Transparency = theme.ElementStrokeTransparency, Color = theme.ElementStroke }
             )
             :Play()
-        a15.tweenService:Create(element.title, a321, { TextColor3 = a322.ContentColor }):Play()
+        state.tweenService:Create(element.title, hoverTween, { TextColor3 = theme.ContentColor }):Play()
         if element.hoverOverlay then
-            a15.tweenService:Create(element.hoverOverlay, a321, { BackgroundTransparency = 1 }):Play()
+            state.tweenService:Create(element.hoverOverlay, hoverTween, { BackgroundTransparency = 1 }):Play()
         end
     end)
 end
 
-function a17:_runGuarded(element, fn, ...)
+function Window:_runGuarded(element, fn, ...)
             if element.locked then
         return
     end
 
-    local a323 = table.pack(...)
+    local args = table.pack(...)
     task.spawn(function()
-        local ok, a324 = pcall(function()
-            return fn(table.unpack(a323, 1, a323.n))
+        local ok, err = pcall(function()
+            return fn(table.unpack(args, 1, args.n))
         end)
         if ok or element._errored then
             return
         end
         element._errored = true
 
-        local a325 = element.flashTarget or element.main
-        local a326 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-        a15.tweenService:Create(a325, a326, { BackgroundColor3 = self.theme.ErrorColor }):Play()
-        a15.tweenService:Create(element.stroke, a326, { Color = self.theme.ErrorStrokeColor }):Play()
+        local flashTarget = element.flashTarget or element.main
+        local errorTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        state.tweenService:Create(flashTarget, errorTween, { BackgroundColor3 = self.theme.ErrorColor }):Play()
+        state.tweenService:Create(element.stroke, errorTween, { Color = self.theme.ErrorStrokeColor }):Play()
                 if element.title then
-            element.title.Text = a7.resolve("Error, log recorded in console.")
+            element.title.Text = locale.resolve("Error, log recorded in console.")
         end
 
-        a8.warn(
+        log.warn(
             `Astra encountered an error, with the callback for a {element.__type} component named '{element.name}':`
         )
-        a8.print(a324)
+        log.print(err)
 
         task.wait(1)
 
         if element.title then
-            element.title.Text = a7.resolve(element.name)
+            element.title.Text = locale.resolve(element.name)
         end
-        a15.tweenService
+        state.tweenService
             :Create(
-                a325,
+                flashTarget,
                 TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
                 { BackgroundColor3 = Color3.fromRGB(255, 255, 255) }
             )
             :Play()
-        a15.tweenService
+        state.tweenService
             :Create(
                 element.stroke,
                 TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -2349,41 +2349,41 @@ function a17:_runGuarded(element, fn, ...)
     end)
 end
 
-function a17:StyleElementBody(a327)
+function Window:StyleElementBody(frame)
     self:Create("UIGradient", {
         Rotation = 270,
 
-        Parent = a327,
+        Parent = frame,
     }, { Color = "ElementGradient" })
 
     self:Create("UICorner", {
-        Parent = a327,
+        Parent = frame,
     }, { CornerRadius = "ElementCornerRadius" })
 
     return self:Create("UIStroke", {
         Transparency = 1,
 
-        Parent = a327,
+        Parent = frame,
     }, { Color = "ElementStroke", Transparency = "ElementStrokeTransparency" })
 end
 
-function a17:_buildCompactRow(a328, a329, a330)
-    local a331 = self:Create("Frame", {
-        Name = a329,
-        Size = UDim2.fromOffset(0, a27),
+function Window:_buildCompactRow(tab, name, zIndex)
+    local row = self:Create("Frame", {
+        Name = name,
+        Size = UDim2.fromOffset(0, compactRowHeight),
         AutomaticSize = Enum.AutomaticSize.X,
         ClipsDescendants = true,         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
 
         BackgroundTransparency = 1,
-        Parent = a328.tabPage,
+        Parent = tab.tabPage,
     }, { BackgroundTransparency = "ElementTransparency" })
 
-    local a332 = self:StyleElementBody(a331)
+    local stroke = self:StyleElementBody(row)
 
         self:Create("UIFlexItem", {
         FlexMode = Enum.UIFlexMode.Fill,
-        Parent = a331,
+        Parent = row,
     })
 
         self:Create("UIListLayout", {
@@ -2391,239 +2391,239 @@ function a17:_buildCompactRow(a328, a329, a330)
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalFlex = Enum.UIFlexAlignment.Fill,
 
-        Parent = a331,
+        Parent = row,
     })
 
-        local a333 = self:Create("TextButton", {
+        local button = self:Create("TextButton", {
         Text = "",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BackgroundTransparency = 1,         AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, a27),
+        Size = UDim2.fromOffset(0, compactRowHeight),
         BorderSizePixel = 0,
         TextTransparency = 1,
-        ZIndex = a330 or 1,
+        ZIndex = zIndex or 1,
 
-        Parent = a331,
+        Parent = row,
     })
 
     self:Create("UICorner", {
-        Parent = a333,
+        Parent = button,
     }, { CornerRadius = "ElementCornerRadius" })
 
-    return a331, a332, a333
+    return row, stroke, button
 end
 
-function a17:StyleElementPanel(a334)
+function Window:StyleElementPanel(frame)
     self:Create("UIGradient", {
         Rotation = 270,
 
-        Parent = a334,
+        Parent = frame,
     }, { Color = "ElementGradient" })
 
     self:Create("UICorner", {
-        Parent = a334,
+        Parent = frame,
     }, { CornerRadius = "ElementCornerRadius" })
 
-    local a335 = self:Create("UIStroke", {
+    local stroke = self:Create("UIStroke", {
         Color = Color3.fromRGB(255, 255, 255),
         Transparency = 1,
-        Parent = a334,
+        Parent = frame,
     })
 
     self:Create("UIGradient", {
         Rotation = 270,
 
-        Parent = a335,
+        Parent = stroke,
     }, { Color = "ElementStrokeGradient" })
 
-    return a335
+    return stroke
 end
 
-function a17:_reveal(a336, a337, a338, a339)
-    if not a336 then
+function Window:_reveal(instance, targets, animate, tweenInfo)
+    if not instance then
         return
     end
-    local a340 = false
-    for a341, a342 in a337 do
-        if a336[a341] ~= a342 then
-            a340 = true
+    local needsUpdate = false
+    for prop, value in targets do
+        if instance[prop] ~= value then
+            needsUpdate = true
             break
         end
     end
-    if not a340 then
+    if not needsUpdate then
         return
     end
-    if a338 then
-        a15.tweenService:Create(a336, a339 or a18, a337):Play()
+    if animate then
+        state.tweenService:Create(instance, tweenInfo or revealTween, targets):Play()
     else
-        for a343, a344 in a337 do
-            a336[a343] = a344
+        for prop, value in targets do
+            instance[prop] = value
         end
     end
 end
 
-function a17:_revealCommon(element, a345)
-    self:_reveal(element.stroke, { Transparency = self.theme.ElementStrokeTransparency }, a345)
-    self:_reveal(element.title, { TextTransparency = 0 }, a345)
-    self:_reveal(element.main, { BackgroundTransparency = self.theme.ElementTransparency or 0 }, a345)
+function Window:_revealCommon(element, animate)
+    self:_reveal(element.stroke, { Transparency = self.theme.ElementStrokeTransparency }, animate)
+    self:_reveal(element.title, { TextTransparency = 0 }, animate)
+    self:_reveal(element.main, { BackgroundTransparency = self.theme.ElementTransparency or 0 }, animate)
     if element.iconLabel then
-        self:_reveal(element.iconLabel, { ImageTransparency = 0 }, a345)
+        self:_reveal(element.iconLabel, { ImageTransparency = 0 }, animate)
     end
     if element.descriptor then
-        self:_reveal(element.descriptor.titleLabel, { TextTransparency = 0.7 }, a345)
+        self:_reveal(element.descriptor.titleLabel, { TextTransparency = 0.7 }, animate)
     end
 end
 
-function a17:_hideCommon(element, a346)
-    self:_reveal(element.stroke, { Transparency = 1 }, a346)
-    self:_reveal(element.title, { TextTransparency = 1 }, a346)
-    self:_reveal(element.main, { BackgroundTransparency = 1 }, a346)
+function Window:_hideCommon(element, animate)
+    self:_reveal(element.stroke, { Transparency = 1 }, animate)
+    self:_reveal(element.title, { TextTransparency = 1 }, animate)
+    self:_reveal(element.main, { BackgroundTransparency = 1 }, animate)
     if element.iconLabel then
-        self:_reveal(element.iconLabel, { ImageTransparency = 1 }, a346)
+        self:_reveal(element.iconLabel, { ImageTransparency = 1 }, animate)
     end
     if element.descriptor then
-        self:_reveal(element.descriptor.titleLabel, { TextTransparency = 1 }, a346)
+        self:_reveal(element.descriptor.titleLabel, { TextTransparency = 1 }, animate)
     end
 end
 
-function a17:_collapsedRect()
-    local a347 = if self.showIconOnly then a21 else a20
+function Window:_collapsedRect()
+    local size = if self.showIconOnly then collapsedIconOnlySize else collapsedWideSize
         if self._collapsedPosition then
-        return self._collapsedPosition, a347
+        return self._collapsedPosition, size
     end
-    local a348 = UDim2.new(
-        a22.X.Scale,
-        a22.X.Offset,
-        a22.Y.Scale,
-        a22.Y.Offset + a347.Y.Offset / 2
+    local position = UDim2.new(
+        collapsedPosition.X.Scale,
+        collapsedPosition.X.Offset,
+        collapsedPosition.Y.Scale,
+        collapsedPosition.Y.Offset + size.Y.Offset / 2
     )
-    return a348, a347
+    return position, size
 end
 
-function a17:_interactive()
+function Window:_interactive()
     return not self.animating and not self.hidden
 end
 
-function a17:_settled()
+function Window:_settled()
     return not self.hidden and not self._revealing
 end
 
-function a17:Connect(a349, a350)
-    local a351 = a349:Connect(a350)
-    table.insert(self.connections, a351)
-    return a351
+function Window:Connect(signal, callback)
+    local connection = signal:Connect(callback)
+    table.insert(self.connections, connection)
+    return connection
 end
 
-function a17:ConnectFor(a352, a353, a354)
-    local a355 = self:Connect(a353, a354)
-    a352.connections = a352.connections or {}
-    table.insert(a352.connections, a355)
-    return a355
+function Window:ConnectFor(element, signal, callback)
+    local connection = self:Connect(signal, callback)
+    element.connections = element.connections or {}
+    table.insert(element.connections, connection)
+    return connection
 end
 
-function a17:Disconnect(a356)
-    if not a356 then
+function Window:Disconnect(connection)
+    if not connection then
         return
     end
-    local a357 = table.find(self.connections, a356)
-    if a357 then
-        table.remove(self.connections, a357)
+    local index = table.find(self.connections, connection)
+    if index then
+        table.remove(self.connections, index)
     end
-    a356:Disconnect()
+    connection:Disconnect()
 end
 
-function a17:DestroySubtree(a358)
-    if not a358 then
+function Window:DestroySubtree(root)
+    if not root then
         return
     end
 
-    local a359 = { [a358] = true }
-    for _, a360 in a358:GetDescendants() do
-        a359[a360] = true
+    local descendants = { [root] = true }
+    for _, desc in root:GetDescendants() do
+        descendants[desc] = true
     end
     for i = #self.instances, 1, -1 do
-        local a361 = self.instances[i]
-        if a359[a361] then
+        local inst = self.instances[i]
+        if descendants[inst] then
             table.remove(self.instances, i)
-            self.themeProperties[a361] = nil
-            self.localeProperties[a361] = nil
+            self.themeProperties[inst] = nil
+            self.localeProperties[inst] = nil
         end
     end
 
-    a358:Destroy()
+    root:Destroy()
 end
 
-function a17:DisconnectMany(a362, a363)
-    if not a363 or #a363 == 0 then
+function Window:DisconnectMany(element, connections)
+    if not connections or #connections == 0 then
         return
     end
 
-    local a364 = {}
-    for _, a365 in a363 do
-        a364[a365] = true
-        a365:Disconnect()
+    local removed = {}
+    for _, conn in connections do
+        removed[conn] = true
+        conn:Disconnect()
     end
 
-    local function a366(a367)
-        if not a367 then
+    local function compact(list)
+        if not list then
             return
         end
-        local a368 = 0
-        for a369 = 1, #a367 do
-            local a370 = a367[a369]
-            if not a364[a370] then
-                a368 += 1
-                a367[a368] = a370
+        local write = 0
+        for i = 1, #list do
+            local conn = list[i]
+            if not removed[conn] then
+                write += 1
+                list[write] = conn
             end
         end
-        for a371 = #a367, a368 + 1, -1 do
-            a367[a371] = nil
+        for i = #list, write + 1, -1 do
+            list[i] = nil
         end
     end
 
-    a366(self.connections)
-    if a362 and a362 ~= self then
-        a366(a362.connections)
+    compact(self.connections)
+    if element and element ~= self then
+        compact(element.connections)
     end
 end
 
-function a17:DestroySubtrees(a372)
-    if not a372 or #a372 == 0 then
+function Window:DestroySubtrees(roots)
+    if not roots or #roots == 0 then
         return
     end
 
-    local a373 = {}
-    for _, a374 in a372 do
-        a373[a374] = true
-        for _, a375 in a374:GetDescendants() do
-            a373[a375] = true
+    local descendants = {}
+    for _, root in roots do
+        descendants[root] = true
+        for _, desc in root:GetDescendants() do
+            descendants[desc] = true
         end
     end
 
-    local a376 = 0
-    for a377 = 1, #self.instances do
-        local a378 = self.instances[a377]
-        if a373[a378] then
-            self.themeProperties[a378] = nil
-            self.localeProperties[a378] = nil
+    local write = 0
+    for i = 1, #self.instances do
+        local inst = self.instances[i]
+        if descendants[inst] then
+            self.themeProperties[inst] = nil
+            self.localeProperties[inst] = nil
         else
-            a376 += 1
-            self.instances[a376] = a378
+            write += 1
+            self.instances[write] = inst
         end
     end
-    for a379 = #self.instances, a376 + 1, -1 do
-        self.instances[a379] = nil
+    for i = #self.instances, write + 1, -1 do
+        self.instances[i] = nil
     end
 
-    for _, a380 in a372 do
-        a380:Destroy()
+    for _, root in roots do
+        root:Destroy()
     end
 end
 
-function a17:Unload()
+function Window:Unload()
     self.unloaded = true
-            a9.teardown()
-    a9.releaseContainer(self.screenGui)
+            haptic.teardown()
+    haptic.releaseContainer(self.screenGui)
     if self._liveTween then
         self._liveTween:Cancel()         self._liveTween = nil
     end
@@ -2642,4 +2642,4 @@ function a17:Unload()
     table.clear(self.tabs)
 end
 
-return a17
+return Window

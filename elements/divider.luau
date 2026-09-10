@@ -1,20 +1,20 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Divider"
+local state = {}
+state.__index = state
+state.__type = "Divider"
 
-local a2 = require(script.Parent.Parent.utilities.moveable)
-local a3 = require(script.Parent.Parent.utilities.locale)
+local constants = require(script.Parent.Parent.utilities.moveable)
+local Divider = require(script.Parent.Parent.utilities.locale)
 
-local a4 = 1
-local a5 = 12
-local a6 = 10
-local a7 = 14
-local a8 = 12
+local tab = 1
+local props = 12
+local text = 10
+local line = 14
+local element = 12
 
-local a9 = 0.88
+local frame = 0.88
 local a10 = 0.55
 
-function a1.new(tab, a11)
+function state.new(tab, a11)
     a11 = if typeof(a11) == "table" then a11 else {}
 
     local a12 = a11.spacing or a11.Spacing
@@ -24,9 +24,9 @@ function a1.new(tab, a11)
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
         text = if a13 ~= nil then tostring(a13) else "",
-        spacing = if type(a12) == "number" then math.max(a12, 0) else a5,
+        spacing = if type(a12) == "number" then math.max(a12, 0) else props,
                         line = a11.line ~= false and a11.Line ~= false,
-    }, a1)
+    }, state)
 
     self.main = self.window:Create("Frame", {
         Size = UDim2.new(1, -40, 0, 0),
@@ -39,7 +39,7 @@ function a1.new(tab, a11)
 
     self.window:Create("UIListLayout", {
         FillDirection = Enum.FillDirection.Horizontal,
-        Padding = UDim.new(0, a6),
+        Padding = UDim.new(0, text),
         SortOrder = Enum.SortOrder.LayoutOrder,
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -60,9 +60,9 @@ function a1.new(tab, a11)
     return self
 end
 
-function a1:_buildHalf(a14)
+function state:_buildHalf(a14)
     local a15 = self.window:Create("Frame", {
-        Size = UDim2.new(0, 0, 0, a4),
+        Size = UDim2.new(0, 0, 0, tab),
         BorderSizePixel = 0,
         LayoutOrder = a14,
 
@@ -79,14 +79,14 @@ function a1:_buildHalf(a14)
     return a15
 end
 
-function a1:_buildLabel()
+function state:_buildLabel()
     self.title = self.window:Create("TextLabel", {
-        Text = a3.t(self.text),
-        Size = UDim2.fromOffset(0, a7),
+        Text = Divider.t(self.text),
+        Size = UDim2.fromOffset(0, line),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
-        TextSize = a8,
+        TextSize = element,
         TextXAlignment = Enum.TextXAlignment.Center,
         LayoutOrder = 2,
 
@@ -99,12 +99,12 @@ function a1:_buildLabel()
     end
 end
 
-function a1:_applyHeight()
-    local a16 = if self.text ~= "" then a7 elseif self.line then a4 else 0
+function state:_applyHeight()
+    local a16 = if self.text ~= "" then line elseif self.line then tab else 0
     self.main.Size = UDim2.new(1, -40, 0, self.spacing * 2 + a16)
 end
 
-function a1:Set(a17)
+function state:Set(a17)
     self.text = if a17 ~= nil then tostring(a17) else ""
 
     if self.text ~= "" and not self.title then
@@ -128,15 +128,15 @@ function a1:Set(a17)
     self:_applyHeight()
 end
 
-function a1:_setShown(a19, a20)
+function state:_setShown(a19, a20)
     local w = self.window
-    local a21 = if a19 then a9 else 1
+    local a21 = if a19 then frame else 1
 
     w:_reveal(self.left, { BackgroundTransparency = a21 }, a20)
     w:_reveal(self.right, { BackgroundTransparency = a21 }, a20)
     w:_reveal(self.title, { TextTransparency = if a19 then a10 else 1 }, a20)
 end
 
-a2(a1)
+constants(state)
 
-return a1
+return state

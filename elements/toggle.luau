@@ -1,39 +1,39 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Toggle"
+local state = {}
+state.__index = state
+state.__type = "Toggle"
 
-local a2 = script.Parent.Parent.utilities
+local constants = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.moveable)
-local a6 = require(a2.lockable)
-local a7 = require(a2.locale)
-local a8 = require(a2.HapticEngine)
-local a9 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local Toggle = require(constants.Parent.core.state)
+local tab = require(script.Parent.Parent.functions)
+local props = require(constants.moveable)
+local name = require(constants.lockable)
+local flag = require(constants.locale)
+local value = require(constants.HapticEngine)
+local callback = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-function a1.new(tab, a10)
-    a10 = if typeof(a10) == "table" then a10 else {}
+function state.new(tab, element)
+    element = if typeof(element) == "table" then element else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a10.name or a10.Name or "Switch",
-        icon = tab.window:ResolveIcon(a10.icon or a10.Icon),
-        description = a10.description or a10.Description,
-        forgetState = a10.forgetState or a10.ForgetState or tab.forgetState,         compact = tab.compact or false,
-        flag = a10.flag
-            or a10.Flag
+        name = element.name or element.Name or "Switch",
+        icon = tab.window:ResolveIcon(element.icon or element.Icon),
+        description = element.description or element.Description,
+        forgetState = element.forgetState or element.ForgetState or tab.forgetState,         compact = tab.compact or false,
+        flag = element.flag
+            or element.Flag
             or (
-                not (a10.forgetState or a10.ForgetState or tab.forgetState)
-                    and a4.deriveFlagFromName(a10.name or a10.Name or "Switch")
+                not (element.forgetState or element.ForgetState or tab.forgetState)
+                    and tab.deriveFlagFromName(element.name or element.Name or "Switch")
                 or nil
             ),
 
-        callback = a10.callback or a10.Callback or function() end,
+        callback = element.callback or element.Callback or function() end,
 
-        value = if (a10.value or a10.Value) ~= nil then (a10.value or a10.Value) else false,
-    }, a1)
+        value = if (element.value or element.Value) ~= nil then (element.value or element.Value) else false,
+    }, state)
 
         self.window:_registerControl(self)
 
@@ -50,7 +50,7 @@ function a1.new(tab, a10)
     return self
 end
 
-function a1:_buildSwitch(a11)
+function state:_buildSwitch(frame)
     local window = self.window
 
     self.functionContainer = window:Create("Frame", {
@@ -58,7 +58,7 @@ function a1:_buildSwitch(a11)
         Size = UDim2.fromOffset(50, 21),
 
         BackgroundTransparency = 1,
-        Parent = a11,
+        Parent = frame,
     }, { BackgroundColor3 = "ToggleTrack" })
 
     window:Create("UICorner", {
@@ -126,8 +126,8 @@ function a1:_buildSwitch(a11)
     return self.functionContainer
 end
 
-function a1:_performToggle()
-    a8.click()
+function state:_performToggle()
+    value.click()
     self.value = not self.value
     self:_animateIndicator()
 
@@ -135,7 +135,7 @@ function a1:_performToggle()
     self.window:_persist(self)
 end
 
-function a1:_buildFull()
+function state:_buildFull()
     local window = self.window
 
     self.main = window:Create("Frame", {
@@ -184,7 +184,7 @@ function a1:_buildFull()
     end
 
     self.title = window:Create("TextLabel", {
-        Text = a7.t(self.name),
+        Text = flag.t(self.name),
         Size = UDim2.fromOffset(250, 16),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
@@ -217,14 +217,14 @@ function a1:_buildFull()
     self.window:_wireElementHover(self)
 
     self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
-        a3.tweenService
+        Toggle.tweenService
             :Create(
                 self.stroke,
-                a9,
+                callback,
                 { Transparency = 1 }
             )
             :Play()
-        a3.tweenService
+        Toggle.tweenService
             :Create(
                 self.main,
                 TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
@@ -240,24 +240,24 @@ function a1:_buildFull()
             return
         end
 
-        a3.tweenService
+        Toggle.tweenService
             :Create(
                 self.main,
                 TweenInfo.new(0.25, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
                 { Size = UDim2.new(1, -20, 0, 41) }
             )
             :Play()
-        a3.tweenService
+        Toggle.tweenService
             :Create(
                 self.stroke,
-                a9,
+                callback,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
     end)
 end
 
-function a1:_buildCompact()
+function state:_buildCompact()
     local window = self.window
 
         self.main, self.stroke, self.interact = window:_buildCompactRow(self.tab, self.name, 10)
@@ -317,7 +317,7 @@ function a1:_buildCompact()
     end
 
     self.title = window:Create("TextLabel", {
-        Text = a7.t(self.name),
+        Text = flag.t(self.name),
         Size = UDim2.fromOffset(0, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -342,10 +342,10 @@ function a1:_buildCompact()
     self.window:_wireElementHover(self)
 
     self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
-        a3.tweenService
+        Toggle.tweenService
             :Create(
                 self.stroke,
-                a9,
+                callback,
                 { Transparency = 1 }
             )
             :Play()
@@ -358,92 +358,92 @@ function a1:_buildCompact()
             return
         end
 
-        a3.tweenService
+        Toggle.tweenService
             :Create(
                 self.stroke,
-                a9,
+                callback,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
     end)
 end
 
-function a1:_animateIndicator()
-    local a12 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+function state:_animateIndicator()
+    local track = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
     if self.indicatorGlow then
-        a3.tweenService
-            :Create(self.indicatorGlow, a12, { Transparency = self.value and self.window.theme.AccentGlow or 1 })
+        Toggle.tweenService
+            :Create(self.indicatorGlow, track, { Transparency = self.value and self.window.theme.AccentGlow or 1 })
             :Play()
     end
     if self.value then
-        a3.tweenService
-            :Create(self.indicator, a12, {
+        Toggle.tweenService
+            :Create(self.indicator, track, {
                 Position = UDim2.new(1, -28, 0.5, 0),
                 BackgroundColor3 = self.window.theme.AccentColor,
                 BackgroundTransparency = 0,
             })
             :Play()
-        a3.tweenService
-            :Create(self.indicatorStroke, a12, { Color = self.window.theme.AccentStroke, Transparency = 0 })
+        Toggle.tweenService
+            :Create(self.indicatorStroke, track, { Color = self.window.theme.AccentStroke, Transparency = 0 })
             :Play()
     else
-        a3.tweenService
-            :Create(self.indicator, a12, {
+        Toggle.tweenService
+            :Create(self.indicator, track, {
                 Position = UDim2.new(1, -47, 0.5, 0),
                 BackgroundColor3 = self.window.theme.ToggleKnobOff,
                 BackgroundTransparency = self.window.theme.ToggleKnobOffTransparency,
             })
             :Play()
-        a3.tweenService
-            :Create(self.indicatorStroke, a12, { Color = Color3.fromRGB(255, 255, 255), Transparency = 0.7 })
+        Toggle.tweenService
+            :Create(self.indicatorStroke, track, { Color = Color3.fromRGB(255, 255, 255), Transparency = 0.7 })
             :Play()
     end
 end
 
-local a13 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local a14 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0.35)
+local knob = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local accentTween = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0.35)
 
-function a1:_setShown(a15, a16)
+function state:_setShown(flag, a16)
     local w = self.window
-    if a15 then
+    if flag then
         w:_revealCommon(self, a16)
                 w:_reveal(self.indicator, {
             BackgroundColor3 = self.value and w.theme.AccentColor or w.theme.ToggleKnobOff,
             BackgroundTransparency = self.value and 0 or w.theme.ToggleKnobOffTransparency,
-        }, a16, a13)
+        }, a16, knob)
         w:_reveal(self.indicatorStroke, {
             Color = self.value and w.theme.AccentStroke or Color3.fromRGB(255, 255, 255),
             Transparency = self.value and 0 or 0.7,
-        }, a16, a13)
+        }, a16, knob)
         w:_reveal(
             self.indicatorGlow,
             { Transparency = self.value and w.theme.AccentGlow or 1 },
             a16,
-            a14
+            accentTween
         )
-        w:_reveal(self.overlay, { BackgroundTransparency = 0 }, a16, a13)
-        w:_reveal(self.containerStroke, { Transparency = 0.85 }, a16, a13)
+        w:_reveal(self.overlay, { BackgroundTransparency = 0 }, a16, knob)
+        w:_reveal(self.containerStroke, { Transparency = 0.85 }, a16, knob)
         w:_reveal(
             self.functionContainer,
             { BackgroundTransparency = w.theme.ToggleTrackTransparency },
             a16,
-            a13
+            knob
         )
     else
         w:_hideCommon(self, a16)
-        w:_reveal(self.indicator, { BackgroundTransparency = 1 }, a16, a13)
-        w:_reveal(self.indicatorStroke, { Transparency = 1 }, a16, a13)
-        w:_reveal(self.indicatorGlow, { Transparency = 1 }, a16, a14)
-        w:_reveal(self.overlay, { BackgroundTransparency = 1 }, a16, a13)
-        w:_reveal(self.containerStroke, { Transparency = 1 }, a16, a13)
-        w:_reveal(self.functionContainer, { BackgroundTransparency = 1 }, a16, a13)
+        w:_reveal(self.indicator, { BackgroundTransparency = 1 }, a16, knob)
+        w:_reveal(self.indicatorStroke, { Transparency = 1 }, a16, knob)
+        w:_reveal(self.indicatorGlow, { Transparency = 1 }, a16, accentTween)
+        w:_reveal(self.overlay, { BackgroundTransparency = 1 }, a16, knob)
+        w:_reveal(self.containerStroke, { Transparency = 1 }, a16, knob)
+        w:_reveal(self.functionContainer, { BackgroundTransparency = 1 }, a16, knob)
     end
 end
 
-function a1:_refreshTheme()
+function state:_refreshTheme()
     local t = self.window.theme
     local a17 = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local ts = a3.tweenService
+    local ts = Toggle.tweenService
     ts:Create(self.functionContainer, a17, { BackgroundTransparency = t.ToggleTrackTransparency }):Play()
     ts:Create(self.indicator, a17, {
         BackgroundColor3 = self.value and t.AccentColor or t.ToggleKnobOff,
@@ -457,17 +457,17 @@ function a1:_refreshTheme()
     end
 end
 
-function a1:_minWidth()
+function state:_minWidth()
     local w = 30 + 10 + 50     if self.icon then
         w += 21     end
-        w += a4.textWidth(self.window.theme.Font, 16, a7.resolve(self.name))
+        w += tab.textWidth(self.window.theme.Font, 16, flag.resolve(self.name))
     return w
 end
 
-a5(a1)
-a6(a1)
+props(state)
+name(state)
 
-function a1:Set(a18, a19)
+function state:Set(a18, a19)
     local a20 = self.value ~= a18
     self.value = a18
 
@@ -480,4 +480,4 @@ function a1:Set(a18, a19)
         self.window:_persist(self)     end
 end
 
-return a1
+return state

@@ -1,44 +1,44 @@
-local a1 = script.Parent.Parent.utilities
-local a2 = require(a1.Parent.core.state)
-local a3 = require(script.Parent.Parent.images.image)
-local a4 = require(a1.locale)
-local a5 = require(script.Parent.tabSelector)
-local a6 = require(script.Parent.search)
+local utilities = script.Parent.Parent.utilities
+local state = require(utilities.Parent.core.state)
+local image = require(script.Parent.Parent.images.image)
+local locale = require(utilities.locale)
+local tabSelector = require(script.Parent.tabSelector)
+local search = require(script.Parent.search)
 
-local a7 = {}
+local sidebar = {}
 
-local a8 = 0
-local a9 = 0.7
-local a10 = 0.95
+local nameTransparency = 0
+local subtitleTransparency = 0.7
+local avatarBgTransparency = 0.95
 
-local function a11(a12)
-    a12 = tostring(a12 or "")
-    if a12 == "" then
+local function maskUsername(name)
+    name = tostring(name or "")
+    if name == "" then
         return "****"
     end
-    return string.sub(a12, 1, math.min(3, #a12)) .. "****"
+    return string.sub(name, 1, math.min(3, #name)) .. "****"
 end
 
-function a7.refreshProfileName(window)
-    if not window.profileName or not a2.localPlayer then
+function sidebar.refreshProfileName(window)
+    if not window.profileName or not state.localPlayer then
         return
     end
-    local a13 = a2.localPlayer.Name
-    window.profileName.Text = if window.settings.showFullUsername then a13 else a11(a13)
+    local fullName = state.localPlayer.Name
+    window.profileName.Text = if window.settings.showFullUsername then fullName else maskUsername(fullName)
 end
 
-local a14 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-a7.settleInfo = a14
+local settleTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+sidebar.settleInfo = settleTween
 
-local a15 = 0
+local buildGeneration = 0
 
-local a16 = setmetatable({}, { __mode = "k" })
+local avatarGenerations = setmetatable({}, { __mode = "k" })
 
-local a17 = setmetatable({}, { __mode = "k" })
+local avatarReady = setmetatable({}, { __mode = "k" })
 
-local a18 = "rbxassetid://0"
+local fallbackUri = "rbxassetid://0"
 
-local function a19(window)
+local function shouldShowProfile(window)
     -- Profile.Visible = Window.Visible AND settings.showProfile: the profile
     -- also hides while the window is minimised to the pill, where the topbar
     -- remains technically visible but the window content is not shown.
@@ -46,12 +46,12 @@ local function a19(window)
         and window.settings.showProfile
         and not window.hidden
         and not window.minimised
-        and a2.localPlayer ~= nil
+        and state.localPlayer ~= nil
 end
 
-function a7.buildProfile(window, a21)
-    local a22 = a2.localPlayer
-    if not a22 then
+function sidebar.buildProfile(window, layout)
+    local player = state.localPlayer
+    if not player then
         return
     end
 
@@ -68,27 +68,27 @@ function a7.buildProfile(window, a21)
         window.profileLabels = nil
     end
 
-    a15 += 1
-    local a23 = a15
+    buildGeneration += 1
+    local generation = buildGeneration
 
-    local a24 = a21.mode == "sidebar" and not a21.forceCollapsed
-    local a25 = a21.forceCollapsed == true
-    local a26 = a21.mode == "top"
+    local isSidebar = layout.mode == "sidebar" and not layout.forceCollapsed
+    local isCollapsed = layout.forceCollapsed == true
+    local isTop = layout.mode == "top"
 
-    if a24 then
+    if isSidebar then
         window.profile = window:Create("Frame", {
             Name = "Profile",
             AnchorPoint = Vector2.new(0.5, 1),
             Position = UDim2.fromScale(0.5, 1),
-            Size = UDim2.new(1, 0, 0, a21.footerHeight),
+            Size = UDim2.new(1, 0, 0, layout.footerHeight),
             BackgroundTransparency = 1,
             Parent = window.sidebar,
         })
 
         window.profileContainer = window:Create("Frame", {
             AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, a21.rowInset, 0.5, 0),
-            Size = UDim2.new(1, -a21.rowInset, 1, 0),
+            Position = UDim2.new(0, layout.rowInset, 0.5, 0),
+            Size = UDim2.new(1, -layout.rowInset, 1, 0),
             BackgroundTransparency = 1,
             Parent = window.profile,
         })
@@ -101,12 +101,12 @@ function a7.buildProfile(window, a21)
             SortOrder = Enum.SortOrder.LayoutOrder,
             Parent = window.profileContainer,
         })
-    elseif a26 then
+    elseif isTop then
         window.profile = window:Create("Frame", {
             Name = "Profile",
             AnchorPoint = Vector2.new(0, 1),
             Position = UDim2.new(0, 0, 1, -0),
-            Size = UDim2.new(1, 0, 0, a21.profileHeight),
+            Size = UDim2.new(1, 0, 0, layout.profileHeight),
             BackgroundTransparency = 1,
             Parent = window.topbar,
         })
@@ -149,11 +149,11 @@ function a7.buildProfile(window, a21)
         })
     end
 
-    local a27 = a21.avatarSize
+    local avatarSize = layout.avatarSize
 
     window.profileAvatar = window:Create("ImageLabel", {
         Name = "Avatar",
-        Size = UDim2.fromOffset(a27, a27),
+        Size = UDim2.fromOffset(avatarSize, avatarSize),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
@@ -167,10 +167,10 @@ function a7.buildProfile(window, a21)
     })
 
     window.profileLabels = window:Create("Frame", {
-        Size = UDim2.fromOffset(50, a27),
+        Size = UDim2.fromOffset(50, avatarSize),
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
-        LayoutOrder = a25 and 0 or 1,
+        LayoutOrder = isCollapsed and 0 or 1,
         Parent = window.profileContainer,
     })
 
@@ -184,7 +184,7 @@ function a7.buildProfile(window, a21)
     })
 
     window.profileName = window:Create("TextLabel", {
-        Text = if window.settings.showFullUsername then a22.Name else a11(a22.Name),
+        Text = if window.settings.showFullUsername then player.Name else maskUsername(player.Name),
         Size = UDim2.fromOffset(50, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
@@ -207,38 +207,38 @@ function a7.buildProfile(window, a21)
         Parent = window.profileLabels,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 
-    a16[window.profileAvatar] = a23
+    avatarGenerations[window.profileAvatar] = generation
 
-    local function a28(a29, a30)
-        if a16[a29] ~= a23 then
+    local function applyAvatar(avatarLabel, uri)
+        if avatarGenerations[avatarLabel] ~= generation then
             return
         end
-        if a30 ~= nil and a30 ~= "" then
-            a17[a29] = true
-            a3.assign(a29, "Image", a30)
+        if uri ~= nil and uri ~= "" then
+            avatarReady[avatarLabel] = true
+            image.assign(avatarLabel, "Image", uri)
         else
-            a17[a29] = nil
-            a3.assign(a29, "Image", a18)
+            avatarReady[avatarLabel] = nil
+            image.assign(avatarLabel, "Image", fallbackUri)
         end
     end
 
-    local a31 = a3.avatar(a22.UserId, function(a32)
+    local cachedUri = image.avatar(player.UserId, function(uri)
         if window.unloaded then
             return
         end
-        local a33 = window.profileAvatar
-        if not a33 then
+        local avatar = window.profileAvatar
+        if not avatar then
             return
         end
-        a28(a33, a32)
+        applyAvatar(avatar, uri)
     end)
 
-    if a31 ~= "" then
-        a28(window.profileAvatar, a31)
+    if cachedUri ~= "" then
+        applyAvatar(window.profileAvatar, cachedUri)
     end
 end
 
-function a7.buildTabRail(window, a34, collapsed)
+function sidebar.buildTabRail(window, layout, collapsed)
     window.tabList = window:Create("ScrollingFrame", {
         Name = if collapsed then "CollapsedTabs" else "Tabs",
         Active = true,
@@ -254,12 +254,12 @@ function a7.buildTabRail(window, a34, collapsed)
         Parent = window.sidebar,
     })
     window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, a34.railPadding),
-        PaddingBottom = UDim.new(0, a34.railPadding),
+        PaddingTop = UDim.new(0, layout.railPadding),
+        PaddingBottom = UDim.new(0, layout.railPadding),
         Parent = window.tabList,
     })
     window.tabListLayout = window:Create("UIListLayout", {
-        Padding = UDim.new(0, a34.rowSpacing),
+        Padding = UDim.new(0, layout.rowSpacing),
         FillDirection = Enum.FillDirection.Vertical,
         VerticalAlignment = Enum.VerticalAlignment.Top,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -268,157 +268,157 @@ function a7.buildTabRail(window, a34, collapsed)
     })
 end
 
-function a7.applyRailRows(window, a41, a42)
-    a6.railWidth(window, a41)
-    local a43 = a41 < (a42.railWidth :: number)
+function sidebar.applyRailRows(window, width, layout)
+    search.railWidth(window, width)
+    local isCollapsed = width < (layout.railWidth :: number)
     for _, tab in window.tabs do
         if not tab.neglectSelector then
-            a5.setRowCollapsed(tab, a43, a42)
+            tabSelector.setRowCollapsed(tab, isCollapsed, layout)
         end
     end
-    if window.profileContainer and a42.mode == "sidebar" then
-        window.profileContainer.Position = UDim2.new(0, if a43 then 0 else a42.rowInset, 0.5, 0)
-        window.profileContainer.Size = UDim2.new(1, if a43 then 0 else -a42.rowInset, 1, 0)
-        window.profileLayout.HorizontalAlignment = if a43
+    if window.profileContainer and layout.mode == "sidebar" then
+        window.profileContainer.Position = UDim2.new(0, if isCollapsed then 0 else layout.rowInset, 0.5, 0)
+        window.profileContainer.Size = UDim2.new(1, if isCollapsed then 0 else -layout.rowInset, 1, 0)
+        window.profileLayout.HorizontalAlignment = if isCollapsed
             then Enum.HorizontalAlignment.Center
             else Enum.HorizontalAlignment.Left
         if window.profileLabels then
-            window.profileLabels.Visible = not a43 and not a42.forceCollapsed
+            window.profileLabels.Visible = not isCollapsed and not layout.forceCollapsed
         end
     end
 end
 
-function a7.build(window, a34)
-    if a34.mode == "sidebar" then
+function sidebar.build(window, layout)
+    if layout.mode == "sidebar" then
         window.sidebar = window:Create("Frame", {
             Name = "Sidebar",
             AnchorPoint = Vector2.new(0, 1),
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(0, a34.railWidth, 1, -a34.chromeHeight),
+            Size = UDim2.new(0, layout.railWidth, 1, -layout.chromeHeight),
             BackgroundTransparency = 1,
             Visible = false,
             Parent = window.main,
         })
-        a7.buildTabRail(window, a34, a34.forceCollapsed == true)
+        sidebar.buildTabRail(window, layout, layout.forceCollapsed == true)
     end
-    a7.buildProfile(window, a34)
-    a7.reflowProfile(window)
+    sidebar.buildProfile(window, layout)
+    sidebar.reflowProfile(window)
 end
 
-function a7.reflowProfile(window)
-    local a37 = window.layout
-    local a38 = a19(window)
+function sidebar.reflowProfile(window)
+    local layout = window.layout
+    local shouldShow = shouldShowProfile(window)
 
     if window.profile then
-        window.profile.Visible = a38
+        window.profile.Visible = shouldShow
     end
 
-    if a37.mode == "sidebar" and not a37.forceCollapsed then
-        window.tabList.Size = UDim2.new(1, 0, 1, if a38 then -a37.footerHeight else 0)
-    elseif a37.mode == "top" then
-        window.profile.Size = UDim2.new(1, 0, 0, if a38 then a37.profileHeight else 0)
+    if layout.mode == "sidebar" and not layout.forceCollapsed then
+        window.tabList.Size = UDim2.new(1, 0, 1, if shouldShow then -layout.footerHeight else 0)
+    elseif layout.mode == "top" then
+        window.profile.Size = UDim2.new(1, 0, 0, if shouldShow then layout.profileHeight else 0)
         if window.profileContainer then
-            window.profileContainer.Visible = a38
+            window.profileContainer.Visible = shouldShow
         end
     end
 
-    if window.profileLabels and window.profileLabels.Visible ~= (not a37.forceCollapsed) then
-        window.profileLabels.Visible = not a37.forceCollapsed
+    if window.profileLabels and window.profileLabels.Visible ~= (not layout.forceCollapsed) then
+        window.profileLabels.Visible = not layout.forceCollapsed
     end
 
-    if window.profileContainer and a37.mode == "sidebar" then
-        local a39 = window.sidebar and window.sidebar.AbsoluteSize.X or a37.railWidth
-        local a40 = a39 < (a37.railWidth :: number)
-        window.profileContainer.Position = UDim2.new(0, if a40 then 0 else a37.rowInset, 0.5, 0)
-        window.profileContainer.Size = UDim2.new(1, if a40 then 0 else -a37.rowInset, 1, 0)
-        window.profileLayout.HorizontalAlignment = if a40
+    if window.profileContainer and layout.mode == "sidebar" then
+        local sidebarWidth = window.sidebar and window.sidebar.AbsoluteSize.X or layout.railWidth
+        local isCollapsed = sidebarWidth < (layout.railWidth :: number)
+        window.profileContainer.Position = UDim2.new(0, if isCollapsed then 0 else layout.rowInset, 0.5, 0)
+        window.profileContainer.Size = UDim2.new(1, if isCollapsed then 0 else -layout.rowInset, 1, 0)
+        window.profileLayout.HorizontalAlignment = if isCollapsed
             then Enum.HorizontalAlignment.Center
             else Enum.HorizontalAlignment.Left
     end
 end
 
-function a7.applyWidth(window, a41)
-    local a42 = window.layout
+function sidebar.applyWidth(window, width)
+    local layout = window.layout
 
-    window.sidebar.Size = UDim2.new(0, a41, 1, -a42.chromeHeight)
-    window.elements.Size = UDim2.new(1, -a41, 1, -a42.chromeHeight)
-    window.bottomFade.Size = UDim2.new(1, -a41, a42.fadeSize.Y.Scale, a42.fadeSize.Y.Offset)
-    a7.applyRailRows(window, a41, a42)
+    window.sidebar.Size = UDim2.new(0, width, 1, -layout.chromeHeight)
+    window.elements.Size = UDim2.new(1, -width, 1, -layout.chromeHeight)
+    window.bottomFade.Size = UDim2.new(1, -width, layout.fadeSize.Y.Scale, layout.fadeSize.Y.Offset)
+    sidebar.applyRailRows(window, width, layout)
 end
 
-function a7.setProfileShown(window, a44, a45)
+function sidebar.setProfileShown(window, shown, tweenInfo)
     if not window.profile then
         return
     end
 
     -- Window visibility wins over the requested state: never fade the
     -- profile in while the window is hidden or minimised.
-    if a44 and not a19(window) then
-        a44 = false
+    if shown and not shouldShowProfile(window) then
+        shown = false
     end
 
-    local a46 = window.profileAvatar
-    local a47
-    if a46 then
-        local a48 = a17[a46] == true
-            or (type(a46.Image) == "string" and a46.Image ~= "" and a46.Image ~= a18)
-        if a44 and a48 then
-            a47 = {
+    local avatar = window.profileAvatar
+    local avatarProps
+    if avatar then
+        local hasImage = avatarReady[avatar] == true
+            or (type(avatar.Image) == "string" and avatar.Image ~= "" and avatar.Image ~= fallbackUri)
+        if shown and hasImage then
+            avatarProps = {
                 ImageTransparency = 0,
-                BackgroundTransparency = a10,
+                BackgroundTransparency = avatarBgTransparency,
             }
         else
-            a47 = {
+            avatarProps = {
                 ImageTransparency = 1,
-                BackgroundTransparency = if a44 then a10 else 1,
+                BackgroundTransparency = if shown then avatarBgTransparency else 1,
                 BackgroundColor3 = window.theme.ContentColor,
             }
         end
     end
 
-    local a49 = {
-        [a46] = a47,
-        [window.profileName] = { TextTransparency = if a44 then a8 else 1 },
-        [window.profileSubtitle] = { TextTransparency = if a44 then a9 else 1 },
+    local targets = {
+        [avatar] = avatarProps,
+        [window.profileName] = { TextTransparency = if shown then nameTransparency else 1 },
+        [window.profileSubtitle] = { TextTransparency = if shown then subtitleTransparency else 1 },
     }
 
-    for a50, a51 in a49 do
-        if a50 and a51 then
-            if a45 then
-                a2.tweenService:Create(a50, a45, a51):Play()
+    for instance, props in targets do
+        if instance and props then
+            if tweenInfo then
+                state.tweenService:Create(instance, tweenInfo, props):Play()
             else
-                for a52, a53 in a51 do
-                    a50[a52] = a53
+                for prop, value in props do
+                    instance[prop] = value
                 end
             end
         end
     end
 end
 
-function a7.setProfileEnabled(window, a54)
+function sidebar.setProfileEnabled(window, enabled)
     if not window.profile then
-        window.settings.showProfile = a54
+        window.settings.showProfile = enabled
         return
     end
 
-    window.settings.showProfile = a54
-    a7.reflowProfile(window)
+    window.settings.showProfile = enabled
+    sidebar.reflowProfile(window)
 
-    if a54 then
-        a7.setProfileShown(window, true, a14)
+    if enabled then
+        sidebar.setProfileShown(window, true, settleTween)
     else
-        a7.setProfileShown(window, false, a14)
+        sidebar.setProfileShown(window, false, settleTween)
     end
 end
 
-function a7.setSubtitle(window, a55)
+function sidebar.setSubtitle(window, text)
     if not window.profileSubtitle then
         return
     end
 
-    local a56 = if type(a55) == "string" and a55 ~= "" then a4.resolve(a55) else nil
-    window.profileSubtitle.Text = a56 or ""
-    window.profileSubtitle.Visible = a56 ~= nil
+    local resolved = if type(text) == "string" and text ~= "" then locale.resolve(text) else nil
+    window.profileSubtitle.Text = resolved or ""
+    window.profileSubtitle.Visible = resolved ~= nil
 end
 
-return a7
+return sidebar

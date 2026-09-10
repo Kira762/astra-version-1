@@ -1,53 +1,53 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Input"
+local state = {}
+state.__index = state
+state.__type = "Input"
 
-local a2 = script.Parent.Parent.utilities
+local constants = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.moveable)
-local a6 = require(a2.lockable)
-local a7 = require(a2.locale)
-local a8 = require(a2.constants)
-local a9 = require(a2.HapticEngine)
+local Input = require(constants.Parent.core.state)
+local tab = require(script.Parent.Parent.functions)
+local props = require(constants.moveable)
+local name = require(constants.lockable)
+local placeholder = require(constants.locale)
+local numeric = require(constants.constants)
+local clearOnFocus = require(constants.HapticEngine)
 
-local a10 = a8.pillResizeInfo
-local a11 = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local callback = numeric.pillResizeInfo
+local element = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local function a12(a13)
-    local a, b = a13:match("^([%d%.%-]+)%^([%d%.%-]+)$")
+local function frame(textBox)
+    local a, b = textBox:match("^([%d%.%-]+)%^([%d%.%-]+)$")
     if a and b then
         local na, nb = tonumber(a), tonumber(b)
         if na and nb then
             return na ^ nb
         end
     end
-    return tonumber(a13)
+    return tonumber(textBox)
 end
 
-function a1.new(tab, a14)
-    a14 = if typeof(a14) == "table" then a14 else {}
+function state.new(tab, placeholderLabel)
+    placeholderLabel = if typeof(placeholderLabel) == "table" then placeholderLabel else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a14.name or a14.Name or "Input",
-        icon = tab.window:ResolveIcon(a14.icon or a14.Icon),
-        description = a14.description or a14.Description,
-        forgetState = a14.forgetState or a14.ForgetState or tab.forgetState,
-        placeholder = a14.placeholder or a14.Placeholder or "",
-        numeric = a14.numeric or a14.Numeric or false,         clearOnFocus = a14.clearOnFocus or a14.ClearOnFocus or false,
+        name = placeholderLabel.name or placeholderLabel.Name or "Input",
+        icon = tab.window:ResolveIcon(placeholderLabel.icon or placeholderLabel.Icon),
+        description = placeholderLabel.description or placeholderLabel.Description,
+        forgetState = placeholderLabel.forgetState or placeholderLabel.ForgetState or tab.forgetState,
+        placeholder = placeholderLabel.placeholder or placeholderLabel.Placeholder or "",
+        numeric = placeholderLabel.numeric or placeholderLabel.Numeric or false,         clearOnFocus = placeholderLabel.clearOnFocus or placeholderLabel.ClearOnFocus or false,
 
-        callback = a14.callback or a14.Callback or function() end,
-    }, a1)
+        callback = placeholderLabel.callback or placeholderLabel.Callback or function() end,
+    }, state)
 
     self.value =
-        tostring(a14.value or a14.Value or a14.currentValue or a14.CurrentValue or "")
+        tostring(placeholderLabel.value or placeholderLabel.Value or placeholderLabel.currentValue or placeholderLabel.CurrentValue or "")
 
-    self.flag = a14.flag
-        or a14.Flag
-        or (not self.forgetState and a4.deriveFlagFromName(self.name) or nil)
+    self.flag = placeholderLabel.flag
+        or placeholderLabel.Flag
+        or (not self.forgetState and tab.deriveFlagFromName(self.name) or nil)
     self.window:_registerControl(self)
 
     self.main = self.window:Create("Frame", {
@@ -96,7 +96,7 @@ function a1.new(tab, a14)
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a7.t(self.name),
+        Text = placeholder.t(self.name),
         Size = UDim2.fromOffset(150, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -134,7 +134,7 @@ function a1.new(tab, a14)
     self._glowIdle = 1
     self.input = self.window:Create("TextBox", {
         Text = self.value,
-        PlaceholderText = a7.t(self.placeholder),
+        PlaceholderText = placeholder.t(self.placeholder),
         Size = UDim2.new(1, -15, 0, 15),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -160,11 +160,11 @@ function a1.new(tab, a14)
     end)
 
         self.window:ConnectFor(self, self.input.Focused, function()
-        a3.tweenService:Create(self.input, a11, { TextTransparency = 0 }):Play()
+        Input.tweenService:Create(self.input, element, { TextTransparency = 0 }):Play()
     end)
 
         self.window:ConnectFor(self, self.input.FocusLost, function()
-        a3.tweenService:Create(self.input, a11, { TextTransparency = 0.6 }):Play()
+        Input.tweenService:Create(self.input, element, { TextTransparency = 0.6 }):Play()
                         if self.clearOnFocus and self.input.Text == "" and self.value ~= "" then
             self.input.Text = self.value
             return
@@ -184,20 +184,20 @@ function a1.new(tab, a14)
     return self
 end
 
-function a1:_sizeBox(a16)
+function state:_sizeBox(a16)
     local a17 = self.input.Text ~= "" and self.input.Text or self.placeholder
-    local a18 = math.clamp(a4.textWidth(self.window.theme.Font, 15, a17) + 30, 70, 220)
+    local a18 = math.clamp(tab.textWidth(self.window.theme.Font, 15, a17) + 30, 70, 220)
     if a16 then
-        a3.tweenService:Create(self.box, a10, { Size = UDim2.fromOffset(a18, 30) }):Play()
+        Input.tweenService:Create(self.box, callback, { Size = UDim2.fromOffset(a18, 30) }):Play()
     else
         self.box.Size = UDim2.fromOffset(a18, 30)
     end
 end
 
-function a1:_commit(a19, a20)
+function state:_commit(a19, a20)
     a19 = tostring(a19)
     if self.numeric then
-        local n = a12(a19)
+        local n = frame(a19)
         if not n or n ~= n or n == math.huge or n == -math.huge then
                         if self.input.Text ~= self.value then
                 self.input.Text = self.value
@@ -217,17 +217,17 @@ function a1:_commit(a19, a20)
         self.window:_runGuarded(self, self.callback, a19)
         self.window:_persist(self)
                         if a21 and not self.window._loading then
-            a9.click()
+            clearOnFocus.click()
             self.window:_flashResult(self, true)
         end
     end
 end
 
-function a1:Set(a22, a23)
+function state:Set(a22, a23)
     self:_commit(a22, a23)
 end
 
-function a1:_setShown(a24, a25)
+function state:_setShown(a24, a25)
     local w = self.window
     if a24 then
         w:_revealCommon(self, a25)
@@ -242,8 +242,8 @@ function a1:_setShown(a24, a25)
     end
 end
 
-function a1:_refreshTheme()
-    a3.tweenService
+function state:_refreshTheme()
+    Input.tweenService
         :Create(
             self.box,
             TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -252,7 +252,7 @@ function a1:_refreshTheme()
         :Play()
 end
 
-a5(a1)
-a6(a1)
+props(state)
+name(state)
 
-return a1
+return state

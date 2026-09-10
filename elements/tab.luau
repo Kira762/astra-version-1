@@ -1,26 +1,26 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Tab"
+local state = {}
+state.__index = state
+state.__type = "Tab"
 
-local a2 = script.Parent.Parent.utilities
+local constants = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(a2.ordering)
-local a5 = require(a2.HapticEngine)
-local a6 = require(script.Parent.Parent.components.search)
-local a7 = require(script.Parent.Parent.components.tabSelector)
+local Tab = require(constants.Parent.core.state)
+local window = require(constants.ordering)
+local props = require(constants.HapticEngine)
+local name = require(script.Parent.Parent.components.search)
+local icon = require(script.Parent.Parent.components.tabSelector)
 
-local function a8(window, a9)
-    for _, element in a9 do
+local function customOrder(window, forgetState)
+    for _, element in forgetState do
         if element.__type == "Group" then
-            a8(window, element.elements)
+            customOrder(window, element.elements)
         else
             window:_unregisterControl(element)
         end
 
                 if element.connections then
-            for _, a10 in element.connections do
-                window:Disconnect(a10)
+            for _, neglectSelector in element.connections do
+                window:Disconnect(neglectSelector)
             end
             element.connections = nil
         end
@@ -39,11 +39,11 @@ local function a8(window, a9)
     end
 end
 
-local a11 = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local a12 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local element = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local page = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local function a13(a14)
-    if a14.mode == "sidebar" then
+local function selector(elements)
+    if elements.mode == "sidebar" then
         return UDim2.new(1, -35, 1, 0)
     end
     return UDim2.new(1, -20, 1, 0)
@@ -56,7 +56,7 @@ local function a15(a16)
     return UDim2.new(0, 0, 0, 0)
 end
 
-function a1.new(window, a17)
+function state.new(window, a17)
     a17 = if typeof(a17) == "table" then a17 else {}
 
     local self = setmetatable({
@@ -69,17 +69,17 @@ function a1.new(window, a17)
         _isSettingsTab = a17.isSettingsTab == true or a17.IsSettingsTab == true,
 
         elements = {},
-        connections = {},     }, a1)
+        connections = {},     }, state)
 
         assert(self.name or self.icon, "A tab needs a name or an icon.")
 
         if not self.neglectSelector then
-        a7.build(self, self.window.layout)
+        icon.build(self, self.window.layout)
     end
 
         self.tabPage = self.window:Create("ScrollingFrame", {
         Name = self.name,
-        Size = a13(self.window.layout),
+        Size = selector(self.window.layout),
         Position = a15(self.window.layout),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
@@ -115,12 +115,12 @@ function a1.new(window, a17)
     return self
 end
 
-function a1:_bindSelector()
+function state:_bindSelector()
     if self.neglectSelector or not self.topbarItemInteract then
         return
     end
     table.insert(self.connections, self.window:Connect(self.topbarItemInteract.MouseButton1Click, function()
-        a5.click()
+        props.click()
         self:Select()
     end))
     table.insert(self.connections, self.window:Connect(self.topbarItemInteract.MouseEnter, function()
@@ -128,18 +128,18 @@ function a1:_bindSelector()
             return
         end
         if self.window.selectedTab ~= self then
-            self:_applyVisual("hover", a12)
+            self:_applyVisual("hover", page)
             self:_spinGradients()
         end
     end))
     table.insert(self.connections, self.window:Connect(self.topbarItemInteract.MouseLeave, function()
         if self.window.selectedTab ~= self then
-            self:_applyVisual("unselected", a12)
+            self:_applyVisual("unselected", page)
         end
     end))
 end
 
-function a1:_rebuildSelector()
+function state:_rebuildSelector()
     if self.neglectSelector then
         return
     end
@@ -150,37 +150,37 @@ function a1:_rebuildSelector()
     if self.topbarItem then
         self.window:DestroySubtree(self.topbarItem)
     end
-    a7.build(self, self.window.layout)
+    icon.build(self, self.window.layout)
     self:_bindSelector()
 end
 
-function a1:_applyVisual(a19, a20)
+function state:_applyVisual(a19, a20)
     if self.neglectSelector or not self.topbarItem then
         return
     end
 
-    local a21 = a7.states[self.window.layout.mode][a19]
+    local a21 = icon.states[self.window.layout.mode][a19]
     if not a21 then
         return
     end
 
-    a7.applyVisual(self, a21, a20)
+    icon.applyVisual(self, a21, a20)
 end
 
-function a1:_spinGradients()
+function state:_spinGradients()
     if self.neglectSelector then
         return
     end
 
     local a22 = TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     for _, a23 in { self.topbarItemGradient, self.topbarItemStrokeGradient } do
-        a23.Rotation = 90 - 360         a3.tweenService:Create(a23, a22, { Rotation = 90 }):Play()
+        a23.Rotation = 90 - 360         Tab.tweenService:Create(a23, a22, { Rotation = 90 }):Play()
     end
 end
 
-function a1:Select(a24)
+function state:Select(a24)
             if self.window._searching then
-        a6.close(self.window, { showTabs = true, jumpTo = false })
+        name.close(self.window, { showTabs = true, jumpTo = false })
     end
 
     self.window.selectedTab = self
@@ -194,7 +194,7 @@ function a1:Select(a24)
                     local a25 = a24 or not self.window:_interactive()
 
     if not self.neglectSelector and not a25 then
-        self:_applyVisual("selected", a11)
+        self:_applyVisual("selected", element)
     end
 
     for _, tab in self.window.tabs do
@@ -204,7 +204,7 @@ function a1:Select(a24)
     end
 
     if self ~= self.window.rfSettings and self.window.settingsAction and not a25 then
-        a3.tweenService
+        Tab.tweenService
             :Create(
                 self.window.settingsAction.iconLabel,
                 TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -214,15 +214,15 @@ function a1:Select(a24)
     end
 end
 
-function a1:Deselect(a26)
+function state:Deselect(a26)
     if not self.neglectSelector and not a26 then
-        self:_applyVisual("unselected", a11)
+        self:_applyVisual("unselected", element)
     end
 end
 
-function a1:_register(element)
+function state:_register(element)
     table.insert(self.elements, element)
-    a4(element, #self.elements * 10)
+    window(element, #self.elements * 10)
     self.window:_restoreLate(element)
 
     if not self.window.hidden then
@@ -232,67 +232,67 @@ function a1:_register(element)
     return element
 end
 
-function a1:CreateButton(a27)
+function state:CreateButton(a27)
     return self:_register(require(script.Parent.button).new(self, a27))
 end
 
-function a1:CreateToggle(a28)
+function state:CreateToggle(a28)
     return self:_register(require(script.Parent.toggle).new(self, a28))
 end
 
-function a1:CreateSwitch(a29)
+function state:CreateSwitch(a29)
     return self:CreateToggle(a29)
 end
 
-function a1:CreateSection(a30)
+function state:CreateSection(a30)
     return self:_register(require(script.Parent.section).new(self, a30))
 end
 
-function a1:CreateText(a31)
+function state:CreateText(a31)
     return self:_register(require(script.Parent.text).new(self, a31))
 end
 
-function a1:CreateDivider(a32)
+function state:CreateDivider(a32)
     return self:_register(require(script.Parent.divider).new(self, a32))
 end
 
-function a1:CreateProgress(a33)
+function state:CreateProgress(a33)
     return self:_register(require(script.Parent.progress).new(self, a33))
 end
 
-function a1:CreateConsole(a34)
+function state:CreateConsole(a34)
     return self:_register(require(script.Parent.console).new(self, a34))
 end
 
-function a1:CreateStat(a35)
+function state:CreateStat(a35)
     return self:_register(require(script.Parent.stat).new(self, a35))
 end
 
-function a1:CreateSlider(a36)
+function state:CreateSlider(a36)
     return self:_register(require(script.Parent.slider).new(self, a36))
 end
 
-function a1:CreateDropdown(a37)
+function state:CreateDropdown(a37)
     return self:_register(require(script.Parent.dropdown).new(self, a37))
 end
 
-function a1:CreateInput(a38)
+function state:CreateInput(a38)
     return self:_register(require(script.Parent.input).new(self, a38))
 end
 
-function a1:CreateKeybind(a39)
+function state:CreateKeybind(a39)
     return self:_register(require(script.Parent.keybind).new(self, a39))
 end
 
-function a1:CreateColorPicker(a40)
+function state:CreateColorPicker(a40)
     return self:_register(require(script.Parent.colorpicker).new(self, a40))
 end
 
-function a1:CreateGroup(a41)
+function state:CreateGroup(a41)
     return self:_register(require(script.Parent.group).new(self, a41))
 end
 
-function a1:_moveElement(element, a42)
+function state:_moveElement(element, a42)
     local a43 = table.find(self.elements, element)
     if not a43 then
         return
@@ -301,15 +301,15 @@ function a1:_moveElement(element, a42)
     a42 = math.clamp(a42, 1, #self.elements + 1)
     table.insert(self.elements, a42, element)
     for i, el in self.elements do
-        a4(el, i * 10)
+        window(el, i * 10)
     end
 end
 
-function a1:Remove()
+function state:Remove()
     local window = self.window
 
             if window._searching then
-        a6.close(window, { showTabs = true, jumpTo = window.selectedTab and window.selectedTab.tabPage })
+        name.close(window, { showTabs = true, jumpTo = window.selectedTab and window.selectedTab.tabPage })
     end
 
     local a44 = table.find(window.tabs, self)
@@ -327,7 +327,7 @@ function a1:Remove()
         end
     end
 
-            a8(window, self.elements)
+            customOrder(window, self.elements)
 
             for _, a45 in self.connections do
         window:Disconnect(a45)
@@ -345,4 +345,4 @@ function a1:Remove()
     self.elements = {}
 end
 
-return a1
+return state

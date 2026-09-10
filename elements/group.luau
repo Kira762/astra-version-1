@@ -1,25 +1,25 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Group"
+local state = {}
+state.__index = state
+state.__type = "Group"
 
-local a2 = require(script.Parent.Parent.utilities.moveable)
-local a3 = require(script.Parent.Parent.utilities.log)
-local a4 = require(script.Parent.Parent.utilities.ordering)
+local constants = require(script.Parent.Parent.utilities.moveable)
+local Group = require(script.Parent.Parent.utilities.log)
+local tab = require(script.Parent.Parent.utilities.ordering)
 
-local a5 = 8
+local props = 8
 
-local a6 = {
+local direction = {
     button = true,
     toggle = true,
     stat = true,
     slider = true,
 }
 
-function a1.new(tab, a7)
-    a7 = if typeof(a7) == "table" then a7 else {}
+function state.new(tab, element)
+    element = if typeof(element) == "table" then element else {}
 
-    local a8 = string.lower(a7.direction or a7.Direction or "row")
-    local a9 = a8 == "column" or a8 == "vertical"
+    local frame = string.lower(element.direction or element.Direction or "row")
+    local a9 = frame == "column" or frame == "vertical"
     local a10 = not a9
     local a11 = if a10 then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical
 
@@ -27,7 +27,7 @@ function a1.new(tab, a7)
         tab = assert(tab, "Missing argument #1 (Tab expected)"),         window = tab.window,
         direction = a11,
         compact = a10,         forgetState = tab.forgetState,         elements = {},
-    }, a1)
+    }, state)
 
         local a12 = tab.direction == Enum.FillDirection.Horizontal
 
@@ -54,7 +54,7 @@ function a1.new(tab, a7)
     self.layout = self.window:Create("UIListLayout", {
         FillDirection = a11,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, a5),
+        Padding = UDim.new(0, props),
         VerticalAlignment = if a10 then Enum.VerticalAlignment.Center else Enum.VerticalAlignment.Top,
         HorizontalAlignment = if a10 then Enum.HorizontalAlignment.Left else Enum.HorizontalAlignment.Center,
 
@@ -64,9 +64,9 @@ function a1.new(tab, a7)
     return self
 end
 
-function a1:_add(a13, a14)
-    if self.compact and not a6[a13] then
-        a3.warn(
+function state:_add(a13, a14)
+    if self.compact and not direction[a13] then
+        Group.warn(
             `Astra: a row only holds compact elements (button/toggle/stat/slider), ignoring '{a13}'. Use a column for it.`
         )
         return nil
@@ -74,7 +74,7 @@ function a1:_add(a13, a14)
 
     local element = require(script.Parent[a13]).new(self, a14)
     table.insert(self.elements, element)
-    a4(element, #self.elements * 10)
+    tab(element, #self.elements * 10)
     self.window:_restoreLate(element)
 
     if self.compact then
@@ -88,7 +88,7 @@ function a1:_add(a13, a14)
     return element
 end
 
-function a1:_reflowRow()
+function state:_reflowRow()
     if self.direction ~= Enum.FillDirection.Horizontal then
         return
     end
@@ -101,10 +101,10 @@ function a1:_reflowRow()
         end
     end
 
-    self.layout.Padding = if a15 then UDim.new(0, -10) else UDim.new(0, a5)
+    self.layout.Padding = if a15 then UDim.new(0, -10) else UDim.new(0, props)
 end
 
-function a1:_wrapChild(element)
+function state:_wrapChild(element)
     self.layout.Wraps = true
     self.layout.HorizontalFlex = Enum.UIFlexAlignment.Fill
 
@@ -117,35 +117,35 @@ function a1:_wrapChild(element)
     end
 end
 
-function a1:CreateButton(a17)
+function state:CreateButton(a17)
     return self:_add("button", a17)
 end
-function a1:CreateToggle(a18)
+function state:CreateToggle(a18)
     return self:_add("toggle", a18)
 end
-function a1:CreateSwitch(a19)
+function state:CreateSwitch(a19)
     return self:_add("toggle", a19)
 end
-function a1:CreateStat(a20)
+function state:CreateStat(a20)
     return self:_add("stat", a20)
 end
-function a1:CreateSlider(a21)
+function state:CreateSlider(a21)
     return self:_add("slider", a21)
 end
-function a1:CreateDropdown(a22)
+function state:CreateDropdown(a22)
     return self:_add("dropdown", a22)
 end
-function a1:CreateSection(a23)
+function state:CreateSection(a23)
     return self:_add("section", a23)
 end
-function a1:CreateText(a24)
+function state:CreateText(a24)
     return self:_add("text", a24)
 end
-function a1:CreateDivider(a25)
+function state:CreateDivider(a25)
     return self:_add("divider", a25)
 end
 
-function a1:_addGroup(a26)
+function state:_addGroup(a26)
     a26 = if typeof(a26) == "table" then table.clone(a26) else {}
 
         if self.direction == Enum.FillDirection.Horizontal then
@@ -155,18 +155,18 @@ function a1:_addGroup(a26)
         end
     end
 
-    local a27 = a1.new(self, a26)
+    local a27 = state.new(self, a26)
     table.insert(self.elements, a27)
     a27.main.LayoutOrder = #self.elements * 10
     self:_reflowRow()
     return a27
 end
 
-function a1:CreateGroup(a28)
+function state:CreateGroup(a28)
     return self:_addGroup(a28)
 end
 
-function a1:_moveElement(element, a29)
+function state:_moveElement(element, a29)
     local a30 = table.find(self.elements, element)
     if not a30 then
         return
@@ -175,17 +175,17 @@ function a1:_moveElement(element, a29)
     a29 = math.clamp(a29, 1, #self.elements + 1)
     table.insert(self.elements, a29, element)
     for i, el in self.elements do
-        a4(el, i * 10)
+        tab(el, i * 10)
     end
 end
 
-function a1:_setShown(a31, a32)
+function state:_setShown(a31, a32)
     for _, el in self.elements do
         el:_setShown(a31, a32)
     end
 end
 
-function a1:_refreshTheme()
+function state:_refreshTheme()
     for _, el in self.elements do
         if el._refreshTheme then
             el:_refreshTheme()
@@ -193,6 +193,6 @@ function a1:_refreshTheme()
     end
 end
 
-a2(a1)
+constants(state)
 
-return a1
+return state

@@ -1,4 +1,4 @@
-local a1 = require(script.Parent.filesystem)
+local filesystemManager = require(script.Parent.filesystem)
 local a2 = require(script.Parent.path)
 
 local a3 = "Astra"
@@ -20,8 +20,8 @@ function a4.new(a5: string?): FileSystemManager
         root = a6,
         assets = a6 .. "/Assets",
     }, a4) :: any
-    pcall(a1.ensureFolder, self.root)
-    pcall(a1.ensureFolder, self.assets)
+    pcall(filesystemManager.ensureFolder, self.root)
+    pcall(filesystemManager.ensureFolder, self.assets)
 
     return self
 end
@@ -33,7 +33,7 @@ end
 function a4:getAssetsFolder(a8: string?): string
     if a8 then
         local a9 = a2.join(self.assets, a8)
-        pcall(a1.ensureFolder, a9)
+        pcall(filesystemManager.ensureFolder, a9)
         return a9
     end
     return self.assets

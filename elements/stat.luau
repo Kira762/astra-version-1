@@ -1,27 +1,27 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Statistic"
+local state = {}
+state.__index = state
+state.__type = "Statistic"
 
-local a2 = script.Parent.Parent.utilities
+local constants = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.odometer)
-local a6 = require(a2.moveable)
-local a7 = require(a2.constants)
-local a8 = require(a2.locale)
-local a9 = require(a2.log)
+local Stat = require(constants.Parent.core.state)
+local tab = require(script.Parent.Parent.functions)
+local props = require(constants.odometer)
+local name = require(constants.moveable)
+local value = require(constants.constants)
+local prefix = require(constants.locale)
+local suffix = require(constants.log)
 
-local a10 = a7.statAccents
+local element = value.statAccents
 
-local a11 = NumberSequence.new({
+local frame = NumberSequence.new({
     NumberSequenceKeypoint.new(0, 0.85),
     NumberSequenceKeypoint.new(1, 0),
 })
 
-local a12 = 41
+local valueLabel = 41
 
-local a13 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential)
+local baseline = TweenInfo.new(0.6, Enum.EasingStyle.Exponential)
 
 local function a14(a15)
     return a15.fill.Keypoints[1].Value
@@ -61,7 +61,7 @@ local function a22(a23)
     end
 end
 
-function a1.new(tab, a25)
+function state.new(tab, a25)
     a25 = if typeof(a25) == "table" then a25 else {}
 
     local self = setmetatable({
@@ -90,7 +90,7 @@ function a1.new(tab, a25)
             then (a25.value or a25.Value)
             else nil,
         _lastChange = 0,
-    }, a1)
+    }, state)
 
     if self.compact then
         self:_buildCompact()
@@ -100,7 +100,7 @@ function a1.new(tab, a25)
 
     if self.description then
         if self.compact then
-            a9.warn(`Astra: a compact stat has no room for a description, ignoring it on '{self.name}'.`)
+            suffix.warn(`Astra: a compact stat has no room for a description, ignoring it on '{self.name}'.`)
         else
             self.descriptor = require(script.Parent.descriptor).new(self.tab, { description = self.description })
         end
@@ -109,7 +109,7 @@ function a1.new(tab, a25)
     return self
 end
 
-function a1:_buildFull()
+function state:_buildFull()
     local window = self.window
 
     self.main = window:Create("Frame", {
@@ -136,8 +136,8 @@ function a1:_buildFull()
     self.strokeGradient = window:Create("UIGradient", {
         Rotation = 2,
         Offset = Vector2.new(0, 0.5),
-        Color = a10.neutral.stroke,
-        Transparency = a11,
+        Color = element.neutral.stroke,
+        Transparency = frame,
 
         Parent = self.stroke,
     })
@@ -163,10 +163,10 @@ function a1:_buildFull()
         Parent = self.main,
     })
 
-            self.glow = window:CreateGlow(self.main, a14(a10.neutral), 13, 1)
+            self.glow = window:CreateGlow(self.main, a14(element.neutral), 13, 1)
 
     self.title = window:Create("TextLabel", {
-        Text = a8.t(self.name),
+        Text = prefix.t(self.name),
 
         Size = UDim2.fromOffset(300, 19),
         BorderSizePixel = 0,
@@ -184,8 +184,8 @@ function a1:_buildFull()
     self.mainGradient = window:Create("UIGradient", {
         Rotation = 2,
         Offset = Vector2.new(0, 0.5),
-        Color = a10.neutral.fill,
-        Transparency = a11,
+        Color = element.neutral.fill,
+        Transparency = frame,
 
         Parent = self.gradientContainer,
     })
@@ -239,13 +239,13 @@ function a1:_buildFull()
         Parent = self.main,
     })
 
-    self.valueOdo = a5.new(window, self.valueHost, {
+    self.valueOdo = props.new(window, self.valueHost, {
         textSize = 20,
         alignment = Enum.HorizontalAlignment.Left,
         transparency = 1,     })
     self.valueOdo:snap(self:_formatValue(self.value))
 
-    self.changeOdo = a5.new(window, self.changeHost, {
+    self.changeOdo = props.new(window, self.changeHost, {
         textSize = 15,
         alignment = Enum.HorizontalAlignment.Right,
         transparency = 1,
@@ -255,14 +255,14 @@ function a1:_buildFull()
     self._accentGradients = { self.strokeGradient, self.mainGradient }
 end
 
-function a1:_buildCompact()
+function state:_buildCompact()
     local window = self.window
 
         local a26 = self.tab.compact or false
 
     self.main = window:Create("Frame", {
         Name = self.name,
-        Size = if a26 then UDim2.fromOffset(0, a12) else UDim2.new(1, -20, 0, a12),
+        Size = if a26 then UDim2.fromOffset(0, valueLabel) else UDim2.new(1, -20, 0, valueLabel),
         AutomaticSize = if a26 then Enum.AutomaticSize.X else Enum.AutomaticSize.None,
         ClipsDescendants = true,
         BorderSizePixel = 0,
@@ -285,8 +285,8 @@ function a1:_buildCompact()
     self.strokeGradient = window:Create("UIGradient", {
         Rotation = 2,
         Offset = Vector2.new(0, 0.5),
-        Color = a10.neutral.stroke,
-        Transparency = a11,
+        Color = element.neutral.stroke,
+        Transparency = frame,
 
         Parent = self.stroke,
     })
@@ -308,7 +308,7 @@ function a1:_buildCompact()
 
         self.card = window:Create("Frame", {
         AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, a12),
+        Size = UDim2.fromOffset(0, valueLabel),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 5,
@@ -324,8 +324,8 @@ function a1:_buildCompact()
     self.mainGradient = window:Create("UIGradient", {
         Rotation = 2,
         Offset = Vector2.new(0, 0.5),
-        Color = a10.neutral.fill,
-        Transparency = a11,
+        Color = element.neutral.fill,
+        Transparency = frame,
 
         Parent = self.card,
     })
@@ -386,7 +386,7 @@ function a1:_buildCompact()
     end
 
     self.title = window:Create("TextLabel", {
-        Text = a8.t(self.name),
+        Text = prefix.t(self.name),
         Size = UDim2.fromOffset(0, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -416,7 +416,7 @@ function a1:_buildCompact()
         Parent = self.card,
     })
 
-    self.readoutOdo = a5.new(window, self.readoutHost, {
+    self.readoutOdo = props.new(window, self.readoutHost, {
         textSize = 17,
         alignment = Enum.HorizontalAlignment.Right,
         transparency = 1,
@@ -426,8 +426,8 @@ function a1:_buildCompact()
     self._accentGradients = { self.strokeGradient, self.mainGradient }
 end
 
-function a1:_setAccent(a27, a28)
-    local a29 = a10[a27]
+function state:_setAccent(a27, a28)
+    local a29 = element[a27]
     self.strokeGradient.Color = a29.stroke
     self.mainGradient.Color = a29.fill
     if self.glow then
@@ -440,15 +440,15 @@ function a1:_setAccent(a27, a28)
         elseif a28 == -1 then Vector2.new(-0.04, 0.5)
         else Vector2.new(0, 0.5)
     for _, a32 in self._accentGradients do
-        a3.tweenService:Create(a32, a13, { Rotation = a30, Offset = a31 }):Play()
+        Stat.tweenService:Create(a32, baseline, { Rotation = a30, Offset = a31 }):Play()
     end
 end
 
-function a1:_formatValue(a33)
+function state:_formatValue(a33)
     return self.prefix .. a18(a33) .. self.suffix
 end
 
-function a1:_formatChange(a34)
+function state:_formatChange(a34)
     if self.changeMode == "absolute" then
         return a22(a34)
     else
@@ -456,7 +456,7 @@ function a1:_formatChange(a34)
     end
 end
 
-function a1:_showValue(a35, a36, a37, a38)
+function state:_showValue(a35, a36, a37, a38)
     if self.numberEasing and not a38 then
         a35:to(self:_formatValue(a36), a36 >= a37)
     else
@@ -464,7 +464,7 @@ function a1:_showValue(a35, a36, a37, a38)
     end
 end
 
-function a1:_updateFullReadouts(a39, a40, a41, a42, a43, a44)
+function state:_updateFullReadouts(a39, a40, a41, a42, a43, a44)
     self:_showValue(self.valueOdo, a39, a40, a44)
 
     if a43 then
@@ -479,7 +479,7 @@ function a1:_updateFullReadouts(a39, a40, a41, a42, a43, a44)
     end
 end
 
-function a1:_updateCompactReadout(a45, a46, a47, a48, a49, a50)
+function state:_updateCompactReadout(a45, a46, a47, a48, a49, a50)
     if self.display == "change" then
         if a49 then
             self.readoutOdo:snap(a49)
@@ -495,7 +495,7 @@ function a1:_updateCompactReadout(a45, a46, a47, a48, a49, a50)
     end
 end
 
-function a1:Set(a51)
+function state:Set(a51)
     assert(typeof(a51) == "number", "Statistic:Set() - value must be a number, got " .. typeof(a51))
 
     local a52 = self.value
@@ -540,7 +540,7 @@ function a1:Set(a51)
     end
 end
 
-function a1:ResetBaseline(a62)
+function state:ResetBaseline(a62)
     local a63 = self.value
     local a64 = not self._hasValue
     local a65 = if typeof(a62) == "number" then a62 else self.value
@@ -563,7 +563,7 @@ function a1:ResetBaseline(a62)
     self:_setAccent("neutral", 0)
 end
 
-function a1:_setShown(a66, a67)
+function state:_setShown(a66, a67)
     local w = self.window
 
     if self.compact then
@@ -601,15 +601,15 @@ function a1:_setShown(a66, a67)
     end
 end
 
-function a1:_minWidth()
+function state:_minWidth()
     local w = 30 + 10     if self.icon then
         w += 26     end
-        w += a4.textWidth(self.window.theme.Font, 16, a8.resolve(self.name))
+        w += tab.textWidth(self.window.theme.Font, 16, prefix.resolve(self.name))
     local a68 = if self.display == "change" then self:_formatChange(0) else self:_formatValue(self.value)
-    w += a4.textWidth(self.window.theme.Font, 17, a68)
+    w += tab.textWidth(self.window.theme.Font, 17, a68)
     return w
 end
 
-a6(a1)
+name(state)
 
-return a1
+return state

@@ -1,17 +1,17 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Descriptor"
+local state = {}
+state.__index = state
+state.__type = "Descriptor"
 
-local a2 = require(script.Parent.Parent.utilities.locale)
+local constants = require(script.Parent.Parent.utilities.locale)
 
-function a1.new(tab, a3)
-    a3 = if typeof(a3) == "table" then a3 else {}
+function state.new(tab, Descriptor)
+    Descriptor = if typeof(Descriptor) == "table" then Descriptor else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        description = a3.description or a3.Description or "",
-    }, a1)
+        description = Descriptor.description or Descriptor.Description or "",
+    }, state)
 
     self.main = self.window:Create("Frame", {
         AutomaticSize = Enum.AutomaticSize.Y,
@@ -31,7 +31,7 @@ function a1.new(tab, a3)
         BackgroundTransparency = 1,
         RichText = true,
         Size = UDim2.new(1, -90, 0, 0),
-        Text = a2.t(self.description),
+        Text = constants.t(self.description),
         TextSize = 12,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -51,8 +51,8 @@ function a1.new(tab, a3)
     return self
 end
 
-function a1:Remove()
+function state:Remove()
     self.main:Destroy()
 end
 
-return a1
+return state

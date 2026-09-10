@@ -1,11 +1,11 @@
 
-local a1 = {}
+local performance = {}
 
-function a1.validate(a2: string, a3: any): (boolean, any)
-    if a2 == "haptics" then
-        return type(a3) == "boolean", a3 == true
+function performance.validate(key: string, value: any): (boolean, any)
+    if key == "haptics" then
+        return type(value) == "boolean", value == true
     end
     return false, nil
 end
 
-return a1
+return performance

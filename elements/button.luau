@@ -1,29 +1,29 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Button"
+local state = {}
+state.__index = state
+state.__type = "Button"
 
-local a2 = script.Parent.Parent.utilities
+local constants = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.moveable)
-local a6 = require(a2.lockable)
-local a7 = require(a2.locale)
-local a8 = require(a2.HapticEngine)
-local a9 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local Button = require(constants.Parent.core.state)
+local tab = require(script.Parent.Parent.functions)
+local props = require(constants.moveable)
+local name = require(constants.lockable)
+local icon = require(constants.locale)
+local callback = require(constants.HapticEngine)
+local element = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-function a1.new(tab, a10)
-    a10 = if typeof(a10) == "table" then a10 else {}
+function state.new(tab, frame)
+    frame = if typeof(frame) == "table" then frame else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a10.name or a10.Name or "Button",
-        icon = tab.window:ResolveIcon(a10.icon or a10.Icon),
-        description = a10.description or a10.Description,
+        name = frame.name or frame.Name or "Button",
+        icon = tab.window:ResolveIcon(frame.icon or frame.Icon),
+        description = frame.description or frame.Description,
         compact = tab.compact or false,
-        callback = a10.callback or a10.Callback or function() end,
-    }, a1)
+        callback = frame.callback or frame.Callback or function() end,
+    }, state)
 
     if self.compact then
         self:_buildCompact()
@@ -38,11 +38,11 @@ function a1.new(tab, a10)
     return self
 end
 
-function a1:_runCallback()
+function state:_runCallback()
     self.window:_runGuarded(self, self.callback)
 end
 
-function a1:_buildFull()
+function state:_buildFull()
     self.main = self.window:Create("Frame", {
         Size = UDim2.new(1, -20, 0, 43),
         BorderSizePixel = 0,
@@ -88,7 +88,7 @@ function a1:_buildFull()
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a7.t(self.name),
+        Text = icon.t(self.name),
 
         Size = UDim2.fromOffset(250, 16),
         BorderSizePixel = 0,
@@ -117,15 +117,15 @@ function a1:_buildFull()
     self.window:_wireElementHover(self)
 
         self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
-        a8.click()
-        a3.tweenService
+        callback.click()
+        Button.tweenService
             :Create(
                 self.stroke,
-                a9,
+                element,
                 { Transparency = 1 }
             )
             :Play()
-        a3.tweenService
+        Button.tweenService
             :Create(
                 self.main,
                 TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
@@ -141,24 +141,24 @@ function a1:_buildFull()
             return
         end
 
-        a3.tweenService
+        Button.tweenService
             :Create(
                 self.main,
                 TweenInfo.new(0.25, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
                 { Size = UDim2.new(1, -20, 0, 43) }
             )
             :Play()
-        a3.tweenService
+        Button.tweenService
             :Create(
                 self.stroke,
-                a9,
+                element,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
     end)
 end
 
-function a1:_buildCompact()
+function state:_buildCompact()
     local window = self.window
 
     self.main, self.stroke, self.interact = window:_buildCompactRow(self.tab, self.name)
@@ -194,7 +194,7 @@ function a1:_buildCompact()
     end
 
     self.title = window:Create("TextLabel", {
-        Text = a7.t(self.name),
+        Text = icon.t(self.name),
         Size = UDim2.fromOffset(0, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -216,11 +216,11 @@ function a1:_buildCompact()
     self.window:_wireElementHover(self)
 
         self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
-        a8.click()
-        a3.tweenService
+        callback.click()
+        Button.tweenService
             :Create(
                 self.stroke,
-                a9,
+                element,
                 { Transparency = 1 }
             )
             :Play()
@@ -233,32 +233,32 @@ function a1:_buildCompact()
             return
         end
 
-        a3.tweenService
+        Button.tweenService
             :Create(
                 self.stroke,
-                a9,
+                element,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
     end)
 end
 
-function a1:_setShown(a11, a12)
-    if a11 then
-        self.window:_revealCommon(self, a12)
+function state:_setShown(stroke, hoverOverlay)
+    if stroke then
+        self.window:_revealCommon(self, hoverOverlay)
     else
-        self.window:_hideCommon(self, a12)
+        self.window:_hideCommon(self, hoverOverlay)
     end
 end
 
-function a1:_minWidth()
+function state:_minWidth()
     local w = 32     if self.icon then
         w += 22     end
-        w += a4.textWidth(self.window.theme.Font, 16, a7.resolve(self.name))
+        w += tab.textWidth(self.window.theme.Font, 16, icon.resolve(self.name))
     return w
 end
 
-a5(a1)
-a6(a1)
+props(state)
+name(state)
 
-return a1
+return state

@@ -1,8 +1,8 @@
 
-local a1 = require(script.moduleCache)
+local imageCache = require(script.moduleCache)
 
-local a2 = {
-    modules = a1,
+local moduleCache = {
+    modules = imageCache,
 }
 
-return a2
+return moduleCache

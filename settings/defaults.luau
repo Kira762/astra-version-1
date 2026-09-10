@@ -1,7 +1,7 @@
 
-local a1 = {}
+local defaults = {}
 
-a1.values = {
+defaults.values = {
     toggleKeybind = Enum.KeyCode.K,
     mouseOverride = true,
     keepOnScreen = true,
@@ -13,14 +13,14 @@ a1.values = {
     layoutMode = "top",    activeSubTab = 1,
 }
 
-function a1.clone(a2: { [string]: any }?): { [string]: any }
-    local a3 = table.clone(a1.values)
-    if a2 then
-        for a4, a5 in a2 do
-            a3[a4] = a5
+function defaults.clone(overrides: { [string]: any }?): { [string]: any }
+    local result = table.clone(defaults.values)
+    if overrides then
+        for key, value in overrides do
+            result[key] = value
         end
     end
-    return a3
+    return result
 end
 
-return a1
+return defaults

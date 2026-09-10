@@ -1,11 +1,11 @@
-local a1 = require(script.Parent.Parent.images.windowIcons)
+local constants = require(script.Parent.Parent.images.windowIcons)
 local a2 = {}
 
 a2.fontAsset = "rbxassetid://12187375716"
 
 a2.pillResizeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-a2.icons = a1.ids
+a2.icons = constants.ids
 
 a2.accent = {
     on = Color3.fromRGB(23, 153, 110),

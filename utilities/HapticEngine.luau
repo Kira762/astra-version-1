@@ -1,30 +1,30 @@
-local a1 = require(script.Parent.Parent.core.state)
+local haptic = require(script.Parent.Parent.core.state)
 
-local a2 = {}
+local hapticService = {}
 
-a2.enabled = false
+hapticService.enabled = false
 type HapticTypes = {
     click: Enum.HapticEffectType?,
     notify: Enum.HapticEffectType?,
 }
 
-local a3: HapticTypes = {}
-local a4, a5 = pcall(function()
+local enabled: HapticTypes = {}
+local container, a5 = pcall(function()
     Instance.new("HapticEffect"):Destroy()     return {
         click = Enum.HapticEffectType.UIHover,         notify = Enum.HapticEffectType.UIClick,     }
 end)
-if a4 then
-    a3 = a5
+if container then
+    enabled = a5
 end
 
 local a6: { [Enum.HapticEffectType]: Instance } = {}
 local a7: Instance? = nil
 
-function a2.setContainer(a8: Instance?)
+function hapticService.setContainer(a8: Instance?)
     a7 = a8
 end
 
-function a2.releaseContainer(a9: Instance?)
+function hapticService.releaseContainer(a9: Instance?)
     if a9 == nil or a7 == a9 then
         a7 = nil
     end
@@ -34,7 +34,7 @@ local function a10(): Instance
     if a7 and a7.Parent then
         return a7
     end
-    return a1.guiContainer
+    return haptic.guiContainer
 end
 
 local function a11(a12: Enum.HapticEffectType): Instance?
@@ -60,7 +60,7 @@ local function a11(a12: Enum.HapticEffectType): Instance?
 end
 
 local function a17(a18: Enum.HapticEffectType?)
-    if not a18 or not a2.enabled then
+    if not a18 or not hapticService.enabled then
         return
     end
     local a19 = a11(a18)
@@ -70,26 +70,26 @@ local function a17(a18: Enum.HapticEffectType?)
     end
 end
 
-function a2.click()
-    a17(a3.click)
+function hapticService.click()
+    a17(enabled.click)
 end
 
-function a2.notify()
-    a17(a3.notify)
+function hapticService.notify()
+    a17(enabled.notify)
 end
 
-function a2.setEnabled(a21: boolean?)
-    a2.enabled = a21 and true or false
-    if not a2.enabled then
-        a2.teardown()
+function hapticService.setEnabled(a21: boolean?)
+    hapticService.enabled = a21 and true or false
+    if not hapticService.enabled then
+        hapticService.teardown()
     end
 end
 
-function a2.teardown()
+function hapticService.teardown()
     for a22, a23 in a6 do
         pcall(a23.Destroy, a23)
         a6[a22] = nil
     end
 end
 
-return a2
+return hapticService

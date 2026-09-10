@@ -1,11 +1,11 @@
 
-local a1 = script
-local a2 = require(script.Parent.core.state)
-local a3 = require(script.Parent.utilities.log)
+local themesFolder = script
+local coreState = require(script.Parent.core.state)
+local log = require(script.Parent.utilities.log)
 
-local a4 = {}
+local themeTable = {}
 
-local a5 = {
+local colorSequenceKeys = {
     WindowColor = true,
     ElementGradient = true,
     ElementStrokeGradient = true,
@@ -14,75 +14,75 @@ local a5 = {
     SliderProgress = true,
 }
 
-function a4.coerceValue(a6, a7)
-    if a5[a6] and typeof(a7) == "Color3" then
-        return ColorSequence.new(a7)
+function themeTable.coerceValue(key, value)
+    if colorSequenceKeys[key] and typeof(value) == "Color3" then
+        return ColorSequence.new(value)
     end
-    return a7
+    return value
 end
 
-function a4.firstColor(a8)
-    return if typeof(a8) == "ColorSequence" then a8.Keypoints[1].Value else a8
+function themeTable.firstColor(key)
+    return if typeof(key) == "ColorSequence" then key.Keypoints[1].Value else key
 end
 
-local function a9(a10, a11)
-    local a12 = 0.299 * a10.R + 0.587 * a10.G + 0.114 * a10.B
-    local a13 = if a12 > 0.5 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1)
-    return a10:Lerp(a13, a11)
+local function luminance(color, amount)
+    local lum = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B
+    local contrast = if lum > 0.5 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1)
+    return color:Lerp(contrast, amount)
 end
 
-function a4.deriveStrokes(a14, a15)
-    if a15.ElementGradient then
-        local a16 = a4.firstColor(a14.ElementGradient)
-        if a15.ElementStroke == nil then
-            a14.ElementStroke = a9(a16, 0.28)
+function themeTable.deriveStrokes(theme, overrides)
+    if overrides.ElementGradient then
+        local baseColor = themeTable.firstColor(theme.ElementGradient)
+        if overrides.ElementStroke == nil then
+            theme.ElementStroke = luminance(baseColor, 0.28)
         end
-        if a15.ElementStrokeGradient == nil then
-            a14.ElementStrokeGradient = ColorSequence.new(a9(a16, 0.4))
+        if overrides.ElementStrokeGradient == nil then
+            theme.ElementStrokeGradient = ColorSequence.new(luminance(baseColor, 0.4))
         end
-        if a15.ElementStrokeHover == nil then
-            a14.ElementStrokeHover = a9(a16, 0.52)
+        if overrides.ElementStrokeHover == nil then
+            theme.ElementStrokeHover = luminance(baseColor, 0.52)
         end
     end
-    if a15.TabBackground and a15.TabStroke == nil then
-        a14.TabStroke = ColorSequence.new(a9(a4.firstColor(a14.TabBackground), 0.4))
+    if overrides.TabBackground and overrides.TabStroke == nil then
+        theme.TabStroke = ColorSequence.new(luminance(themeTable.firstColor(theme.TabBackground), 0.4))
     end
 end
 
-local function a17(a18)
-    if typeof(a18) == "table" then
-        return a18
-    elseif typeof(a18) == "string" then
-        local a19 = a1:FindFirstChild(string.lower(a18))
-        if a19 then
-            return require(a19)
+local function resolveInput(input)
+    if typeof(input) == "table" then
+        return input
+    elseif typeof(input) == "string" then
+        local child = themes:FindFirstChild(string.lower(input))
+        if child then
+            return require(child)
         end
-        a3.warn("Astra: unknown theme '" .. a18 .. "', using default")
-    elseif a18 ~= nil then
-        a3.warn("Astra: invalid theme (expected a built-in name or a theme table), using default")
+        state.warn("Astra: unknown theme '" .. input .. "', using default")
+    elseif input ~= nil then
+        state.warn("Astra: invalid theme (expected a built-in name or a theme table), using default")
     end
-    return require(a1["default"])
+    return require(themes["default"])
 end
 
-function a4.resolve(a20)
-    local a21 = table.clone(require(a1["default"]))
-    local a22 = a17(a20)
-    for a23, a24 in a22 do
-        a21[a23] = a4.coerceValue(a23, a24)
+function themeTable.resolve(input)
+    local base = table.clone(require(themes["default"]))
+    local overlay = resolveInput(input)
+    for key, value in overlay do
+        base[key] = themeTable.coerceValue(key, value)
     end
-    if typeof(a20) == "table" then
-        a4.deriveStrokes(a21, a22)
-    end
-
-    local a25 = if typeof(a20) == "table" then a20 else nil
-    if not (a25 and (a25.Font or a25.font)) then
-        a21.Font = a2.brandFont(Enum.FontWeight.Medium)
-    end
-    if not (a25 and (a25.TitleFont or a25.titleFont)) then
-        a21.TitleFont = a2.brandFont(Enum.FontWeight.SemiBold)
+    if typeof(input) == "table" then
+        themeTable.deriveStrokes(base, overlay)
     end
 
-    return a21
+    local customTable = if typeof(input) == "table" then input else nil
+    if not (customTable and (customTable.Font or customTable.font)) then
+        base.Font = default.brandFont(Enum.FontWeight.Medium)
+    end
+    if not (customTable and (customTable.TitleFont or customTable.titleFont)) then
+        base.TitleFont = default.brandFont(Enum.FontWeight.SemiBold)
+    end
+
+    return base
 end
 
-return a4
+return themeTable

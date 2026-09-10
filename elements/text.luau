@@ -1,25 +1,25 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Text"
+local state = {}
+state.__index = state
+state.__type = "Text"
 
-local a2 = require(script.Parent.Parent.utilities.moveable)
-local a3 = require(script.Parent.Parent.utilities.locale)
+local constants = require(script.Parent.Parent.utilities.moveable)
+local Text = require(script.Parent.Parent.utilities.locale)
 
-local a4 = 16
-local a5 = 14
+local tab = 16
+local props = 14
 
-local a6 = 0.45
+local name = 0.45
 
-function a1.new(tab, a7)
-    a7 = if typeof(a7) == "table" then a7 else {}
+function state.new(tab, text)
+    text = if typeof(text) == "table" then text else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = tostring(a7.name or a7.Name or ""),
-        text = tostring(a7.text or a7.Text or ""),
-        icon = tab.window:ResolveIcon(a7.icon or a7.Icon),
-    }, a1)
+        name = tostring(text.name or text.Name or ""),
+        text = tostring(text.text or text.Text or ""),
+        icon = tab.window:ResolveIcon(text.icon or text.Icon),
+    }, state)
 
             self.main = self.window:Create("Frame", {
         Size = UDim2.new(1, -20, 0, 0),
@@ -83,13 +83,13 @@ function a1.new(tab, a7)
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a3.t(self.name),
+        Text = Text.t(self.name),
         Size = UDim2.new(1, if self.icon then -22 else 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         RichText = true,
-        TextSize = a4,
+        TextSize = tab,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 1,
@@ -99,13 +99,13 @@ function a1.new(tab, a7)
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 
     self.body = self.window:Create("TextLabel", {
-        Text = a3.t(self.text),
+        Text = Text.t(self.text),
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         RichText = true,
-        TextSize = a5,
+        TextSize = props,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 2,
@@ -119,33 +119,33 @@ function a1.new(tab, a7)
     return self
 end
 
-function a1:_applyPresence()
+function state:_applyPresence()
     self.titleRow.Visible = self.name ~= "" or self.icon ~= nil
     self.body.Visible = self.text ~= ""
 end
 
-function a1:Set(a8)
-    self.text = tostring(a8)
+function state:Set(icon)
+    self.text = tostring(icon)
     self.window:_bindLocale(self.body, "Text", self.text)
     self:_applyPresence()
 end
 
-function a1:SetTitle(a9)
-    self.name = tostring(a9)
+function state:SetTitle(element)
+    self.name = tostring(element)
     self.window:_bindLocale(self.title, "Text", self.name)
     self:_applyPresence()
 end
 
-function a1:_setShown(a10, a11)
-        if a10 then
+function state:_setShown(frame, a11)
+        if frame then
         self.window:_revealCommon(self, a11)
     else
         self.window:_hideCommon(self, a11)
     end
 
-    self.window:_reveal(self.body, { TextTransparency = if a10 then a6 else 1 }, a11)
+    self.window:_reveal(self.body, { TextTransparency = if frame then name else 1 }, a11)
 end
 
-a2(a1)
+constants(state)
 
-return a1
+return state

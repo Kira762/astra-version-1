@@ -1,22 +1,22 @@
 
-local a1 = require(script.manager)
-local a2 = require(script.registry)
-local a3 = require(script.defaults)
-local a4 = require(script.persistence)
+local managerModule = require(script.manager)
+local registryModule = require(script.registry)
+local defaultsModule = require(script.defaults)
+local persistenceModule = require(script.persistence)
 
-local a5 = {
-    manager = a1,
-    registry = a2,
-    defaults = a3,
-    persistence = a4,
+local settings = {
+    manager = managerModule,
+    registry = registryModule,
+    defaults = defaultsModule,
+    persistence = persistence,
 }
 
-function a5.newManager(a6: { [string]: any }?)
-    return a1.new(a6)
+function settings.newManager(newManager: { [string]: any }?)
+    return managerModule.new(newManager)
 end
 
-function a5.readPersisted(a7: string, a8: any): any
-    return a4.read(a7, a8)
+function settings.readPersisted(key: string, default: any): any
+    return persistenceModule.read(key, default)
 end
 
-return a5
+return settings

@@ -1,22 +1,22 @@
 
-local a1 = {}
+local persistenceCache = {}
 
-local a2: { [string]: any } = {}
+local cache: { [string]: any } = {}
 
-function a1.getSettings(a3: string): any?
-    return a2[a3]
+function persistenceCache.getSettings(key: string): any?
+    return cache[key]
 end
 
-function a1.putSettings(a4: string, a5: any)
-    a2[a4] = a5
+function persistenceCache.putSettings(key: string, value: any)
+    cache[key] = value
 end
 
-function a1.invalidateSettings(a6: string?)
-    if a6 then
-        a2[a6] = nil
+function persistenceCache.invalidateSettings(key: string?)
+    if key then
+        cache[key] = nil
     else
-        table.clear(a2)
+        table.clear(cache)
     end
 end
 
-return a1
+return persistenceCache

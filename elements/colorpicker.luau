@@ -1,18 +1,18 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "ColorPicker"
+local state = {}
+state.__index = state
+state.__type = "ColorPicker"
 
-local a2 = script.Parent.Parent.utilities
+local constants = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.moveable)
-local a6 = require(a2.lockable)
-local a7 = require(a2.constants)
-local a8 = require(a2.locale)
-local a9 = require(a2.HapticEngine)
+local ColorPicker = require(constants.Parent.core.state)
+local tab = require(script.Parent.Parent.functions)
+local props = require(constants.moveable)
+local name = require(constants.lockable)
+local flag = require(constants.constants)
+local color = require(constants.locale)
+local alpha = require(constants.HapticEngine)
 
-local a10 = ColorSequence.new({
+local callback = ColorSequence.new({
     ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
     ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
     ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
@@ -22,35 +22,35 @@ local a10 = ColorSequence.new({
     ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0)),
 })
 
-local a11 = 41
-local a12 = 52 local a13 = Vector2.new(150, 120)
-local a14 = 184 local a15 = 10
-local a16 = 214 local a17 = 10
+local element = 41
+local frame = 52 local hue = Vector2.new(150, 120)
+local sat = 184 local val = 10
+local isDragging = 214 local connection = 10
 local a18 = 240 local a19 = 62 local a20 = 8
 local a21 = 400
 
 local a22 = {
     wide = {
         height = 190,
-        previewPos = UDim2.new(1, -20, 0, a12 + 39),
+        previewPos = UDim2.new(1, -20, 0, frame + 39),
         previewSize = UDim2.new(1, -(a18 + 20), 0, 78),
-        hexPos = UDim2.new(0, a18, 0, a12 + 90),
+        hexPos = UDim2.new(0, a18, 0, frame + 90),
         hexSize = UDim2.new(1, -(a18 + 20 + a19 + a20), 0, 30),
-        alphaFieldPos = UDim2.new(1, -(20 + a19), 0, a12 + 90),
+        alphaFieldPos = UDim2.new(1, -(20 + a19), 0, frame + 90),
         alphaFieldSize = UDim2.new(0, a19, 0, 30),
     },
     narrow = {
         height = 296,
-        previewPos = UDim2.new(1, -20, 0, a12 + a13.Y + 40),
+        previewPos = UDim2.new(1, -20, 0, frame + hue.Y + 40),
         previewSize = UDim2.new(1, -40, 0, 56),
-        hexPos = UDim2.new(0, 20, 0, a12 + a13.Y + 78),
+        hexPos = UDim2.new(0, 20, 0, frame + hue.Y + 78),
         hexSize = UDim2.new(1, -(40 + a19 + a20), 0, 30),
-        alphaFieldPos = UDim2.new(1, -(20 + a19), 0, a12 + a13.Y + 78),
+        alphaFieldPos = UDim2.new(1, -(20 + a19), 0, frame + hue.Y + 78),
         alphaFieldSize = UDim2.new(0, a19, 0, 30),
     },
 }
 
-local a23 = UDim2.new(1, -16, 0, a11 / 2)
+local a23 = UDim2.new(1, -16, 0, element / 2)
 local a24 = UDim2.fromOffset(40, 22)
 
 local a25 = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
@@ -174,7 +174,7 @@ local function a45(a46, a47)
     return a47
 end
 
-function a1.new(tab, a48)
+function state.new(tab, a48)
     a48 = if typeof(a48) == "table" then a48 else {}
 
     local self = setmetatable({
@@ -188,7 +188,7 @@ function a1.new(tab, a48)
         callback = a48.callback or a48.Callback or function() end,
 
         _isOpen = false,
-    }, a1)
+    }, state)
 
     self.value = a45(
         a48.color or a48.Color or a48.value or a48.Value or a48.default,
@@ -202,11 +202,11 @@ function a1.new(tab, a48)
 
     self.flag = a48.flag
         or a48.Flag
-        or (not self.forgetState and a4.deriveFlagFromName(self.name) or nil)
+        or (not self.forgetState and tab.deriveFlagFromName(self.name) or nil)
     self.window:_registerControl(self)
 
             self.main = self.window:Create("Frame", {
-        Size = UDim2.new(1, -20, 0, a11),
+        Size = UDim2.new(1, -20, 0, element),
         BorderSizePixel = 0,
         Name = self.name,
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -221,7 +221,7 @@ function a1.new(tab, a48)
     self:_buildPicker()
 
     self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
-        a9.click()
+        alpha.click()
         if self._isOpen then
             self:_close()
         else
@@ -234,27 +234,27 @@ function a1.new(tab, a48)
             return
         end
         local a49 = self.window.theme
-        a3.tweenService
+        ColorPicker.tweenService
             :Create(self.stroke, a26, {
                 Transparency = a49.ElementStrokeHoverTransparency,
                 Color = a49.ElementStrokeHover,
             })
             :Play()
-        a3.tweenService:Create(self.title, a26, { TextColor3 = a49.ElementTextHoverColor }):Play()
-        a3.tweenService:Create(self.hoverOverlay, a26, { BackgroundTransparency = 0.97 }):Play()
+        ColorPicker.tweenService:Create(self.title, a26, { TextColor3 = a49.ElementTextHoverColor }):Play()
+        ColorPicker.tweenService:Create(self.hoverOverlay, a26, { BackgroundTransparency = 0.97 }):Play()
     end)
 
     self.window:ConnectFor(self, self.main.MouseLeave, function()
         local a50 = self.window.theme
-        a3.tweenService
+        ColorPicker.tweenService
             :Create(
                 self.stroke,
                 a26,
                 { Transparency = a50.ElementStrokeTransparency, Color = a50.ElementStroke }
             )
             :Play()
-        a3.tweenService:Create(self.title, a26, { TextColor3 = a50.ContentColor }):Play()
-        a3.tweenService:Create(self.hoverOverlay, a26, { BackgroundTransparency = 1 }):Play()
+        ColorPicker.tweenService:Create(self.title, a26, { TextColor3 = a50.ContentColor }):Play()
+        ColorPicker.tweenService:Create(self.hoverOverlay, a26, { BackgroundTransparency = 1 }):Play()
     end)
 
     if self.description then
@@ -276,10 +276,10 @@ function a1.new(tab, a48)
     return self
 end
 
-function a1:_buildHeader()
+function state:_buildHeader()
     self.container = self.window:Create("Frame", {
         Size = UDim2.new(0, 170, 0, 16),
-        Position = UDim2.new(0, 20, 0, a11 / 2),
+        Position = UDim2.new(0, 20, 0, element / 2),
         AnchorPoint = Vector2.new(0, 0.5),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -311,7 +311,7 @@ function a1:_buildHeader()
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a8.t(self.name),
+        Text = color.t(self.name),
         Size = UDim2.fromOffset(150, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -366,7 +366,7 @@ function a1:_buildHeader()
     })
 
     self.invisibleIcon = self.window:Create("ImageLabel", {
-        Image = a7.icons.colorpicker,
+        Image = flag.icons.colorpicker,
         Size = UDim2.fromOffset(16, 16),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -377,7 +377,7 @@ function a1:_buildHeader()
     }, { ImageColor3 = "ContentColor" })
 
     self.invisibleText = self.window:Create("TextLabel", {
-        Text = a8.t("Invisible"),
+        Text = color.t("Invisible"),
         Size = UDim2.fromOffset(0, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
@@ -392,7 +392,7 @@ function a1:_buildHeader()
 
         self.interact = self.window:Create("TextButton", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, a11),
+        Size = UDim2.new(1, 0, 0, element),
         Position = UDim2.fromScale(0, 0),
         BorderSizePixel = 0,
         Text = "",
@@ -404,10 +404,10 @@ function a1:_buildHeader()
     })
 end
 
-function a1:_buildMap()
+function state:_buildMap()
     self.map = self.window:Create("Frame", {
-        Position = UDim2.fromOffset(20, a12),
-        Size = UDim2.fromOffset(a13.X, a13.Y),
+        Position = UDim2.fromOffset(20, frame),
+        Size = UDim2.fromOffset(hue.X, hue.Y),
         BackgroundColor3 = Color3.fromHSV(self.hue, 1, 1),
         BorderSizePixel = 0,
         ZIndex = 2,
@@ -462,7 +462,7 @@ function a1:_buildMap()
     })
 end
 
-function a1:_buildPicker()
+function state:_buildPicker()
     self:_buildMap()
 
     self.satCursor = self.window:Create("Frame", {
@@ -500,8 +500,8 @@ function a1:_buildPicker()
     })
 
         self.hueBar = self.window:Create("Frame", {
-        Position = UDim2.fromOffset(a14, a12),
-        Size = UDim2.fromOffset(a15, a13.Y),
+        Position = UDim2.fromOffset(sat, frame),
+        Size = UDim2.fromOffset(val, hue.Y),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 2,
@@ -516,7 +516,7 @@ function a1:_buildPicker()
     })
 
     self.window:Create("UIGradient", {
-        Color = a10,
+        Color = callback,
         Rotation = 90,
 
         Parent = self.hueBar,
@@ -525,7 +525,7 @@ function a1:_buildPicker()
     self.hueHandle = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0, 0),
-        Size = UDim2.fromOffset(a15 + 8, 8),
+        Size = UDim2.fromOffset(val + 8, 8),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 4,
@@ -560,8 +560,8 @@ function a1:_buildPicker()
     })
 
                 self.alphaBar = self.window:Create("Frame", {
-        Position = UDim2.fromOffset(a16, a12),
-        Size = UDim2.fromOffset(a17, a13.Y),
+        Position = UDim2.fromOffset(isDragging, frame),
+        Size = UDim2.fromOffset(connection, hue.Y),
         BackgroundColor3 = self.value,
         BorderSizePixel = 0,
         ZIndex = 2,
@@ -587,7 +587,7 @@ function a1:_buildPicker()
     self.alphaHandle = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0, 0),
-        Size = UDim2.fromOffset(a17 + 8, 8),
+        Size = UDim2.fromOffset(connection + 8, 8),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 4,
@@ -622,7 +622,7 @@ function a1:_buildPicker()
     })
 
         self.hexBox = self.window:Create("Frame", {
-        Position = UDim2.new(0, a18, 0, a12 + 90),
+        Position = UDim2.new(0, a18, 0, frame + 90),
         Size = UDim2.new(1, -(a18 + 20), 0, 30),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
@@ -645,7 +645,7 @@ function a1:_buildPicker()
 
     self.hexInput = self.window:Create("TextBox", {
         Text = "#" .. self.value:ToHex():upper(),
-        PlaceholderText = a8.t("Smart Input"),
+        PlaceholderText = color.t("Smart Input"),
         Size = UDim2.new(1, -14, 1, 0),
         Position = UDim2.fromScale(0.5, 0.5),
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -661,7 +661,7 @@ function a1:_buildPicker()
     }, { TextColor3 = "ContentColor", FontFace = "Font", PlaceholderColor3 = "PlaceholderColor" })
 
         self.alphaBox = self.window:Create("Frame", {
-        Position = UDim2.new(0, a18, 0, a12 + 90),
+        Position = UDim2.new(0, a18, 0, frame + 90),
         Size = UDim2.fromOffset(a19, 30),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
@@ -726,7 +726,7 @@ function a1:_buildPicker()
         end
     end)
 
-    self.window:ConnectFor(self, a3.userInputService.InputEnded, function(a54)
+    self.window:ConnectFor(self, ColorPicker.userInputService.InputEnded, function(a54)
         if
             (a54.UserInputType == Enum.UserInputType.MouseButton1 or a54.UserInputType == Enum.UserInputType.Touch)
             and self._drag
@@ -754,7 +754,7 @@ function a1:_buildPicker()
     end)
 end
 
-function a1:_beginDrag(a56, a57)
+function state:_beginDrag(a56, a57)
             if not self._isOpen then
         return
     end
@@ -768,9 +768,9 @@ function a1:_beginDrag(a56, a57)
         self._dragConnection = nil
     end
 
-    self._dragConnection = a3.runService.RenderStepped:Connect(function()
+    self._dragConnection = ColorPicker.runService.RenderStepped:Connect(function()
         local a58 = self._dragIsMouse
-            and not a3.userInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+            and not ColorPicker.userInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
         if self.window.unloaded or not self._drag or a58 then
             if a58 then
                 self:_endDrag()
@@ -786,7 +786,7 @@ function a1:_beginDrag(a56, a57)
     end)
 end
 
-function a1:_endDrag()
+function state:_endDrag()
     self._drag = nil
     self:_setHeld(nil)
     if self._dragConnection then
@@ -797,27 +797,27 @@ function a1:_endDrag()
     self.window:_persist(self)
 end
 
-function a1:_setHeld(a59)
+function state:_setHeld(a59)
     local a60 = if a59 == "sat" then UDim2.fromOffset(16, 16) else UDim2.fromOffset(12, 12)
-    local a61 = if a59 == "hue" then UDim2.fromOffset(a15 + 12, 10) else UDim2.fromOffset(a15 + 8, 8)
+    local a61 = if a59 == "hue" then UDim2.fromOffset(val + 12, 10) else UDim2.fromOffset(val + 8, 8)
     local a62 = if a59 == "alpha"
-        then UDim2.fromOffset(a17 + 12, 10)
-        else UDim2.fromOffset(a17 + 8, 8)
-    a3.tweenService:Create(self.satCursor, a29, { Size = a60 }):Play()
-    a3.tweenService:Create(self.hueHandle, a29, { Size = a61 }):Play()
-    a3.tweenService:Create(self.alphaHandle, a29, { Size = a62 }):Play()
+        then UDim2.fromOffset(connection + 12, 10)
+        else UDim2.fromOffset(connection + 8, 8)
+    ColorPicker.tweenService:Create(self.satCursor, a29, { Size = a60 }):Play()
+    ColorPicker.tweenService:Create(self.hueHandle, a29, { Size = a61 }):Play()
+    ColorPicker.tweenService:Create(self.alphaHandle, a29, { Size = a62 }):Play()
 end
 
-function a1:_mouseLocation()
-    local a63 = a3.userInputService:GetMouseLocation()
+function state:_mouseLocation()
+    local a63 = ColorPicker.userInputService:GetMouseLocation()
     local a64 = self.window.screenGui
     if a64 and a64.IgnoreGuiInset then
-        return a63 - a3.guiService:GetGuiInset()
+        return a63 - ColorPicker.guiService:GetGuiInset()
     end
     return a63
 end
 
-function a1:_pump()
+function state:_pump()
         local a65, a66, a67, a68 = self.hue, self.sat, self.val, self.alpha
 
     if self._drag == "sat" then
@@ -855,7 +855,7 @@ function a1:_pump()
     self:_fireCallback()
 end
 
-function a1:_render(a75)
+function state:_render(a75)
     local a76 = Color3.fromHSV(self.hue, 1, 1)
     local a77 = UDim2.new(self.sat, 0, 1 - self.val, 0)
     local a78 = UDim2.new(0.5, 0, self.hue, 0)
@@ -875,23 +875,23 @@ function a1:_render(a75)
         end
     else
         local a82 = if a75 == "drag" then a28 else a27
-        a3.tweenService:Create(self.map, a82, { BackgroundColor3 = a76 }):Play()
-        a3.tweenService
+        ColorPicker.tweenService:Create(self.map, a82, { BackgroundColor3 = a76 }):Play()
+        ColorPicker.tweenService
             :Create(self.satCursor, a82, { Position = a77, BackgroundColor3 = self.value })
             :Play()
-        a3.tweenService:Create(self.hueHandle, a82, { Position = a78, BackgroundColor3 = a76 }):Play()
-        a3.tweenService
+        ColorPicker.tweenService:Create(self.hueHandle, a82, { Position = a78, BackgroundColor3 = a76 }):Play()
+        ColorPicker.tweenService
             :Create(self.alphaHandle, a82, { Position = a79, BackgroundColor3 = self.value })
             :Play()
-                a3.tweenService:Create(self.alphaBar, a27, { BackgroundColor3 = self.value }):Play()
+                ColorPicker.tweenService:Create(self.alphaBar, a27, { BackgroundColor3 = self.value }):Play()
         local a83 = { BackgroundColor3 = self.value }
         local a84 = { Color = self.value }
         if not self.window.hidden then
             a83.BackgroundTransparency = a80
             a84.Transparency = a81
         end
-        a3.tweenService:Create(self.preview, a27, a83):Play()
-        a3.tweenService:Create(self.previewShadow, a27, a84):Play()
+        ColorPicker.tweenService:Create(self.preview, a27, a83):Play()
+        ColorPicker.tweenService:Create(self.previewShadow, a27, a84):Play()
     end
 
         if not self.hexInput:IsFocused() then
@@ -904,30 +904,30 @@ function a1:_render(a75)
     self:_renderInvisible(a75 ~= "instant")
 end
 
-function a1:_renderInvisible(a85)
+function state:_renderInvisible(a85)
     local a86 = 0
     if self._isOpen and not self.window.hidden then
         a86 = a30((0.12 - self.alpha) / 0.12)
     end
     local t = 1 - a86
     if a85 then
-        a3.tweenService:Create(self.invisibleIcon, a26, { ImageTransparency = t }):Play()
-        a3.tweenService:Create(self.invisibleText, a26, { TextTransparency = t }):Play()
+        ColorPicker.tweenService:Create(self.invisibleIcon, a26, { ImageTransparency = t }):Play()
+        ColorPicker.tweenService:Create(self.invisibleText, a26, { TextTransparency = t }):Play()
     else
         self.invisibleIcon.ImageTransparency = t
         self.invisibleText.TextTransparency = t
     end
 end
 
-function a1:_renderTooltip(a87)
+function state:_renderTooltip(a87)
     self._renderTooltipState = a87
 end
 
-function a1:_fireCallback()
+function state:_fireCallback()
     self.window:_runGuarded(self, self.callback, self.value, self.alpha)
 end
 
-function a1:_open()
+function state:_open()
     if self._isOpen then
         return
     end
@@ -936,7 +936,7 @@ function a1:_open()
     if self._outsideClickConn then
         self.window:Disconnect(self._outsideClickConn)
     end
-    self._outsideClickConn = self.window:Connect(a3.userInputService.InputBegan, function(a88)
+    self._outsideClickConn = self.window:Connect(ColorPicker.userInputService.InputBegan, function(a88)
         if
             a88.UserInputType ~= Enum.UserInputType.MouseButton1
             and a88.UserInputType ~= Enum.UserInputType.Touch
@@ -956,15 +956,15 @@ function a1:_open()
         end
     end)
 
-    a3.tweenService:Create(self.main, a25, { Size = UDim2.new(1, -20, 0, self._openHeight) }):Play()
-        a3.tweenService
+    ColorPicker.tweenService:Create(self.main, a25, { Size = UDim2.new(1, -20, 0, self._openHeight) }):Play()
+        ColorPicker.tweenService
         :Create(self.preview, a25, { Position = self._previewOpenPos, Size = self._previewOpenSize })
         :Play()
     self:_applyPickerVisibility(true, true)
     self:_renderInvisible(true)
 end
 
-function a1:_close()
+function state:_close()
     if not self._isOpen then
         return
     end
@@ -987,10 +987,10 @@ function a1:_close()
 
     self:_applyPickerVisibility(false, true)
     self:_renderInvisible(true)
-    a3.tweenService
+    ColorPicker.tweenService
         :Create(self.preview, a25, { Position = a23, Size = a24 })
         :Play()
-    a3.tweenService:Create(self.main, a25, { Size = UDim2.new(1, -20, 0, a11) }):Play()
+    ColorPicker.tweenService:Create(self.main, a25, { Size = UDim2.new(1, -20, 0, element) }):Play()
 
             task.delay(a26.Time, function()
         if not self._isOpen and not self.window.unloaded then
@@ -999,7 +999,7 @@ function a1:_close()
     end)
 end
 
-function a1:_applyPickerVisibility(a92, a93)
+function state:_applyPickerVisibility(a92, a93)
     local a94 = {
         [self.map] = { BackgroundTransparency = if a92 then 0 else 1 },
         [self.satOverlay] = { BackgroundTransparency = if a92 then 0 else 1 },
@@ -1023,7 +1023,7 @@ function a1:_applyPickerVisibility(a92, a93)
 
     for a95, a96 in a94 do
         if a93 then
-            a3.tweenService:Create(a95, a26, a96):Play()
+            ColorPicker.tweenService:Create(a95, a26, a96):Play()
         else
             for a97, a98 in a96 do
                 a95[a97] = a98
@@ -1032,13 +1032,13 @@ function a1:_applyPickerVisibility(a92, a93)
     end
 end
 
-function a1:_setControlsVisible(a99)
+function state:_setControlsVisible(a99)
     for _, a100 in { self.map, self.hueBar, self.alphaBar, self.hexBox, self.alphaBox } do
         a100.Visible = a99
     end
 end
 
-function a1:_applyLayout()
+function state:_applyLayout()
     local a101 = self.main.AbsoluteSize.X
     local a102 = if a101 > 0 and a101 < a21 then "narrow" else "wide"
     if a102 == self._layoutMode then
@@ -1056,14 +1056,14 @@ function a1:_applyLayout()
     self.alphaBox.Size = l.alphaFieldSize
 
     if self._isOpen then
-        a3.tweenService:Create(self.main, a25, { Size = UDim2.new(1, -20, 0, self._openHeight) }):Play()
-        a3.tweenService
+        ColorPicker.tweenService:Create(self.main, a25, { Size = UDim2.new(1, -20, 0, self._openHeight) }):Play()
+        ColorPicker.tweenService
             :Create(self.preview, a25, { Position = self._previewOpenPos, Size = self._previewOpenSize })
             :Play()
     end
 end
 
-function a1:Set(a103, a104)
+function state:Set(a103, a104)
     self.value = a45(a103, self.value)
     self.hue, self.sat, self.val = self.value:ToHSV()
         self:_render(if self._isOpen then "animate" else "instant")
@@ -1074,7 +1074,7 @@ function a1:Set(a103, a104)
     end
 end
 
-function a1:SetAlpha(a105, a106)
+function state:SetAlpha(a105, a106)
     self.alpha = a30(if type(a105) == "number" then a105 else self.alpha)
     self:_render(if self._isOpen then "animate" else "instant")
 
@@ -1084,11 +1084,11 @@ function a1:SetAlpha(a105, a106)
     end
 end
 
-function a1:_serialize()
+function state:_serialize()
     return self.value:ToHex() .. string.format("%02x", math.clamp(math.round((self.alpha or 1) * 255), 0, 255))
 end
 
-function a1:_deserialize(a107)
+function state:_deserialize(a107)
     local a108 = tostring(a107)
     local a109 = nil
     if #a108 >= 8 then
@@ -1106,7 +1106,7 @@ function a1:_deserialize(a107)
     self:Set(a110)
 end
 
-function a1:_setShown(a111, a112)
+function state:_setShown(a111, a112)
     local w = self.window
     if a111 then
         w:_revealCommon(self, a112)
@@ -1122,7 +1122,7 @@ function a1:_setShown(a111, a112)
     end
 end
 
-a5(a1)
-a6(a1)
+props(state)
+name(state)
 
-return a1
+return state

@@ -1,4 +1,4 @@
-local a1 = require(script.Parent.Parent.core.state)
+local persistenceConfig = require(script.Parent.Parent.core.state)
 local a2 = require(script.Parent.filesystem)
 local a3 = require(script.Parent.log)
 local a4 = require(script.Parent.path)
@@ -68,7 +68,7 @@ function a7.save(window: ConfigWindow, a9: unknown?): boolean
         end
     end
 
-    local a20, a21 = pcall(a1.httpService.JSONEncode, a1.httpService, a12)
+    local a20, a21 = pcall(persistenceConfig.httpService.JSONEncode, persistenceConfig.httpService, a12)
     if not a20 then
         a3.warn("Astra: Failed to encode configuration - " .. tostring(a21))
         return false
@@ -102,7 +102,7 @@ local function a23(a24: string): ({ [string]: unknown }?, string?)
         return nil, nil
     end
 
-    local a27, a28 = pcall(a1.httpService.JSONDecode, a1.httpService, a26)
+    local a27, a28 = pcall(persistenceConfig.httpService.JSONDecode, persistenceConfig.httpService, a26)
 
         if not a27 or type(a28) ~= "table" then
         return nil, a26

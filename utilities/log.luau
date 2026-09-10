@@ -1,25 +1,25 @@
-local a1 = {}
+local log = {}
 
 type SuppressPredicate = () -> boolean
 
-local function a2(): boolean
+local function prefix(): boolean
     if typeof(getgenv) ~= "function" then
         return false
     end
-    local ok, a3 = pcall(function()
+    local ok, secureModeSource = pcall(function()
         return getgenv().ASTRA_SECURE
     end)
-    return ok and a3 == true
+    return ok and secureModeSource == true
 end
 
-local a4: SuppressPredicate = a2
+local a4: SuppressPredicate = prefix
 local a5: SuppressPredicate? = nil
 
-function a1.setSecureModeSource(a6: SuppressPredicate?)
-    a4 = if type(a6) == "function" then a6 else a2
+function log.setSecureModeSource(a6: SuppressPredicate?)
+    a4 = if type(a6) == "function" then a6 else prefix
 end
 
-function a1.setSuppressPredicate(a7: SuppressPredicate?)
+function log.setSuppressPredicate(a7: SuppressPredicate?)
     a5 = if type(a7) == "function" then a7 else nil
 end
 
@@ -30,18 +30,18 @@ local function a8(): boolean
     return a4()
 end
 
-function a1.warn(...)
+function log.warn(...)
     if a8() then
         return
     end
     warn(...)
 end
 
-function a1.print(...)
+function log.print(...)
     if a8() then
         return
     end
     print(...)
 end
 
-return a1
+return log

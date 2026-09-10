@@ -1,42 +1,42 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Console"
+local state = {}
+state.__index = state
+state.__type = "Console"
 
-local a2 = script.Parent.Parent.utilities
+local constants = script.Parent.Parent.utilities
 
-local a3 = require(a2.moveable)
-local a4 = require(a2.locale)
+local Console = require(constants.moveable)
+local tab = require(constants.locale)
 
-local a5 = 120
-local a6 = 48
-local a7 = 24 local a8 = 17
-local a9 = 12 local a10 = 12
-local a11 = 1.25
-local a12 = 200
+local props = 120
+local name = 48
+local text = 24 local height = 17
+local follow = 12 local maxLines = 12
+local element = 1.25
+local frame = 200
 
-local a13 = Font.fromEnum(Enum.Font.Code)
+local outputBuffer = Font.fromEnum(Enum.Font.Code)
 
-function a1.new(tab, a14)
-    a14 = if typeof(a14) == "table" then a14 else {}
+function state.new(tab, maxLines)
+    maxLines = if typeof(maxLines) == "table" then maxLines else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a14.name or a14.Name,
-        description = a14.description or a14.Description,
+        name = maxLines.name or maxLines.Name,
+        description = maxLines.description or maxLines.Description,
 
-        height = math.max(tonumber(a14.height or a14.Height) or a5, a6),
-                follow = a14.follow or a14.Follow or false,
-        maxLines = math.max(tonumber(a14.maxLines or a14.MaxLines) or a12, 1),
+        height = math.max(tonumber(maxLines.height or maxLines.Height) or props, name),
+                follow = maxLines.follow or maxLines.Follow or false,
+        maxLines = math.max(tonumber(maxLines.maxLines or maxLines.MaxLines) or frame, 1),
 
         lines = {},
                                 lineLabels = {},
         head = 1,         nextOrder = 1,
         textDirty = true,
-    }, a1)
+    }, state)
 
     self:_build()
-    self:_setLines(a14.text or a14.Text or "")
+    self:_setLines(maxLines.text or maxLines.Text or "")
 
     if self.description then
         self.descriptor = require(script.Parent.descriptor).new(self.tab, { description = self.description })
@@ -45,7 +45,7 @@ function a1.new(tab, a14)
     return self
 end
 
-function a1:Get(): string
+function state:Get(): string
     if self.textDirty then
         self.text = table.concat(self.lines, "\n")
         self.textDirty = false
@@ -53,7 +53,7 @@ function a1:Get(): string
     return self.text
 end
 
-function a1:_setLines(a15)
+function state:_setLines(a15)
     a15 = if type(a15) == "string" then a15 else tostring(a15)
 
     table.clear(self.lines)
@@ -66,7 +66,7 @@ function a1:_setLines(a15)
     self:_flush()
 end
 
-function a1:_trim()
+function state:_trim()
     local a17 = #self.lines - self.maxLines
     if a17 <= 0 then
         return
@@ -77,18 +77,18 @@ function a1:_trim()
     end
 end
 
-function a1:_makeLabel()
+function state:_makeLabel()
     return self.window:Create("TextLabel", {
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        FontFace = a13,
-        TextSize = a10,
+        FontFace = outputBuffer,
+        TextSize = maxLines,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Top,
         TextWrapped = true,
-        LineHeight = a11,
+        LineHeight = element,
         RichText = false,
                 TextTransparency = self._textTransparency or 1,
 
@@ -100,7 +100,7 @@ local function a19(a20: string): string
     return if a20 == "" then " " else a20
 end
 
-function a1:_flush()
+function state:_flush()
     self.textDirty = true
 
     for a21, a22 in self.lines do
@@ -123,7 +123,7 @@ function a1:_flush()
     self:_follow()
 end
 
-function a1:_pushLine(a25: string)
+function state:_pushLine(a25: string)
     self.textDirty = true
 
     if #self.lines < self.maxLines then
@@ -153,11 +153,11 @@ function a1:_pushLine(a25: string)
     self.head = (self.head % #self.lineLabels) + 1
 end
 
-function a1:_build()
-    local a29 = if self.name then a7 else 0
+function state:_build()
+    local a29 = if self.name then text else 0
 
     self.main = self.window:Create("Frame", {
-        Size = UDim2.new(1, -20, 0, self.height + a29 + a8 * 2),
+        Size = UDim2.new(1, -20, 0, self.height + a29 + height * 2),
         BorderSizePixel = 0,
         Name = self.name or "Console",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -170,8 +170,8 @@ function a1:_build()
 
     if self.name then
         self.container = self.window:Create("Frame", {
-            Size = UDim2.new(1, -a8 * 2, 0, 16),
-            Position = UDim2.new(0, a8, 0, a8),
+            Size = UDim2.new(1, -height * 2, 0, 16),
+            Position = UDim2.new(0, height, 0, height),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
 
@@ -179,7 +179,7 @@ function a1:_build()
         })
 
         self.title = self.window:Create("TextLabel", {
-            Text = a4.t(self.name),
+            Text = tab.t(self.name),
 
             Size = UDim2.fromScale(1, 1),
             BorderSizePixel = 0,
@@ -194,8 +194,8 @@ function a1:_build()
 
             self.panel = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0.5, 1),
-        Position = UDim2.new(0.5, 0, 1, -a8),
-        Size = UDim2.new(1, -a8 * 2, 0, self.height),
+        Position = UDim2.new(0.5, 0, 1, -height),
+        Size = UDim2.new(1, -height * 2, 0, self.height),
         BorderSizePixel = 0,
         ClipsDescendants = true,
 
@@ -215,7 +215,7 @@ function a1:_build()
     }, { Color = "SurfaceStroke" })
 
     self.scroll = self.window:Create("ScrollingFrame", {
-        Size = UDim2.new(1, -a9 * 2, 1, -a9 * 2),
+        Size = UDim2.new(1, -follow * 2, 1, -follow * 2),
         Position = UDim2.fromScale(0.5, 0.5),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundTransparency = 1,
@@ -240,7 +240,7 @@ function a1:_build()
     self:_watchCanvas()
 end
 
-function a1:_pin()
+function state:_pin()
     local a30 = self.scroll
     if not a30 or not a30.Parent then
         return
@@ -248,7 +248,7 @@ function a1:_pin()
     a30.CanvasPosition = Vector2.new(0, a30.AbsoluteCanvasSize.Y)
 end
 
-function a1:_follow()
+function state:_follow()
     if not self.follow then
         return
     end
@@ -258,7 +258,7 @@ function a1:_follow()
     end)
 end
 
-function a1:_watchCanvas()
+function state:_watchCanvas()
     self.window:ConnectFor(self, self.scrollLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
         if self.follow then
             self:_pin()
@@ -266,11 +266,11 @@ function a1:_watchCanvas()
     end)
 end
 
-function a1:Set(a31)
+function state:Set(a31)
     self:_setLines(a31)
 end
 
-function a1:Append(a32)
+function state:Append(a32)
     a32 = if type(a32) == "string" then a32 else tostring(a32)
     for a33 in string.gmatch(a32 .. "\n", "([^\n]*)\n") do
         self:_pushLine(a33)
@@ -278,12 +278,12 @@ function a1:Append(a32)
     self:_follow()
 end
 
-function a1:Clear()
+function state:Clear()
     table.clear(self.lines)
     self:_flush()
 end
 
-function a1:Copy(): boolean
+function state:Copy(): boolean
     local a34 = (getgenv and getgenv().setclipboard) or setclipboard
     if typeof(a34) ~= "function" then
         return false
@@ -291,14 +291,14 @@ function a1:Copy(): boolean
     return (pcall(a34, self:Get()))
 end
 
-function a1:SetHeight(a35)
-    self.height = math.max(tonumber(a35) or a5, a6)
-    local a36 = if self.name then a7 else 0
-    self.panel.Size = UDim2.new(1, -a8 * 2, 0, self.height)
-    self.main.Size = UDim2.new(1, -20, 0, self.height + a36 + a8 * 2)
+function state:SetHeight(a35)
+    self.height = math.max(tonumber(a35) or props, name)
+    local a36 = if self.name then text else 0
+    self.panel.Size = UDim2.new(1, -height * 2, 0, self.height)
+    self.main.Size = UDim2.new(1, -20, 0, self.height + a36 + height * 2)
 end
 
-function a1:_setShown(a37, a38)
+function state:_setShown(a37, a38)
     local w = self.window
 
         w:_reveal(self.main, { BackgroundTransparency = if a37 then w.theme.ElementTransparency or 0 else 1 }, a38)
@@ -319,13 +319,13 @@ function a1:_setShown(a37, a38)
     end
 end
 
-function a1:Remove()
+function state:Remove()
     if self.descriptor then
         self.descriptor:Remove()
     end
     self.main:Destroy()
 end
 
-a3(a1)
+Console(state)
 
-return a1
+return state

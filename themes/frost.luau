@@ -1,4 +1,4 @@
-local a1 = require(script.Parent.Parent.core.state)
+local frost = require(script.Parent.Parent.core.state)
 
 return {
     WindowColor = ColorSequence.new({
@@ -46,8 +46,8 @@ return {
     NeutralButtonHover = Color3.fromRGB(212, 220, 224),
     NeutralButtonStroke = Color3.fromRGB(242, 246, 248),
     ActionColor = Color3.fromRGB(68, 74, 80),     TitlingColor = Color3.fromRGB(26, 30, 34),
-    TitleFont = a1.brandFont(Enum.FontWeight.SemiBold),
-    Font = a1.brandFont(Enum.FontWeight.Medium),
+    TitleFont = frost.brandFont(Enum.FontWeight.SemiBold),
+    Font = frost.brandFont(Enum.FontWeight.Medium),
     ContentColor = Color3.fromRGB(42, 46, 52),
     ElementTextHoverColor = Color3.fromRGB(18, 22, 26),
 

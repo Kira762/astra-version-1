@@ -1,7 +1,7 @@
-local a1 = require(script.Parent.services)
+local filesystem = require(script.Parent.services)
 local a2 = {}
 
-local a3 = a1.getService("RunService"):IsStudio()
+local a3 = filesystem.getService("RunService"):IsStudio()
 local a4 = not a3
     and typeof(writefile) == "function"
     and typeof(readfile) == "function"
@@ -53,7 +53,7 @@ if a4 then
 elseif a3 then
             local a16 = Instance.new("Folder")
     a16.Name = "Filesystem"
-    a16.Parent = a1.getService("ReplicatedStorage")
+    a16.Parent = filesystem.getService("ReplicatedStorage")
 
     local function a17(a18: string): { string }
         local a19 = {}

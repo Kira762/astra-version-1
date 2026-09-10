@@ -1,43 +1,42 @@
+local registry = {}
 
-local a1 = {}
+local modules: { [string]: any } = {}
+local factories: { [string]: () -> any } = {}
 
-local a2: { [string]: any } = {}
-local a3: { [string]: () -> any } = {}
-
-function a1.register(a4: string, a5: any)
-    a2[a4] = a5
+function registry.register(name: string, module: any)
+	modules[name] = module
 end
 
-function a1.registerFactory(a6: string, a7: () -> any)
-    a3[a6] = a7
+function registry.registerFactory(name: string, factory: () -> any)
+	factories[name] = factory
 end
 
-function a1.get(a8: string): any?
-    local a9 = a2[a8]
-    if a9 ~= nil then
-        return a9
-    end
-    local a10 = a3[a8]
-    if a10 then
-        local a11 = a10()
-        a2[a8] = a11
-        return a11
-    end
-    return nil
+function registry.get(name: string): any?
+	local cached = modules[name]
+	if cached ~= nil then
+		return cached
+	end
+	local factory = factories[name]
+	if factory then
+		local instance = factory()
+		modules[name] = instance
+		return instance
+	end
+	return nil
 end
 
-function a1.names(): { string }
-    local a12 = {}
-    for a13 in a2 do
-        table.insert(a12, a13)
-    end
-    for a14 in a3 do
-        if a2[a14] == nil then
-            table.insert(a12, a14)
-        end
-    end
-    table.sort(a12)
-    return a12
+function registry.names(): { string }
+	local list = {}
+	for name in modules do
+		table.insert(list, name)
+	end
+	for name in factories do
+		if modules[name] == nil then
+			table.insert(list, name)
+		end
+	end
+	table.sort(list)
+	return list
 end
 
-return a1
+return registry

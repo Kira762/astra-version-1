@@ -1,7 +1,7 @@
 
-local a1 = {}
+local windowIcons = {}
 
-a1.ids = {
+windowIcons.ids = {
     window = 80387863064905,
     close = 83277910885129,
     minimise = 108115485663409,
@@ -15,7 +15,7 @@ a1.ids = {
     config = 125823673784681,
 }
 
-a1.roles = {
+windowIcons.roles = {
     close = "close",
     minimise = "minimise",
     maximise = "maximise",
@@ -28,34 +28,34 @@ a1.roles = {
     config = "config",
 }
 
-function a1.manifest()
-    local a2: { [number]: { roles: { string } } } = {}
-    for a3, id in a1.ids do
-        local a4 = a2[id]
-        if not a4 then
-            a4 = { roles = {} }
-            a2[id] = a4
+function windowIcons.manifest()
+    local manifest: { [number]: { roles: { string } } } = {}
+    for name, id in windowIcons.ids do
+        local entry = manifest[id]
+        if not entry then
+            entry = { roles = {} }
+            manifest[id] = entry
         end
-        table.insert(a4.roles, a1.roles[a3] or a3)
+        table.insert(entry.roles, windowIcons.roles[name] or name)
     end
-    return a2
+    return manifest
 end
 
-function a1.roleForId(id: number): string
-    local a5 = a1.manifest()[id]
-    if not a5 or #a5.roles == 0 then
+function windowIcons.roleForId(id: number): string
+    local entry = windowIcons.manifest()[id]
+    if not entry or #entry.roles == 0 then
         return "window icon"
     end
-    return table.concat(a5.roles, "/")
+    return table.concat(entry.roles, "/")
 end
 
-function a1.roleList(): { string }
-    local a6 = {}
-    for a7 in a1.ids do
-        table.insert(a6, a1.roles[a7] or a7)
+function windowIcons.roleList(): { string }
+    local list = {}
+    for name in windowIcons.ids do
+        table.insert(list, windowIcons.roles[name] or name)
     end
-    table.sort(a6)
-    return a6
+    table.sort(list)
+    return list
 end
 
-return a1
+return windowIcons

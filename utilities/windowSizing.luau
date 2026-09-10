@@ -1,6 +1,6 @@
-local a1 = require(script.Parent.layouts)
+local windowSizing = require(script.Parent.layouts)
 
-local a2 = {}
+local breakpoints = {}
 
 export type Profile = {
 	defaultSize: Vector2,
@@ -33,7 +33,7 @@ local a4 = {
 		marginFloorY = 20,
 		maxAspectRatio = 2.3,
 		widthCompensation = 100,
-		chromeHeight = a1.top.chromeHeight,
+		chromeHeight = windowSizing.top.chromeHeight,
 	} :: Profile,
 	sidebar = {
 		defaultSize = Vector2.new(720, 600),
@@ -45,19 +45,19 @@ local a4 = {
 		marginFloorY = 20,
 		maxAspectRatio = 2.6,
 		minAspectRatio = 1.18,
-		chromeHeight = a1.sidebar.chromeHeight,
+		chromeHeight = windowSizing.sidebar.chromeHeight,
 	} :: Profile,
 }
 
-function a2.profile(a5: layouts.Mode?): Profile
+function breakpoints.profile(a5: layouts.Mode?): Profile
 	if a5 == "sidebar" then
 		return a4.sidebar
 	end
 	return a4.top
 end
 
-function a2.pageHeight(a6: number?, a7: layouts.Mode?): number
-	local a8 = a2.profile(a7)
+function breakpoints.pageHeight(a6: number?, a7: layouts.Mode?): number
+	local a8 = breakpoints.profile(a7)
 	local a9 = if a6 and a6 > 0 then a6 else a8.minSize.Y
 	return math.max(a9 - a8.chromeHeight, 0)
 end
@@ -113,7 +113,7 @@ local function getTieredOccupancy(a31: Vector2, a32: Profile): (number, number)
 	end
 end
 
-function a2.fit(a31: Vector2?, a32: layouts.Mode?): UDim2
+function breakpoints.fit(a31: Vector2?, a32: layouts.Mode?): UDim2
 	-- Fix: respect mode (old code always used sidebar)
 	local a33 = if a32 == "top" then a4.top else a4.sidebar
 	if not a31 or a31.X < a3 or a31.Y < a3 then
@@ -135,7 +135,7 @@ function a2.fit(a31: Vector2?, a32: layouts.Mode?): UDim2
 end
 
 -- UIScale helper: same physical perception mobile vs desktop.
-function a2.scaleForViewport(a36: Vector2?): number
+function breakpoints.scaleForViewport(a36: Vector2?): number
 	if not a36 or a36.X < a3 then return 1 end
 	-- 390 -> 0.92, 768 -> 0.98, 1280 -> 1.04, 1920 -> 1.12, 2560 -> 1.18 (clamped)
 	local s = 0.88 + (a36.X / 2200) * 0.32
@@ -144,4 +144,4 @@ function a2.scaleForViewport(a36: Vector2?): number
 	return math.clamp(s, 0.88, 1.18)
 end
 
-return a2
+return breakpoints

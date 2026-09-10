@@ -1,4 +1,4 @@
-local a1 = require(script.Parent.network)
+local assetResolver = require(script.Parent.network)
 local a2 = require(script.Parent.log)
 
 export type AssetId = number | string
@@ -119,7 +119,7 @@ function a3.getAssetContentFromUrl(
     end
 
     local a23: string? = nil
-    local a24 = a1.getRequestFn()
+    local a24 = assetResolver.getRequestFn()
     if not a24 then
         a2.warn("No request function available to download asset content.")
     else

@@ -1,4 +1,4 @@
-local a1 = require(script.Parent.Parent.core.state)
+local persistenceSettings = require(script.Parent.Parent.core.state)
 local a2 = require(script.Parent.filesystem)
 local a3 = require(script.Parent.persistencePaths)
 local a4 = require(script.Parent.persistenceWrite)
@@ -56,7 +56,7 @@ function a6.saveSettings(window: SettingsWindow): boolean
         activeSubTab = window.settings.activeSubTab,
     }
 
-    local ok, a10 = pcall(a1.httpService.JSONEncode, a1.httpService, a9)
+    local ok, a10 = pcall(persistenceSettings.httpService.JSONEncode, persistenceSettings.httpService, a9)
     if not ok then
         return false
     end
@@ -84,7 +84,7 @@ local function a12(a13: string): (DecodedSettings?, string?)
         return nil, nil
     end
 
-    local a17, a18 = pcall(a1.httpService.JSONDecode, a1.httpService, a16)
+    local a17, a18 = pcall(persistenceSettings.httpService.JSONDecode, persistenceSettings.httpService, a16)
         if not a17 or type(a18) ~= "table" then
         return nil, a16
     end

@@ -1,104 +1,104 @@
-local a1 = require(script.Parent.Parent.core.state)
-local a2 = a1.textService
+local state = require(script.Parent.Parent.core.state)
+local textService = state.textService
 
-local a3 = {}
+local textMetrics = {}
 
-local a4: { [string]: number } = {}
-local a5 = 0
-local a6 = 1024
-local a7: { [string]: number } = {}
-local a8 = 0
-local a9 = 1024
+local widthCache: { [string]: number } = {}
+local widthCount = 0
+local widthMax = 1024
+local heightCache: { [string]: number } = {}
+local heightCount = 0
+local heightMax = 1024
 
-local function a10(a11: string, a12: Font, a13: number, a14: number): GetTextBoundsParams
-	local a15 = Instance.new("GetTextBoundsParams")
-	a15.Text = a11
-	a15.Font = a12
-	a15.Size = a13
-	a15.Width = a14
-	return a15
+local function createParams(text: string, font: Font, size: number, width: number): GetTextBoundsParams
+	local params = Instance.new("GetTextBoundsParams")
+	params.Text = text
+	params.Font = font
+	params.Size = size
+	params.Width = width
+	return params
 end
 
-local function a16(a17: GetTextBoundsParams): unknown
-    local ok, a18 = pcall(function()
-        return a2:GetTextBoundsAsync(a17)
+local function measureAsync(params: GetTextBoundsParams): unknown
+    local ok, result = pcall(function()
+        return textService:GetTextBoundsAsync(params)
     end)
-    return if ok then a18 else nil
+    return if ok then result else nil
 end
 
-local function a19(a20: unknown, a21: "X" | "Y"): number?
-    if typeof(a20) == "Vector2" then
-        return if a21 == "X" then a20.X else a20.Y
+local function extractAxis(result: unknown, axis: "X" | "Y"): number?
+    if typeof(result) == "Vector2" then
+        return if axis == "X" then result.X else result.Y
     end
-    if type(a20) == "table" and type((a20 :: any)[a21]) == "number" then
-        return (a20 :: any)[a21]
+    if type(result) == "table" and type((result :: any)[axis]) == "number" then
+        return (result :: any)[axis]
     end
     return nil
 end
 
-function a3.textWidth(a22: Font, a23: number, a24: any): number
-    a24 = tostring(a24)
-    local a25 = tostring(a22.Family)
+function textMetrics.textWidth(font: Font, size: number, text: any): number
+    text = tostring(text)
+    local cacheKey = tostring(font.Family)
         .. "|"
-        .. tostring(a22.Weight)
+        .. tostring(font.Weight)
         .. "|"
-        .. tostring(a22.Style)
+        .. tostring(font.Style)
         .. "|"
-        .. tostring(a23)
+        .. tostring(size)
         .. "|"
-        .. a24
-    local a26 = a4[a25]
-    if a26 then
-        return a26
+        .. text
+    local cached = widthCache[cacheKey]
+    if cached then
+        return cached
     end
 
-    local a27 = a19(a16(a10(a24, a22, a23, math.huge)), "X")
-    if not a27 then
-        local a28 = utf8.len(a24) or #a24
-        return math.ceil(a23 * 0.55 * a28)
+    local width = extractAxis(measureAsync(createParams(text, font, size, math.huge)), "X")
+    if not width then
+        local charCount = utf8.len(text) or #text
+        return math.ceil(size * 0.55 * charCount)
     end
 
-    local a29 = math.ceil(a27)
-    if a5 >= a6 then
-        a4 = {}
-        a5 = 0
+    local ceiled = math.ceil(width)
+    if widthCount >= widthMax then
+        widthCache = {}
+        widthCount = 0
     end
-    a4[a25] = a29
-    a5 += 1
-    return a29
+    widthCache[cacheKey] = ceiled
+    widthCount += 1
+    return ceiled
 end
 
-function a3.textHeight(a30: Font, a31: number, a32: any, a33: number): number
-    a32 = tostring(a32)
-    local a34 = tostring(a30.Family)
+function textMetrics.textHeight(font: Font, size: number, text: any, maxWidth: number): number
+    text = tostring(text)
+    local cacheKey = tostring(font.Family)
         .. "|"
-        .. tostring(a30.Weight)
+        .. tostring(font.Weight)
         .. "|"
-        .. tostring(a30.Style)
+        .. tostring(font.Style)
         .. "|"
-        .. tostring(a31)
+        .. tostring(size)
         .. "|"
-        .. tostring(a33)
+        .. tostring(maxWidth)
         .. "|"
-        .. a32
-    local a35 = a7[a34]
-    if a35 then
-        return a35
+        .. text
+    local cached = heightCache[cacheKey]
+    if cached then
+        return cached
     end
 
-    local a36 = a19(a16(a10(a32, a30, a31, a33)), "Y")
-    if not a36 then
-        return a31
+    local height = extractAxis(measureAsync(createParams(text, font, size, maxWidth)), "Y")
+    if not height then
+        return size
     end
 
-    local a37 = math.ceil(a36)
-    if a8 >= a9 then
-        a7 = {}
-        a8 = 0
+    local ceiled = math.ceil(height)
+    if heightCount >= heightMax then
+        heightCache = {}
+        heightCount = 0
     end
-    a7[a34] = a37
-    a8 += 1
-    return a37
+    heightCache[cacheKey] = ceiled
+    heightCount += 1
+    return ceiled
 end
 
-return a3
+return textMetrics

@@ -1,26 +1,25 @@
-local a1 = script.Parent.Parent.utilities
-local a2 = require(a1.Parent.core.state)
-local a3 = require(a1.filesystem)
-local a4 = require(a1.constants)
-local a5 = require(a1.locale)
-local a6 = require(a1.HapticEngine)
+local utilities = script.Parent.Parent.utilities
+local state = require(utilities.Parent.core.state)
+local fs = require(utilities.filesystem)
+local constants = require(utilities.constants)
+local locale = require(utilities.locale)
+local haptic = require(utilities.HapticEngine)
 
-local a7 = {}
+local chrome = {}
 
-local a8 = 5
+local dragThreshold = 5
 
-function a7.buildCollapsedFace(window)
-    local a9 = window.showIconOnly
+function chrome.buildCollapsedFace(window)
+    local iconOnly = window.showIconOnly
 
     window.collapsedIcon = window:Create("ImageLabel", {
         Name = "CollapsedIcon",
-        AnchorPoint = if a9 then Vector2.new(0.5, 0.5) else Vector2.new(0, 0.5),
-        Position = if a9 then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 16, 0.5, 0),
+        AnchorPoint = if iconOnly then Vector2.new(0.5, 0.5) else Vector2.new(0, 0.5),
+        Position = if iconOnly then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 16, 0.5, 0),
         Size = UDim2.fromOffset(24, 24),
         BackgroundTransparency = 1,
-                Image = window.showIcon,
-        ZIndex = a4.zIndex.restoreContent,
-
+        Image = window.showIcon,
+        ZIndex = constants.zIndex.restoreContent,
         ImageTransparency = 1,
         Parent = window.main,
     }, { ImageColor3 = "TitlingColor" })
@@ -29,15 +28,14 @@ function a7.buildCollapsedFace(window)
         Parent = window.collapsedIcon,
     }, { CornerRadius = "CornerRoundness" })
 
-    local a10 = window:Create("Frame", {
+    local collapsedTextFrame = window:Create("Frame", {
         Name = "CollapsedText",
-        Visible = not a9,
+        Visible = not iconOnly,
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 50, 0.5, 0),
         Size = UDim2.new(1, -60, 0, 32),
         BackgroundTransparency = 1,
-        ZIndex = a4.zIndex.restoreContent,
-
+        ZIndex = constants.zIndex.restoreContent,
         Parent = window.main,
     })
 
@@ -45,8 +43,7 @@ function a7.buildCollapsedFace(window)
         Padding = UDim.new(0, 1),
         VerticalAlignment = Enum.VerticalAlignment.Center,
         SortOrder = Enum.SortOrder.LayoutOrder,
-
-        Parent = a10,
+        Parent = collapsedTextFrame,
     })
 
     window.collapsedTitle = window:Create("TextLabel", {
@@ -54,189 +51,186 @@ function a7.buildCollapsedFace(window)
         Text = window.showName,
         Size = UDim2.new(1, 0, 0, 16),
         BackgroundTransparency = 1,
-        FontFace = a2.brandFont(Enum.FontWeight.Medium),
+        FontFace = state.brandFont(Enum.FontWeight.Medium),
         RichText = true,
         TextSize = 16,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 1,
-        ZIndex = a4.zIndex.restoreContent,
-
+        ZIndex = constants.zIndex.restoreContent,
         TextTransparency = 1,
-        Parent = a10,
+        Parent = collapsedTextFrame,
     }, { TextColor3 = "TitlingColor" })
 
     window.collapsedSubtitle = window:Create("TextLabel", {
         Name = "Subtitle",
-        Text = a5.t("Tap to show"),
+        Text = locale.t("Tap to show"),
         Size = UDim2.new(1, 0, 0, 14),
         BackgroundTransparency = 1,
-        FontFace = a2.brandFont(Enum.FontWeight.Medium),
+        FontFace = state.brandFont(Enum.FontWeight.Medium),
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 2,
-        ZIndex = a4.zIndex.restoreContent,
-
+        ZIndex = constants.zIndex.restoreContent,
         TextTransparency = 1,
-        Parent = a10,
+        Parent = collapsedTextFrame,
     }, { TextColor3 = "TitlingColor" })
 
-                    window.collapsedInteract = window:Create("TextButton", {
+    window.collapsedInteract = window:Create("TextButton", {
         Name = "CollapsedInteract",
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
         Text = "",
         TextTransparency = 1,
         Visible = false,
-        ZIndex = a4.zIndex.restoreInteract,
-
+        ZIndex = constants.zIndex.restoreInteract,
         Parent = window.main,
     })
 
-    a7.bindCollapsedDrag(window)
+    chrome.bindCollapsedDrag(window)
 end
 
-function a7.bindCollapsedDrag(window)
-    local a11 = a2.userInputService
-    local a12, a13 = false, false
-    local a14, a15 = Vector2.zero, Vector2.zero
-    local a16
+function chrome.bindCollapsedDrag(window)
+    local inputService = state.userInputService
+    local isDragging, hasMoved = false, false
+    local dragOffset, startMousePos = Vector2.zero, Vector2.zero
+    local renderConnection
 
-            local function a17()
+    local function getGuiInset()
         if window.screenGui and window.screenGui.IgnoreGuiInset then
-            return a2.guiService:GetGuiInset()
+            return state.guiService:GetGuiInset()
         end
         return Vector2.zero
     end
 
-    local function a18()
-        a12 = false
-        if a16 then
-            window:Disconnect(a16)
-            a16 = nil
+    local function cleanupDrag()
+        isDragging = false
+        if renderConnection then
+            window:Disconnect(renderConnection)
+            renderConnection = nil
         end
     end
 
-    local function a19()
-        if not a12 then
-            a18()
+    local function updateDrag()
+        if not isDragging then
+            cleanupDrag()
             return
         end
         if window.unloaded or not window.hidden or window.animating then
-            a18()
+            cleanupDrag()
             return
         end
 
-        local a20 = a11:GetMouseLocation()
-        if not a13 and (a20 - a15).Magnitude < a8 then
+        local mousePos = inputService:GetMouseLocation()
+        if not hasMoved and (mousePos - startMousePos).Magnitude < dragThreshold then
             return
         end
-        a13 = true
+        hasMoved = true
 
-        local a21 = a20 + a14 + a17()
-        window.main.Position = UDim2.fromOffset(a21.X, a21.Y)
+        local newPos = mousePos + dragOffset + getGuiInset()
+        window.main.Position = UDim2.fromOffset(newPos.X, newPos.Y)
     end
 
-    window:Connect(window.collapsedInteract.InputBegan, function(a22, a23)
-        if a23 or not window.hidden or window.animating then
+    window:Connect(window.collapsedInteract.InputBegan, function(input, gameProcessed)
+        if gameProcessed or not window.hidden or window.animating then
             return
         end
-        local a24 = a22.UserInputType.Name
-        if a24 ~= "MouseButton1" and a24 ~= "Touch" then
+        local inputType = input.UserInputType.Name
+        if inputType ~= "MouseButton1" and inputType ~= "Touch" then
             return
         end
 
-        a12, a13 = true, false
-        if a16 then
-            window:Disconnect(a16)
-            a16 = nil
+        isDragging, hasMoved = true, false
+        if renderConnection then
+            window:Disconnect(renderConnection)
+            renderConnection = nil
         end
-        a16 = window:Connect(a2.runService.RenderStepped, a19)
-        a15 = a11:GetMouseLocation()
-        a14 = window.main.AbsolutePosition + window.main.AbsoluteSize * window.main.AnchorPoint - a15
+        renderConnection = window:Connect(state.runService.RenderStepped, updateDrag)
+        startMousePos = inputService:GetMouseLocation()
+        dragOffset = window.main.AbsolutePosition + window.main.AbsoluteSize * window.main.AnchorPoint - startMousePos
     end)
 
-    window:Connect(a11.InputEnded, function(a25)
-        local a26 = a25.UserInputType.Name
-        if a26 ~= "MouseButton1" and a26 ~= "Touch" then
+    window:Connect(inputService.InputEnded, function(input)
+        local inputType = input.UserInputType.Name
+        if inputType ~= "MouseButton1" and inputType ~= "Touch" then
             return
         end
-        if not a12 then
+        if not isDragging then
             return
         end
-        a18()
+        cleanupDrag()
 
-        if a13 then
+        if hasMoved then
             window._collapsedPosition = window.main.Position
             return
         end
 
-        a6.click()
+        haptic.click()
         window:ToggleHide()
     end)
 
-            window:Connect(a11.WindowFocusReleased, function()
-        a18()
+    window:Connect(inputService.WindowFocusReleased, function()
+        cleanupDrag()
     end)
 end
 
-function a7.isNewUser()
-    local a27 = a2.localPlayer
-    if not a27 then
+function chrome.isNewUser()
+    local player = state.localPlayer
+    if not player then
         return false
     end
 
-        if typeof(a3.isfile) ~= "function" or typeof(a3.writefile) ~= "function" then
+    if typeof(fs.isfile) ~= "function" or typeof(fs.writefile) ~= "function" then
         return true
     end
 
-    local a28 = a2.fileSystemManager:getPath("lastuser.txt")
-    local a29 = tostring(a27.UserId)
-    local a30 = true
+    local path = state.fileSystemManager:getPath("lastuser.txt")
+    local userId = tostring(player.UserId)
+    local isNew = true
 
     pcall(function()
-        if a3.isfile(a28) then
-            a30 = a3.readfile(a28) ~= a29
+        if fs.isfile(path) then
+            isNew = fs.readfile(path) ~= userId
         end
     end)
 
     pcall(function()
-        a3.writefile(a28, a29)
+        fs.writefile(path, userId)
     end)
 
-    return a30
+    return isNew
 end
 
-function a7.setCollapsedShown(window, a31, a32)
-    local a33 = window._hideTransitionId
+function chrome.setCollapsedShown(window, shown, tweenInfo)
+    local transitionId = window._hideTransitionId
 
-    local a34 = {
-        [window.collapsedIcon] = { ImageTransparency = if a31 then 0 else 1 },
+    local targets = {
+        [window.collapsedIcon] = { ImageTransparency = if shown then 0 else 1 },
     }
 
     if not window.showIconOnly then
-        a34[window.collapsedTitle] = { TextTransparency = if a31 then 0 else 1 }
-        a34[window.collapsedSubtitle] = { TextTransparency = if a31 then 0.5 else 1 }
+        targets[window.collapsedTitle] = { TextTransparency = if shown then 0 else 1 }
+        targets[window.collapsedSubtitle] = { TextTransparency = if shown then 0.5 else 1 }
     end
 
-    for a35, a36 in a34 do
-        if a32 then
-            local a37 = a2.tweenService:Create(a35, a32, a36)
-            a37.Completed:Connect(function(ok)
-                if not ok or window._hideTransitionId ~= a33 then
+    for instance, properties in targets do
+        if tweenInfo then
+            local tween = state.tweenService:Create(instance, tweenInfo, properties)
+            tween.Completed:Connect(function(ok)
+                if not ok or window._hideTransitionId ~= transitionId then
                     return
                 end
-                for a38, a39 in a36 do
-                    a35[a38] = a39
+                for prop, value in properties do
+                    instance[prop] = value
                 end
             end)
-            a37:Play()
+            tween:Play()
         else
-            for a40, a41 in a36 do
-                a35[a40] = a41
+            for prop, value in properties do
+                instance[prop] = value
             end
         end
     end
 end
 
-return a7
+return chrome

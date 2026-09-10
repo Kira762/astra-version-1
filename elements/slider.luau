@@ -1,37 +1,37 @@
-local a1 = {}
-a1.__index = a1
-a1.__type = "Slider"
+local state = {}
+state.__index = state
+state.__type = "Slider"
 
-local a2 = script.Parent.Parent.utilities
+local constants = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.odometer)
-local a6 = require(a2.moveable)
-local a7 = require(a2.lockable)
-local a8 = require(a2.locale)
-local a9 = require(a2.HapticEngine)
+local Slider = require(constants.Parent.core.state)
+local tab = require(script.Parent.Parent.functions)
+local props = require(constants.odometer)
+local name = require(constants.moveable)
+local flag = require(constants.lockable)
+local range = require(constants.locale)
+local value = require(constants.HapticEngine)
 
-local function a10(a11)
-    local a12 = 0
-    while a12 < 6 do
-        local a13 = a11 * 10 ^ a12
-        if math.abs(a13 - math.round(a13)) < 1e-9 then
+local function increment(suffix)
+    local minimal = 0
+    while minimal < 6 do
+        local callback = suffix * 10 ^ minimal
+        if math.abs(callback - math.round(callback)) < 1e-9 then
             break
         end
-        a12 += 1
+        minimal += 1
     end
-    return a12
+    return minimal
 end
 
-local function a14(a15, a16, a17)
-    local a18 = a15[1] + math.round((a17 - a15[1]) / a16) * a16
-    return math.clamp(a18, a15[1], a15[2])
+local function element(frame, fill, handle)
+    local min = frame[1] + math.round((handle - frame[1]) / fill) * fill
+    return math.clamp(min, frame[1], frame[2])
 end
 
-local a19 = TweenInfo.new(0.45, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local a20 = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local a21 = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local max = TweenInfo.new(0.45, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local isDragging = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local connection = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 local a22 = 300
 
@@ -50,7 +50,7 @@ local function a28(x: number, a29: number, a30: number): number
     return math.clamp((x - a29) / a30, 0, 1)
 end
 
-function a1.new(tab, a31)
+function state.new(tab, a31)
     a31 = if typeof(a31) == "table" then a31 else {}
 
     local self = setmetatable({
@@ -70,7 +70,7 @@ function a1.new(tab, a31)
         dragging = false,
         minimal = a31.minimal or a31.Minimal or false,
                 _handleWidth = a23.X,
-    }, a1)
+    }, state)
 
         assert(
         typeof(self.range) == "table" and typeof(self.range[1]) == "number" and typeof(self.range[2]) == "number",
@@ -91,13 +91,13 @@ function a1.new(tab, a31)
         )
         else self.range[1]
 
-            self.value = a14(self.range, self.increment, self.value)
+            self.value = element(self.range, self.increment, self.value)
 
-    self._decimals = a10(self.increment)
+    self._decimals = increment(self.increment)
 
     self.flag = a31.flag
         or a31.Flag
-        or (not self.forgetState and a4.deriveFlagFromName(self.name) or nil)
+        or (not self.forgetState and tab.deriveFlagFromName(self.name) or nil)
     self.window:_registerControl(self)
 
     self.main = self.window:Create("Frame", {
@@ -159,7 +159,7 @@ function a1.new(tab, a31)
         }),
 
         Parent = self.progress,
-    }, { Color = { "SliderProgress", a4.toColorSequence } })
+    }, { Color = { "SliderProgress", tab.toColorSequence } })
 
         self.progressGlow = self.window:CreateGlow(self.progress, "AccentColor", 20, 1)
 
@@ -198,14 +198,14 @@ function a1.new(tab, a31)
         self.window:ConnectFor(self, self.main.MouseEnter, function()
         if not self.window:_interactive() then
             return         end
-        a3.tweenService
-            :Create(self.track, a19, { BackgroundColor3 = self.window.theme.SliderBackgroundHover })
+        Slider.tweenService
+            :Create(self.track, max, { BackgroundColor3 = self.window.theme.SliderBackgroundHover })
             :Play()
     end)
 
     self.window:ConnectFor(self, self.main.MouseLeave, function()
-        a3.tweenService
-            :Create(self.track, a19, { BackgroundColor3 = self.window.theme.SliderBackground })
+        Slider.tweenService
+            :Create(self.track, max, { BackgroundColor3 = self.window.theme.SliderBackground })
             :Play()
     end)
 
@@ -214,7 +214,7 @@ function a1.new(tab, a31)
             a32.UserInputType == Enum.UserInputType.MouseButton1
             or a32.UserInputType == Enum.UserInputType.Touch
         then
-            a9.click()             self.dragging = true
+            value.click()             self.dragging = true
             self:_setHeld(true)
             self:_updateFromMouse()
 
@@ -223,7 +223,7 @@ function a1.new(tab, a31)
                 self._dragConnection = nil
             end
 
-                                    self._dragConnection = a3.runService.RenderStepped:Connect(function()
+                                    self._dragConnection = Slider.runService.RenderStepped:Connect(function()
                 if self.window.unloaded or not self.dragging then
                     if self._dragConnection then
                         self._dragConnection:Disconnect()
@@ -236,7 +236,7 @@ function a1.new(tab, a31)
         end
     end)
 
-    self.window:ConnectFor(self, a3.userInputService.InputEnded, function(a33)
+    self.window:ConnectFor(self, Slider.userInputService.InputEnded, function(a33)
         if
             a33.UserInputType == Enum.UserInputType.MouseButton1
             or a33.UserInputType == Enum.UserInputType.Touch
@@ -245,7 +245,7 @@ function a1.new(tab, a31)
         end
     end)
 
-            self.window:ConnectFor(self, a3.userInputService.WindowFocusReleased, function()
+            self.window:ConnectFor(self, Slider.userInputService.WindowFocusReleased, function()
         self:_endDrag()
     end)
 
@@ -273,7 +273,7 @@ function a1.new(tab, a31)
     return self
 end
 
-function a1:_buildLabel()
+function state:_buildLabel()
         self.container = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 20, 0.5, 0),
@@ -330,7 +330,7 @@ function a1:_buildLabel()
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a8.t(self.name),
+        Text = range.t(self.name),
         Size = UDim2.new(1, 0, 0, 16),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
@@ -358,14 +358,14 @@ function a1:_buildLabel()
         Parent = self.container,
     })
 
-    self.valueOdo = a5.new(self.window, self.valueHost, {
+    self.valueOdo = props.new(self.window, self.valueHost, {
         textSize = 15,
         alignment = Enum.HorizontalAlignment.Left,
         transparency = 1,         duration = 0.28,     })
     self.valueOdo:snap(self:_format(self.value))
 end
 
-function a1:_setMainHeight(a34)
+function state:_setMainHeight(a34)
     if self._widthManaged then
         self.main.Size = UDim2.new(self.main.Size.X.Scale, self.main.Size.X.Offset, 0, a34)
     else
@@ -373,7 +373,7 @@ function a1:_setMainHeight(a34)
     end
 end
 
-function a1:_applyLayout()
+function state:_applyLayout()
     if self.minimal then
         return     end
     local a35 = self.main.AbsoluteSize.X
@@ -413,7 +413,7 @@ function a1:_applyLayout()
     end
 end
 
-function a1:_format(a37)
+function state:_format(a37)
     local a38 = string.format("%." .. self._decimals .. "f", a37)
     if self.suffix ~= "" then
         return a38 .. " " .. self.suffix
@@ -421,43 +421,43 @@ function a1:_format(a37)
     return a38
 end
 
-function a1:_pillTravel()
+function state:_pillTravel()
     return math.max(self.track.AbsoluteSize.X, 0)
 end
 
-function a1:_renderProgress(a39)
+function state:_renderProgress(a39)
     local a40 = self.range[2] - self.range[1]
     local a41 = if a40 ~= 0 then math.clamp((self.value - self.range[1]) / a40, 0, 1) else 0
 
     local a42 = a25(a41)
     if a39 then
-        a3.tweenService:Create(self.progress, a39, { Size = a42 }):Play()
+        Slider.tweenService:Create(self.progress, a39, { Size = a42 }):Play()
     else
         self.progress.Size = a42
     end
 end
 
-function a1:_updateFromMouse()
+function state:_updateFromMouse()
     local a43 = self:_pillTravel()
     if a43 <= 0 then
         return
     end
 
     local a44 =
-        a28(a3.userInputService:GetMouseLocation().X, self.track.AbsolutePosition.X, a43)
-    local a45 = a14(self.range, self.increment, self.range[1] + a44 * (self.range[2] - self.range[1]))
+        a28(Slider.userInputService:GetMouseLocation().X, self.track.AbsolutePosition.X, a43)
+    local a45 = element(self.range, self.increment, self.range[1] + a44 * (self.range[2] - self.range[1]))
 
     if a45 ~= self.value then
         self.value = a45
         if self.valueOdo then
             self.valueOdo:snap(self:_format(a45))         end
         self._lastValue = a45
-        self:_renderProgress(a21)
+        self:_renderProgress(connection)
         self:_fireCallback(a45)
     end
 end
 
-function a1:_endDrag()
+function state:_endDrag()
     if not self.dragging then
         return
     end
@@ -472,7 +472,7 @@ function a1:_endDrag()
     self.window:_persist(self)
 end
 
-function a1:_setHeld(a46)
+function state:_setHeld(a46)
                 if not a46 then
         self:_fireCallback(self.value)
     end
@@ -480,28 +480,28 @@ function a1:_setHeld(a46)
     local a47 = if a46 then a24 else a23
     self._handleWidth = a47.X
 
-    a3.tweenService
-        :Create(self.handle, a20, {
+    Slider.tweenService
+        :Create(self.handle, isDragging, {
             Size = UDim2.fromOffset(a47.X, a47.Y),
             BackgroundTransparency = if a46 then 0.7 else 0,
         })
         :Play()
-    a3.tweenService:Create(self.handleStroke, a20, { Transparency = if a46 then 0.6 else 1 }):Play()
-    self:_renderProgress(a20)
+    Slider.tweenService:Create(self.handleStroke, isDragging, { Transparency = if a46 then 0.6 else 1 }):Play()
+    self:_renderProgress(isDragging)
 end
 
-function a1:_fireCallback(a48)
+function state:_fireCallback(a48)
     self.window:_runGuarded(self, self.callback, a48, self.dragging == true)
 end
 
-function a1:Set(a49, a50)
-    a49 = a14(self.range, self.increment, a49)
+function state:Set(a49, a50)
+    a49 = element(self.range, self.increment, a49)
     self.value = a49
     if self.valueOdo then
         self.valueOdo:to(self:_format(a49), a49 >= (self._lastValue or a49))
     end
     self._lastValue = a49
-    self:_renderProgress(a19)
+    self:_renderProgress(max)
 
     if not a50 then
         self:_fireCallback(a49)
@@ -511,7 +511,7 @@ end
 
 local a51 = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0.35)
 
-function a1:_setShown(a52, a53)
+function state:_setShown(a52, a53)
     local w = self.window
     if a52 then
         w:_revealCommon(self, a53)
@@ -536,8 +536,8 @@ function a1:_setShown(a52, a53)
     end
 end
 
-function a1:_refreshTheme()
-    a3.tweenService
+function state:_refreshTheme()
+    Slider.tweenService
         :Create(
             self.progressGlow,
             TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -546,17 +546,17 @@ function a1:_refreshTheme()
         :Play()
 end
 
-function a1:_minWidth()
+function state:_minWidth()
     if self.minimal then
         return 100     end
     local w = 40     if self.icon then
         w += 22     end
-        w += a4.textWidth(self.window.theme.Font, 16, a8.resolve(self.name))
-    w += 12     w += a4.textWidth(self.window.theme.Font, 15, self:_format(self.value))
+        w += tab.textWidth(self.window.theme.Font, 16, range.resolve(self.name))
+    w += 12     w += tab.textWidth(self.window.theme.Font, 15, self:_format(self.value))
     return math.max(w, 160)
 end
 
-a6(a1)
-a7(a1)
+name(state)
+flag(state)
 
-return a1
+return state

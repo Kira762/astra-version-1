@@ -1,4 +1,4 @@
-local a1 = require(script.Parent.Parent.core.state)
+local default = require(script.Parent.Parent.core.state)
 
 return {
     CornerRoundness = UDim.new(0, 20),
@@ -29,8 +29,8 @@ return {
     SliderProgress = ColorSequence.new(Color3.fromRGB(0, 170, 127), Color3.fromRGB(0, 134, 98)),
     SliderStroke = Color3.fromRGB(255, 255, 255),
     ActionColor = Color3.fromRGB(255, 255, 255),
-    TitleFont = a1.brandFont(Enum.FontWeight.SemiBold),
-    Font = a1.brandFont(Enum.FontWeight.Medium),
+    TitleFont = default.brandFont(Enum.FontWeight.SemiBold),
+    Font = default.brandFont(Enum.FontWeight.Medium),
     ContentColor = Color3.fromRGB(255, 255, 255),
 
     LiveAnimation = false,

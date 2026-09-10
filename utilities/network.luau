@@ -1,9 +1,9 @@
-local a1 = {}
-a1.__index = a1
+local network = {}
+network.__index = network
 
 export type RequestFn = (...any) -> any
 
-function a1.getRequestFn(a2: any?): RequestFn?
+function network.getRequestFn(a2: any?): RequestFn?
     a2 = a2 or getfenv()
     return a2.request
         or a2.http_request
@@ -12,4 +12,4 @@ function a1.getRequestFn(a2: any?): RequestFn?
         or (a2.fluxus and a2.fluxus.request)
 end
 
-return a1
+return network

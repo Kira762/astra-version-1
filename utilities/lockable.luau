@@ -1,4 +1,4 @@
-local function a1<T>(a2: T): T
+local function lockable<T>(a2: T): T
     local a3 = a2 :: any
 
         function a3:Lock(a4: string?)
@@ -16,4 +16,4 @@ local function a1<T>(a2: T): T
     return a2
 end
 
-return a1
+return lockable
