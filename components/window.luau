@@ -676,8 +676,8 @@ function Window:CreateTab(props)
 
     if not tab.neglectSelector then
         local isFirst = true
-        for _, tab in self.tabs do
-            if tab ~= tab and not tab.neglectSelector and tab._isSettingsTab == tab._isSettingsTab then
+        for _, existingTab in self.tabs do
+            if existingTab ~= tab and not existingTab.neglectSelector and existingTab._isSettingsTab == tab._isSettingsTab then
                 isFirst = false
                 break
             end

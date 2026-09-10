@@ -58,9 +58,12 @@ end
 
 function state.new(window, a17)
     a17 = if typeof(a17) == "table" then a17 else {}
+    -- Validate the dependency before resolving the tab icon so malformed tab
+    -- construction reports the actual missing Window argument.
+    window = assert(window, "Missing argument #1 (Window expected)")
 
     local self = setmetatable({
-        window = assert(window, "Missing argument #1 (Window expected)"),
+        window = window,
         name = a17.name or a17.Name,
         icon = window:ResolveIcon(a17.icon or a17.Icon),
         neglectSelector = a17.neglectSelector or a17.NeglectSelector or false,
