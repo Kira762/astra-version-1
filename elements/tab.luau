@@ -9,6 +9,7 @@ local window = require(constants.ordering)
 local props = require(constants.HapticEngine)
 local name = require(script.Parent.Parent.components.search)
 local icon = require(script.Parent.Parent.components.tabSelector)
+local flagNames = require(script.Parent.Parent.functions.flagNames)
 
 local function customOrder(window, forgetState)
     for _, element in forgetState do
@@ -70,6 +71,7 @@ function state.new(window, a17)
         customOrder = a17.customOrder or a17.CustomOrder or 0,
                 forgetState = a17.forgetState or a17.ForgetState or false,
         _isSettingsTab = a17.isSettingsTab == true or a17.IsSettingsTab == true,
+        deriveFlagFromName = flagNames.deriveFlagFromName,
 
         elements = {},
         connections = {},     }, state)
