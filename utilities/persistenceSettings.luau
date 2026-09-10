@@ -9,6 +9,7 @@ local a6 = {}
 type SettingsWindow = {
     settings: {
         toggleKeybind: EnumItem,
+        theme: string,
         mouseOverride: boolean,
         keepOnScreen: boolean,
         dragMinimisedBar: boolean,
@@ -24,6 +25,7 @@ type SettingsWindow = {
 
 type DecodedSettings = {
     toggleKeybind: { [number]: unknown }?,
+    theme: unknown?,
     mouseOverride: unknown?,
     keepOnScreen: unknown?,
     dragMinimisedBar: unknown?,
@@ -47,6 +49,7 @@ function a6.saveSettings(window: SettingsWindow): boolean
             tostring(window.settings.toggleKeybind.EnumType),
             window.settings.toggleKeybind.Value,
         } :: { unknown },
+        theme = window.settings.theme,
         mouseOverride = window.settings.mouseOverride,
         keepOnScreen = window.settings.keepOnScreen,
         dragMinimisedBar = window.settings.dragMinimisedBar,
@@ -129,6 +132,15 @@ function a6.loadSettings(window: SettingsWindow): boolean
                 end
             end
         end)
+    end
+
+    if type(a25.theme) == "string" then
+        local theme = string.lower(a25.theme)
+        if theme == "default" or theme == "amethyst" or theme == "cobalt"
+            or theme == "ember" or theme == "frost" or theme == "rose"
+        then
+            window.settings.theme = theme
+        end
     end
 
     if type(a25.mouseOverride) == "boolean" then

@@ -191,6 +191,7 @@ function Window.new(props)
 
             self.settings = {
         toggleKeybind = Enum.KeyCode.K,
+        theme = if type(props.theme or props.Theme) == "string" then string.lower(props.theme or props.Theme) else "default",
         mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = false,
         dragMinimisedBar = false,
         showProfile = true,
@@ -549,6 +550,7 @@ function Window.new(props)
     self._collapsedShown = false
 
         self:LoadSettings()
+    self:ChangeTheme(self.settings.theme)
     if self.settings.layoutMode == "collapsedSidebar"
         or (self.settings.layoutMode and self.settings.layoutMode ~= self.layout.mode)
     then
@@ -1431,6 +1433,60 @@ function Window:_buildSettingsUI()
         description = "Shows a 'Signed in as' toast the first time you open the menu on a new account.",
         value = self.settings.welcomeToast,
         callback = function(value) self.settings.welcomeToast = value; self:SaveSettings() end,
+    })
+
+    appearance:CreateSection({ name = "Theme" })
+    local themes = {
+        default = "Default",
+        amethyst = "Amethyst",
+        cobalt = "Cobalt",
+        ember = "Ember",
+        frost = "Frost",
+        rose = "Rose",
+    }
+    local selectedTheme = self.settings.theme
+    local function themeLabel(key)
+        return themes[key] or themes.default
+    end
+    if not themes[selectedTheme] then
+        selectedTheme = "default"
+    end
+    appearance:CreateDropdown({
+        name = "Theme",
+        description = "Choose a built-in theme to preview and apply.",
+        options = { "Default", "Amethyst", "Cobalt", "Ember", "Frost", "Rose" },
+        value = themeLabel(selectedTheme),
+        callback = function(value)
+            for key, label in themes do
+                if value == label then
+                    selectedTheme = key
+                    break
+                end
+            end
+        end,
+    })
+    appearance:CreateButton({
+        name = "Apply theme",
+        description = "Confirm the selected theme before changing the window.",
+        callback = function()
+            if selectedTheme == self.settings.theme then
+                self:Notify({ title = "Theme", content = "The " .. themeLabel(selectedTheme) .. " theme is already active." })
+                return
+            end
+            self:Popup({
+                title = "Apply theme?",
+                content = "Apply the " .. themeLabel(selectedTheme) .. " theme to this window?",
+                options = {
+                    { text = "Cancel" },
+                    { text = "Apply", style = "primary", callback = function()
+                        self.settings.theme = selectedTheme
+                        self:ChangeTheme(selectedTheme)
+                        self:SaveSettings()
+                        self:Notify({ title = "Theme applied", subtitle = themeLabel(selectedTheme) })
+                    end },
+                },
+            })
+        end,
     })
 
     appearance:CreateSection({ name = "Layout" })

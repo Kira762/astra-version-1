@@ -3959,6 +3959,7 @@ function Window.new(props)
 
             self.settings = {
         toggleKeybind = Enum.KeyCode.K,
+        theme = if type(props.theme or props.Theme) == "string" then string.lower(props.theme or props.Theme) else "default",
         mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = false,
         dragMinimisedBar = false,
         showProfile = true,
@@ -4317,6 +4318,7 @@ function Window.new(props)
     self._collapsedShown = false
 
         self:LoadSettings()
+    self:ChangeTheme(self.settings.theme)
     if self.settings.layoutMode == "collapsedSidebar"
         or (self.settings.layoutMode and self.settings.layoutMode ~= self.layout.mode)
     then
@@ -5199,6 +5201,60 @@ function Window:_buildSettingsUI()
         description = "Shows a 'Signed in as' toast the first time you open the menu on a new account.",
         value = self.settings.welcomeToast,
         callback = function(value) self.settings.welcomeToast = value; self:SaveSettings() end,
+    })
+
+    appearance:CreateSection({ name = "Theme" })
+    local themes = {
+        default = "Default",
+        amethyst = "Amethyst",
+        cobalt = "Cobalt",
+        ember = "Ember",
+        frost = "Frost",
+        rose = "Rose",
+    }
+    local selectedTheme = self.settings.theme
+    local function themeLabel(key)
+        return themes[key] or themes.default
+    end
+    if not themes[selectedTheme] then
+        selectedTheme = "default"
+    end
+    appearance:CreateDropdown({
+        name = "Theme",
+        description = "Choose a built-in theme to preview and apply.",
+        options = { "Default", "Amethyst", "Cobalt", "Ember", "Frost", "Rose" },
+        value = themeLabel(selectedTheme),
+        callback = function(value)
+            for key, label in themes do
+                if value == label then
+                    selectedTheme = key
+                    break
+                end
+            end
+        end,
+    })
+    appearance:CreateButton({
+        name = "Apply theme",
+        description = "Confirm the selected theme before changing the window.",
+        callback = function()
+            if selectedTheme == self.settings.theme then
+                self:Notify({ title = "Theme", content = "The " .. themeLabel(selectedTheme) .. " theme is already active." })
+                return
+            end
+            self:Popup({
+                title = "Apply theme?",
+                content = "Apply the " .. themeLabel(selectedTheme) .. " theme to this window?",
+                options = {
+                    { text = "Cancel" },
+                    { text = "Apply", style = "primary", callback = function()
+                        self.settings.theme = selectedTheme
+                        self:ChangeTheme(selectedTheme)
+                        self:SaveSettings()
+                        self:Notify({ title = "Theme applied", subtitle = themeLabel(selectedTheme) })
+                    end },
+                },
+            })
+        end,
     })
 
     appearance:CreateSection({ name = "Layout" })
@@ -28276,6 +28332,7 @@ local a6 = {}
 type SettingsWindow = {
     settings: {
         toggleKeybind: EnumItem,
+        theme: string,
         mouseOverride: boolean,
         keepOnScreen: boolean,
         dragMinimisedBar: boolean,
@@ -28291,6 +28348,7 @@ type SettingsWindow = {
 
 type DecodedSettings = {
     toggleKeybind: { [number]: unknown }?,
+    theme: unknown?,
     mouseOverride: unknown?,
     keepOnScreen: unknown?,
     dragMinimisedBar: unknown?,
@@ -28314,6 +28372,7 @@ function a6.saveSettings(window: SettingsWindow): boolean
             tostring(window.settings.toggleKeybind.EnumType),
             window.settings.toggleKeybind.Value,
         } :: { unknown },
+        theme = window.settings.theme,
         mouseOverride = window.settings.mouseOverride,
         keepOnScreen = window.settings.keepOnScreen,
         dragMinimisedBar = window.settings.dragMinimisedBar,
@@ -28396,6 +28455,15 @@ function a6.loadSettings(window: SettingsWindow): boolean
                 end
             end
         end)
+    end
+
+    if type(a25.theme) == "string" then
+        local theme = string.lower(a25.theme)
+        if theme == "default" or theme == "amethyst" or theme == "cobalt"
+            or theme == "ember" or theme == "frost" or theme == "rose"
+        then
+            window.settings.theme = theme
+        end
     end
 
     if type(a25.mouseOverride) == "boolean" then
@@ -28653,84 +28721,84 @@ local LineOffsets = {
     [16] = 3114,
     [17] = 3392,
     [18] = 3769,
-    [20] = 6422,
-    [21] = 6689,
-    [22] = 7820,
-    [23] = 8154,
-    [24] = 8215,
-    [25] = 8360,
-    [26] = 9680,
-    [27] = 9881,
-    [28] = 10142,
-    [29] = 10604,
-    [30] = 11054,
-    [31] = 11141,
-    [32] = 11706,
-    [33] = 12324,
-    [34] = 12678,
-    [35] = 12808,
-    [36] = 12972,
-    [37] = 13126,
-    [39] = 13637,
-    [40] = 13660,
-    [41] = 13677,
-    [42] = 13706,
-    [43] = 13822,
-    [44] = 13836,
-    [45] = 13885,
-    [46] = 13612,
-    [47] = 13986,
-    [48] = 14289,
-    [49] = 14320,
-    [50] = 13975,
-    [51] = 14363,
-    [52] = 14383,
-    [53] = 14415,
-    [54] = 14345,
-    [55] = 14522,
-    [56] = 14584,
-    [57] = 14647,
-    [59] = 14710,
-    [60] = 14875,
-    [61] = 14695,
-    [62] = 15127,
-    [63] = 15422,
-    [64] = 16078,
-    [65] = 17862,
-    [66] = 19003,
-    [67] = 20523,
-    [68] = 14939,
-    [69] = 25767,
-    [70] = 25811,
-    [71] = 25854,
-    [72] = 25927,
-    [73] = 25971,
-    [74] = 26032,
-    [75] = 25661,
-    [76] = 26076,
-    [77] = 26174,
-    [78] = 26352,
-    [79] = 26403,
-    [80] = 26433,
-    [81] = 26684,
-    [82] = 26733,
-    [83] = 27186,
-    [84] = 27204,
-    [85] = 27358,
-    [86] = 27457,
-    [87] = 27479,
-    [88] = 27529,
-    [89] = 27565,
-    [90] = 27583,
-    [91] = 27896,
-    [92] = 27912,
-    [93] = 27963,
-    [94] = 27982,
-    [95] = 28224,
-    [96] = 28268,
-    [97] = 28448,
-    [98] = 28476,
-    [99] = 28487,
+    [20] = 6478,
+    [21] = 6745,
+    [22] = 7876,
+    [23] = 8210,
+    [24] = 8271,
+    [25] = 8416,
+    [26] = 9736,
+    [27] = 9937,
+    [28] = 10198,
+    [29] = 10660,
+    [30] = 11110,
+    [31] = 11197,
+    [32] = 11762,
+    [33] = 12380,
+    [34] = 12734,
+    [35] = 12864,
+    [36] = 13028,
+    [37] = 13182,
+    [39] = 13693,
+    [40] = 13716,
+    [41] = 13733,
+    [42] = 13762,
+    [43] = 13878,
+    [44] = 13892,
+    [45] = 13941,
+    [46] = 13668,
+    [47] = 14042,
+    [48] = 14345,
+    [49] = 14376,
+    [50] = 14031,
+    [51] = 14419,
+    [52] = 14439,
+    [53] = 14471,
+    [54] = 14401,
+    [55] = 14578,
+    [56] = 14640,
+    [57] = 14703,
+    [59] = 14766,
+    [60] = 14931,
+    [61] = 14751,
+    [62] = 15183,
+    [63] = 15478,
+    [64] = 16134,
+    [65] = 17918,
+    [66] = 19059,
+    [67] = 20579,
+    [68] = 14995,
+    [69] = 25823,
+    [70] = 25867,
+    [71] = 25910,
+    [72] = 25983,
+    [73] = 26027,
+    [74] = 26088,
+    [75] = 25717,
+    [76] = 26132,
+    [77] = 26230,
+    [78] = 26408,
+    [79] = 26459,
+    [80] = 26489,
+    [81] = 26740,
+    [82] = 26789,
+    [83] = 27242,
+    [84] = 27260,
+    [85] = 27414,
+    [86] = 27513,
+    [87] = 27535,
+    [88] = 27585,
+    [89] = 27621,
+    [90] = 27639,
+    [91] = 27952,
+    [92] = 27968,
+    [93] = 28019,
+    [94] = 28038,
+    [95] = 28280,
+    [96] = 28324,
+    [97] = 28516,
+    [98] = 28544,
+    [99] = 28555,
 }
 
 -- Misc AOT variable imports
