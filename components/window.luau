@@ -710,7 +710,7 @@ function Window:CreateSection(props)
 
             if not section.inert and not self.hidden and not self.minimised then
         section:_setVisible(true)
-        section:_setShown(true, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out))
+        section:_setShown(true, false)
     end
 
     return section

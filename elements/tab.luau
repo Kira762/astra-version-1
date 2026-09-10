@@ -231,7 +231,7 @@ function state:_register(element)
     self.window:_restoreLate(element)
 
     if not self.window.hidden then
-        element:_setShown(true, true)
+        element:_setShown(true, false)
     end
 
     return element
