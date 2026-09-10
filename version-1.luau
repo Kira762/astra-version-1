@@ -1137,6 +1137,7 @@ function Drag.new(window, props)
     self.window:CreateGlow(self.dragCosmetic, Color3.fromRGB(255, 255, 255), 10, 0.5)
 
     self.dragInteract = self.window:Create("TextButton", {
+        Active = true,
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
         TextTransparency = 1,
@@ -1216,7 +1217,7 @@ function Drag.new(window, props)
             self._dragConnection = nil
         end
 
-        if not self.window:_interactive() then
+        if not self.window:_canDragCapsule() then
             return
         end
 
@@ -1243,14 +1244,7 @@ function Drag.new(window, props)
             return
         end
 
-        if self.window.hidden or self.window.animating then
-            return
-        end
-
-        if self.window.minimised
-            and self.window.settings
-            and self.window.settings.dragMinimisedBar ~= true
-        then
+        if not self.window:_canDragCapsule() then
             return
         end
 
@@ -1306,7 +1300,7 @@ function Drag.new(window, props)
             return
         end
 
-        if self.window.unloaded or not self.window:_interactive() then
+        if self.window.unloaded or not self.window:_canDragCapsule() then
             endDrag()
             return
         end
@@ -5089,7 +5083,7 @@ function Window:_bindTopbarDrag()
             endDrag()
             return
         end
-        if self.unloaded or not self:_interactive() then
+        if self.unloaded or not self:_canDragCapsule() then
             endDrag()
             return
         end
@@ -5132,10 +5126,7 @@ function Window:_bindTopbarDrag()
             return
         end
 
-        if self.minimised
-            and self.settings
-            and self.settings.dragMinimisedBar ~= true
-        then
+        if not self:_canDragCapsule() then
             return
         end
 
@@ -6338,6 +6329,13 @@ end
 
 function Window:_interactive()
     return not self.animating and not self.hidden
+end
+
+function Window:_canDragCapsule()
+    if self.hidden or self.animating then
+        return false
+    end
+    return not self.minimised or (self.settings and self.settings.dragMinimisedBar == true)
 end
 
 function Window:_settled()
@@ -28721,91 +28719,91 @@ local LineOffsets = {
     [9] = 745,
     [10] = 855,
     [11] = 1094,
-    [12] = 1327,
-    [13] = 1634,
-    [14] = 2352,
-    [15] = 2687,
-    [16] = 3114,
-    [17] = 3392,
-    [18] = 3769,
-    [20] = 6485,
-    [21] = 6752,
-    [22] = 7883,
-    [23] = 8217,
-    [24] = 8278,
-    [25] = 8423,
-    [26] = 9743,
-    [27] = 9944,
-    [28] = 10205,
-    [29] = 10667,
-    [30] = 11117,
-    [31] = 11204,
-    [32] = 11769,
-    [33] = 12387,
-    [34] = 12741,
-    [35] = 12871,
-    [36] = 13035,
-    [37] = 13189,
-    [39] = 13700,
-    [40] = 13723,
-    [41] = 13740,
-    [42] = 13769,
-    [43] = 13885,
-    [44] = 13899,
-    [45] = 13948,
-    [46] = 13675,
-    [47] = 14049,
-    [48] = 14352,
-    [49] = 14383,
-    [50] = 14038,
-    [51] = 14426,
-    [52] = 14446,
-    [53] = 14478,
-    [54] = 14408,
-    [55] = 14585,
-    [56] = 14647,
-    [57] = 14710,
-    [59] = 14773,
-    [60] = 14938,
-    [61] = 14758,
-    [62] = 15190,
-    [63] = 15485,
-    [64] = 16141,
-    [65] = 17925,
-    [66] = 19066,
-    [67] = 20586,
-    [68] = 15002,
-    [69] = 25830,
-    [70] = 25874,
-    [71] = 25917,
-    [72] = 25990,
-    [73] = 26034,
-    [74] = 26095,
-    [75] = 25724,
-    [76] = 26139,
-    [77] = 26237,
-    [78] = 26415,
-    [79] = 26466,
-    [80] = 26496,
-    [81] = 26747,
-    [82] = 26796,
-    [83] = 27249,
-    [84] = 27267,
-    [85] = 27421,
-    [86] = 27520,
-    [87] = 27542,
-    [88] = 27592,
-    [89] = 27628,
-    [90] = 27646,
-    [91] = 27959,
-    [92] = 27975,
-    [93] = 28026,
-    [94] = 28045,
-    [95] = 28287,
-    [96] = 28331,
-    [97] = 28523,
-    [98] = 28551,
-    [99] = 28562,
+    [12] = 1321,
+    [13] = 1628,
+    [14] = 2346,
+    [15] = 2681,
+    [16] = 3108,
+    [17] = 3386,
+    [18] = 3763,
+    [20] = 6483,
+    [21] = 6750,
+    [22] = 7881,
+    [23] = 8215,
+    [24] = 8276,
+    [25] = 8421,
+    [26] = 9741,
+    [27] = 9942,
+    [28] = 10203,
+    [29] = 10665,
+    [30] = 11115,
+    [31] = 11202,
+    [32] = 11767,
+    [33] = 12385,
+    [34] = 12739,
+    [35] = 12869,
+    [36] = 13033,
+    [37] = 13187,
+    [39] = 13698,
+    [40] = 13721,
+    [41] = 13738,
+    [42] = 13767,
+    [43] = 13883,
+    [44] = 13897,
+    [45] = 13946,
+    [46] = 13673,
+    [47] = 14047,
+    [48] = 14350,
+    [49] = 14381,
+    [50] = 14036,
+    [51] = 14424,
+    [52] = 14444,
+    [53] = 14476,
+    [54] = 14406,
+    [55] = 14583,
+    [56] = 14645,
+    [57] = 14708,
+    [59] = 14771,
+    [60] = 14936,
+    [61] = 14756,
+    [62] = 15188,
+    [63] = 15483,
+    [64] = 16139,
+    [65] = 17923,
+    [66] = 19064,
+    [67] = 20584,
+    [68] = 15000,
+    [69] = 25828,
+    [70] = 25872,
+    [71] = 25915,
+    [72] = 25988,
+    [73] = 26032,
+    [74] = 26093,
+    [75] = 25722,
+    [76] = 26137,
+    [77] = 26235,
+    [78] = 26413,
+    [79] = 26464,
+    [80] = 26494,
+    [81] = 26745,
+    [82] = 26794,
+    [83] = 27247,
+    [84] = 27265,
+    [85] = 27419,
+    [86] = 27518,
+    [87] = 27540,
+    [88] = 27590,
+    [89] = 27626,
+    [90] = 27644,
+    [91] = 27957,
+    [92] = 27973,
+    [93] = 28024,
+    [94] = 28043,
+    [95] = 28285,
+    [96] = 28329,
+    [97] = 28521,
+    [98] = 28549,
+    [99] = 28560,
 }
 
 -- Misc AOT variable imports

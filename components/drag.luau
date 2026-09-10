@@ -44,6 +44,7 @@ function Drag.new(window, props)
     self.window:CreateGlow(self.dragCosmetic, Color3.fromRGB(255, 255, 255), 10, 0.5)
 
     self.dragInteract = self.window:Create("TextButton", {
+        Active = true,
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
         TextTransparency = 1,
@@ -123,7 +124,7 @@ function Drag.new(window, props)
             self._dragConnection = nil
         end
 
-        if not self.window:_interactive() then
+        if not self.window:_canDragCapsule() then
             return
         end
 
@@ -150,14 +151,7 @@ function Drag.new(window, props)
             return
         end
 
-        if self.window.hidden or self.window.animating then
-            return
-        end
-
-        if self.window.minimised
-            and self.window.settings
-            and self.window.settings.dragMinimisedBar ~= true
-        then
+        if not self.window:_canDragCapsule() then
             return
         end
 
@@ -213,7 +207,7 @@ function Drag.new(window, props)
             return
         end
 
-        if self.window.unloaded or not self.window:_interactive() then
+        if self.window.unloaded or not self.window:_canDragCapsule() then
             endDrag()
             return
         end

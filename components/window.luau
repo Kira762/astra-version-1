@@ -1321,7 +1321,7 @@ function Window:_bindTopbarDrag()
             endDrag()
             return
         end
-        if self.unloaded or not self:_interactive() then
+        if self.unloaded or not self:_canDragCapsule() then
             endDrag()
             return
         end
@@ -1364,10 +1364,7 @@ function Window:_bindTopbarDrag()
             return
         end
 
-        if self.minimised
-            and self.settings
-            and self.settings.dragMinimisedBar ~= true
-        then
+        if not self:_canDragCapsule() then
             return
         end
 
@@ -2570,6 +2567,13 @@ end
 
 function Window:_interactive()
     return not self.animating and not self.hidden
+end
+
+function Window:_canDragCapsule()
+    if self.hidden or self.animating then
+        return false
+    end
+    return not self.minimised or (self.settings and self.settings.dragMinimisedBar == true)
 end
 
 function Window:_settled()
