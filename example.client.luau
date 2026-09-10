@@ -13,11 +13,12 @@ assert(
 local window = Astra:CreateWindow({
     name = "Astra Example",
     subtitle = "Multi-tab supported API example",
+    showHeader = false,
 })
 
 window:CreateTag({
     icon = "tag",
-    text = "0.0.7",
+    text = "0.0.8",
 })
 
 -- Home: overview content and basic controls.

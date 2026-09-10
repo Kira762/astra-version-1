@@ -133,6 +133,7 @@ function Window.new(props)
         icon = icons.resolve(constants.icons.window, iconPack),
         showName = props.showName or props.ShowName or "Astra",
         showIcon = icons.resolve(constants.icons.window, iconPack),
+        showHeader = props.showHeader ~= false and props.ShowHeader ~= false,
                 showIconOnly = props.showIconOnly or props.ShowIconOnly or false,
                 profileText = nil,
 
@@ -327,7 +328,7 @@ function Window.new(props)
         Parent = self.titleContainer,
     })
 
-    if self.name then
+    if self.name and self.showHeader then
         self.title = self:Create("TextLabel", {
                         Text = locale.t(self.name),
             FontFace = state.brandFont(Enum.FontWeight.Medium),
@@ -345,7 +346,7 @@ function Window.new(props)
         }, { FontFace = "Font", TextColor3 = "TitlingColor" })
     end
 
-    if self.icon then
+    if self.icon and self.showHeader then
         self.topbarIcon = self:Create("ImageLabel", {
             Image = self.icon,
 
@@ -357,7 +358,7 @@ function Window.new(props)
         }, { ImageColor3 = "TitlingColor" })
     end
 
-    if self.subheading then
+    if self.subheading and self.showHeader then
         self.subtitle = self:Create("TextLabel", {
                         Text = locale.t(self.subheading),
             Size = UDim2.fromOffset(50, 12),
@@ -392,6 +393,7 @@ function Window.new(props)
 
         Parent = self.tagContainer,
     })
+
 
         self.windowShadow = self:CreateGlow(self.main, "ShadowColor", 20, 1)
 
