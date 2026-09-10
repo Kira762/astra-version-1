@@ -6,7 +6,7 @@
 
 local Astra = loadstring(
 	game:HttpGet(
-		"https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"
+		"https://raw.githubusercontent.com/Kira762/astra-version-1/61136e9/version-1.luau"
 	)
 )()
 
