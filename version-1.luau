@@ -13964,9 +13964,9 @@ return moduleCache
 
 end)() end,
     [47] = function()local wax,script,require=ImportGlobals(47)local ImportGlobals return (function(...)
-local fs = require(script.Parent.Parent.utilities.filesystem)
-local pathUtil = require(script.Parent.Parent.utilities.path)
-local coreState = require(script.Parent.Parent.core.state)
+local filesystem = require(script.Parent.Parent.utilities.filesystem)
+local path = require(script.Parent.Parent.utilities.path)
+local variables = require(script.Parent.Parent.core.state)
 local constants = require(script.Parent.Parent.utilities.constants)
 local windowIcons = require(script.Parent.Parent.images.windowIcons)
 
@@ -13982,157 +13982,157 @@ export type ThumbnailEntry = {
 export type ThumbnailResponse = {
     data: { ThumbnailEntry }?,
 }
-local memoryHits = {}
+local imageCache = {}
 
 type RemoteCallback = (uri: string?) -> ()
 
-local diskHits = memoryCache.fileSystemManager:getRootFolder()
-local assetsFolder = memoryCache.fileSystemManager:getAssetsFolder()
-local assetResolver = memoryCache.assetResolver
+local cacheRoot = variables.fileSystemManager:getRootFolder()
+local cacheFolder = variables.fileSystemManager:getAssetsFolder()
+local assetResolver = variables.assetResolver
 
-local githubBase = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/assets/"
-local avatarSize = 48
-local thumbnailUrl =
+local assetBase = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/assets/"
+local headshotPx = 48
+local thumbEndpoint =
     "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=%dx%d&format=Png&isCircular=false"
 
-local remoteUrls: { [number]: string } = {}
-local manifest = maxMemory.manifest()
-for id in manifest do
-    remoteUrls[id] = githubBase .. tostring(id) .. ".png"
+local manifest: { [number]: string } = {}
+local iconManifest = windowIcons.manifest()
+for iconId in iconManifest do
+    manifest[iconId] = assetBase .. tostring(iconId) .. ".png"
 end
-local totalIcons = 0
-for _ in remoteUrls do
-    totalIcons += 1
+local manifestSize = 0
+for _ in manifest do
+    manifestSize += 1
 end
 
-memoryHits.rewrites = {} :: RewriteMap
-memoryHits.onCached = nil :: OnCachedCallback?
-local pngSignature = "\137PNG\r\n\26\n"
-local uriCache: { [string]: string } = {}
-local pendingCallbacks: { [string]: { RemoteCallback } } = {}
+imageCache.rewrites = {} :: RewriteMap
+	imageCache.onCached = nil :: OnCachedCallback?
+local pngMagic = "\137PNG\r\n\26\n"
+local remoteRewrites: { [string]: string } = {}
+local remotePending: { [string]: { RemoteCallback } } = {}
 
-local function downloadAndRegister(diskPath: string, url: string): string?
-        if type(getfenv().getcustomasset) ~= "function" or typeof(state.isfile) ~= "function" then
+local function cacheFile(filePath: string, url: string): string?
+        if type(getfenv().getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
         return nil
     end
-    if not state.isfile(diskPath) then
-        pcall(state.ensureFolder, diskHits)
-        pcall(state.ensureFolder, assetsFolder)
-        local content = assetResolver:getAssetContentFromUrl(url, diskPath, false)
-                        if not content or string.sub(content, 1, 8) ~= pngSignature then
+    if not filesystem.isfile(filePath) then
+        pcall(filesystem.ensureFolder, cacheRoot)
+        pcall(filesystem.ensureFolder, cacheFolder)
+        local body = assetResolver:getAssetContentFromUrl(url, filePath, false)
+                        if not body or string.sub(body, 1, 8) ~= pngMagic then
             return nil
         end
-        if not pcall(state.writefile, diskPath, content) then
+        if not pcall(filesystem.writefile, filePath, body) then
             return nil
         end
     end
-    local ok, uri = pcall(getfenv().getcustomasset, diskPath)
+    local ok, uri = pcall(getfenv().getcustomasset, filePath)
     return if ok and type(uri) == "string" then uri else nil
 end
 
-local function diskPathForUrl(url: string): string
+local function remoteFilePath(url: string): string
     local hash = 0
-    for i = 1, #url do
-        hash = (hash * 33 + string.byte(url, i)) % 2147483647
+    for index = 1, #url do
+        hash = (hash * 33 + string.byte(url, index)) % 2147483647
     end
-    return imageCache.join(assetsFolder, "icon_" .. tostring(hash) .. ".png")
+    return path.join(cacheFolder, "icon_" .. tostring(hash) .. ".png")
 end
 
-function memoryHits.remote(url: string, callback: RemoteCallback?): string
+function imageCache.remote(url: string, onReady: RemoteCallback?): string
     local env = getfenv()
-    if type(env.getcustomasset) ~= "function" or typeof(state.isfile) ~= "function" then
-        if callback then
-            task.defer(callback, nil)
+    if type(env.getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
+        if onReady then
+            task.defer(onReady, nil)
         end
         return ""
     end
 
-    local cached = uriCache[url]
-    if cached then
-        if callback then
-            task.defer(callback, cached)
+    local rewritten = remoteRewrites[url]
+    if rewritten then
+        if onReady then
+            task.defer(onReady, rewritten)
         end
-        return cached
+        return rewritten
     end
 
-    local diskPath = diskPathForUrl(url)
-    if state.isfile(diskPath) then
-        local ok, uri = pcall(env.getcustomasset, diskPath)
+    local filePath = remoteFilePath(url)
+    if filesystem.isfile(filePath) then
+        local ok, uri = pcall(env.getcustomasset, filePath)
         if ok and type(uri) == "string" then
-            uriCache[url] = uri
-            if callback then
-                task.defer(callback, uri)
+            remoteRewrites[url] = uri
+            if onReady then
+                task.defer(onReady, uri)
             end
             return uri
         end
     end
 
-    local queue = pendingCallbacks[url]
-    if not queue then
-        queue = {}
-        pendingCallbacks[url] = queue
+    local pending = remotePending[url]
+    if not pending then
+        pending = {}
+        remotePending[url] = pending
         task.spawn(function()
-            local uri = downloadAndRegister(diskPath, url)
+            local uri = cacheFile(filePath, url)
             if uri then
-                uriCache[url] = uri
+                remoteRewrites[url] = uri
             end
-            local callbacks = pendingCallbacks[url]
-            pendingCallbacks[url] = nil
+            local callbacks = remotePending[url]
+            remotePending[url] = nil
             if callbacks then
-                for _, cb in callbacks do
-                    pcall(cb, uri)
+                for _, callback in callbacks do
+                    pcall(callback, uri)
                 end
             end
         end)
     end
-    if callback then
-        table.insert(queue, callback)
+    if onReady then
+        table.insert(pending, onReady)
     end
     return ""
 end
 
-local function avatarDiskPath(userId: number): string
-    return imageCache.join(assetsFolder, "avatar_" .. tostring(userId) .. ".png")
+local function avatarPath(userId: number): string
+    return path.join(cacheFolder, "avatar_" .. tostring(userId) .. ".png")
 end
 
-local function parseThumbnailResponse(json: string): string?
-    local ok, data = pcall(function()
-        return memoryCache.httpService:JSONDecode(json)
+local function decodeThumbnailUrl(body: string): string?
+    local decodeOk, parsed = pcall(function()
+        return variables.httpService:JSONDecode(body)
     end)
-    if not ok or type(data) ~= "table" then
+    if not decodeOk or type(parsed) ~= "table" then
         return nil
     end
 
-    local entries = (data :: ThumbnailResponse).data
-    if type(entries) ~= "table" then
+    local data = (parsed :: ThumbnailResponse).data
+    if type(data) ~= "table" then
         return nil
     end
 
-    local entry = entries[1]
+    local entry = data[1]
     if type(entry) ~= "table" then
         return nil
     end
 
-    local entry = entry :: ThumbnailEntry
-    if entry.state == "Completed" and type(entry.imageUrl) == "string" then
-        return entry.imageUrl
+    local thumbnail = entry :: ThumbnailEntry
+    if thumbnail.state == "Completed" and type(thumbnail.imageUrl) == "string" then
+        return thumbnail.imageUrl
     end
 
     return nil
 end
 
-local function fetchAvatarUrl(userId: number): string?
-    local imageUrl: string? = nil
+local function fetchAvatar(userId: number): string?
+    local cdnUrl: string? = nil
     for attempt = 1, 4 do
-                local json = assetResolver:getAssetContentFromUrl(
-            string.format(thumbnailUrl, userId, avatarSize, avatarSize),
+                local body = assetResolver:getAssetContentFromUrl(
+            string.format(thumbEndpoint, userId, headshotPx, headshotPx),
             "avatar:" .. tostring(userId),
             attempt > 1
         )
-        if json then
-            local url = parseThumbnailResponse(json)
-            if url then
-                imageUrl = url
+        if body then
+            local imageUrl = decodeThumbnailUrl(body)
+            if imageUrl then
+                cdnUrl = imageUrl
                 break
             end
         end
@@ -14140,121 +14140,121 @@ local function fetchAvatarUrl(userId: number): string?
             task.wait(0.3)
         end
     end
-    if not imageUrl then
+    if not cdnUrl then
         return nil
     end
 
-    return downloadAndRegister(avatarDiskPath(userId), imageUrl)
+    return cacheFile(avatarPath(userId), cdnUrl)
 end
 
-local avatarPending: { [number]: { AvatarCallback } } = {}
-local avatarFailed: { [number]: boolean } = {}
+local pendingAvatars: { [number]: { AvatarCallback } } = {}
+local failedAvatars: { [number]: boolean } = {}
 
-function memoryHits.preload(callback: PreloadCallback?): (boolean, number)
+function imageCache.preload(onSettled: PreloadCallback?): (boolean, number)
     local env = getfenv()
-    if type(env.getcustomasset) ~= "function" or typeof(state.isfile) ~= "function" then
-        if callback then
-            task.defer(callback, totalIcons, maxMemory.roleList())
+    if type(env.getcustomasset) ~= "function" or typeof(filesystem.isfile) ~= "function" then
+        if onSettled then
+            task.defer(onSettled, manifestSize, windowIcons.roleList())
         end
-        return false, totalIcons
+        return false, manifestSize
     end
 
-    local rewrites = memoryHits.rewrites
-    table.clear(rewrites)
-    local function notifyFailed()
-        if not callback then
+    local rewrites = imageCache.rewrites
+	    table.clear(rewrites)
+    local function settle()
+        if not onSettled then
             return
         end
-        local failedCount = 0
+        local failed = 0
         local failedRoles = {}
-        for id in remoteUrls do
+        for id in manifest do
             if not rewrites[id] then
-                failedCount += 1
-                table.insert(failedRoles, maxMemory.roleForId(id))
+                failed += 1
+                table.insert(failedRoles, windowIcons.roleForId(id))
             end
         end
         table.sort(failedRoles)
-        callback(failedCount, failedRoles)
+        onSettled(failed, failedRoles)
     end
 
-    local pending, failedCount = 0, 0
-    local settled = true     for id, url in remoteUrls do
-        local diskPath = imageCache.join(assetsFolder, tostring(id) .. ".png")
+    local pending, missing = 0, 0
+    local spawning = true     for id, url in manifest do
+        local filePath = path.join(cacheFolder, tostring(id) .. ".png")
         local uri: string? = nil
-        if state.isfile(diskPath) then
-            local ok, uri = pcall(env.getcustomasset, diskPath)
-            uri = if ok and type(uri) == "string" then uri else nil
+        if filesystem.isfile(filePath) then
+            local ok, res = pcall(env.getcustomasset, filePath)
+            uri = if ok and type(res) == "string" then res else nil
         end
         if uri then
                         rewrites[id] = uri
         else
-                        failedCount += 1
+                        missing += 1
             pending += 1
             task.spawn(function()
-                local uri = downloadAndRegister(diskPath, url)
-                if uri then
-                    rewrites[id] = uri
-                    if memoryHits.onCached then
-                                                pcall(memoryHits.onCached, id)
+                local cached = cacheFile(filePath, url)
+                if cached then
+                    rewrites[id] = cached
+                    if imageCache.onCached then
+                                                pcall(imageCache.onCached, id)
                     end
                 end
                 pending -= 1
-                if pending == 0 and not settled then
-                    notifyFailed()
+                if pending == 0 and not spawning then
+                    settle()
                 end
             end)
         end
     end
 
-    settled = false
+    spawning = false
     if pending == 0 then
-        notifyFailed()
+        settle()
     end
 
-    return failedCount == 0, failedCount
+    return missing == 0, missing
 end
 
-function memoryHits.avatar(userId: unknown, callback: AvatarCallback?): string
+function imageCache.avatar(userId: unknown, onReady: AvatarCallback?): string
     if type(userId) ~= "number" then
         return ""
     end
 
-        if typeof(state.isfile) ~= "function" then
+        if typeof(filesystem.isfile) ~= "function" then
         return ""
     end
 
-    local diskPath = avatarDiskPath(userId)
-    if state.isfile(diskPath) then
-        local ok, uri = pcall(getfenv().getcustomasset, diskPath)
+    local filePath = avatarPath(userId)
+    if filesystem.isfile(filePath) then
+        local ok, uri = pcall(getfenv().getcustomasset, filePath)
         if ok and type(uri) == "string" then
             return uri
         end
     end
 
-        if avatarFailed[userId] then
+        if failedAvatars[userId] then
         return ""
     end
 
-            local callbacks = avatarPending[userId]
-    if callbacks then
-        if callback then
-            table.insert(callbacks, callback)
+            local waiting = pendingAvatars[userId]
+    if waiting then
+        if onReady then
+            table.insert(waiting, onReady)
         end
         return ""
     end
 
-    if callback then
-        avatarPending[userId] = { callback }
+    if onReady then
+        pendingAvatars[userId] = { onReady }
         task.spawn(function()
-            local uri = fetchAvatarUrl(userId)
-            local callbacks = avatarPending[userId]
-            avatarPending[userId] = nil
+            local uri = fetchAvatar(userId)
+            local callbacks = pendingAvatars[userId]
+            pendingAvatars[userId] = nil
             if not uri then
-                avatarFailed[userId] = true
+                failedAvatars[userId] = true
             end
             if callbacks then
-                for _, cb in callbacks do
-                    pcall(cb, uri or "")
+                for _, callback in callbacks do
+                    pcall(callback, uri or "")
                 end
             end
         end)
@@ -14263,7 +14263,7 @@ function memoryHits.avatar(userId: unknown, callback: AvatarCallback?): string
     return ""
 end
 
-return memoryHits
+return imageCache
 
 end)() end,
     [48] = function()local wax,script,require=ImportGlobals(48)local ImportGlobals return (function(...)
@@ -14688,115 +14688,117 @@ return windowIcons
 
 end)() end,
     [59] = function()local wax,script,require=ImportGlobals(59)local ImportGlobals return (function(...)
-local state = require(script.Parent.Parent.cache.imageCache)
-local imageCache = require(script.Parent.Parent.core.state)
+local imageCache = require(script.Parent.Parent.cache.imageCache)
+local variables = require(script.Parent.Parent.core.state)
 
 type AvatarCallback = imageCache.AvatarCallback
 type PreloadCallback = imageCache.PreloadCallback
 
 local image = {}
 
-image.rewrites = state.rewrites
+image.rewrites = imageCache.rewrites
 image.onBlock = nil :: ((unknown) -> ())?
 
 type PendingProperties = { [string]: boolean }
 
 image.pending = {} :: { [number]: { [Instance]: PendingProperties } }
 
-local assignedProps = false
+local settled = false
 
-local avatarCallbacks: { [string]: boolean } = {
+local imageProperties: { [string]: boolean } = {
     Image = true,
     HoverImage = true,
     PressedImage = true,
 }
 
-local function avatarPending(a7: unknown): number?
-    if type(a7) == "number" then
-        return a7
-    elseif type(a7) == "string" then
-        return tonumber(string.match(a7, "^rbxassetid://(%d+)$"))
+local function idOf(value: unknown): number?
+    if type(value) == "number" then
+        return value
+    elseif type(value) == "string" then
+        return tonumber(string.match(value, "^rbxassetid://(%d+)$"))
     end
     return nil
 end
 
-local function a8(a9: unknown): string
+local function blocked(value: unknown): string
     if image.onBlock then
-        image.onBlock(a9)
+        image.onBlock(value)
     end
     return ""
 end
 
-function image.preload(a10: PreloadCallback?): (boolean, number)
-    assignedProps = false
-    return state.preload(function(a11, a12)
-        assignedProps = true
+function image.preload(onSettled: PreloadCallback?): (boolean, number)
+    settled = false
+    return imageCache.preload(function(failed, failedRoles)
+        settled = true
         table.clear(image.pending)
-        if a10 then
-            a10(a11, a12)
+        if onSettled then
+            onSettled(failed, failedRoles)
         end
     end)
 end
 
-function image.avatar(a13: number, a14: AvatarCallback?): string
-    local a15 = `rbxthumb://type=AvatarHeadShot&id={a13}&w=48&h=48`
-    if not imageCache.secureMode then
-        if a14 then
-            task.defer(a14, a15)
+function image.avatar(userId: number, onReady: AvatarCallback?): string
+    local uri = `rbxthumb://type=AvatarHeadShot&id={userId}&w=48&h=48`
+    if not variables.secureMode then
+        -- The URI is immediately usable; still deliver the callback so
+        -- callers that only render on it do not stay blank.
+        if onReady then
+            task.defer(onReady, uri)
         end
-        return a15
+        return uri
     end
 
-    return state.avatar(a13, a14)
+    return imageCache.avatar(userId, onReady)
 end
 
-function image.assign(a16: Instance, a17: string, a18: unknown)
-    local a19 = a16 :: any
-    if not avatarCallbacks[a17] then
-        a19[a17] = a18
+function image.assign(instance: Instance, property: string, value: unknown)
+    local target = instance :: any
+    if not imageProperties[property] then
+        target[property] = value
         return
     end
 
-    local a20 = type(a18) == "string" and string.match(a18, "^https?://") ~= nil
-    if a20 then
-        a19[a17] = state.remote(a18 :: string, function(a21)
-            if a16.Parent then
-                a19[a17] = a21 or ""
+    local isRemoteUrl = type(value) == "string" and string.match(value, "^https?://") ~= nil
+    if isRemoteUrl then
+        target[property] = imageCache.remote(value :: string, function(uri)
+            if instance.Parent then
+                target[property] = uri or ""
             end
         end)
     else
-        a19[a17] = image.resolve(a18)
+        target[property] = image.resolve(value)
     end
-    if imageCache.secureMode and not assignedProps then
-        local id = avatarPending(a18)
+    if variables.secureMode and not settled then
+        local id = idOf(value)
         if id and not image.rewrites[id] then
-            local a22 = image.pending[id]
-            if not a22 then
-                a22 = setmetatable({}, { __mode = "k" }) :: any
-                image.pending[id] = a22
+            local waiting = image.pending[id]
+            if not waiting then
+                waiting = setmetatable({}, { __mode = "k" }) :: any
+                image.pending[id] = waiting
             end
-            local a23 = a22[a16]
-            if not a23 then
-                a23 = {}
-                a22[a16] = a23
+            local properties = waiting[instance]
+            if not properties then
+                properties = {}
+                waiting[instance] = properties
             end
-            a23[a17] = true
+            properties[property] = true
         end
     end
 end
 
-state.onCached = function(id: number)
-    local a24 = image.pending[id]
-    if not a24 then
+imageCache.onCached = function(id: number)
+    local waiting = image.pending[id]
+    if not waiting then
         return
     end
-    local a25 = image.rewrites[id]
-    if a25 then
-        for a26, a27 in a24 do
-            if a26.Parent then
-                local a28 = a26 :: any
-                for a29 in a27 do
-                    a28[a29] = a25
+    local uri = image.rewrites[id]
+    if uri then
+        for instance, properties in waiting do
+            if instance.Parent then
+                local target = instance :: any
+                for property in properties do
+                    target[property] = uri
                 end
             end
         end
@@ -14804,47 +14806,47 @@ state.onCached = function(id: number)
     image.pending[id] = nil
 end
 
-function image.resolve(a30: unknown): string
-    if a30 == nil or a30 == 0 or a30 == "" then
+function image.resolve(value: unknown): string
+    if value == nil or value == 0 or value == "" then
         return ""
     end
 
-    if type(a30) == "string" then
-        if string.match(a30, "^https?://") then
-            return state.remote(a30)
+    if type(value) == "string" then
+        if string.match(value, "^https?://") then
+            return imageCache.remote(value)
         end
-        if string.sub(a30, 1, 11) == "rbxasset://" then
-            return a30
+        if string.sub(value, 1, 11) == "rbxasset://" then
+            return value
         end
-        if string.sub(a30, 1, 11) == "rbxthumb://" then
-            return if imageCache.secureMode then a8(a30) else a30
+        if string.sub(value, 1, 11) == "rbxthumb://" then
+            return if variables.secureMode then blocked(value) else value
         end
     end
 
     local id: number? = nil
-    if type(a30) == "number" then
-        id = a30
-    elseif type(a30) == "string" then
-        id = tonumber(string.match(a30, "^rbxassetid://(%d+)$"))
+    if type(value) == "number" then
+        id = value
+    elseif type(value) == "string" then
+        id = tonumber(string.match(value, "^rbxassetid://(%d+)$"))
     end
 
-    local a31 = if id then image.rewrites[id] else nil
-    if a31 then
-        return a31
+    local rewrite = if id then image.rewrites[id] else nil
+    if rewrite then
+        return rewrite
     end
 
-    if imageCache.secureMode then
-        return a8(a30)
+    if variables.secureMode then
+        return blocked(value)
     end
 
-    if type(a30) == "number" then
-        return "rbxassetid://" .. a30
+    if type(value) == "number" then
+        return "rbxassetid://" .. value
     end
-    if type(a30) == "string" then
-        return a30
+    if type(value) == "string" then
+        return value
     end
 
-    return a8(a30)
+    return blocked(value)
 end
 
 return image
@@ -28679,46 +28681,46 @@ local LineOffsets = {
     [56] = 14565,
     [57] = 14628,
     [59] = 14691,
-    [60] = 14854,
+    [60] = 14856,
     [61] = 14676,
-    [62] = 15137,
-    [63] = 15432,
-    [64] = 16088,
-    [65] = 17872,
-    [66] = 19013,
-    [67] = 20533,
-    [68] = 14918,
-    [69] = 25762,
-    [70] = 25806,
-    [71] = 25849,
-    [72] = 25922,
-    [73] = 25966,
-    [74] = 26027,
-    [75] = 25671,
-    [76] = 26071,
-    [77] = 26169,
-    [78] = 26347,
-    [79] = 26398,
-    [80] = 26428,
-    [81] = 26679,
-    [82] = 26728,
-    [83] = 27181,
-    [84] = 27199,
-    [85] = 27353,
-    [86] = 27452,
-    [87] = 27474,
-    [88] = 27524,
-    [89] = 27560,
-    [90] = 27578,
-    [91] = 27891,
-    [92] = 27907,
-    [93] = 27958,
-    [94] = 27977,
-    [95] = 28219,
-    [96] = 28263,
-    [97] = 28436,
-    [98] = 28464,
-    [99] = 28475,
+    [62] = 15139,
+    [63] = 15434,
+    [64] = 16090,
+    [65] = 17874,
+    [66] = 19015,
+    [67] = 20535,
+    [68] = 14920,
+    [69] = 25764,
+    [70] = 25808,
+    [71] = 25851,
+    [72] = 25924,
+    [73] = 25968,
+    [74] = 26029,
+    [75] = 25673,
+    [76] = 26073,
+    [77] = 26171,
+    [78] = 26349,
+    [79] = 26400,
+    [80] = 26430,
+    [81] = 26681,
+    [82] = 26730,
+    [83] = 27183,
+    [84] = 27201,
+    [85] = 27355,
+    [86] = 27454,
+    [87] = 27476,
+    [88] = 27526,
+    [89] = 27562,
+    [90] = 27580,
+    [91] = 27893,
+    [92] = 27909,
+    [93] = 27960,
+    [94] = 27979,
+    [95] = 28221,
+    [96] = 28265,
+    [97] = 28438,
+    [98] = 28466,
+    [99] = 28477,
 }
 
 -- Misc AOT variable imports

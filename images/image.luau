@@ -1,112 +1,114 @@
-local state = require(script.Parent.Parent.cache.imageCache)
-local imageCache = require(script.Parent.Parent.core.state)
+local imageCache = require(script.Parent.Parent.cache.imageCache)
+local variables = require(script.Parent.Parent.core.state)
 
 type AvatarCallback = imageCache.AvatarCallback
 type PreloadCallback = imageCache.PreloadCallback
 
 local image = {}
 
-image.rewrites = state.rewrites
+image.rewrites = imageCache.rewrites
 image.onBlock = nil :: ((unknown) -> ())?
 
 type PendingProperties = { [string]: boolean }
 
 image.pending = {} :: { [number]: { [Instance]: PendingProperties } }
 
-local assignedProps = false
+local settled = false
 
-local avatarCallbacks: { [string]: boolean } = {
+local imageProperties: { [string]: boolean } = {
     Image = true,
     HoverImage = true,
     PressedImage = true,
 }
 
-local function avatarPending(a7: unknown): number?
-    if type(a7) == "number" then
-        return a7
-    elseif type(a7) == "string" then
-        return tonumber(string.match(a7, "^rbxassetid://(%d+)$"))
+local function idOf(value: unknown): number?
+    if type(value) == "number" then
+        return value
+    elseif type(value) == "string" then
+        return tonumber(string.match(value, "^rbxassetid://(%d+)$"))
     end
     return nil
 end
 
-local function a8(a9: unknown): string
+local function blocked(value: unknown): string
     if image.onBlock then
-        image.onBlock(a9)
+        image.onBlock(value)
     end
     return ""
 end
 
-function image.preload(a10: PreloadCallback?): (boolean, number)
-    assignedProps = false
-    return state.preload(function(a11, a12)
-        assignedProps = true
+function image.preload(onSettled: PreloadCallback?): (boolean, number)
+    settled = false
+    return imageCache.preload(function(failed, failedRoles)
+        settled = true
         table.clear(image.pending)
-        if a10 then
-            a10(a11, a12)
+        if onSettled then
+            onSettled(failed, failedRoles)
         end
     end)
 end
 
-function image.avatar(a13: number, a14: AvatarCallback?): string
-    local a15 = `rbxthumb://type=AvatarHeadShot&id={a13}&w=48&h=48`
-    if not imageCache.secureMode then
-        if a14 then
-            task.defer(a14, a15)
+function image.avatar(userId: number, onReady: AvatarCallback?): string
+    local uri = `rbxthumb://type=AvatarHeadShot&id={userId}&w=48&h=48`
+    if not variables.secureMode then
+        -- The URI is immediately usable; still deliver the callback so
+        -- callers that only render on it do not stay blank.
+        if onReady then
+            task.defer(onReady, uri)
         end
-        return a15
+        return uri
     end
 
-    return state.avatar(a13, a14)
+    return imageCache.avatar(userId, onReady)
 end
 
-function image.assign(a16: Instance, a17: string, a18: unknown)
-    local a19 = a16 :: any
-    if not avatarCallbacks[a17] then
-        a19[a17] = a18
+function image.assign(instance: Instance, property: string, value: unknown)
+    local target = instance :: any
+    if not imageProperties[property] then
+        target[property] = value
         return
     end
 
-    local a20 = type(a18) == "string" and string.match(a18, "^https?://") ~= nil
-    if a20 then
-        a19[a17] = state.remote(a18 :: string, function(a21)
-            if a16.Parent then
-                a19[a17] = a21 or ""
+    local isRemoteUrl = type(value) == "string" and string.match(value, "^https?://") ~= nil
+    if isRemoteUrl then
+        target[property] = imageCache.remote(value :: string, function(uri)
+            if instance.Parent then
+                target[property] = uri or ""
             end
         end)
     else
-        a19[a17] = image.resolve(a18)
+        target[property] = image.resolve(value)
     end
-    if imageCache.secureMode and not assignedProps then
-        local id = avatarPending(a18)
+    if variables.secureMode and not settled then
+        local id = idOf(value)
         if id and not image.rewrites[id] then
-            local a22 = image.pending[id]
-            if not a22 then
-                a22 = setmetatable({}, { __mode = "k" }) :: any
-                image.pending[id] = a22
+            local waiting = image.pending[id]
+            if not waiting then
+                waiting = setmetatable({}, { __mode = "k" }) :: any
+                image.pending[id] = waiting
             end
-            local a23 = a22[a16]
-            if not a23 then
-                a23 = {}
-                a22[a16] = a23
+            local properties = waiting[instance]
+            if not properties then
+                properties = {}
+                waiting[instance] = properties
             end
-            a23[a17] = true
+            properties[property] = true
         end
     end
 end
 
-state.onCached = function(id: number)
-    local a24 = image.pending[id]
-    if not a24 then
+imageCache.onCached = function(id: number)
+    local waiting = image.pending[id]
+    if not waiting then
         return
     end
-    local a25 = image.rewrites[id]
-    if a25 then
-        for a26, a27 in a24 do
-            if a26.Parent then
-                local a28 = a26 :: any
-                for a29 in a27 do
-                    a28[a29] = a25
+    local uri = image.rewrites[id]
+    if uri then
+        for instance, properties in waiting do
+            if instance.Parent then
+                local target = instance :: any
+                for property in properties do
+                    target[property] = uri
                 end
             end
         end
@@ -114,47 +116,47 @@ state.onCached = function(id: number)
     image.pending[id] = nil
 end
 
-function image.resolve(a30: unknown): string
-    if a30 == nil or a30 == 0 or a30 == "" then
+function image.resolve(value: unknown): string
+    if value == nil or value == 0 or value == "" then
         return ""
     end
 
-    if type(a30) == "string" then
-        if string.match(a30, "^https?://") then
-            return state.remote(a30)
+    if type(value) == "string" then
+        if string.match(value, "^https?://") then
+            return imageCache.remote(value)
         end
-        if string.sub(a30, 1, 11) == "rbxasset://" then
-            return a30
+        if string.sub(value, 1, 11) == "rbxasset://" then
+            return value
         end
-        if string.sub(a30, 1, 11) == "rbxthumb://" then
-            return if imageCache.secureMode then a8(a30) else a30
+        if string.sub(value, 1, 11) == "rbxthumb://" then
+            return if variables.secureMode then blocked(value) else value
         end
     end
 
     local id: number? = nil
-    if type(a30) == "number" then
-        id = a30
-    elseif type(a30) == "string" then
-        id = tonumber(string.match(a30, "^rbxassetid://(%d+)$"))
+    if type(value) == "number" then
+        id = value
+    elseif type(value) == "string" then
+        id = tonumber(string.match(value, "^rbxassetid://(%d+)$"))
     end
 
-    local a31 = if id then image.rewrites[id] else nil
-    if a31 then
-        return a31
+    local rewrite = if id then image.rewrites[id] else nil
+    if rewrite then
+        return rewrite
     end
 
-    if imageCache.secureMode then
-        return a8(a30)
+    if variables.secureMode then
+        return blocked(value)
     end
 
-    if type(a30) == "number" then
-        return "rbxassetid://" .. a30
+    if type(value) == "number" then
+        return "rbxassetid://" .. value
     end
-    if type(a30) == "string" then
-        return a30
+    if type(value) == "string" then
+        return value
     end
 
-    return a8(a30)
+    return blocked(value)
 end
 
 return image
