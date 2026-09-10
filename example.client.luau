@@ -18,7 +18,7 @@ local window = Astra:CreateWindow({
 -- Window tags are rendered beside the window title and remain available in the chrome.
 window:CreateTag({
     icon = "tag",
-    text = "0.0.26",
+    text = "0.0.27",
 })
 
 -- Home: use a tab for overview content and simple state controls.
@@ -110,6 +110,55 @@ information:CreateButton({
         window:Toast({ title = "Astra", subtitle = "All example tabs are available." })
     end,
 })
+
+-- Additional test tabs: twenty main-window tabs with varied elements.
+local testTabs = {
+    { name = "Dashboard", icon = "layout-dashboard" },
+    { name = "Analytics", icon = "chart-no-axes-combined" },
+    { name = "Profile", icon = "user-round" },
+    { name = "Security", icon = "shield" },
+    { name = "Network", icon = "wifi" },
+    { name = "Audio", icon = "volume-2" },
+    { name = "Display", icon = "monitor" },
+    { name = "Shortcuts", icon = "keyboard" },
+    { name = "Notifications", icon = "bell" },
+    { name = "Storage", icon = "hard-drive" },
+    { name = "Automation", icon = "bot" },
+    { name = "Advanced", icon = "wrench" },
+    { name = "Debug", icon = "bug" },
+    { name = "Logs", icon = "scroll-text" },
+    { name = "Experiments", icon = "flask-conical" },
+    { name = "Diagnostics", icon = "activity" },
+}
+
+for index, details in ipairs(testTabs) do
+    local tab = window:CreateTab({ name = details.name, icon = details.icon })
+    tab:CreateSection({ name = "Test elements" })
+    tab:CreateText({
+        name = "Test tab " .. tostring(index),
+        text = "This tab is part of the twenty-tab loading and layout test.",
+    })
+    tab:CreateButton({
+        name = "Run test action",
+        callback = function()
+            window:Toast({ title = details.name, subtitle = "Action completed" })
+        end,
+    })
+
+    if index % 4 == 1 then
+        tab:CreateToggle({ name = "Enabled", value = index % 3 == 0 })
+        tab:CreateSlider({ name = "Intensity", range = { 0, 100 }, value = index * 5, increment = 5 })
+    elseif index % 4 == 2 then
+        tab:CreateDropdown({ name = "Preset", options = { "Low", "Medium", "High" }, value = "Medium" })
+        tab:CreateInput({ name = "Label", placeholder = "Test input" })
+    elseif index % 4 == 3 then
+        tab:CreateColorPicker({ name = "Color", color = Color3.fromHSV(index / #testTabs, 0.7, 1) })
+        tab:CreateDivider()
+    else
+        tab:CreateText({ name = "Status", text = "Ready for testing." })
+        tab:CreateToggle({ name = "Experimental mode", value = false })
+    end
+end
 
 -- Select the first tab explicitly so the example is deterministic on startup.
 home:Select()
