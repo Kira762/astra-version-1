@@ -20,11 +20,11 @@ local window = Astra:CreateWindow({
 -- Window tags are rendered beside the window title and remain available in the chrome.
 window:CreateTag({
     icon = "tag",
-    text = "0.0.15",
+    text = "0.0.16",
 })
 
 -- Home: use a tab for overview content and simple state controls.
-local home = window:CreateTab({ icon = "house" })
+local home = window:CreateTab({ name = "Home", icon = "house" })
 home:CreateSection({ name = "Overview" })
 home:CreateText({
     name = "Welcome",
@@ -48,7 +48,7 @@ home:CreateToggle({
 })
 
 -- Controls: use input elements for values, choices, and user text.
-local controls = window:CreateTab({ icon = "sliders-horizontal" })
+local controls = window:CreateTab({ name = "Controls", icon = "sliders-horizontal" })
 controls:CreateSection({ name = "Input elements" })
 controls:CreateSlider({
     name = "Volume",
@@ -76,7 +76,7 @@ controls:CreateInput({
 })
 
 -- Appearance: use visual elements for colors, dividers, and explanatory text.
-local appearance = window:CreateTab({ icon = "palette" })
+local appearance = window:CreateTab({ name = "Appearance", icon = "palette" })
 appearance:CreateSection({ name = "Visual elements" })
 appearance:CreateColorPicker({
     name = "Accent color",
@@ -92,7 +92,7 @@ appearance:CreateText({
 })
 
 -- Information: document the Window, Tab, and element creation pattern.
-local information = window:CreateTab({ icon = "info" })
+local information = window:CreateTab({ name = "Information", icon = "info" })
 information:CreateSection({ name = "Usage" })
 information:CreateText({
     name = "Create a tab",
