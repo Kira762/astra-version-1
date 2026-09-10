@@ -932,10 +932,10 @@ function Window:Hide()
 
     local collapsedPos, collapsedSize = self:_collapsedRect()
 
-    local hideTween = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-            local surfaceTween = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
-    local cornerTween = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
-    local collapseShowTween = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local hideTween = TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local surfaceTween = TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut)
+    local cornerTween = TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut)
+    local collapseShowTween = TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
             self._hideTransitionId = (self._hideTransitionId or 0) + 1
     local transitionId = self._hideTransitionId
@@ -996,15 +996,9 @@ function Window:Hide()
     tween:Play()
     state.tweenService:Create(self.windowCorner, cornerTween, { CornerRadius = UDim.new(1, 0) }):Play()
 
-            task.delay(0.18, function()
-        if self.unloaded or not self.hidden or self._hideTransitionId ~= transitionId then
-            return
-        end
-        self.topbar.Visible = false
-        self:_setContentVisible(false)
-
-        chrome.setCollapsedShown(self, true, collapseShowTween)
-    end)
+    self.topbar.Visible = true
+    self:_setContentVisible(false)
+    chrome.setCollapsedShown(self, true, collapseShowTween)
 end
 
 function Window:ToggleHide()
