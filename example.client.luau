@@ -16,6 +16,10 @@ local window = Astra:CreateWindow({
     name = "Astra Example",
     subtitle = "Multi-tab supported API example",
 })
+window:CreateTag({
+    icon = "tag",
+    text = "0.0.5",
+})
 
 -- Keep each tab reference local and create it through the Window receiver.
 -- Every element is then created through its Tab receiver.
@@ -90,11 +94,6 @@ appearance:CreateText({
 
 local information = window:CreateTab({
     icon = "info",
-})
-information:CreateText({
-    name = "Version",
-    icon = "tag",
-    text = "0.0.4",
 })
 information:CreateText({
     name = "Supported usage",
