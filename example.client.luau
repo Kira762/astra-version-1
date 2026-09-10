@@ -46,7 +46,6 @@ local controls = window:CreateTab({
     name = "Controls",
     icon = "sliders-horizontal",
 })
-controls:CreateSection({ name = "Adjustments" })
 controls:CreateSlider({
     name = "Volume",
     range = { 0, 100 },
@@ -76,7 +75,6 @@ local appearance = window:CreateTab({
     name = "Appearance",
     icon = "palette",
 })
-appearance:CreateSection({ name = "Theme" })
 appearance:CreateColorPicker({
     name = "Accent color",
     color = Color3.fromRGB(96, 205, 255),
@@ -94,7 +92,6 @@ local information = window:CreateTab({
     name = "Information",
     icon = "info",
 })
-information:CreateSection({ name = "About this example" })
 information:CreateText({
     name = "Supported usage",
     text = "Tabs are created with window:CreateTab, and controls with tab:Create... methods.",

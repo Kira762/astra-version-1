@@ -11174,16 +11174,16 @@ local function a28(x: number, a29: number, a30: number): number
     return math.clamp((x - a29) / a30, 0, 1)
 end
 
-function state.new(tab, a31)
+function state.new(ownerTab, a31)
     a31 = if typeof(a31) == "table" then a31 else {}
 
     local self = setmetatable({
-        tab = assert(tab, "Missing argument #1 (Tab expected)"),
-        window = tab.window,
+        tab = assert(ownerTab, "Missing argument #1 (Tab expected)"),
+        window = ownerTab.window,
         name = a31.name or a31.Name or "Slider",
-        icon = tab.window:ResolveIcon(a31.icon or a31.Icon),
+        icon = ownerTab.window:ResolveIcon(a31.icon or a31.Icon),
         description = a31.description or a31.Description,
-        forgetState = a31.forgetState or a31.ForgetState or tab.forgetState,
+        forgetState = a31.forgetState or a31.ForgetState or ownerTab.forgetState,
 
         range = a31.range or a31.Range or { 0, 100 },
         increment = a31.increment or a31.Increment or 1,
@@ -11221,7 +11221,7 @@ function state.new(tab, a31)
 
     self.flag = a31.flag
         or a31.Flag
-        or (not self.forgetState and tab.deriveFlagFromName(self.name) or nil)
+        or (not self.forgetState and ownerTab.deriveFlagFromName(self.name) or nil)
     self.window:_registerControl(self)
 
     self.main = self.window:Create("Frame", {
@@ -12965,15 +12965,15 @@ local props = 14
 
 local name = 0.45
 
-function state.new(tab, text)
-    text = if typeof(text) == "table" then text else {}
+function state.new(tab, element)
+    element = if typeof(element) == "table" then element else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = tostring(text.name or text.Name or ""),
-        text = tostring(text.text or text.Text or ""),
-        icon = tab.window:ResolveIcon(text.icon or text.Icon),
+        name = tostring(element.name or element.Name or ""),
+        text = tostring(element.text or element.Text or ""),
+        icon = tab.window:ResolveIcon(element.icon or element.Icon),
     }, state)
 
             self.main = self.window:Create("Frame", {
@@ -13044,7 +13044,7 @@ function state.new(tab, text)
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         RichText = true,
-        TextSize = tab,
+        TextSize = 16,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 1,
@@ -13060,7 +13060,7 @@ function state.new(tab, text)
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         RichText = true,
-        TextSize = props,
+        TextSize = 14,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 2,

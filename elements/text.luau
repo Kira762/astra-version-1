@@ -10,15 +10,15 @@ local props = 14
 
 local name = 0.45
 
-function state.new(tab, text)
-    text = if typeof(text) == "table" then text else {}
+function state.new(tab, element)
+    element = if typeof(element) == "table" then element else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = tostring(text.name or text.Name or ""),
-        text = tostring(text.text or text.Text or ""),
-        icon = tab.window:ResolveIcon(text.icon or text.Icon),
+        name = tostring(element.name or element.Name or ""),
+        text = tostring(element.text or element.Text or ""),
+        icon = tab.window:ResolveIcon(element.icon or element.Icon),
     }, state)
 
             self.main = self.window:Create("Frame", {
@@ -89,7 +89,7 @@ function state.new(tab, text)
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         RichText = true,
-        TextSize = tab,
+        TextSize = 16,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 1,
@@ -105,7 +105,7 @@ function state.new(tab, text)
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         RichText = true,
-        TextSize = props,
+        TextSize = 14,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 2,
