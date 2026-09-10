@@ -1,4 +1,3 @@
--- Version: 0.0.3
 -- Astra multi-tab supported-usage example.
 -- This example loads the current bundle with remote icon asset resolution.
 
@@ -21,7 +20,6 @@ local window = Astra:CreateWindow({
 -- Keep each tab reference local and create it through the Window receiver.
 -- Every element is then created through its Tab receiver.
 local home = window:CreateTab({
-    name = "Home",
     icon = "house",
 })
 home:CreateSection({ name = "Overview" })
@@ -47,7 +45,6 @@ home:CreateToggle({
 })
 
 local controls = window:CreateTab({
-    name = "Controls",
     icon = "sliders-horizontal",
 })
 controls:CreateSlider({
@@ -76,7 +73,6 @@ controls:CreateInput({
 })
 
 local appearance = window:CreateTab({
-    name = "Appearance",
     icon = "palette",
 })
 appearance:CreateColorPicker({
@@ -93,8 +89,12 @@ appearance:CreateText({
 })
 
 local information = window:CreateTab({
-    name = "Information",
     icon = "info",
+})
+information:CreateText({
+    name = "Version",
+    icon = "tag",
+    text = "0.0.4",
 })
 information:CreateText({
     name = "Supported usage",
