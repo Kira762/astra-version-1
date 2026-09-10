@@ -25670,14 +25670,25 @@ return tabler
 
 end)() end,
     [75] = function()local wax,script,require=ImportGlobals(75)local ImportGlobals return (function(...)
+-- Theme resolution engine (themes/init.luau).
+--
+-- Extracted verbatim from components/window.luau so the window no longer owns
+-- theme logic. Responsibilities: named-theme lookup against the themes folder,
+-- value coercion (Color3 -> ColorSequence for gradient keys), stroke
+-- derivation for user-supplied theme tables, and brand-font fallbacks.
+-- Only the default theme module is required eagerly; named themes load on
+-- demand when selected.
 
+-- This file IS the `themes` ModuleScript (init.luau semantics): the theme
+-- modules (default, frost, ...) are children of `script`, and other folders
+-- (core, utilities) are siblings reachable through script.Parent.
 local themesFolder = script
-local coreState = require(script.Parent.core.state)
+local variables = require(script.Parent.core.state)
 local log = require(script.Parent.utilities.log)
 
-local themeTable = {}
+local themes = {}
 
-local colorSequenceKeys = {
+local gradientKeys = {
     WindowColor = true,
     ElementGradient = true,
     ElementStrokeGradient = true,
@@ -25686,78 +25697,82 @@ local colorSequenceKeys = {
     SliderProgress = true,
 }
 
-function themeTable.coerceValue(key, value)
-    if colorSequenceKeys[key] and typeof(value) == "Color3" then
+function themes.coerceValue(key, value)
+    if gradientKeys[key] and typeof(value) == "Color3" then
         return ColorSequence.new(value)
     end
     return value
 end
 
-function themeTable.firstColor(key)
-    return if typeof(key) == "ColorSequence" then key.Keypoints[1].Value else key
+function themes.firstColor(value)
+    return if typeof(value) == "ColorSequence" then value.Keypoints[1].Value else value
 end
 
-local function luminance(color, amount)
-    local lum = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B
-    local contrast = if lum > 0.5 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1)
-    return color:Lerp(contrast, amount)
+local function edgeShade(color, amount)
+    local luminance = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B
+    local target = if luminance > 0.5 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1)
+    return color:Lerp(target, amount)
 end
 
-function themeTable.deriveStrokes(theme, overrides)
+-- Stroke derivation for user-supplied theme tables. Exposed so ChangeTheme
+-- can re-derive derived stroke colors after merging user overrides.
+function themes.deriveStrokes(resolved, overrides)
     if overrides.ElementGradient then
-        local baseColor = themeTable.firstColor(theme.ElementGradient)
+        local fill = themes.firstColor(resolved.ElementGradient)
         if overrides.ElementStroke == nil then
-            theme.ElementStroke = luminance(baseColor, 0.28)
+            resolved.ElementStroke = edgeShade(fill, 0.28)
         end
         if overrides.ElementStrokeGradient == nil then
-            theme.ElementStrokeGradient = ColorSequence.new(luminance(baseColor, 0.4))
+            resolved.ElementStrokeGradient = ColorSequence.new(edgeShade(fill, 0.4))
         end
         if overrides.ElementStrokeHover == nil then
-            theme.ElementStrokeHover = luminance(baseColor, 0.52)
+            resolved.ElementStrokeHover = edgeShade(fill, 0.52)
         end
     end
     if overrides.TabBackground and overrides.TabStroke == nil then
-        theme.TabStroke = ColorSequence.new(luminance(themeTable.firstColor(theme.TabBackground), 0.4))
+        resolved.TabStroke = ColorSequence.new(edgeShade(themes.firstColor(resolved.TabBackground), 0.4))
     end
 end
 
-local function resolveInput(input)
-    if typeof(input) == "table" then
-        return input
-    elseif typeof(input) == "string" then
-        local child = themes:FindFirstChild(string.lower(input))
-        if child then
-            return require(child)
+local function themeOverrides(value)
+    if typeof(value) == "table" then
+        return value
+    elseif typeof(value) == "string" then
+        local named = themesFolder:FindFirstChild(string.lower(value))
+        if named then
+            return require(named)
         end
-        state.warn("Astra: unknown theme '" .. input .. "', using default")
-    elseif input ~= nil then
-        state.warn("Astra: invalid theme (expected a built-in name or a theme table), using default")
+        log.warn("Astra: unknown theme '" .. value .. "', using default")
+    elseif value ~= nil then
+        log.warn("Astra: invalid theme (expected a built-in name or a theme table), using default")
     end
-    return require(themes["default"])
+    return require(themesFolder["default"])
 end
 
-function themeTable.resolve(input)
-    local base = table.clone(require(themes["default"]))
-    local overlay = resolveInput(input)
-    for key, value in overlay do
-        base[key] = themeTable.coerceValue(key, value)
+-- Resolve a theme value (nil, built-in name, or theme table) to a full theme
+-- table. Public API: window code calls themes.resolve(value).
+function themes.resolve(value)
+    local resolved = table.clone(require(themesFolder["default"]))
+    local overrides = themeOverrides(value)
+	for key, override in overrides do
+		resolved[key] = themes.coerceValue(key, override)
+	end
+	if typeof(value) == "table" then
+		themes.deriveStrokes(resolved, overrides)
+	end
+
+	local userTable = if typeof(value) == "table" then value else nil
+    if not (userTable and (userTable.Font or userTable.font)) then
+        resolved.Font = variables.brandFont(Enum.FontWeight.Medium)
     end
-    if typeof(input) == "table" then
-        themeTable.deriveStrokes(base, overlay)
+    if not (userTable and (userTable.TitleFont or userTable.titleFont)) then
+        resolved.TitleFont = variables.brandFont(Enum.FontWeight.SemiBold)
     end
 
-    local customTable = if typeof(input) == "table" then input else nil
-    if not (customTable and (customTable.Font or customTable.font)) then
-        base.Font = default.brandFont(Enum.FontWeight.Medium)
-    end
-    if not (customTable and (customTable.TitleFont or customTable.titleFont)) then
-        base.TitleFont = default.brandFont(Enum.FontWeight.SemiBold)
-    end
-
-    return base
+    return resolved
 end
 
-return themeTable
+return themes
 
 end)() end,
     [69] = function()local wax,script,require=ImportGlobals(69)local ImportGlobals return (function(...)
@@ -28690,37 +28705,37 @@ local LineOffsets = {
     [66] = 19015,
     [67] = 20535,
     [68] = 14920,
-    [69] = 25764,
-    [70] = 25808,
-    [71] = 25851,
-    [72] = 25924,
-    [73] = 25968,
-    [74] = 26029,
+    [69] = 25779,
+    [70] = 25823,
+    [71] = 25866,
+    [72] = 25939,
+    [73] = 25983,
+    [74] = 26044,
     [75] = 25673,
-    [76] = 26073,
-    [77] = 26171,
-    [78] = 26349,
-    [79] = 26400,
-    [80] = 26430,
-    [81] = 26681,
-    [82] = 26730,
-    [83] = 27183,
-    [84] = 27201,
-    [85] = 27355,
-    [86] = 27454,
-    [87] = 27476,
-    [88] = 27526,
-    [89] = 27562,
-    [90] = 27580,
-    [91] = 27893,
-    [92] = 27909,
-    [93] = 27960,
-    [94] = 27979,
-    [95] = 28221,
-    [96] = 28265,
-    [97] = 28438,
-    [98] = 28466,
-    [99] = 28477,
+    [76] = 26088,
+    [77] = 26186,
+    [78] = 26364,
+    [79] = 26415,
+    [80] = 26445,
+    [81] = 26696,
+    [82] = 26745,
+    [83] = 27198,
+    [84] = 27216,
+    [85] = 27370,
+    [86] = 27469,
+    [87] = 27491,
+    [88] = 27541,
+    [89] = 27577,
+    [90] = 27595,
+    [91] = 27908,
+    [92] = 27924,
+    [93] = 27975,
+    [94] = 27994,
+    [95] = 28236,
+    [96] = 28280,
+    [97] = 28453,
+    [98] = 28481,
+    [99] = 28492,
 }
 
 -- Misc AOT variable imports
