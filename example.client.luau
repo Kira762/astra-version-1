@@ -18,7 +18,7 @@ local window = Astra:CreateWindow({
 -- Window tags are rendered beside the window title and remain available in the chrome.
 window:CreateTag({
     icon = "tag",
-    text = "0.0.25",
+    text = "0.0.26",
 })
 
 -- Home: use a tab for overview content and simple state controls.

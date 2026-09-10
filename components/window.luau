@@ -472,7 +472,7 @@ function Window.new(props)
     self.rfSettings = self:CreateTab({
         name = "General",
         icon = "sliders-horizontal",
-        customOrder = 1000,
+        customOrder = 1001,
         forgetState = true,
         isSettingsTab = true,
     })
@@ -1419,11 +1419,11 @@ function Window:_bindTopbarDrag()
 end
 
 function Window:_buildSettingsUI()
-    local appearance = self:CreateTab({ name = "Appearance", icon = "palette", customOrder = 1001, forgetState = true, isSettingsTab = true })
-    local behavior = self:CreateTab({ name = "Behavior", icon = "shield-check", customOrder = 1002, forgetState = true, isSettingsTab = true })
-    local performance = self:CreateTab({ name = "Performance", icon = "gauge", customOrder = 1003, forgetState = true, isSettingsTab = true })
-    local persistence = self:CreateTab({ name = "Persistence", icon = "save", customOrder = 1004, forgetState = true, isSettingsTab = true })
-    local about = self:CreateTab({ name = "About", icon = "info", customOrder = 1005, forgetState = true, isSettingsTab = true })
+    local appearance = self:CreateTab({ name = "Appearance", icon = "palette", customOrder = 1002, forgetState = true, isSettingsTab = true })
+    local behavior = self:CreateTab({ name = "Behavior", icon = "shield-check", customOrder = 1003, forgetState = true, isSettingsTab = true })
+    local performance = self:CreateTab({ name = "Performance", icon = "gauge", customOrder = 1004, forgetState = true, isSettingsTab = true })
+    local persistence = self:CreateTab({ name = "Persistence", icon = "save", customOrder = 1005, forgetState = true, isSettingsTab = true })
+    local about = self:CreateTab({ name = "About", icon = "info", customOrder = 1000, forgetState = true, isSettingsTab = true })
     for _, tab in { appearance, behavior, performance, persistence, about } do
         tab._isSettingsTab = true
         table.insert(self._settingsTabs, tab)
@@ -1432,7 +1432,7 @@ function Window:_buildSettingsUI()
     about:CreateSection({ name = "Rayfield Gen2" })
     about:CreateText({
         name = "About Rayfield Gen2",
-        text = "A ground-up rebuild of the Rayfield Interface Suite, built entirely in code for a faster, more stable, and more consistent experience.",
+        text = "Rayfield Gen2 is a ground-up rebuild of the Rayfield Interface Suite, built entirely in code for a faster, more stable, and more consistent experience.",
     })
     about:CreateText({
         name = "Highlights",
@@ -1441,7 +1441,11 @@ function Window:_buildSettingsUI()
     about:CreateSection({ name = "Astra" })
     about:CreateText({
         name = "Our Story",
-        text = "Astra is an original customization and continuation of Rayfield Gen2, reshaped into a distinct interface library with its own visual language, behavior, and features.",
+        text = "Astra began from Rayfield Gen2 and was reshaped into a distinct interface library with its own visual language, behavior, and features.",
+    })
+    about:CreateText({
+        name = "What Astra Provides",
+        text = "A responsive, customizable interface with persistent settings, runtime themes, localization support, animated window transitions, and a growing set of reusable elements.",
     })
     about:CreateText({
         name = "Customized by Haijo",
