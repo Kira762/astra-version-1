@@ -150,6 +150,10 @@ function Drag.new(window, props)
             return
         end
 
+        if self.window.settings and self.window.settings.dragMinimisedBar == false then
+            return
+        end
+
         local inputType = input.UserInputType.Name
         if inputType == "MouseButton1" or inputType == "Touch" then
             if not self.window:_interactive() then

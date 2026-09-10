@@ -192,6 +192,7 @@ function Window.new(props)
             self.settings = {
         toggleKeybind = Enum.KeyCode.K,
         mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = true,
+        dragMinimisedBar = true,
         showProfile = true,
         showFullUsername = false,
         antiWindowDuplicate = true,
@@ -1505,6 +1506,10 @@ function Window:_buildSettingsUI()
     appearance:CreateToggle({
         name = "Keep window on screen", description = "Stops the window being dragged off the edge of the screen and lost.", value = self.settings.keepOnScreen,
         callback = function(value) self.settings.keepOnScreen = value; self:SaveSettings() end,
+    })
+    appearance:CreateToggle({
+        name = "Draggable minimized bar", description = "Allows the minimized window capsule to be dragged to a new position. When off, it stays where it was left.", value = self.settings.dragMinimisedBar,
+        callback = function(value) self.settings.dragMinimisedBar = value == true; self:SaveSettings() end,
     })
     appearance:CreateButton({
         name = "Reset Window Position", callback = function()

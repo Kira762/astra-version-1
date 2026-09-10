@@ -11,6 +11,7 @@ type SettingsWindow = {
         toggleKeybind: EnumItem,
         mouseOverride: boolean,
         keepOnScreen: boolean,
+        dragMinimisedBar: boolean,
         welcomeToast: boolean,
         haptics: boolean,
         showProfile: boolean,
@@ -25,6 +26,7 @@ type DecodedSettings = {
     toggleKeybind: { [number]: unknown }?,
     mouseOverride: unknown?,
     keepOnScreen: unknown?,
+    dragMinimisedBar: unknown?,
     welcomeToast: unknown?,
         haptics: unknown?,
         showProfile: unknown?,
@@ -47,6 +49,7 @@ function a6.saveSettings(window: SettingsWindow): boolean
         } :: { unknown },
         mouseOverride = window.settings.mouseOverride,
         keepOnScreen = window.settings.keepOnScreen,
+        dragMinimisedBar = window.settings.dragMinimisedBar,
         welcomeToast = window.settings.welcomeToast,
         haptics = window.settings.haptics,
         showProfile = window.settings.showProfile,
@@ -134,6 +137,10 @@ function a6.loadSettings(window: SettingsWindow): boolean
 
     if type(a25.keepOnScreen) == "boolean" then
         window.settings.keepOnScreen = a25.keepOnScreen
+    end
+
+    if type(a25.dragMinimisedBar) == "boolean" then
+        window.settings.dragMinimisedBar = a25.dragMinimisedBar
     end
 
     if type(a25.welcomeToast) == "boolean" then
