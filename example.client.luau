@@ -18,7 +18,7 @@ local window = Astra:CreateWindow({
 })
 window:CreateTag({
     icon = "tag",
-    text = "0.0.5",
+    text = "0.0.6",
 })
 
 -- Keep each tab reference local and create it through the Window receiver.
