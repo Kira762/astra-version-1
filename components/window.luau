@@ -1824,6 +1824,7 @@ function Window:_applySettingsLayout(isSettings)
     for _, tab in self.tabs do
         if tab.topbarItem then
             tab.topbarItem.Visible = not self.hidden and not self.minimised
+                and (self._settingsMode == (tab._isSettingsTab == true))
         end
     end
     if self.selectedTab and self.selectedTab.tabPage then
@@ -1841,6 +1842,7 @@ function Window:_setSettingsMode(active)
     for _, tab in self.tabs do
         if tab.topbarItem then
             tab.topbarItem.Visible = not self.hidden and not self.minimised
+                and (active == (tab._isSettingsTab == true))
         end
     end
     self:_applySettingsLayout(active)
