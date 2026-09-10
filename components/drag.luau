@@ -150,7 +150,14 @@ function Drag.new(window, props)
             return
         end
 
-        if self.window.settings and self.window.settings.dragMinimisedBar == false then
+        if self.window.hidden or self.window.animating then
+            return
+        end
+
+        if self.window.minimised
+            and self.window.settings
+            and self.window.settings.dragMinimisedBar ~= true
+        then
             return
         end
 

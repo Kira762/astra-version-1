@@ -191,8 +191,8 @@ function Window.new(props)
 
             self.settings = {
         toggleKeybind = Enum.KeyCode.K,
-        mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = true,
-        dragMinimisedBar = true,
+        mouseOverride = true,         keepOnScreen = true,         welcomeToast = true,         haptics = false,
+        dragMinimisedBar = false,
         showProfile = true,
         showFullUsername = false,
         antiWindowDuplicate = true,
