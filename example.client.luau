@@ -18,7 +18,7 @@ local window = Astra:CreateWindow({
 
 window:CreateTag({
     icon = "tag",
-    text = "0.0.8",
+    text = "0.0.9",
 })
 
 -- Home: overview content and basic controls.

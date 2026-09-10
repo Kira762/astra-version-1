@@ -2035,6 +2035,9 @@ function Window:_quickRestore()
         end
     end
 
+    for _, tag in self.tags do
+        tag:_setShown(true, false)
+    end
     local tween = state.tweenService:Create(self.main, tweenInfo, { Size = self.size, Position = targetPos })
     tween.Completed:Connect(function()
         if self.hidden or self.unloaded then
@@ -2067,6 +2070,9 @@ function Window:_firstShow()
         for _, element in ipairs(tab.elements) do
             element:_setShown(true, false)
         end
+    end
+    for _, tag in self.tags do
+        tag:_setShown(true, false)
     end
     local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     if self.topbarIcon then
