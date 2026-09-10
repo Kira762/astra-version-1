@@ -2,9 +2,7 @@
 -- This example loads the current bundle with remote icon asset resolution.
 
 local Astra = loadstring(
-    game:HttpGet(
-        "https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"
-    )
+    game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
 )()
 
 assert(
@@ -16,16 +14,14 @@ local window = Astra:CreateWindow({
     name = "Astra Example",
     subtitle = "Multi-tab supported API example",
 })
+
 window:CreateTag({
     icon = "tag",
-    text = "0.0.6",
+    text = "0.0.7",
 })
 
--- Keep each tab reference local and create it through the Window receiver.
--- Every element is then created through its Tab receiver.
-local home = window:CreateTab({
-    icon = "house",
-})
+-- Home: overview content and basic controls.
+local home = window:CreateTab({ icon = "house" })
 home:CreateSection({ name = "Overview" })
 home:CreateText({
     name = "Welcome",
@@ -48,9 +44,8 @@ home:CreateToggle({
     end,
 })
 
-local controls = window:CreateTab({
-    icon = "sliders-horizontal",
-})
+-- Controls: sliders, dropdowns, and text input.
+local controls = window:CreateTab({ icon = "sliders-horizontal" })
 controls:CreateSlider({
     name = "Volume",
     range = { 0, 100 },
@@ -76,9 +71,8 @@ controls:CreateInput({
     end,
 })
 
-local appearance = window:CreateTab({
-    icon = "palette",
-})
+-- Appearance: visual and theme-related controls.
+local appearance = window:CreateTab({ icon = "palette" })
 appearance:CreateColorPicker({
     name = "Accent color",
     color = Color3.fromRGB(96, 205, 255),
@@ -92,9 +86,8 @@ appearance:CreateText({
     text = "Use this tab for visual and theme-related controls.",
 })
 
-local information = window:CreateTab({
-    icon = "info",
-})
+-- Information: usage notes and notifications.
+local information = window:CreateTab({ icon = "info" })
 information:CreateText({
     name = "Supported usage",
     text = "Tabs are created with window:CreateTab, and controls with tab:Create... methods.",
