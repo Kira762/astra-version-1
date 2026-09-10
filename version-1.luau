@@ -4648,22 +4648,36 @@ function Window:Close()
     local transitionId = self._closeTransitionId
     local originalSize = self.main.Size
     local originalPosition = self.main.Position
-    local topPosition = UDim2.new(
-        originalPosition.X.Scale,
-        originalPosition.X.Offset,
-        originalPosition.Y.Scale - originalSize.Y.Scale / 2,
-        originalPosition.Y.Offset - originalSize.Y.Offset / 2
+    local closeTweenInfo = TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut)
+    local targetSize = UDim2.new(
+        originalSize.X.Scale * 0.88,
+        math.floor(originalSize.X.Offset * 0.88),
+        originalSize.Y.Scale * 0.88,
+        math.floor(originalSize.Y.Offset * 0.88)
     )
-    local closeTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 
     self.main.ClipsDescendants = true
-    self.main.AnchorPoint = Vector2.new(0.5, 0)
-    self.main.Position = topPosition
+    self.main.AnchorPoint = Vector2.new(0.5, 0.5)
+    self.main.Position = originalPosition
     self.drag.drag.Visible = false
-    state.tweenService:Create(self.windowShadow, closeTweenInfo, { Transparency = 1 }):Play()
-    state.tweenService:Create(self.windowStroke, closeTweenInfo, { Transparency = 1 }):Play()
+    self:_fadeSurfaces(false, closeTweenInfo)
+    if self.title then
+        state.tweenService:Create(self.title, closeTweenInfo, { TextTransparency = 1 }):Play()
+    end
+    if self.subtitle then
+        state.tweenService:Create(self.subtitle, closeTweenInfo, { TextTransparency = 1 }):Play()
+    end
+    if self.topbarIcon then
+        state.tweenService:Create(self.topbarIcon, closeTweenInfo, { ImageTransparency = 1 }):Play()
+    end
+    for _, tag in self.tags do
+        tag:_setShown(false, closeTweenInfo)
+    end
+    self:_fadeSelectedElementsOut()
     local tween = state.tweenService:Create(self.main, closeTweenInfo, {
-        Size = UDim2.new(originalSize.X.Scale, originalSize.X.Offset, 0, 0),
+        Size = targetSize,
+        Position = originalPosition,
+        BackgroundTransparency = 1,
     })
     tween.Completed:Connect(function()
         if not self.unloaded and self._closeTransitionId == transitionId then
@@ -28736,84 +28750,84 @@ local LineOffsets = {
     [16] = 3114,
     [17] = 3392,
     [18] = 3769,
-    [20] = 6491,
-    [21] = 6758,
-    [22] = 7889,
-    [23] = 8223,
-    [24] = 8284,
-    [25] = 8429,
-    [26] = 9749,
-    [27] = 9950,
-    [28] = 10211,
-    [29] = 10673,
-    [30] = 11123,
-    [31] = 11210,
-    [32] = 11775,
-    [33] = 12393,
-    [34] = 12749,
-    [35] = 12879,
-    [36] = 13043,
-    [37] = 13197,
-    [39] = 13708,
-    [40] = 13731,
-    [41] = 13748,
-    [42] = 13777,
-    [43] = 13893,
-    [44] = 13907,
-    [45] = 13956,
-    [46] = 13683,
-    [47] = 14057,
-    [48] = 14360,
-    [49] = 14391,
-    [50] = 14046,
-    [51] = 14434,
-    [52] = 14454,
-    [53] = 14486,
-    [54] = 14416,
-    [55] = 14593,
-    [56] = 14655,
-    [57] = 14718,
-    [59] = 14781,
-    [60] = 14946,
-    [61] = 14766,
-    [62] = 15198,
-    [63] = 15493,
-    [64] = 16149,
-    [65] = 17933,
-    [66] = 19074,
-    [67] = 20594,
-    [68] = 15010,
-    [69] = 25838,
-    [70] = 25882,
-    [71] = 25925,
-    [72] = 25998,
-    [73] = 26042,
-    [74] = 26103,
-    [75] = 25732,
-    [76] = 26147,
-    [77] = 26245,
-    [78] = 26423,
-    [79] = 26474,
-    [80] = 26504,
-    [81] = 26755,
-    [82] = 26804,
-    [83] = 27257,
-    [84] = 27275,
-    [85] = 27429,
-    [86] = 27528,
-    [87] = 27550,
-    [88] = 27600,
-    [89] = 27636,
-    [90] = 27654,
-    [91] = 27967,
-    [92] = 27983,
-    [93] = 28034,
-    [94] = 28053,
-    [95] = 28295,
-    [96] = 28339,
-    [97] = 28531,
-    [98] = 28559,
-    [99] = 28570,
+    [20] = 6505,
+    [21] = 6772,
+    [22] = 7903,
+    [23] = 8237,
+    [24] = 8298,
+    [25] = 8443,
+    [26] = 9763,
+    [27] = 9964,
+    [28] = 10225,
+    [29] = 10687,
+    [30] = 11137,
+    [31] = 11224,
+    [32] = 11789,
+    [33] = 12407,
+    [34] = 12763,
+    [35] = 12893,
+    [36] = 13057,
+    [37] = 13211,
+    [39] = 13722,
+    [40] = 13745,
+    [41] = 13762,
+    [42] = 13791,
+    [43] = 13907,
+    [44] = 13921,
+    [45] = 13970,
+    [46] = 13697,
+    [47] = 14071,
+    [48] = 14374,
+    [49] = 14405,
+    [50] = 14060,
+    [51] = 14448,
+    [52] = 14468,
+    [53] = 14500,
+    [54] = 14430,
+    [55] = 14607,
+    [56] = 14669,
+    [57] = 14732,
+    [59] = 14795,
+    [60] = 14960,
+    [61] = 14780,
+    [62] = 15212,
+    [63] = 15507,
+    [64] = 16163,
+    [65] = 17947,
+    [66] = 19088,
+    [67] = 20608,
+    [68] = 15024,
+    [69] = 25852,
+    [70] = 25896,
+    [71] = 25939,
+    [72] = 26012,
+    [73] = 26056,
+    [74] = 26117,
+    [75] = 25746,
+    [76] = 26161,
+    [77] = 26259,
+    [78] = 26437,
+    [79] = 26488,
+    [80] = 26518,
+    [81] = 26769,
+    [82] = 26818,
+    [83] = 27271,
+    [84] = 27289,
+    [85] = 27443,
+    [86] = 27542,
+    [87] = 27564,
+    [88] = 27614,
+    [89] = 27650,
+    [90] = 27668,
+    [91] = 27981,
+    [92] = 27997,
+    [93] = 28048,
+    [94] = 28067,
+    [95] = 28309,
+    [96] = 28353,
+    [97] = 28545,
+    [98] = 28573,
+    [99] = 28584,
 }
 
 -- Misc AOT variable imports

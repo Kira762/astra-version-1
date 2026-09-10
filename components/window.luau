@@ -880,22 +880,36 @@ function Window:Close()
     local transitionId = self._closeTransitionId
     local originalSize = self.main.Size
     local originalPosition = self.main.Position
-    local topPosition = UDim2.new(
-        originalPosition.X.Scale,
-        originalPosition.X.Offset,
-        originalPosition.Y.Scale - originalSize.Y.Scale / 2,
-        originalPosition.Y.Offset - originalSize.Y.Offset / 2
+    local closeTweenInfo = TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut)
+    local targetSize = UDim2.new(
+        originalSize.X.Scale * 0.88,
+        math.floor(originalSize.X.Offset * 0.88),
+        originalSize.Y.Scale * 0.88,
+        math.floor(originalSize.Y.Offset * 0.88)
     )
-    local closeTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 
     self.main.ClipsDescendants = true
-    self.main.AnchorPoint = Vector2.new(0.5, 0)
-    self.main.Position = topPosition
+    self.main.AnchorPoint = Vector2.new(0.5, 0.5)
+    self.main.Position = originalPosition
     self.drag.drag.Visible = false
-    state.tweenService:Create(self.windowShadow, closeTweenInfo, { Transparency = 1 }):Play()
-    state.tweenService:Create(self.windowStroke, closeTweenInfo, { Transparency = 1 }):Play()
+    self:_fadeSurfaces(false, closeTweenInfo)
+    if self.title then
+        state.tweenService:Create(self.title, closeTweenInfo, { TextTransparency = 1 }):Play()
+    end
+    if self.subtitle then
+        state.tweenService:Create(self.subtitle, closeTweenInfo, { TextTransparency = 1 }):Play()
+    end
+    if self.topbarIcon then
+        state.tweenService:Create(self.topbarIcon, closeTweenInfo, { ImageTransparency = 1 }):Play()
+    end
+    for _, tag in self.tags do
+        tag:_setShown(false, closeTweenInfo)
+    end
+    self:_fadeSelectedElementsOut()
     local tween = state.tweenService:Create(self.main, closeTweenInfo, {
-        Size = UDim2.new(originalSize.X.Scale, originalSize.X.Offset, 0, 0),
+        Size = targetSize,
+        Position = originalPosition,
+        BackgroundTransparency = 1,
     })
     tween.Completed:Connect(function()
         if not self.unloaded and self._closeTransitionId == transitionId then
