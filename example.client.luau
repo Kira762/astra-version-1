@@ -1,90 +1,111 @@
--- Astra supported-usage example.
--- This example intentionally uses only the documented public API and avoids
--- optional icon, custom-theme, and advanced persistence paths.
+-- Astra multi-tab supported-usage example.
+-- This example pins the bundle that contains the tab/window nil-reference fix.
 
 local Astra = loadstring(
-	game:HttpGet(
-		"https://raw.githubusercontent.com/Kira762/astra-version-1/61136e9/version-1.luau"
-	)
+    game:HttpGet(
+        "https://raw.githubusercontent.com/Kira762/astra-version-1/895006a/version-1.luau"
+    )
 )()
 
 assert(
-	type(Astra) == "table" and type(Astra.CreateWindow) == "function",
-	"[Astra] Failed to load Astra bundle."
+    type(Astra) == "table" and type(Astra.CreateWindow) == "function",
+    "[Astra] Failed to load Astra bundle."
 )
 
 local window = Astra:CreateWindow({
-	name = "Astra Example",
-	subtitle = "Supported API example",
+    name = "Astra Example",
+    subtitle = "Multi-tab supported API example",
 })
 
-window:CreateSection({
-	name = "Overview",
-})
-
+-- Keep each tab reference local and create it through the Window receiver.
+-- Every element is then created through its Tab receiver.
 local home = window:CreateTab({
-	name = "Home",
+    name = "Home",
+    icon = "house",
 })
-
-home:CreateSection({
-	name = "Basic controls",
-})
-
+home:CreateSection({ name = "Overview" })
 home:CreateText({
-	name = "Welcome",
-	text = "This window uses only Astra's supported public API.",
+    name = "Welcome",
+    text = "This window demonstrates several independent Astra tabs.",
 })
-
 home:CreateButton({
-	name = "Button",
-	callback = function()
-		print("Astra button pressed")
-	end,
+    name = "Say hello",
+    callback = function()
+        window:Notify({ title = "Hello", content = "The Home tab is working." })
+    end,
 })
-
 home:CreateToggle({
-	name = "Enable feature",
-	value = true,
-	callback = function(value)
-		print("Feature enabled:", value)
-	end,
+    name = "Enable feature",
+    value = true,
+    callback = function(value)
+        print("Feature enabled:", value)
+    end,
 })
 
-home:CreateSlider({
-	name = "Volume",
-	range = { 0, 100 },
-	value = 50,
-	increment = 1,
-	callback = function(value)
-		print("Volume:", value)
-	end,
+local controls = window:CreateTab({
+    name = "Controls",
+    icon = "sliders-horizontal",
+})
+controls:CreateSection({ name = "Adjustments" })
+controls:CreateSlider({
+    name = "Volume",
+    range = { 0, 100 },
+    value = 50,
+    increment = 1,
+    callback = function(value)
+        print("Volume:", value)
+    end,
+})
+controls:CreateDropdown({
+    name = "Mode",
+    options = { "Default", "Performance", "Visual" },
+    value = "Default",
+    callback = function(value)
+        print("Mode:", value)
+    end,
+})
+controls:CreateInput({
+    name = "Display name",
+    placeholder = "Enter a name",
+    callback = function(value)
+        print("Name:", value)
+    end,
 })
 
-home:CreateDropdown({
-	name = "Mode",
-	options = { "Default", "Performance", "Visual" },
-	value = "Default",
-	callback = function(value)
-		print("Mode:", value)
-	end,
+local appearance = window:CreateTab({
+    name = "Appearance",
+    icon = "palette",
+})
+appearance:CreateSection({ name = "Theme" })
+appearance:CreateColorPicker({
+    name = "Accent color",
+    color = Color3.fromRGB(96, 205, 255),
+    callback = function(value)
+        print("Accent color changed:", value)
+    end,
+})
+appearance:CreateDivider()
+appearance:CreateText({
+    name = "Layout",
+    text = "Use this tab for visual and theme-related controls.",
 })
 
-home:CreateInput({
-	name = "Name",
-	placeholder = "Enter a name",
-	callback = function(value)
-		print("Name:", value)
-	end,
+local information = window:CreateTab({
+    name = "Information",
+    icon = "info",
+})
+information:CreateSection({ name = "About this example" })
+information:CreateText({
+    name = "Supported usage",
+    text = "Tabs are created with window:CreateTab, and controls with tab:Create... methods.",
+})
+information:CreateButton({
+    name = "Show notification",
+    callback = function()
+        window:Toast({ title = "Astra", subtitle = "All example tabs are available." })
+    end,
 })
 
-home:CreateColorPicker({
-	name = "Accent color",
-	color = Color3.fromRGB(96, 205, 255),
-	callback = function(value)
-		print("Accent color changed:", value)
-	end,
-})
-
-home:CreateDivider()
-
-print("[Astra] Supported usage example loaded successfully.")
+-- Select the first tab explicitly so the example is deterministic on startup.
+home:Select()
+print("[Astra] Multi-tab example loaded successfully.")
