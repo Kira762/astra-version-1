@@ -1450,10 +1450,6 @@ function Window:_buildSettingsUI()
     })
     about:CreateSection({ name = "Links" })
     about:CreateText({
-        name = "GitHub Repository",
-        text = "https://github.com/Kira762/astra-version-1",
-    })
-    about:CreateText({
         name = "Documentation",
         text = "https://docs.sirius.menu/rayfield-gen2",
     })
