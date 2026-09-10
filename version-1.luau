@@ -532,91 +532,91 @@ return {}
 end)() end,
     [8] = function()local wax,script,require=ImportGlobals(8)local ImportGlobals return (function(...)
 
-local a1 = require(script.state)
-local a2 = require(script.registry)
-local a3 = require(script.loader)
+local state = require(script.state)
+local registry = require(script.registry)
+local loader = require(script.loader)
 
-local a4 = {
-    state = a1,
-    registry = a2,
-    loader = a3,
+local core = {
+    state = state,
+    registry = registry,
+    loader = loader,
 }
 
-return a4
+return core
 
 end)() end,
     [5] = function()local wax,script,require=ImportGlobals(5)local ImportGlobals return (function(...)
 
-local a1 = {}
+local loader = {}
 
-local a2: { [string]: boolean } = {}
+local loading: { [string]: boolean } = {}
 
-local a3 = {
+local knownModules = {
     state = true,
     registry = true,
 }
 
-function a1.load(a4: string)
-    assert(a3[a4], "Astra core loader: unknown module '" .. tostring(a4) .. "'")
-    if a2[a4] then
+function loader.load(name: string)
+    assert(knownModules[name], "Astra core loader: unknown module '" .. tostring(name) .. "'")
+    if loading[name] then
         return nil
     end
-    a2[a4] = true
-    local ok, a5 = pcall(function()
-        return require((script :: any).Parent[a4])
+    loading[name] = true
+    local ok, result = pcall(function()
+        return require((script :: any).Parent[name])
     end)
-    a2[a4] = nil
+    loading[name] = nil
     if not ok then
-        error(a5, 0)
+        error(result, 0)
     end
-    return a5
+    return result
 end
 
-function a1.service(a6: string, a7: () -> any)
-    local a8 = a1.load("registry")
-    a8.registerFactory(a6, a7)
-    return a8
+function loader.service(reg: string, loader: () -> any)
+    local name = loader.load("registry")
+    name.registerFactory(name, factory)
+    return name
 end
 
-return a1
+return registry
 
 end)() end,
     [6] = function()local wax,script,require=ImportGlobals(6)local ImportGlobals return (function(...)
 
-local a1 = {}
+local registry = {}
 
-local a2: { [string]: any } = {}
-local a3: { [string]: () -> any } = {}
+local modules: { [string]: any } = {}
+local factories: { [string]: () -> any } = {}
 
-function a1.register(a4: string, a5: any)
-    a2[a4] = a5
+function registry.register(name: string, module: any)
+    modules[name] = module
 end
 
-function a1.registerFactory(a6: string, a7: () -> any)
-    a3[a6] = a7
+function registry.registerFactory(name: string, factory: () -> any)
+    factories[name] = factory
 end
 
-function a1.get(a8: string): any?
-    local a9 = a2[a8]
-    if a9 ~= nil then
-        return a9
+function registry.get(name: string): any?
+    local cached = modules[name]
+    if cached ~= nil then
+        return cached
     end
-    local a10 = a3[a8]
-    if a10 then
-        local a11 = a10()
-        a2[a8] = a11
-        return a11
+    local factory = factories[name]
+    if factory then
+        local instance = factory()
+        modules[name] = instance
+        return instance
     end
     return nil
 end
 
-function a1.names(): { string }
-    local a12 = {}
-    for a13 in a2 do
-        table.insert(a12, a13)
+function registry.names(): { string }
+    local list = {}
+    for name in modules do
+        table.insert(list, name)
     end
-    for a14 in a3 do
-        if a2[a14] == nil then
+    for name in factories do
+        if modules[name] == nil then
             table.insert(a12, a14)
         end
     end
@@ -629,12 +629,12 @@ return a1
 end)() end,
     [7] = function()local wax,script,require=ImportGlobals(7)local ImportGlobals return (function(...)
 
-local a1 = require(script.Parent.Parent.utilities.services)
+local runService = require(script.Parent.Parent.utilities.services)
 local a2 = require(script.Parent.Parent.utilities.constants)
 local a3 = require(script.Parent.Parent.utilities.log)
-local a4 = require(script.Parent.Parent.utilities.filesystemManager)
-local a5 = require(script.Parent.Parent.utilities.assetResolver)
-local a6 = require(script.Parent.Parent.utilities.fontManager)
+local assetResolver = require(script.Parent.Parent.utilities.filesystemManager)
+local state = require(script.Parent.Parent.utilities.assetResolver)
+local fileSystemManager = require(script.Parent.Parent.utilities.fontManager)
 
 type FileSystemManager = fileSystemManager.FileSystemManager
 type AssetResolver = assetResolver.AssetResolver
@@ -663,9 +663,9 @@ export type VariablesState = {
     brandFont: (weight: Enum.FontWeight?) -> Font,
 }
 
-local a7 = {} :: VariablesState
+local state = {} :: VariablesState
 
-a7.secureMode = (function()
+state.secureMode = (function()
     if typeof(getgenv) ~= "function" then
         return false
     end
@@ -675,25 +675,25 @@ a7.secureMode = (function()
     return ok and a8 == true
 end)()
 
-a7.coreGui = a1.getService("CoreGui") :: CoreGui
-a7.workspace = a1.getService("Workspace") :: Workspace
-a7.runService = a1.getService("RunService") :: RunService
-a7.userInputService = a1.getService("UserInputService") :: UserInputService
-a7.guiService = a1.getService("GuiService") :: GuiService
-a7.localPlayer = (a1.getService("Players") :: Players).LocalPlayer
-a7.tweenService = a1.getService("TweenService") :: TweenService
-a7.httpService = a1.getService("HttpService") :: HttpService
-a7.textService = a1.getService("TextService") :: TextService
-a7.replicatedStorage = a1.getService("ReplicatedStorage") :: ReplicatedStorage
-a7.localizationService = a1.getService("LocalizationService") :: LocalizationService
+state.coreGui = runService.getService("CoreGui") :: CoreGui
+state.workspace = runService.getService("Workspace") :: Workspace
+state.runService = runService.getService("RunService") :: RunService
+state.userInputService = runService.getService("UserInputService") :: UserInputService
+state.guiService = runService.getService("GuiService") :: GuiService
+state.localPlayer = (runService.getService("Players") :: Players).LocalPlayer
+state.tweenService = runService.getService("TweenService") :: TweenService
+state.httpService = runService.getService("HttpService") :: HttpService
+state.textService = runService.getService("TextService") :: TextService
+state.replicatedStorage = runService.getService("ReplicatedStorage") :: ReplicatedStorage
+state.localizationService = runService.getService("LocalizationService") :: LocalizationService
 
-a7.guiContainer = (function(): Instance
-    if a7.runService:IsStudio() then
-        local a9 = a7.localPlayer
+state.guiContainer = (function(): Instance
+    if state.runService:IsStudio() then
+        local a9 = state.localPlayer
         if a9 then
             return a9.PlayerGui
         end
-        return a7.coreGui
+        return state.coreGui
     end
     if typeof(gethui) == "function" then
         local ok, a10 = pcall(gethui)
@@ -701,78 +701,78 @@ a7.guiContainer = (function(): Instance
             return a10
         end
     end
-    return a7.coreGui
+    return state.coreGui
 end)()
 
 a3.setSecureModeSource(function()
-    return a7.secureMode
+    return state.secureMode
 end)
 
-a7.fallbackFont = Font.fromEnum(Enum.Font.BuilderSans)
+state.fallbackFont = Font.fromEnum(Enum.Font.BuilderSans)
 
-a7.fileSystemManager = a4.new()
-a7.assetResolver =
-    a5.new(true, a5.Enum.AssetDownloadUrl.RoProxyDownloadUrl) :: AssetResolver
-a7.fontManager = a6.new(
-    a7.fileSystemManager:getAssetsFolder("fonts"),
+state.fileSystemManager = assetResolver.new()
+state.assetResolver =
+    state.new(true, state.Enum.AssetDownloadUrl.RoProxyDownloadUrl) :: AssetResolver
+state.fontManager = fileSystemManager.new(
+    state.fileSystemManager:getAssetsFolder("fonts"),
     false,
     true,
-    a5.Enum.AssetDownloadUrl.RoProxyDownloadUrl,
+    state.Enum.AssetDownloadUrl.RoProxyDownloadUrl,
     {
         saveToDisk = true,
         skipCache = false,
-        fallbackFont = a7.fallbackFont,
+        fallbackFont = state.fallbackFont,
     }
 ) :: FontManager
 
-function a7.setFallbackFont(a11: Enum.Font | Font)
-    if typeof(a11) == "EnumItem" then
-        a11 = Font.fromEnum(a11)
+function state.setFallbackFont(font: Enum.Font | Font)
+    if typeof(font) == "EnumItem" then
+        font = Font.fromEnum(font)
     end
-    if typeof(a11) == "Font" then
-        a7.fallbackFont = a11
-        a7.fontManager.defaultOptions.fallbackFont = a11
+    if typeof(font) == "Font" then
+        state.fallbackFont = font
+        props.fontManager.defaultOptions.fallbackFont = font
     end
 end
 
-function a7.brandFont(a12: Enum.FontWeight?): Font
-    if a7.secureMode then
-        return Font.new(a7.fallbackFont.Family, a12)
+function props.brandFont(state: Enum.FontWeight?): Font
+    if props.secureMode then
+        return Font.new(props.fallbackFont.Family, state)
     end
-    return Font.new(a2.fontAsset, a12)
+    return Font.new(utilities.fontAsset, state)
 end
 
-return a7
+return props
 
 end)() end,
     [9] = function()local wax,script,require=ImportGlobals(9)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Action"
+local Action = {}
+Action.__index = Action
+Action.__type = "Action"
 
-local a2 = script.Parent.Parent.utilities
+local utilities = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(a2.log)
-local a5 = require(a2.HapticEngine)
-local a6 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local state = require(utilities.Parent.core.state)
+local log = require(utilities.log)
+local haptic = require(utilities.HapticEngine)
+local hoverTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-function a1.new(window, a7)
-    a7 = if typeof(a7) == "table" then a7 else {}
+function Action.new(window, props)
+    props = if typeof(props) == "table" then props else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        name = a7.name or a7.Name or "Action",
-        icon = assert(window:ResolveIcon(a7.icon or a7.Icon), "Missing argument (Icon expected)"),
-        callback = assert(a7.callback or a7.Callback, "Missing argument (Function expected)"),
-        linkedTab = a7.linkedTab or a7.LinkedTab,
-    }, a1)
+        name = props.name or props.Name or "Action",
+        icon = assert(window:ResolveIcon(props.icon or props.Icon), "Missing argument (Icon expected)"),
+        callback = assert(props.callback or props.Callback, "Missing argument (Function expected)"),
+        linkedTab = props.linkedTab or props.LinkedTab,
+    }, Action)
 
     self.action = self.window:Create("Frame", {
         Name = self.name,
         BorderSizePixel = 0,
 
-        LayoutOrder = -(a7.order or 0),
+        LayoutOrder = -(props.order or 0),
         Size = UDim2.fromOffset(24, 24),
         BackgroundTransparency = 1,
 
@@ -803,7 +803,7 @@ function a1.new(window, a7)
         Parent = self.action,
     })
 
-                local function a8()
+                local function idleTransparency()
         if self.window.unloaded then
             return
         end
@@ -815,72 +815,72 @@ function a1.new(window, a7)
         if self.isLit and self:isLit() then
             return
         end
-        a3.tweenService
+        state.tweenService
             :Create(
                 self.iconLabel,
-                a6,
+                hoverTween,
                 { ImageTransparency = 0.6 }
             )
             :Play()
     end
 
     self.window:Connect(self.interact.MouseButton1Click, function()
-        a5.click()
+        haptic.click()
         task.spawn(function()
-            local a9, a10 = pcall(self.callback)
-            if not a9 then
-                a4.warn(
+            local ok, err = pcall(self.callback)
+            if not ok then
+                log.warn(
                     `Astra encountered an error, with the callback for a {self.__type} component named '{self.name}':`
                 )
-                a4.print(a10)
+                log.print(err)
             end
-                                    a8()
+                                    idleTransparency()
         end)
     end)
 
     self.window:Connect(self.interact.MouseEnter, function()
         if not self.window:_interactive() then
             return         end
-        a3.tweenService
+        fs.tweenService
             :Create(
                 self.iconLabel,
-                a6,
+                haptic,
                 { ImageTransparency = 0.2 }
             )
             :Play()
     end)
 
-    self.window:Connect(self.interact.MouseLeave, a8)
+    self.window:Connect(self.interact.MouseLeave, dragThreshold)
 
     return self
 end
 
-return a1
+return utilities
 
 end)() end,
     [10] = function()local wax,script,require=ImportGlobals(10)local ImportGlobals return (function(...)
-local a1 = script.Parent.Parent.utilities
-local a2 = require(a1.Parent.core.state)
-local a3 = require(a1.filesystem)
-local a4 = require(a1.constants)
-local a5 = require(a1.locale)
-local a6 = require(a1.HapticEngine)
+local utilities = script.Parent.Parent.utilities
+local state = require(utilities.Parent.core.state)
+local fs = require(utilities.filesystem)
+local constants = require(utilities.constants)
+local locale = require(utilities.locale)
+local haptic = require(utilities.HapticEngine)
 
-local a7 = {}
+local chrome = {}
 
-local a8 = 5
+local dragThreshold = 5
 
-function a7.buildCollapsedFace(window)
-    local a9 = window.showIconOnly
+function chrome.buildCollapsedFace(window)
+    local iconOnly = window.showIconOnly
 
     window.collapsedIcon = window:Create("ImageLabel", {
         Name = "CollapsedIcon",
-        AnchorPoint = if a9 then Vector2.new(0.5, 0.5) else Vector2.new(0, 0.5),
-        Position = if a9 then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 16, 0.5, 0),
+        AnchorPoint = if iconOnly then Vector2.new(0.5, 0.5) else Vector2.new(0, 0.5),
+        Position = if iconOnly then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 16, 0.5, 0),
         Size = UDim2.fromOffset(24, 24),
         BackgroundTransparency = 1,
                 Image = window.showIcon,
-        ZIndex = a4.zIndex.restoreContent,
+        ZIndex = constants.zIndex.restoreContent,
 
         ImageTransparency = 1,
         Parent = window.main,
@@ -890,14 +890,14 @@ function a7.buildCollapsedFace(window)
         Parent = window.collapsedIcon,
     }, { CornerRadius = "CornerRoundness" })
 
-    local a10 = window:Create("Frame", {
+    local collapsedTextFrame = window:Create("Frame", {
         Name = "CollapsedText",
-        Visible = not a9,
+        Visible = not iconOnly,
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 50, 0.5, 0),
         Size = UDim2.new(1, -60, 0, 32),
         BackgroundTransparency = 1,
-        ZIndex = a4.zIndex.restoreContent,
+        ZIndex = constants.zIndex.restoreContent,
 
         Parent = window.main,
     })
@@ -907,7 +907,7 @@ function a7.buildCollapsedFace(window)
         VerticalAlignment = Enum.VerticalAlignment.Center,
         SortOrder = Enum.SortOrder.LayoutOrder,
 
-        Parent = a10,
+        Parent = collapsedTextFrame,
     })
 
     window.collapsedTitle = window:Create("TextLabel", {
@@ -915,31 +915,31 @@ function a7.buildCollapsedFace(window)
         Text = window.showName,
         Size = UDim2.new(1, 0, 0, 16),
         BackgroundTransparency = 1,
-        FontFace = a2.brandFont(Enum.FontWeight.Medium),
+        FontFace = state.brandFont(Enum.FontWeight.Medium),
         RichText = true,
         TextSize = 16,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 1,
-        ZIndex = a4.zIndex.restoreContent,
+        ZIndex = constants.zIndex.restoreContent,
 
         TextTransparency = 1,
-        Parent = a10,
+        Parent = collapsedTextFrame,
     }, { TextColor3 = "TitlingColor" })
 
     window.collapsedSubtitle = window:Create("TextLabel", {
         Name = "Subtitle",
-        Text = a5.t("Tap to show"),
+        Text = locale.t("Tap to show"),
         Size = UDim2.new(1, 0, 0, 14),
         BackgroundTransparency = 1,
-        FontFace = a2.brandFont(Enum.FontWeight.Medium),
+        FontFace = state.brandFont(Enum.FontWeight.Medium),
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 2,
-        ZIndex = a4.zIndex.restoreContent,
+        ZIndex = constants.zIndex.restoreContent,
 
         TextTransparency = 1,
-        Parent = a10,
+        Parent = collapsedTextFrame,
     }, { TextColor3 = "TitlingColor" })
 
                     window.collapsedInteract = window:Create("TextButton", {
@@ -949,185 +949,185 @@ function a7.buildCollapsedFace(window)
         Text = "",
         TextTransparency = 1,
         Visible = false,
-        ZIndex = a4.zIndex.restoreInteract,
+        ZIndex = constants.zIndex.restoreInteract,
 
         Parent = window.main,
     })
 
-    a7.bindCollapsedDrag(window)
+    chrome.bindCollapsedDrag(window)
 end
 
-function a7.bindCollapsedDrag(window)
-    local a11 = a2.userInputService
-    local a12, a13 = false, false
-    local a14, a15 = Vector2.zero, Vector2.zero
-    local a16
+function chrome.bindCollapsedDrag(window)
+    local inputService = state.userInputService
+    local isDragging, hasMoved = false, false
+    local dragOffset, startMousePos = Vector2.zero, Vector2.zero
+    local renderConnection
 
-            local function a17()
+            local function getGuiInset()
         if window.screenGui and window.screenGui.IgnoreGuiInset then
-            return a2.guiService:GetGuiInset()
+            return state.guiService:GetGuiInset()
         end
         return Vector2.zero
     end
 
-    local function a18()
-        a12 = false
-        if a16 then
-            window:Disconnect(a16)
-            a16 = nil
+    local function cleanupDrag()
+        isDragging = false
+        if renderConnection then
+            window:Disconnect(renderConnection)
+            renderConnection = nil
         end
     end
 
-    local function a19()
-        if not a12 then
-            a18()
+    local function updateDrag()
+        if not isDragging then
+            cleanupDrag()
             return
         end
         if window.unloaded or not window.hidden or window.animating then
-            a18()
+            cleanupDrag()
             return
         end
 
-        local a20 = a11:GetMouseLocation()
-        if not a13 and (a20 - a15).Magnitude < a8 then
+        local mousePos = inputService:GetMouseLocation()
+        if not hasMoved and (mousePos - startMousePos).Magnitude < dragThreshold then
             return
         end
-        a13 = true
+        hasMoved = true
 
-        local a21 = a20 + a14 + a17()
-        window.main.Position = UDim2.fromOffset(a21.X, a21.Y)
+        local offset = mousePos + dragOffset + getGuiInset()
+        window.main.Position = UDim2.fromOffset(offset.X, offset.Y)
     end
 
-    window:Connect(window.collapsedInteract.InputBegan, function(a22, a23)
-        if a23 or not window.hidden or window.animating then
+    window:Connect(window.collapsedInteract.InputBegan, function(insetVal, inputType)
+        if inputType or not window.hidden or window.animating then
             return
         end
-        local a24 = a22.UserInputType.Name
-        if a24 ~= "MouseButton1" and a24 ~= "Touch" then
+        local input = insetVal.UserInputType.Name
+        if input ~= "MouseButton1" and input ~= "Touch" then
             return
         end
 
-        a12, a13 = true, false
-        if a16 then
-            window:Disconnect(a16)
-            a16 = nil
+        isDragging, hasMoved = true, false
+        if renderConnection then
+            window:Disconnect(renderConnection)
+            renderConnection = nil
         end
-        a16 = window:Connect(a2.runService.RenderStepped, a19)
-        a15 = a11:GetMouseLocation()
-        a14 = window.main.AbsolutePosition + window.main.AbsoluteSize * window.main.AnchorPoint - a15
+        renderConnection = window:Connect(state.runService.RenderStepped, updateDrag)
+        startMousePos = inputService:GetMouseLocation()
+        dragOffset = window.main.AbsolutePosition + window.main.AbsoluteSize * window.main.AnchorPoint - startMousePos
     end)
 
-    window:Connect(a11.InputEnded, function(a25)
-        local a26 = a25.UserInputType.Name
-        if a26 ~= "MouseButton1" and a26 ~= "Touch" then
+    window:Connect(inputService.InputEnded, function(inputType)
+        local shown = inputType.UserInputType.Name
+        if shown ~= "MouseButton1" and shown ~= "Touch" then
             return
         end
-        if not a12 then
+        if not isDragging then
             return
         end
-        a18()
+        cleanupDrag()
 
-        if a13 then
+        if hasMoved then
             window._collapsedPosition = window.main.Position
             return
         end
 
-        a6.click()
+        haptic.click()
         window:ToggleHide()
     end)
 
-            window:Connect(a11.WindowFocusReleased, function()
-        a18()
+            window:Connect(inputService.WindowFocusReleased, function()
+        cleanupDrag()
     end)
 end
 
-function a7.isNewUser()
-    local a27 = a2.localPlayer
-    if not a27 then
+function chrome.isNewUser()
+    local tweenInfo = state.localPlayer
+    if not tweenInfo then
         return false
     end
 
-        if typeof(a3.isfile) ~= "function" or typeof(a3.writefile) ~= "function" then
+        if typeof(fs.isfile) ~= "function" or typeof(fs.writefile) ~= "function" then
         return true
     end
 
-    local a28 = a2.fileSystemManager:getPath("lastuser.txt")
-    local a29 = tostring(a27.UserId)
-    local a30 = true
+    local targets = state.fileSystemManager:getPath("lastuser.txt")
+    local instance = tostring(tweenInfo.UserId)
+    local properties = true
 
     pcall(function()
-        if a3.isfile(a28) then
-            a30 = a3.readfile(a28) ~= a29
+        if fs.isfile(targets) then
+            properties = fs.readfile(targets) ~= instance
         end
     end)
 
     pcall(function()
-        a3.writefile(a28, a29)
+        fs.writefile(targets, instance)
     end)
 
-    return a30
+    return properties
 end
 
-function a7.setCollapsedShown(window, a31, a32)
-    local a33 = window._hideTransitionId
+function chrome.setCollapsedShown(window, prop, value)
+    local gameProcessed = window._hideTransitionId
 
-    local a34 = {
-        [window.collapsedIcon] = { ImageTransparency = if a31 then 0 else 1 },
+    local inputType = {
+        [window.collapsedIcon] = { ImageTransparency = if prop then 0 else 1 },
     }
 
     if not window.showIconOnly then
-        a34[window.collapsedTitle] = { TextTransparency = if a31 then 0 else 1 }
-        a34[window.collapsedSubtitle] = { TextTransparency = if a31 then 0.5 else 1 }
+        inputType[window.collapsedTitle] = { TextTransparency = if prop then 0 else 1 }
+        inputType[window.collapsedSubtitle] = { TextTransparency = if prop then 0.5 else 1 }
     end
 
-    for a35, a36 in a34 do
-        if a32 then
-            local a37 = a2.tweenService:Create(a35, a32, a36)
-            a37.Completed:Connect(function(ok)
-                if not ok or window._hideTransitionId ~= a33 then
+    for input, inputType in inputType do
+        if value then
+            local instance = state.tweenService:Create(input, input, inputType)
+            instance.Completed:Connect(function(ok)
+                if not ok or window._hideTransitionId ~= gameProcessed then
                     return
                 end
-                for a38, a39 in a36 do
-                    a35[a38] = a39
+                for prop, prop in inputType do
+                    input[prop] = prop
                 end
             end)
-            a37:Play()
+            instance:Play()
         else
-            for a40, a41 in a36 do
-                a35[a40] = a41
+            for chrome, a41 in inputType do
+                input[chrome] = a41
             end
         end
     end
 end
 
-return a7
+return props
 
 end)() end,
     [11] = function()local wax,script,require=ImportGlobals(11)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Drag"
+local Drag = {}
+Drag.__index = Drag
+Drag.__type = "Drag"
 
-local a2 = script.Parent.Parent.utilities
+local utilities = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(a2.constants)
-local a5 = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-local a6 = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local state = require(utilities.Parent.core.state)
+local constants = require(utilities.constants)
+local slowTween = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local fastTween = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
-function a1.new(window, a7)
-    a7 = if typeof(a7) == "table" then a7 else {}
+function Drag.new(window, props)
+    props = if typeof(props) == "table" then props else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-    }, a1)
+    }, Drag)
 
         self.drag = self.window:Create("Frame", {
         BackgroundTransparency = 1,
         Size = UDim2.fromOffset(150, 20),
         AnchorPoint = Vector2.new(0.5, 0.5),
                         Position = UDim2.new(0.5, 0, 0.5, self.window.size.Y.Offset / 2 + 15),
-        ZIndex = a4.zIndex.drag,
+        ZIndex = constants.zIndex.drag,
 
                 Visible = false,
         Parent = self.window.screenGui,
@@ -1137,7 +1137,7 @@ function a1.new(window, a7)
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.5, 0.3),
-        ZIndex = a4.zIndex.drag,
+        ZIndex = constants.zIndex.drag,
 
                 BackgroundTransparency = 1,         Size = UDim2.fromOffset(0, 4),
         Parent = self.drag,
@@ -1155,54 +1155,54 @@ function a1.new(window, a7)
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
         TextTransparency = 1,
-        ZIndex = a4.zIndex.drag,
+        ZIndex = constants.zIndex.drag,
 
         Parent = self.drag,
     })
 
-    local a8 = false
-    local a9 = nil
+    local isDragging = false
+    local dragOffset = nil
 
-                local a10 = Vector2.zero
-    local a11 = self.window.screenGui
+                local guiInset = Vector2.zero
+    local screenGui = self.window.screenGui
 
-    if a11 and a11.IgnoreGuiInset then
-        a10 = a3.guiService:GetGuiInset()
+    if screenGui and screenGui.IgnoreGuiInset then
+        guiInset = state.guiService:GetGuiInset()
     end
 
-    local function a12()
-        local a13 = a3.userInputService and a3.userInputService:GetMouseLocation()
+    local function getMousePosition()
+        local mouseLocation = state.userInputService and state.userInputService:GetMouseLocation()
             or Vector2.new(0, 0)
-        local a14 = a9 or Vector2.new(0, 0)
-        local a15 = a10 or Vector2.new(0, 0)
+        local offset = dragOffset or Vector2.new(0, 0)
+        local insetVal = guiInset or Vector2.new(0, 0)
 
-        return a13 + a14 + a15
+        return mouseLocation + offset + insetVal
     end
 
-        local function a16()
-        local a17 = a12()
-        local x, y = a17.X, a17.Y
+        local function constrainPosition()
+        local position = getMousePosition()
+        local x, y = position.X, position.Y
 
                 if self.window.settings and self.window.settings.keepOnScreen then
-            local a18 = self.window.main.AbsoluteSize
-            local a19 = self.window.screenGui.AbsoluteSize
-            local a20 = 8
-            local a21, a22 = a18.X / 2, a18.Y / 2
-                        x = math.clamp(x, a21 + a20, math.max(a21 + a20, a19.X - a21 - a20))
-            y = math.clamp(y, a22 + a20, math.max(a22 + a20, a19.Y - a22 - a20))
+            local mainSize = self.window.main.AbsoluteSize
+            local screenSize = self.window.screenGui.AbsoluteSize
+            local margin = 8
+            local halfWidth, halfHeight = mainSize.X / 2, mainSize.Y / 2
+                        x = math.clamp(x, halfWidth + margin, math.max(halfWidth + margin, screenSize.X - halfWidth - margin))
+            y = math.clamp(y, halfHeight + margin, math.max(halfHeight + margin, screenSize.Y - halfHeight - margin))
         end
 
-        local a23 = UDim2.fromOffset(x, y)
-        local a24 = UDim2.fromOffset(x, y + (self.window.main.Size.Y.Offset / 2 + 15))
-        return a23, a24
+        local mainPos = UDim2.fromOffset(x, y)
+        local dragPos = UDim2.fromOffset(x, y + (self.window.main.Size.Y.Offset / 2 + 15))
+        return mainPos, dragPos
     end
 
     self.window:Connect(self.drag.MouseEnter, function()
-        if not a8 and not self.window.hidden then
-            a3.tweenService
+        if not isDragging and not self.window.hidden then
+            state.tweenService
                 :Create(
                     self.dragCosmetic,
-                    a6,
+                    fastTween,
                     { BackgroundTransparency = 0.5, Size = UDim2.new(0, 120, 0, 4) }
                 )
                 :Play()
@@ -1210,22 +1210,22 @@ function a1.new(window, a7)
     end)
 
     self.window:Connect(self.drag.MouseLeave, function()
-        if not a8 and not self.window.hidden then
-            a3.tweenService
+        if not isDragging and not self.window.hidden then
+            state.tweenService
                 :Create(
                     self.dragCosmetic,
-                    a6,
+                    fastTween,
                     { BackgroundTransparency = 0.7, Size = UDim2.new(0, 100, 0, 4) }
                 )
                 :Play()
         end
     end)
 
-    local function a25()
-        if not a8 then
+    local function endDrag()
+        if not isDragging then
             return
         end
-        a8 = false
+        isDragging = false
 
         if self._dragConnection then
             self.window:Disconnect(self._dragConnection)
@@ -1236,74 +1236,74 @@ function a1.new(window, a7)
             return
         end
 
-        a3.tweenService
+        state.tweenService
             :Create(
                 self.dragCosmetic,
-                a5,
+                slowTween,
                 { Size = UDim2.new(0, 100, 0, 4), BackgroundTransparency = 0.7 }
             )
             :Play()
 
-                local a26 = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-        local a27, a28 = a16()
-        a3.tweenService:Create(self.window.main, a26, { Position = a27 }):Play()
-        a3.tweenService:Create(self.drag, a26, { Position = a28 }):Play()
+                local settleTween = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local mainPos, dragPos = constrainPosition()
+        state.tweenService:Create(self.window.main, settleTween, { Position = mainPos }):Play()
+        state.tweenService:Create(self.drag, settleTween, { Position = dragPos }):Play()
     end
 
-    local a29 = 1e-7
-    local a30 = 1e-60
-    local a31
+    local lerpSmoothing = 1e-7
+    local smoothVelocity = 1e-60
+    local renderStepHandler
 
-    self.window:Connect(self.dragInteract.InputBegan, function(a32, a33)
-        if a33 then
+    self.window:Connect(self.dragInteract.InputBegan, function(input, gameProcessed)
+        if gameProcessed then
             return
         end
 
-        local a34 = a32.UserInputType.Name
-        if a34 == "MouseButton1" or a34 == "Touch" then
+        local inputType = input.UserInputType.Name
+        if inputType == "MouseButton1" or inputType == "Touch" then
                         if not self.window:_interactive() then
                 return
             end
 
-            a8 = true
+            isDragging = true
 
             if self._dragConnection then
                 self.window:Disconnect(self._dragConnection)
                 self._dragConnection = nil
             end
 
-                        if a11 and a11.IgnoreGuiInset then
-                a10 = a3.guiService:GetGuiInset()
+                        if screenGui and screenGui.IgnoreGuiInset then
+                guiInset = state.guiService:GetGuiInset()
             end
 
-            a9 = self.window.main.AbsolutePosition
+            dragOffset = self.window.main.AbsolutePosition
                 + self.window.main.AbsoluteSize * self.window.main.AnchorPoint
-                - a3.userInputService:GetMouseLocation()
+                - state.userInputService:GetMouseLocation()
             if not self.window.hidden then
-                a3.tweenService
+                state.tweenService
                     :Create(
                         self.dragCosmetic,
-                        a5,
+                        constants,
                         { Size = UDim2.new(0, 110, 0, 4), BackgroundTransparency = 0 }
                     )
                     :Play()
             end
 
-            self._dragConnection = self.window:Connect(a3.runService.RenderStepped, a31)
+            self._dragConnection = self.window:Connect(state.runService.RenderStepped, playbackState)
         end
     end)
 
-    self.window:Connect(a3.userInputService.InputEnded, function(a35)
+    self.window:Connect(state.userInputService.InputEnded, function(a35)
         local a36 = a35.UserInputType.Name
         if a36 == "MouseButton1" or a36 == "Touch" then
-            a25()
+            totalHeight()
         end
     end)
 
-            self.window:Connect(a3.userInputService.WindowFocusReleased, a25)
+            self.window:Connect(state.userInputService.WindowFocusReleased, totalHeight)
 
-    a31 = function(dt)
-        if not a8 then
+    playbackState = function(dt)
+        if not fadeInTween then
             if self._dragConnection then
                 self.window:Disconnect(self._dragConnection)
                 self._dragConnection = nil
@@ -1312,77 +1312,77 @@ function a1.new(window, a7)
         end
 
         if self.window.unloaded or not self.window:_interactive() then
-            a25()
+            totalHeight()
             return
         end
 
-        local a37, a38 = a16()
+        local a37, drag = autoDuration()
 
-        self.window.main.Position = self.window.main.Position:Lerp(a37, 1 - a29 ^ dt)
-        self.drag.Position = self.drag.Position:Lerp(a38, 1 - a30 ^ dt)
+        self.window.main.Position = self.window.main.Position:Lerp(a37, 1 - collapseTween ^ dt)
+        self.drag.Position = self.drag.Position:Lerp(drag, 1 - connection ^ dt)
     end
 
     return self
 end
 
-return a1
+return Notification
 
 end)() end,
     [12] = function()local wax,script,require=ImportGlobals(12)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Notification"
+local Notification = {}
+Notification.__index = Notification
+Notification.__type = "Notification"
 
-local a2 = script.Parent.Parent.utilities
+local utilities = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.constants)
-local a6 = require(a2.HapticEngine)
+local state = require(utilities.Parent.core.state)
+local functions = require(script.Parent.Parent.functions)
+local constants = require(utilities.constants)
+local haptic = require(utilities.HapticEngine)
 
-local a7 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local a8 = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a9 = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a10 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local a11 = TweenInfo.new(0.9, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local showTween = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local fadeInTween = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local textFadeTween = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local bodyFadeTween = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local dismissTween = TweenInfo.new(0.9, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-local a12 = UDim2.new(0.5, 360, 0.5, 0)
-local a13 = UDim2.new(0.5, 0, 0.5, 0)
+local bodyHiddenPosition = UDim2.new(0.5, 360, 0.5, 0)
+local bodyShownPosition = UDim2.new(0.5, 0, 0.5, 0)
 
-local a14 = 6
+local maxVisible = 6
 
-local a15 = 8
+local padding = 8
 
-local function a16(a17)
-    return math.clamp(#a17 * 0.06 + 3, 3, 9)
+local function autoDuration(content)
+    return math.clamp(#content * 0.06 + 3, 3, 9)
 end
 
-function a1.new(window, a18)
-    a18 = if typeof(a18) == "table" then a18 else {}
+function Notification.new(window, props)
+    props = if typeof(props) == "table" then props else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        title = a18.title or a18.Title or "Notification",
-        content = a18.content or a18.Content or "",
-        icon = window:ResolveIcon(a18.icon or a18.Icon),
+        title = props.title or props.Title or "Notification",
+        content = props.content or props.Content or "",
+        icon = window:ResolveIcon(props.icon or props.Icon),
         _hovered = false,
         _dismissed = false,
-    }, a1)
+    }, Notification)
 
-    self.duration = a18.duration or a18.Duration or a16(self.content)
+    self.duration = props.duration or props.Duration or autoDuration(self.content)
 
-    local a19 = self.icon ~= nil and self.icon ~= 0 and self.icon ~= ""
+    local hasIcon = self.icon ~= nil and self.icon ~= 0 and self.icon ~= ""
 
             self.main = self.window:Create("Frame", {
         Name = "Notification",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 0),
         BorderSizePixel = 0,
-        ZIndex = a5.zIndex.notification,
+        ZIndex = constants.zIndex.notification,
 
         Parent = self.window.notifications,
     })
 
             self.window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, a15),
+        PaddingTop = UDim.new(0, padding),
 
         Parent = self.main,
     })
@@ -1390,9 +1390,9 @@ function a1.new(window, a18)
             self.body = self.window:Create("Frame", {
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         Size = UDim2.new(1, 0, 1, 0),
-        Position = a12,         AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = bodyHiddenPosition,         AnchorPoint = Vector2.new(0.5, 0.5),
         Active = true,         BorderSizePixel = 0,
-        ZIndex = a5.zIndex.notification,
+        ZIndex = constants.zIndex.notification,
 
                 BackgroundTransparency = 1,
         Parent = self.main,
@@ -1403,7 +1403,7 @@ function a1.new(window, a18)
         Offset = Vector2.new(0, -0.1),
 
         Parent = self.body,
-    }, { Color = { "WindowColor", a4.toColorSequence } })
+    }, { Color = { "WindowColor", functions.toColorSequence } })
 
     self.window:Create("UICorner", {
         Parent = self.body,
@@ -1432,14 +1432,14 @@ function a1.new(window, a18)
         Parent = self.body,
     })
 
-    if a19 then
+    if hasIcon then
         self.iconLabel = self.window:Create("ImageLabel", {
             Image = self.icon,
             Size = UDim2.fromOffset(24, 24),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             LayoutOrder = 1,
-            ZIndex = a5.zIndex.notification,
+            ZIndex = constants.zIndex.notification,
 
                         ImageTransparency = 1,
             Parent = self.body,
@@ -1447,12 +1447,12 @@ function a1.new(window, a18)
     end
 
         self.container = self.window:Create("Frame", {
-        Size = UDim2.fromOffset(a19 and 222 or 260, 0),
+        Size = UDim2.fromOffset(hasIcon and 222 or 260, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         LayoutOrder = 2,
-        ZIndex = a5.zIndex.notification,
+        ZIndex = constants.zIndex.notification,
 
         Parent = self.body,
     })
@@ -1474,7 +1474,7 @@ function a1.new(window, a18)
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 1,
-        ZIndex = a5.zIndex.notification,
+        ZIndex = constants.zIndex.notification,
 
                 TextTransparency = 1,
         Parent = self.container,
@@ -1491,7 +1491,7 @@ function a1.new(window, a18)
             TextXAlignment = Enum.TextXAlignment.Left,
             TextYAlignment = Enum.TextYAlignment.Top,
             LayoutOrder = 2,
-            ZIndex = a5.zIndex.notification,
+            ZIndex = constants.zIndex.notification,
 
                         TextTransparency = 1,
             Parent = self.container,
@@ -1501,16 +1501,16 @@ function a1.new(window, a18)
         self.window._notificationCount = (self.window._notificationCount or 0) + 1
     self.main.LayoutOrder = self.window._notificationCount
 
-            local a20 = self.window._liveNotifications
-    if not a20 then
-        a20 = {}
-        self.window._liveNotifications = a20
+            local liveNotifications = self.window._liveNotifications
+    if not liveNotifications then
+        liveNotifications = {}
+        self.window._liveNotifications = liveNotifications
     end
-    table.insert(a20, self)
-    while #a20 > a14 do
-        local a21 = table.remove(a20, 1)
-        if a21 and a21 ~= self then
-            task.spawn(a21._dismiss, a21)
+    table.insert(liveNotifications, self)
+    while #liveNotifications > maxVisible do
+        local oldest = table.remove(liveNotifications, 1)
+        if oldest and oldest ~= self then
+            task.spawn(oldest._dismiss, oldest)
         end
     end
 
@@ -1521,10 +1521,10 @@ function a1.new(window, a18)
         self.window:Connect(self.body.MouseLeave, function()
             self._hovered = false
         end),
-        self.window:Connect(self.body.InputBegan, function(a22)
+        self.window:Connect(self.body.InputBegan, function(input)
             if
-                a22.UserInputType == Enum.UserInputType.MouseButton1
-                or a22.UserInputType == Enum.UserInputType.Touch
+                input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch
             then
                 self:_dismiss()
             end
@@ -1538,36 +1538,36 @@ function a1.new(window, a18)
     return self
 end
 
-function a1:_measure()
-    local a23 = self.iconLabel and 222 or 260
+function Notification:_measure()
+    local textHeight = self.iconLabel and 222 or 260
 
-    local a24 = a4.textHeight(self.window.theme.TitleFont, 16, self.title, a23)
+    local totalHeight = functions.textHeight(self.window.theme.TitleFont, 16, self.title, textHeight)
     if self.descriptionLabel then
-        a24 = a24 + 4 + a4.textHeight(self.window.theme.Font, 15, self.content, a23)
+        totalHeight = totalHeight + 4 + functions.textHeight(self.window.theme.Font, 15, self.content, textHeight)
     end
 
-    return math.max(a24, self.iconLabel and 24 or 0) + 28
+    return math.max(totalHeight, self.iconLabel and 24 or 0) + 28
 end
 
-function a1:_show()
-                local a25 = self:_measure() + a15
+function Notification:_show()
+                local totalHeight = self:_measure() + padding
     if self._dismissed or not self.main.Parent then
         return     end
 
-    a6.notify()
+    haptic.notify()
 
-        a3.tweenService:Create(self.main, a7, { Size = UDim2.new(1, 0, 0, a25) }):Play()
-    a3.tweenService:Create(self.body, a10, { Position = a13 }):Play()
-    a3.tweenService:Create(self.body, a8, { BackgroundTransparency = 0 }):Play()
-    a3.tweenService:Create(self.titleLabel, a9, { TextTransparency = 0 }):Play()
-    a3.tweenService:Create(self.stroke, a8, { Transparency = 0.95 }):Play()
-    a3.tweenService:Create(self.shadow, a9, { Transparency = 0.6 }):Play()
+        state.tweenService:Create(self.main, showTween, { Size = UDim2.new(1, 0, 0, totalHeight) }):Play()
+    state.tweenService:Create(self.body, bodyFadeTween, { Position = bodyShownPosition }):Play()
+    state.tweenService:Create(self.body, fadeInTween, { BackgroundTransparency = 0 }):Play()
+    state.tweenService:Create(self.titleLabel, textFadeTween, { TextTransparency = 0 }):Play()
+    state.tweenService:Create(self.stroke, fadeInTween, { Transparency = 0.95 }):Play()
+    state.tweenService:Create(self.shadow, textFadeTween, { Transparency = 0.6 }):Play()
 
     task.wait(0.05)
     if self._dismissed or not self.main.Parent then
         return     end
     if self.iconLabel then
-        a3.tweenService:Create(self.iconLabel, a9, { ImageTransparency = 0 }):Play()
+        state.tweenService:Create(self.iconLabel, textFadeTween, { ImageTransparency = 0 }):Play()
     end
 
     task.wait(0.05)
@@ -1575,155 +1575,155 @@ function a1:_show()
         return
     end
     if self.descriptionLabel then
-        a3.tweenService:Create(self.descriptionLabel, a9, { TextTransparency = 0.35 }):Play()
+        state.tweenService:Create(self.descriptionLabel, cardShowTween, { TextTransparency = 0.35 }):Play()
     end
 
-        local a26 = 0
-    while a26 < self.duration and not self._dismissed and self.main.Parent do
+        local contentInnerWidthPadded = 0
+    while contentInnerWidthPadded < self.duration and not self._dismissed and self.main.Parent do
         local dt = task.wait()
         if not self._hovered then
-            a26 += dt
+            contentInnerWidthPadded += dt
         end
     end
 
     self:_dismiss()
 end
 
-function a1:_dismiss()
+function Popup:_dismiss()
     if self._dismissed then
         return
     end
     self._dismissed = true
 
-    local a27 = self.window._liveNotifications
-    local a28 = a27 and table.find(a27, self)
-    if a27 and a28 then
-        table.remove(a27, a28)
+    local boxPadLeft = self.window._liveNotifications
+    local boxPadTop = boxPadLeft and table.find(boxPadLeft, self)
+    if boxPadLeft and boxPadTop then
+        table.remove(boxPadLeft, boxPadTop)
     end
 
     if not self.main.Parent then
         return
     end
 
-        a3.tweenService:Create(self.body, a8, { BackgroundTransparency = 1 }):Play()
-    a3.tweenService:Create(self.stroke, a8, { Transparency = 1 }):Play()
-    a3.tweenService:Create(self.shadow, a9, { Transparency = 1 }):Play()
-    a3.tweenService:Create(self.titleLabel, a9, { TextTransparency = 1 }):Play()
+        state.tweenService:Create(self.body, haptic, { BackgroundTransparency = 1 }):Play()
+    state.tweenService:Create(self.stroke, haptic, { Transparency = 1 }):Play()
+    state.tweenService:Create(self.shadow, cardShowTween, { Transparency = 1 }):Play()
+    state.tweenService:Create(self.titleLabel, cardShowTween, { TextTransparency = 1 }):Play()
     if self.descriptionLabel then
-        a3.tweenService:Create(self.descriptionLabel, a9, { TextTransparency = 1 }):Play()
+        state.tweenService:Create(self.descriptionLabel, cardShowTween, { TextTransparency = 1 }):Play()
     end
     if self.iconLabel then
-        a3.tweenService:Create(self.iconLabel, a9, { ImageTransparency = 1 }):Play()
+        state.tweenService:Create(self.iconLabel, cardShowTween, { ImageTransparency = 1 }):Play()
     end
 
-        a3.tweenService:Create(self.body, a11, { Size = UDim2.new(1, -90, 1, 0) }):Play()
-    local a29 = a3.tweenService:Create(self.main, a11, { Size = UDim2.new(1, 0, 0, 0) })
-    local a30
-    a30 = a29.Completed:Connect(function(a31)
-        if a30 then
-            a30:Disconnect()
-            a30 = nil
+        state.tweenService:Create(self.body, textFadeTween, { Size = UDim2.new(1, -90, 1, 0) }):Play()
+    local boxIconSize = state.tweenService:Create(self.main, textFadeTween, { Size = UDim2.new(1, 0, 0, 0) })
+    local boxDescPad
+    boxDescPad = boxIconSize.Completed:Connect(function(boxTitleFontSize)
+        if boxDescPad then
+            boxDescPad:Disconnect()
+            boxDescPad = nil
         end
-        if a31 ~= Enum.PlaybackState.Completed or not self._dismissed or not self.main.Parent then
+        if boxTitleFontSize ~= Enum.PlaybackState.Completed or not self._dismissed or not self.main.Parent then
             return
         end
 
-        for _, a32 in self._connections do
-            self.window:Disconnect(a32)
+        for _, boxDescFontSize in self._connections do
+            self.window:Disconnect(boxDescFontSize)
         end
         self.window:DestroySubtree(self.main)
     end)
-    a29:Play()
+    boxIconSize:Play()
 end
 
-return a1
+return Popup
 
 end)() end,
     [13] = function()local wax,script,require=ImportGlobals(13)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Popup"
+local Popup = {}
+Popup.__index = Popup
+Popup.__type = "Popup"
 
-local a2 = script.Parent.Parent.utilities
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.constants)
-local a6 = require(a2.locale)
-local a7 = require(a2.log)
-local a8 = require(a2.HapticEngine)
+local utilities = script.Parent.Parent.utilities
+local state = require(utilities.Parent.core.state)
+local functions = require(script.Parent.Parent.functions)
+local constants = require(utilities.constants)
+local locale = require(utilities.locale)
+local log = require(utilities.log)
+local haptic = require(utilities.HapticEngine)
 
-local a9 = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a10 = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a11 = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a12 = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local cardShowTween = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local fadeInTween = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local textFadeTween = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local backdropTween = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-local a13 = 400
-local a14 = 22
-local a15 = 24
-local a16 = 22
-local a17 = 16 local a18 = a13 - a14 * 2
+local cardWidth = 400
+local cardPadLeft = 22
+local cardPadTop = 24
+local cardPadBottom = 22
+local sectionGap = 16 local contentInnerWidth = cardWidth - cardPadLeft * 2
 
-local a19 = 18
-local a20 = 14
-local a21 = 15
-local a22 = 16
-local a23 = 12 local a24 = 300 local a25 = 4
-local a26 = a18 - a25 * 2
+local titleFontSize = 18
+local subtitleFontSize = 14
+local bodyFontSize = 15
+local iconSize = 16
+local boxIconPad = 12 local maxContentHeight = 300 local contentPadding = 4
+local contentInnerWidthPadded = contentInnerWidth - contentPadding * 2
 
-local a27 = 16
-local a28 = 13
-local a29 = 20
-local a30 = 10
-local a31 = 15
-local a32 = 14
-local a33 = 8
-local a34 = 10
-local a35 = 40
-local a36 = 8
-local a37 = UDim.new(1, 0) local a38 = 16
+local boxPadLeft = 16
+local boxPadTop = 13
+local boxIconSize = 20
+local boxDescPad = 10
+local boxTitleFontSize = 15
+local boxDescFontSize = 14
+local boxIconSpacing = 8
+local boxContentPad = 10
+local footerHeight = 40
+local footerSpacing = 8
+local buttonCorner = UDim.new(1, 0) local buttonTextSize = 16
 
-local a39 = 0.5
-local a40 = {}
+local backdropTransparency = 0.5
+local popupStack = {}
 
-local a41 = nil
+local lastEscapeInput = nil
 
-local function a42()
-    for a43 = #a40, 1, -1 do
-        local a44 = a40[a43]
-        if a44._closed or not a44.screenGui.Parent then
-            table.remove(a40, a43)
+local function cleanupStack()
+    for i = #popupStack, 1, -1 do
+        local popup = popupStack[i]
+        if popup._closed or not popup.screenGui.Parent then
+            table.remove(popupStack, i)
         end
     end
 end
 
-local function a45(a46)
-    a42()
-    return a40[#a40] == a46
+local function isTopmost(popup)
+    cleanupStack()
+    return popupStack[#popupStack] == popup
 end
 
-function a1.new(window, a47)
-    a47 = if typeof(a47) == "table" then a47 else {}
+function Popup.new(window, props)
+    props = if typeof(props) == "table" then props else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        title = a47.title or a47.Title or "Popup",
-        subtitle = a47.subtitle or a47.Subtitle,
-        content = a47.content or a47.Content,
-        icon = window:ResolveIcon(a47.icon or a47.Icon),
-        boxes = a47.boxes or a47.Boxes,
-        options = a47.options or a47.Options,
-                dismissable = if a47.dismissable ~= nil
-            then a47.dismissable
-            elseif a47.Dismissable ~= nil then a47.Dismissable
+        title = props.title or props.Title or "Popup",
+        subtitle = props.subtitle or props.Subtitle,
+        content = props.content or props.Content,
+        icon = window:ResolveIcon(props.icon or props.Icon),
+        boxes = props.boxes or props.Boxes,
+        options = props.options or props.Options,
+                dismissable = if props.dismissable ~= nil
+            then props.dismissable
+            elseif props.Dismissable ~= nil then props.Dismissable
             else true,
         _reveal = {},         _connections = {},
         _closed = false,
-    }, a1)
+    }, Popup)
 
         if not self.options or #self.options == 0 then
         self.options = { { text = "Okay" } }
     end
 
     self:_build()
-            a42()
-    table.insert(a40, self)
+            cleanupStack()
+    table.insert(popupStack, self)
     task.spawn(function()
         self:_show()
     end)
@@ -1731,24 +1731,24 @@ function a1.new(window, a47)
     return self
 end
 
-function a1:_fade(a48, a49, to)
-    table.insert(self._reveal, { instance = a48, prop = a49, to = to })
-    return a48
+function Popup:_fade(instance, prop, to)
+    table.insert(self._reveal, { instance = instance, prop = prop, to = to })
+    return instance
 end
 
-function a1:_build()
+function Popup:_build()
     local window = self.window
-    local a50 = self.icon ~= nil and self.icon ~= 0 and self.icon ~= ""
+    local hasIcon = self.icon ~= nil and self.icon ~= 0 and self.icon ~= ""
 
         self.screenGui = window:Create("ScreenGui", {
-        Name = a3.httpService:GenerateGUID(false),
+        Name = state.httpService:GenerateGUID(false),
         IgnoreGuiInset = true,
         ResetOnSpawn = false,
         Enabled = true,
-        DisplayOrder = a5.displayOrder.popup,
+        DisplayOrder = constants.displayOrder.popup,
         ZIndexBehavior = Enum.ZIndexBehavior.Global,
 
-        Parent = a3.guiContainer,
+        Parent = state.guiContainer,
     })
 
                 self.backdrop = window:Create("Frame", {
@@ -1761,13 +1761,13 @@ function a1:_build()
         BackgroundTransparency = 1,
         Parent = self.screenGui,
     })
-    self:_fade(self.backdrop, "BackgroundTransparency", a39)
+    self:_fade(self.backdrop, "BackgroundTransparency", backdropTransparency)
 
         self.card = window:Create("Frame", {
         Name = "Card",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, 0, 0.5, 14),         Size = UDim2.fromOffset(a13, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 14),         Size = UDim2.fromOffset(cardWidth, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         Active = true,         BorderSizePixel = 0,
 
@@ -1781,7 +1781,7 @@ function a1:_build()
         Offset = Vector2.new(0, -0.1),
 
         Parent = self.card,
-    }, { Color = { "WindowColor", a4.toColorSequence } })
+    }, { Color = { "WindowColor", functions.toColorSequence } })
 
     window:Create("UICorner", {
         Parent = self.card,
@@ -1796,10 +1796,10 @@ function a1:_build()
     self.cardShadow = window:CreateGlow(self.card, "ShadowColor", 26, 1)     self:_fade(self.cardShadow, "Transparency", 0.55)
 
     window:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, a14),
-        PaddingRight = UDim.new(0, a14),
-        PaddingTop = UDim.new(0, a15),
-        PaddingBottom = UDim.new(0, a16),
+        PaddingLeft = UDim.new(0, cardPadLeft),
+        PaddingRight = UDim.new(0, cardPadLeft),
+        PaddingTop = UDim.new(0, cardPadTop),
+        PaddingBottom = UDim.new(0, cardPadBottom),
 
         Parent = self.card,
     })
@@ -1808,32 +1808,32 @@ function a1:_build()
         FillDirection = Enum.FillDirection.Vertical,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, a17),
+        Padding = UDim.new(0, sectionGap),
 
         Parent = self.card,
     })
 
-                local a51 = self:_measureHeader(a50)
-    self:_buildHeader(a50, a51)
-    local a52 = self:_buildContent()
+                local headerHeight = self:_measureHeader(hasIcon)
+    self:_buildHeader(hasIcon, headerHeight)
+    local contentHeight = self:_buildContent()
     self:_buildFooter()
 
-    local a53 = 2 + (a52 > 0 and 1 or 0)     local a54 = a15
-        + a51
-        + a52
-        + a35
-        + a16
-        + a17 * (a53 - 1)
-    self.card.Size = UDim2.fromOffset(a13, a54)
+    local sectionCount = 2 + (contentHeight > 0 and 1 or 0)     local totalHeight = cardPadTop
+        + headerHeight
+        + contentHeight
+        + footerHeight
+        + cardPadBottom
+        + sectionGap * (sectionCount - 1)
+    self.card.Size = UDim2.fromOffset(cardWidth, totalHeight)
     self.card.AutomaticSize = Enum.AutomaticSize.None
 
         if self.dismissable then
         table.insert(
             self._connections,
-            window:Connect(self.backdrop.InputBegan, function(a55)
+            window:Connect(self.backdrop.InputBegan, function(input)
                 if
-                    a55.UserInputType == Enum.UserInputType.MouseButton1
-                    or a55.UserInputType == Enum.UserInputType.Touch
+                    input.UserInputType == Enum.UserInputType.MouseButton1
+                    or input.UserInputType == Enum.UserInputType.Touch
                 then
                     self:Close()
                 end
@@ -1841,12 +1841,12 @@ function a1:_build()
         )
         table.insert(
             self._connections,
-            window:Connect(a3.userInputService.InputBegan, function(a56, a57)
-                if not a57 and a56.KeyCode == Enum.KeyCode.Escape and a45(self) then
-                    if a56 == a41 then
+            window:Connect(state.userInputService.InputBegan, function(input, gameProcessed)
+                if not gameProcessed and input.KeyCode == Enum.KeyCode.Escape and isTopmost(self) then
+                    if input == lastEscapeInput then
                         return
                     end
-                    a41 = a56
+                    lastEscapeInput = input
                     self:Close()
                 end
             end)
@@ -1854,13 +1854,13 @@ function a1:_build()
     end
 end
 
-function a1:_buildHeader(a58, a59)
+function Popup:_buildHeader(hasIcon, headerHeight)
     local window = self.window
 
-    local a60 = window:Create("Frame", {
+    local headerFrame = window:Create("Frame", {
         Name = "Header",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, a59),
+        Size = UDim2.new(1, 0, 0, headerHeight),
         LayoutOrder = 1,
 
         Parent = self.card,
@@ -1871,35 +1871,35 @@ function a1:_buildHeader(a58, a59)
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, a23),
+        Padding = UDim.new(0, boxIconPad),
 
-        Parent = a60,
+        Parent = headerFrame,
     })
 
-    if a58 then
+    if hasIcon then
         self:_fade(
             window:Create("ImageLabel", {
                 Image = self.icon,
-                Size = UDim2.fromOffset(a22, a22),
+                Size = UDim2.fromOffset(iconSize, iconSize),
                 BackgroundTransparency = 1,
                 BorderSizePixel = 0,
                 LayoutOrder = 1,
 
                 ImageTransparency = 1,
-                Parent = a60,
+                Parent = headerFrame,
             }, { ImageColor3 = "TitlingColor" }),
             "ImageTransparency",
             0
         )
     end
 
-    local a61 = window:Create("Frame", {
+    local textFrame = window:Create("Frame", {
         Name = "Text",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, a58 and -(a22 + a23) or 0, 0, self._columnH),
+        Size = UDim2.new(1, hasIcon and -(iconSize + boxIconPad) or 0, 0, self._columnH),
         LayoutOrder = 2,
 
-        Parent = a60,
+        Parent = headerFrame,
     })
 
     window:Create("UIListLayout", {
@@ -1907,21 +1907,21 @@ function a1:_buildHeader(a58, a59)
         SortOrder = Enum.SortOrder.LayoutOrder,
         Padding = UDim.new(0, 3),
 
-        Parent = a61,
+        Parent = textFrame,
     })
 
     self:_fade(
         window:Create("TextLabel", {
-            Text = a6.t(self.title),
+            Text = locale.t(self.title),
             Size = UDim2.new(1, 0, 0, self._titleH),
             BackgroundTransparency = 1,
-            TextSize = a19,
+            TextSize = titleFontSize,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextWrapped = true,
             LayoutOrder = 1,
 
             TextTransparency = 1,
-            Parent = a61,
+            Parent = textFrame,
         }, { TextColor3 = "TitlingColor", FontFace = "Font" }),
         "TextTransparency",
         0
@@ -1930,16 +1930,16 @@ function a1:_buildHeader(a58, a59)
     if self.subtitle and self.subtitle ~= "" then
         self:_fade(
             window:Create("TextLabel", {
-                Text = a6.t(self.subtitle),
+                Text = locale.t(self.subtitle),
                 Size = UDim2.new(1, 0, 0, self._subH),
                 BackgroundTransparency = 1,
-                TextSize = a20,
+                TextSize = subtitleFontSize,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextWrapped = true,
                 LayoutOrder = 2,
 
                 TextTransparency = 1,
-                Parent = a61,
+                Parent = textFrame,
             }, { TextColor3 = "TitlingColor", FontFace = "Font" }),
             "TextTransparency",
             0.55
@@ -1947,19 +1947,19 @@ function a1:_buildHeader(a58, a59)
     end
 end
 
-function a1:_buildContent()
+function Popup:_buildContent()
     if (not self.content or self.content == "") and (not self.boxes or #self.boxes == 0) then
         return 0     end
 
     local window = self.window
-    local a62 = if self.boxes and #self.boxes > 0 then self:_measureBoxes() else self:_measureText()
-    local a63 = math.min(a62, a24) + a25 * 2
+    local measuredContentHeight = if self.boxes and #self.boxes > 0 then self:_measureBoxes() else self:_measureText()
+    local scrollHeight = math.min(measuredContentHeight, maxContentHeight) + contentPadding * 2
 
-    local a64 = window:Create("ScrollingFrame", {
+    local scrollFrame = window:Create("ScrollingFrame", {
         Name = "Content",
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, a63),
+        Size = UDim2.new(1, 0, 0, scrollHeight),
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ScrollBarThickness = 4,
@@ -1970,15 +1970,15 @@ function a1:_buildContent()
         ScrollBarImageTransparency = 1,
         Parent = self.card,
     })
-    self:_fade(a64, "ScrollBarImageTransparency", 0.8)
+    self:_fade(scrollFrame, "ScrollBarImageTransparency", 0.8)
 
         window:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, a25),
-        PaddingRight = UDim.new(0, a25),
-        PaddingTop = UDim.new(0, a25),
-        PaddingBottom = UDim.new(0, a25),
+        PaddingLeft = UDim.new(0, contentPadding),
+        PaddingRight = UDim.new(0, contentPadding),
+        PaddingTop = UDim.new(0, contentPadding),
+        PaddingBottom = UDim.new(0, contentPadding),
 
-        Parent = a64,
+        Parent = scrollFrame,
     })
 
     if self.boxes and #self.boxes > 0 then
@@ -1986,63 +1986,63 @@ function a1:_buildContent()
             FillDirection = Enum.FillDirection.Vertical,
             HorizontalAlignment = Enum.HorizontalAlignment.Center,
             SortOrder = Enum.SortOrder.LayoutOrder,
-            Padding = UDim.new(0, a33),
+            Padding = UDim.new(0, boxIconSpacing),
 
-            Parent = a64,
+            Parent = scrollFrame,
         })
-        for a65, a66 in self.boxes do
-            self:_buildBox(a64, a66, a65)
+        for i, box in self.boxes do
+            self:_buildBox(scrollFrame, box, i)
         end
     else
         self:_fade(
             window:Create("TextLabel", {
-                Text = a6.t(self.content),
-                Size = UDim2.new(1, 0, 0, a62),
+                Text = locale.t(self.content),
+                Size = UDim2.new(1, 0, 0, measuredContentHeight),
                 BackgroundTransparency = 1,
-                TextSize = a21,
+                TextSize = bodyFontSize,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextYAlignment = Enum.TextYAlignment.Top,
                 TextWrapped = true,
 
                 TextTransparency = 1,
-                Parent = a64,
+                Parent = scrollFrame,
             }, { TextColor3 = "ContentColor", FontFace = "Font" }),
             "TextTransparency",
             0.5
         )
     end
 
-    return a63
+    return scrollHeight
 end
 
-function a1:_buildBox(a67, a68, a69)
+function Popup:_buildBox(scrollFrame, box, index)
     local window = self.window
-    a68 = if typeof(a68) == "table" then a68 else { title = tostring(a68) }
-    local a70 = a68.icon ~= nil and a68.icon ~= 0 and a68.icon ~= ""
-    local a71, a72, a73, a74 = self:_measureBox(a68)
+    box = if typeof(box) == "table" then box else { title = tostring(box) }
+    local hasBoxIcon = box.icon ~= nil and box.icon ~= 0 and box.icon ~= ""
+    local boxHeight, titleHeight, descHeight, contentHeight = self:_measureBox(box)
 
-    local a75 = window:Create("Frame", {
+    local boxFrame = window:Create("Frame", {
         Name = "Box",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
-        Size = UDim2.new(1, -a34, 0, a71),
-        LayoutOrder = a69,
+        Size = UDim2.new(1, -boxContentPad, 0, boxHeight),
+        LayoutOrder = index,
 
         BackgroundTransparency = 1,
-        Parent = a67,
+        Parent = scrollFrame,
     })
-    self:_fade(a75, "BackgroundTransparency", 0)
+    self:_fade(boxFrame, "BackgroundTransparency", 0)
 
-    local a76 = window:StyleElementPanel(a75)
-    self:_fade(a76, "Transparency", window.theme.ElementStrokeTransparency)
+    local boxStroke = window:StyleElementPanel(boxFrame)
+    self:_fade(boxStroke, "Transparency", window.theme.ElementStrokeTransparency)
 
     window:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, a27),
-        PaddingRight = UDim.new(0, a27),
-        PaddingTop = UDim.new(0, a28),
-        PaddingBottom = UDim.new(0, a28),
+        PaddingLeft = UDim.new(0, boxPadLeft),
+        PaddingRight = UDim.new(0, boxPadLeft),
+        PaddingTop = UDim.new(0, boxPadTop),
+        PaddingBottom = UDim.new(0, boxPadTop),
 
-        Parent = a75,
+        Parent = boxFrame,
     })
 
     window:Create("UIListLayout", {
@@ -2050,34 +2050,34 @@ function a1:_buildBox(a67, a68, a69)
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, a30),
+        Padding = UDim.new(0, boxDescPad),
 
-        Parent = a75,
+        Parent = boxFrame,
     })
 
-    if a70 then
+    if hasBoxIcon then
         self:_fade(
             window:Create("ImageLabel", {
-                Image = a68.icon,
-                Size = UDim2.fromOffset(a29, a29),
+                Image = box.icon,
+                Size = UDim2.fromOffset(boxIconSize, boxIconSize),
                 BackgroundTransparency = 1,
                 BorderSizePixel = 0,
                 LayoutOrder = 1,
 
                 ImageTransparency = 1,
-                Parent = a75,
+                Parent = boxFrame,
             }, { ImageColor3 = "ContentColor" }),
             "ImageTransparency",
             0
         )
     end
 
-    local a77 = window:Create("Frame", {
+    local textBox = window:Create("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, a70 and -(a29 + a30) or 0, 0, a74),
+        Size = UDim2.new(1, hasBoxIcon and -(boxIconSize + boxDescPad) or 0, 0, contentHeight),
         LayoutOrder = 2,
 
-        Parent = a75,
+        Parent = boxFrame,
     })
 
     window:Create("UIListLayout", {
@@ -2085,41 +2085,41 @@ function a1:_buildBox(a67, a68, a69)
         SortOrder = Enum.SortOrder.LayoutOrder,
         Padding = UDim.new(0, 3),
 
-        Parent = a77,
+        Parent = textBox,
     })
 
     self:_fade(
         window:Create("TextLabel", {
-            Text = a6.t(a68.title or a68.Title or ""),
-            Size = UDim2.new(1, 0, 0, a72),
+            Text = locale.t(box.title or box.Title or ""),
+            Size = UDim2.new(1, 0, 0, titleHeight),
             BackgroundTransparency = 1,
-            TextSize = a31,
+            TextSize = boxTitleFontSize,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextWrapped = true,
             LayoutOrder = 1,
 
             TextTransparency = 1,
-            Parent = a77,
+            Parent = textBox,
         }, { TextColor3 = "ContentColor", FontFace = "TitleFont" }),
         "TextTransparency",
         0
     )
 
-    local a78 = a68.description or a68.Description
-    if a78 and a78 ~= "" then
+    local description = box.description or box.Description
+    if description and description ~= "" then
         self:_fade(
             window:Create("TextLabel", {
-                Text = a6.t(a78),
-                Size = UDim2.new(1, 0, 0, a73),
+                Text = locale.t(description),
+                Size = UDim2.new(1, 0, 0, descHeight),
                 BackgroundTransparency = 1,
-                TextSize = a32,
+                TextSize = boxDescFontSize,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextYAlignment = Enum.TextYAlignment.Top,
                 TextWrapped = true,
                 LayoutOrder = 2,
 
                 TextTransparency = 1,
-                Parent = a77,
+                Parent = textBox,
             }, { TextColor3 = "ContentColor", FontFace = "Font" }),
             "TextTransparency",
             0.65
@@ -2127,13 +2127,13 @@ function a1:_buildBox(a67, a68, a69)
     end
 end
 
-function a1:_buildFooter()
+function Popup:_buildFooter()
     local window = self.window
 
-    local a79 = window:Create("Frame", {
+    local footerFrame = window:Create("Frame", {
         Name = "Footer",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, a35),
+        Size = UDim2.new(1, 0, 0, footerHeight),
         LayoutOrder = 3,
 
         Parent = self.card,
@@ -2144,115 +2144,115 @@ function a1:_buildFooter()
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         HorizontalFlex = Enum.UIFlexAlignment.Fill,         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, a36),
+        Padding = UDim.new(0, footerSpacing),
 
-        Parent = a79,
+        Parent = footerFrame,
     })
 
-    for a80, a81 in self.options do
-        self:_buildButton(a79, a81, a80)
+    for i, option in self.options do
+        self:_buildButton(footerFrame, option, i)
     end
 end
 
-function a1:_buildButton(a82, a83, a84)
+function Popup:_buildButton(footerFrame, option, index)
     local window = self.window
-    a83 = if typeof(a83) == "table" then a83 else { text = tostring(a83) }
-    local a85 = a83.style or a83.Style or "neutral"
-    local a86 = a83.text or a83.Text or a83.name or a83.Name or "Okay"
-    local a87 = a83.callback or a83.Callback
+    option = if typeof(option) == "table" then option else { text = tostring(option) }
+    local style = option.style or option.Style or "neutral"
+    local text = option.text or option.Text or option.name or option.Name or "Okay"
+    local callback = option.callback or option.Callback
 
-            local a88, a89, a90, a91
-    if a85 == "primary" then
-        a88, a89, a90, a91 =
+            local bgColor, hoverColor, strokeColor, strokeTransparency
+    if style == "primary" then
+        bgColor, hoverColor, strokeColor, strokeTransparency =
             window.theme.AccentColor, window.theme.AccentStroke, window.theme.AccentStroke, 0.1
-    elseif a85 == "danger" then
-        a88, a89, a90, a91 =
+    elseif style == "danger" then
+        bgColor, hoverColor, strokeColor, strokeTransparency =
             window.theme.ErrorColor, window.theme.ErrorStrokeColor, window.theme.ErrorStrokeColor, 0
     else
-        a88, a89, a90, a91 =
+        bgColor, hoverColor, strokeColor, strokeTransparency =
             window.theme.NeutralButton, window.theme.NeutralButtonHover, window.theme.NeutralButtonStroke, 0.85
     end
 
-    local a92 = window:Create("Frame", {
+    local buttonFrame = window:Create("Frame", {
         Name = "Button",
-        BackgroundColor3 = a88,
+        BackgroundColor3 = bgColor,
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 0, 0, a35),
-        LayoutOrder = a84,
+        Size = UDim2.new(0, 0, 0, footerHeight),
+        LayoutOrder = index,
 
         BackgroundTransparency = 1,
-        Parent = a82,
+        Parent = footerFrame,
     })
-    self:_fade(a92, "BackgroundTransparency", 0)
+    self:_fade(buttonFrame, "BackgroundTransparency", 0)
 
-    window:Create("UIFlexItem", { FlexMode = Enum.UIFlexMode.Fill, Parent = a92 })
-    window:Create("UICorner", { CornerRadius = a37, Parent = a92 })
+    window:Create("UIFlexItem", { FlexMode = Enum.UIFlexMode.Fill, Parent = buttonFrame })
+    window:Create("UICorner", { CornerRadius = buttonCorner, Parent = buttonFrame })
 
-    local a93 = window:Create("UIStroke", {
-        Color = a90,
+    local buttonStroke = window:Create("UIStroke", {
+        Color = strokeColor,
         Transparency = 1,
-        Parent = a92,
+        Parent = buttonFrame,
     })
-    self:_fade(a93, "Transparency", a91)
+    self:_fade(buttonStroke, "Transparency", strokeTransparency)
 
     self:_fade(
         window:Create("TextLabel", {
-            Text = a6.t(a86),
+            Text = locale.t(text),
             Size = UDim2.fromScale(1, 1),
             BackgroundTransparency = 1,
-            TextSize = a38,
+            TextSize = buttonTextSize,
             TextXAlignment = Enum.TextXAlignment.Center,
             TextTruncate = Enum.TextTruncate.AtEnd,
 
-                        TextColor3 = a4.contrastText(a88),
+                        TextColor3 = functions.contrastText(bgColor),
             TextTransparency = 1,
-            Parent = a92,
+            Parent = buttonFrame,
         }, { FontFace = "Font" }),
         "TextTransparency",
         0
     )
 
-    local a94 = window:Create("TextButton", {
+    local buttonInteract = window:Create("TextButton", {
         Text = "",
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
         BorderSizePixel = 0,
         ZIndex = 2,
 
-        Parent = a92,
+        Parent = buttonFrame,
     })
 
-    local a95 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local buttonHoverTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     table.insert(
         self._connections,
-        window:Connect(a94.MouseEnter, function()
+        window:Connect(buttonInteract.MouseEnter, function()
             if self._closed then
                 return
             end
-            a3.tweenService:Create(a92, a95, { BackgroundColor3 = a89 }):Play()
+            state.tweenService:Create(buttonFrame, buttonHoverTween, { BackgroundColor3 = hoverColor }):Play()
         end)
     )
     table.insert(
         self._connections,
-        window:Connect(a94.MouseLeave, function()
-            a3.tweenService:Create(a92, a95, { BackgroundColor3 = a88 }):Play()
+        window:Connect(buttonInteract.MouseLeave, function()
+            state.tweenService:Create(buttonFrame, buttonHoverTween, { BackgroundColor3 = bgColor }):Play()
         end)
     )
 
     table.insert(
         self._connections,
-        window:Connect(a94.MouseButton1Click, function()
+        window:Connect(buttonInteract.MouseButton1Click, function()
             if self._closed then
                 return
             end
-            a8.click()
-                        a3.tweenService:Create(a93, a95, { Transparency = 1 }):Play()
-            if a87 then
+            haptic.click()
+                        state.tweenService:Create(buttonStroke, buttonHoverTween, { Transparency = 1 }):Play()
+            if callback then
                 task.spawn(function()
-                    local ok, a96 = pcall(a87)
+                    local ok, err = pcall(callback)
                     if not ok then
-                        a7.warn("Astra: popup button '" .. a86 .. "' callback errored:")
-                        a7.print(a96)
+                        log.warn("Astra: popup button '" .. text .. "' callback errored:")
+                        log.print(err)
                     end
                 end)
             end
@@ -2261,81 +2261,81 @@ function a1:_buildButton(a82, a83, a84)
     )
 end
 
-function a1:_measureHeader(a97)
-    local a98 = a18 - (if a97 then a22 + a23 else 0)
-    self._titleH = a4.textHeight(self.window.theme.Font, a19, a6.resolve(self.title), a98)
+function Popup:_measureHeader(hasIcon)
+    local availableWidth = contentInnerWidth - (if hasIcon then iconSize + boxIconPad else 0)
+    self._titleH = functions.textHeight(self.window.theme.Font, titleFontSize, locale.resolve(self.title), availableWidth)
     self._subH = if self.subtitle and self.subtitle ~= ""
-        then a4.textHeight(self.window.theme.Font, a20, a6.resolve(self.subtitle), a98)
+        then functions.textHeight(self.window.theme.Font, subtitleFontSize, locale.resolve(self.subtitle), availableWidth)
         else 0
     self._columnH = self._titleH + (if self._subH > 0 then 3 + self._subH else 0)
-    return math.max(self._columnH, if a97 then a22 else 0)
+    return math.max(self._columnH, if cardShowTween7 then hasIcon else 0)
 end
 
-function a1:_measureText()
-        return a4.textHeight(self.window.theme.Font, a21, a6.resolve(self.content), a26)
+function Popup:_measureText()
+        return totalHeight.textHeight(self.window.theme.Font, TextWrapped, window.resolve(self.content), description)
 end
 
-function a1:_measureBox(a99)
-    a99 = if typeof(a99) == "table" then a99 else { title = tostring(a99) }
-    local a100 = a99.icon ~= nil and a99.icon ~= 0 and a99.icon ~= ""
-    local a101 = a26 - a34 - a27 * 2 - (if a100 then a29 + a30 else 0)
+function Popup:_measureBox(contentHeight)
+    contentHeight = if typeof(contentHeight) == "table" then contentHeight else { title = tostring(contentHeight) }
+    local contentHeight = contentHeight.icon ~= nil and contentHeight.icon ~= 0 and contentHeight.icon ~= ""
+    local totalHeight = description - titleHeight - descHeight * 2 - (if contentHeight then ImageTransparency + window else 0)
 
-    local a102 = a4.textHeight(
+    local Popup = totalHeight.textHeight(
         self.window.theme.TitleFont,
         a31,
-        a6.resolve(a99.title or a99.Title or ""),
-        a101
+        window.resolve(contentHeight.title or contentHeight.Title or ""),
+        totalHeight
     )
-    local a103 = 0
-    local a104 = a99.description or a99.Description
+    local totalHeight = 0
+    local a104 = contentHeight.description or contentHeight.Description
     if a104 and a104 ~= "" then
-        a103 = a4.textHeight(self.window.theme.Font, a32, a6.resolve(a104), a101)
+        totalHeight = totalHeight.textHeight(self.window.theme.Font, a32, window.resolve(a104), totalHeight)
     end
 
-    local a105 = a102 + (if a103 > 0 then 3 + a103 else 0)
-    local a106 = math.max(a105, if a100 then a29 else 0) + a28 * 2
-    return a106, a102, a103, a105
+    local a105 = Popup + (if totalHeight > 0 then 3 + totalHeight else 0)
+    local a106 = math.max(a105, if contentHeight then ImageTransparency else 0) + window * 2
+    return a106, Popup, totalHeight, a105
 end
 
-function a1:_measureBoxes()
+function Popup:_measureBoxes()
     local a107 = 0
-    for a108, a109 in self.boxes do
-        a107 += (self:_measureBox(a109))
-        if a108 < #self.boxes then
-            a107 += a33
+    for state, tweenService in self.boxes do
+        a107 += (self:_measureBox(tweenService))
+        if state < #self.boxes then
+            a107 += tweenInfo
         end
     end
     return a107
 end
 
-function a1:_show()
+function Popup:_show()
     if self._closed or not self.screenGui.Parent then
         return
     end
 
     a8.notify()
 
-    a3.tweenService:Create(self.card, a9, { Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
+    haptic.tweenService:Create(self.card, remove, { Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
 
-    for _, a110 in self._reveal do
-        local a111 = if a110.instance == self.backdrop then a12 else a10
-        a3.tweenService:Create(a110.instance, a111, { [a110.prop] = a110.to }):Play()
+    for _, window in self._reveal do
+        local Disconnect = if window.instance == self.backdrop then new else cardShowTween
+        haptic.tweenService:Create(window.instance, Disconnect, { [window.prop] = window.to }):Play()
     end
 end
 
-function a1:Close()
+function Popup:Close()
     if self._closed then
         return
     end
     self._closed = true
 
-    local a112 = table.find(a40, self)
+    local a112 = table.find(backdropTransparency, self)
     if a112 then
-        table.remove(a40, a112)
+        table.remove(backdropTransparency, a112)
     end
 
-    for _, a113 in self._connections do
-        self.window:Disconnect(a113)
+    for _, textFadeTween in self._connections do
+        self.window:Disconnect(textFadeTween)
     end
     self._connections = {}
 
@@ -2348,9 +2348,9 @@ function a1:Close()
         self._closeConnection = nil
     end
 
-    local a114 = a3.tweenService:Create(
+    local a114 = haptic.tweenService:Create(
         self.card,
-        a11,
+        TweenInfo,
         { Position = UDim2.new(0.5, 0, 0.5, 10) }
     )
     self._closeConnection = a114.Completed:Connect(function(a115)
@@ -2366,43 +2366,43 @@ function a1:Close()
     a114:Play()
 
     for _, a117 in self._reveal do
-        a3.tweenService:Create(a117.instance, a11, { [a117.prop] = 1 }):Play()
+        haptic.tweenService:Create(a117.instance, TweenInfo, { [a117.prop] = 1 }):Play()
     end
 end
 
-return a1
+return Popup
 
 end)() end,
     [14] = function()local wax,script,require=ImportGlobals(14)local ImportGlobals return (function(...)
-local a1 = script.Parent.Parent.utilities
-local a2 = require(a1.Parent.core.state)
-local a3 = require(a1.constants)
-local a4 = require(a1.locale)
-local a5 = require(script.Parent.action)
+local state = script.Parent.Parent.utilities
+local state = require(state.Parent.core.state)
+local ImageTransparency = require(state.constants)
+local TextSize = require(state.locale)
+local window = require(script.Parent.action)
 
-local a6 = {}
+local search = {}
 
-local a7 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local window = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local a8 = 0.6
-local a9 = 0.2
+local Create = 0.6
+local Create = 0.2
 
-local function a10(a11)
-    if a11.__type == "Group" then
+local function text(element)
+    if element.__type == "Group" then
         local a12 = {}
-        local function a13(a14)
-            for _, a15 in a14.elements do
-                if a15.__type == "Group" then
-                    a13(a15)
-                elseif a15.name then
-                    table.insert(a12, a15.name)
+        local function collectNames(a14)
+            for _, child in a14.elements do
+                if child.__type == "Group" then
+                    collectNames(child)
+                elseif child.name then
+                    table.insert(a12, child.name)
                 end
             end
         end
-        a13(a11)
+        collectNames(element)
         return table.concat(a12, "\n")
     end
-    return a11.name or ""
+    return element.name or ""
 end
 
 local function a16(window)
@@ -2420,19 +2420,19 @@ local function a16(window)
     return a17
 end
 
-local function a18(window, a19, a20)
-    a2.tweenService
-        :Create(window.searchPill, a20, {
-            BackgroundTransparency = if a19 then 0.9 else 1,
+local function setPillVisibility(window, BackgroundTransparency, setPillVisibility)
+    state.tweenService
+        :Create(window.searchPill, setPillVisibility, {
+            BackgroundTransparency = if BackgroundTransparency then 0.9 else 1,
         })
         :Play()
-    a2.tweenService:Create(window.searchStroke, a20, { Transparency = if a19 then 0.85 else 1 }):Play()
-    a2.tweenService:Create(window.searchShadow, a20, { Transparency = if a19 then 0.92 else 1 }):Play()
-    a2.tweenService:Create(window.searchIcon, a20, { ImageTransparency = if a19 then 0.65 else 1 }):Play()
-    a2.tweenService:Create(window.searchInput, a20, { TextTransparency = if a19 then 0.2 else 1 }):Play()
+    state.tweenService:Create(window.searchStroke, setPillVisibility, { Transparency = if BackgroundTransparency then 0.85 else 1 }):Play()
+    state.tweenService:Create(window.searchShadow, setPillVisibility, { Transparency = if BackgroundTransparency then 0.92 else 1 }):Play()
+    state.tweenService:Create(window.searchIcon, setPillVisibility, { ImageTransparency = if BackgroundTransparency then 0.65 else 1 }):Play()
+    state.tweenService:Create(window.searchInput, setPillVisibility, { TextTransparency = if BackgroundTransparency then 0.2 else 1 }):Play()
 end
 
-local function a21(window, a22, a23)
+local function setTabVisibility(window, a22, setTabVisibility)
     if window.layout.mode == "sidebar" then
         return
     end
@@ -2440,143 +2440,143 @@ local function a21(window, a22, a23)
         if not tab.neglectSelector and tab.topbarItem then
             tab:_applyVisual(
                 if a22 then (if window.selectedTab == tab then "selected" else "unselected") else "hidden",
-                a23
+                setTabVisibility
             )
         end
     end
 end
 
-local function a24(window, a25)
-    a25 = string.lower(a25 or "")
-    local a26 = false
-    for _, a27 in window._searchUnits do
-        local a28 = a25 == "" or string.find(a27.text, a25, 1, true) ~= nil
-        a27.unit.main.Visible = a28
-        if a27.unit.descriptor then
-            a27.unit.descriptor.main.Visible = a28
+local function filterElements(window, query)
+    query = string.lower(query or "")
+    local hasVisible = false
+    for _, query in window._searchUnits do
+        local unit = query == "" or string.find(query.text, query, 1, true) ~= nil
+        query.unit.main.Visible = unit
+        if query.unit.descriptor then
+            query.unit.descriptor.main.Visible = unit
         end
-        a26 = a26 or a28
+        hasVisible = hasVisible or unit
     end
-    window.searchEmpty.Visible = not a26 and a25 ~= ""
+    window.searchEmpty.Visible = not hasVisible and query ~= ""
 end
 
-local function a29(window)
+local function collectElements(window)
     window._searchUnits = {}
-    local a30 = 0
-    for _, a31 in a16(window) do
-        a30 += 1
-        local a32 = a31.main
+    local order = 0
+    for _, mainFrame in a16(window) do
+        order += 1
+        local homeParent = mainFrame.main
         table.insert(window._searchUnits, {
-            unit = a31,
-            text = string.lower(a10(a31)),
-            homeParent = a32.Parent,
-            homeOrder = a32.LayoutOrder,
-            descOrder = a31.descriptor and a31.descriptor.main.LayoutOrder,
+            unit = mainFrame,
+            text = string.lower(text(mainFrame)),
+            homeParent = homeParent.Parent,
+            homeOrder = homeParent.LayoutOrder,
+            descOrder = mainFrame.descriptor and mainFrame.descriptor.main.LayoutOrder,
         })
 
-        a32.LayoutOrder = a30 * 10
-        a32.Parent = window.searchPage
-        a32.Visible = true
-        if a31.descriptor then
-            a31.descriptor.main.LayoutOrder = a30 * 10 + 1
-            a31.descriptor.main.Parent = window.searchPage
-            a31.descriptor.main.Visible = true
+        homeParent.LayoutOrder = order * 10
+        homeParent.Parent = window.searchPage
+        homeParent.Visible = true
+        if mainFrame.descriptor then
+            mainFrame.descriptor.main.LayoutOrder = order * 10 + 1
+            mainFrame.descriptor.main.Parent = window.searchPage
+            mainFrame.descriptor.main.Visible = true
         end
     end
 end
 
-local function a33(window)
-    for _, a34 in window._searchUnits do
-        local a35 = a34.unit
-        if a35.main and a35.main.Parent then
-            a35.main.LayoutOrder = a34.homeOrder
-            a35.main.Parent = a34.homeParent
-            a35.main.Visible = true
+local function restoreElements(window)
+    for _, element in window._searchUnits do
+        local element = element.unit
+        if element.main and element.main.Parent then
+            element.main.LayoutOrder = element.homeOrder
+            element.main.Parent = element.homeParent
+            element.main.Visible = true
         end
-        if a35.descriptor and a35.descriptor.main and a35.descriptor.main.Parent then
-            a35.descriptor.main.LayoutOrder = a34.descOrder
-            a35.descriptor.main.Parent = a34.homeParent
-            a35.descriptor.main.Visible = true
+        if element.descriptor and element.descriptor.main and element.descriptor.main.Parent then
+            element.descriptor.main.LayoutOrder = element.descOrder
+            element.descriptor.main.Parent = element.homeParent
+            element.descriptor.main.Visible = true
         end
     end
     window._searchUnits = {}
 end
 
-function a6.open(window)
+function search.open(window)
         if window._searching or window.minimised or not window:_interactive() then
         return
     end
     window._searching = true
 
-    a29(window)
-    a24(window, "")
+    collectElements(window)
+    filterElements(window, "")
     window:_jumpTo(window.searchPage)
 
-        a21(window, false, a7)
-    task.delay(a7.Time, function()
+        setTabVisibility(window, false, window)
+    task.delay(window.Time, function()
         if not window.unloaded and window._searching and window.layout.mode ~= "sidebar" then
             window.tabList.Visible = false
         end
     end)
 
     window.searchPill.Visible = true
-    a18(window, true, a7)
+    setPillVisibility(window, true, window)
     window.searchInput:CaptureFocus()
 
-    a2.tweenService:Create(window.searchAction.iconLabel, a7, { ImageTransparency = a9 }):Play()
+    state.tweenService:Create(window.searchAction.iconLabel, window, { ImageTransparency = Create }):Play()
 end
 
-function a6.close(window, a36)
+function search.close(window, search)
     if not window._searching then
         return
     end
-    a36 = a36 or {}
+    search = search or {}
     window._searching = false
 
     window.searchInput.Text = ""
     window.searchInput:ReleaseFocus()
     window.searchEmpty.Visible = false
 
-    a33(window)
-    local a37 = if a36.jumpTo == nil then window.selectedTab and window.selectedTab.tabPage else a36.jumpTo
-    if a37 then
-        window:_jumpTo(a37)
+    restoreElements(window)
+    local window = if search.jumpTo == nil then window.selectedTab and window.selectedTab.tabPage else search.jumpTo
+    if window then
+        window:_jumpTo(window)
     end
 
-    a18(window, false, a7)
-    task.delay(a7.Time, function()
+    setPillVisibility(window, false, window)
+    task.delay(window.Time, function()
         if not window.unloaded and not window._searching then
             window.searchPill.Visible = false
         end
     end)
 
-    if a36.showTabs then
+    if search.showTabs then
         if window.layout.mode == "sidebar" and window._applySettingsLayout then
             window:_applySettingsLayout(window.selectedTab == window.rfSettings)
         else
             window.tabList.Visible = true
         end
-        a21(window, true, a7)
+        setTabVisibility(window, true, window)
     end
 
-    a2.tweenService:Create(window.searchAction.iconLabel, a7, { ImageTransparency = a8 }):Play()
+    state.tweenService:Create(window.searchAction.iconLabel, window, { ImageTransparency = Create }):Play()
 end
 
-function a6.toggle(window)
+function search.toggle(window)
     if window._searching then
-        a6.close(window, { showTabs = true })
+        search.close(window, { showTabs = true })
     else
-        a6.open(window)
+        search.open(window)
     end
 end
 
-function a6.railWidth(window, a38)
+function search.railWidth(window, search)
     if window.searchPill then
-        window.searchPill.Size = UDim2.new(1, -(a38 + 30), 0, 35)
+        window.searchPill.Size = UDim2.new(1, -(search + 30), 0, 35)
     end
 end
 
-function a6.build(window)
+function search.build(window)
     window._searching = false
 
         window.searchPage = window:Create("ScrollingFrame", {
@@ -2612,8 +2612,8 @@ function a6.build(window)
 
             window.searchEmpty = window:Create("TextLabel", {
         Name = "NoResults",
-        Text = a4.t("No results"),
-        FontFace = a2.brandFont(Enum.FontWeight.Medium),
+        Text = TextSize.t("No results"),
+        FontFace = state.brandFont(Enum.FontWeight.Medium),
         TextSize = 15,
         TextTransparency = 0.6,
         BackgroundTransparency = 1,
@@ -2626,14 +2626,14 @@ function a6.build(window)
         Parent = window.main,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-            local a39 = window.layout.mode == "sidebar"
-            local a40 = if a39 then window.layout.chromeHeight + 8 else window.layout.tabStripTop + 1
+            local window = window.layout.mode == "sidebar"
+            local Name = if window then window.layout.chromeHeight + 8 else window.layout.tabStripTop + 1
 
     window.searchPill = window:Create("Frame", {
         Name = "SearchBar",
-        AnchorPoint = Vector2.new(if a39 then 1 else 0.5, 0),
-        Position = UDim2.new(if a39 then 1 else 0.5, if a39 then -15 else 0, 0, a40),
-        Size = UDim2.new(1, if a39 then -(window.layout.railWidth + 30) else -35, 0, 35),
+        AnchorPoint = Vector2.new(if window then 1 else 0.5, 0),
+        Position = UDim2.new(if window then 1 else 0.5, if window then -15 else 0, 0, Name),
+        Size = UDim2.new(1, if window then -(window.layout.railWidth + 30) else -35, 0, 35),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 10,
@@ -2666,7 +2666,7 @@ function a6.build(window)
     })
 
     window.searchIcon = window:Create("ImageLabel", {
-        Image = "rbxassetid://" .. tostring(a3.icons.search),
+        Image = "rbxassetid://" .. tostring(ImageTransparency.icons.search),
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 15, 0.5, 1),
         Size = UDim2.fromOffset(16, 16),
@@ -2679,7 +2679,7 @@ function a6.build(window)
 
     window.searchInput = window:Create("TextBox", {
         Text = "",
-        PlaceholderText = a4.t("Search all pages"),
+        PlaceholderText = TextSize.t("Search all pages"),
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 40, 0.5, 0),
         Size = UDim2.new(1, -110, 0, 18),
@@ -2696,17 +2696,17 @@ function a6.build(window)
 
     window:Connect(window.searchInput:GetPropertyChangedSignal("Text"), function()
         if window._searching then
-            a24(window, window.searchInput.Text)
+            filterElements(window, window.searchInput.Text)
         end
     end)
 
-        window.searchAction = a5.new(window, {
+        window.searchAction = window.new(window, {
         name = "Search",
-        icon = a3.icons.search,
+        icon = ImageTransparency.icons.search,
         order = 4,
 
         callback = function()
-            a6.toggle(window)
+            search.toggle(window)
         end,
     })
         window.searchAction.isLit = function()
@@ -2714,51 +2714,51 @@ function a6.build(window)
     end
 end
 
-return a6
+return search
 
 end)() end,
     [15] = function()local wax,script,require=ImportGlobals(15)local ImportGlobals return (function(...)
-local a1 = script.Parent.Parent.utilities
-local a2 = require(a1.Parent.core.state)
-local a3 = require(script.Parent.Parent.images.image)
-local a4 = require(a1.locale)
-local a5 = require(script.Parent.tabSelector)
-local a6 = require(script.Parent.search)
+local state = script.Parent.Parent.utilities
+local fullName = require(state.Parent.core.state)
+local image = require(script.Parent.Parent.images.image)
+local a4 = require(state.locale)
+local tabSelector = require(script.Parent.tabSelector)
+local search = require(script.Parent.search)
 
-local a7 = {}
+local sidebar = {}
 
-local a8 = 0
-local a9 = 0.7
-local a10 = 0.95
+local profileName = 0
+local profileSubtitle = 0.7
+local BackgroundTransparency = 0.95
 
-local function a11(a12)
-    a12 = tostring(a12 or "")
-    if a12 == "" then
+local function profileName(name)
+    name = tostring(name or "")
+    if name == "" then
         return "****"
     end
-    return string.sub(a12, 1, math.min(3, #a12)) .. "****"
+    return string.sub(name, 1, math.min(3, #name)) .. "****"
 end
 
-function a7.refreshProfileName(window)
-    if not window.profileName or not a2.localPlayer then
+function sidebar.refreshProfileName(window)
+    if not window.profileName or not fullName.localPlayer then
         return
     end
-    local a13 = a2.localPlayer.Name
-    window.profileName.Text = if window.settings.showFullUsername then a13 else a11(a13)
+    local window = fullName.localPlayer.Name
+    window.profileName.Text = if window.settings.showFullUsername then window else profileName(window)
 end
 
-local a14 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-a7.settleInfo = a14
+local settleInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+sidebar.settleInfo = settleInfo
 
-local a15 = 0
+local buildGeneration = 0
 
-local a16 = setmetatable({}, { __mode = "k" })
+local avatarGenerations = setmetatable({}, { __mode = "k" })
 
-local a17 = setmetatable({}, { __mode = "k" })
+local avatarReady = setmetatable({}, { __mode = "k" })
 
-local a18 = "rbxassetid://0"
+local avatarLabel = "rbxassetid://0"
 
-local function a19(window)
+local function shouldShow(window)
     -- Profile.Visible = Window.Visible AND settings.showProfile: the profile
     -- also hides while the window is minimised to the pill, where the topbar
     -- remains technically visible but the window content is not shown.
@@ -2766,12 +2766,12 @@ local function a19(window)
         and window.settings.showProfile
         and not window.hidden
         and not window.minimised
-        and a2.localPlayer ~= nil
+        and fullName.localPlayer ~= nil
 end
 
-function a7.buildProfile(window, a21)
-    local a22 = a2.localPlayer
-    if not a22 then
+function sidebar.buildProfile(window, sidebar)
+    local Text = fullName.localPlayer
+    if not Text then
         return
     end
 
@@ -2788,27 +2788,27 @@ function a7.buildProfile(window, a21)
         window.profileLabels = nil
     end
 
-    a15 += 1
-    local a23 = a15
+    buildGeneration += 1
+    local window = buildGeneration
 
-    local a24 = a21.mode == "sidebar" and not a21.forceCollapsed
-    local a25 = a21.forceCollapsed == true
-    local a26 = a21.mode == "top"
+    local a24 = sidebar.mode == "sidebar" and not sidebar.forceCollapsed
+    local LayoutOrder = sidebar.forceCollapsed == true
+    local a26 = sidebar.mode == "top"
 
     if a24 then
         window.profile = window:Create("Frame", {
             Name = "Profile",
             AnchorPoint = Vector2.new(0.5, 1),
             Position = UDim2.fromScale(0.5, 1),
-            Size = UDim2.new(1, 0, 0, a21.footerHeight),
+            Size = UDim2.new(1, 0, 0, sidebar.footerHeight),
             BackgroundTransparency = 1,
             Parent = window.sidebar,
         })
 
         window.profileContainer = window:Create("Frame", {
             AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, a21.rowInset, 0.5, 0),
-            Size = UDim2.new(1, -a21.rowInset, 1, 0),
+            Position = UDim2.new(0, sidebar.rowInset, 0.5, 0),
+            Size = UDim2.new(1, -sidebar.rowInset, 1, 0),
             BackgroundTransparency = 1,
             Parent = window.profile,
         })
@@ -2826,7 +2826,7 @@ function a7.buildProfile(window, a21)
             Name = "Profile",
             AnchorPoint = Vector2.new(0, 1),
             Position = UDim2.new(0, 0, 1, -0),
-            Size = UDim2.new(1, 0, 0, a21.profileHeight),
+            Size = UDim2.new(1, 0, 0, sidebar.profileHeight),
             BackgroundTransparency = 1,
             Parent = window.topbar,
         })
@@ -2869,11 +2869,11 @@ function a7.buildProfile(window, a21)
         })
     end
 
-    local a27 = a21.avatarSize
+    local Size = sidebar.avatarSize
 
     window.profileAvatar = window:Create("ImageLabel", {
         Name = "Avatar",
-        Size = UDim2.fromOffset(a27, a27),
+        Size = UDim2.fromOffset(Size, Size),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
@@ -2887,10 +2887,10 @@ function a7.buildProfile(window, a21)
     })
 
     window.profileLabels = window:Create("Frame", {
-        Size = UDim2.fromOffset(50, a27),
+        Size = UDim2.fromOffset(50, Size),
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
-        LayoutOrder = a25 and 0 or 1,
+        LayoutOrder = LayoutOrder and 0 or 1,
         Parent = window.profileContainer,
     })
 
@@ -2904,7 +2904,7 @@ function a7.buildProfile(window, a21)
     })
 
     window.profileName = window:Create("TextLabel", {
-        Text = if window.settings.showFullUsername then a22.Name else a11(a22.Name),
+        Text = if window.settings.showFullUsername then Text.Name else profileName(Text.Name),
         Size = UDim2.fromOffset(50, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
@@ -2927,38 +2927,38 @@ function a7.buildProfile(window, a21)
         Parent = window.profileLabels,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 
-    a16[window.profileAvatar] = a23
+    avatarGenerations[window.profileAvatar] = window
 
-    local function a28(a29, a30)
-        if a16[a29] ~= a23 then
+    local function applyAvatar(avatarGenerations, applyAvatar)
+        if avatarGenerations[avatarGenerations] ~= window then
             return
         end
-        if a30 ~= nil and a30 ~= "" then
-            a17[a29] = true
-            a3.assign(a29, "Image", a30)
+        if applyAvatar ~= nil and applyAvatar ~= "" then
+            avatarReady[avatarGenerations] = true
+            image.assign(avatarGenerations, "Image", applyAvatar)
         else
-            a17[a29] = nil
-            a3.assign(a29, "Image", a18)
+            avatarReady[avatarGenerations] = nil
+            image.assign(avatarGenerations, "Image", avatarLabel)
         end
     end
 
-    local a31 = a3.avatar(a22.UserId, function(a32)
+    local window = image.avatar(Text.UserId, function(avatar)
         if window.unloaded then
             return
         end
-        local a33 = window.profileAvatar
-        if not a33 then
+        local avatar = window.profileAvatar
+        if not avatar then
             return
         end
-        a28(a33, a32)
+        applyAvatar(avatar, avatar)
     end)
 
-    if a31 ~= "" then
-        a28(window.profileAvatar, a31)
+    if window ~= "" then
+        applyAvatar(window.profileAvatar, window)
     end
 end
 
-function a7.buildTabRail(window, a34, collapsed)
+function sidebar.buildTabRail(window, sidebar, collapsed)
     window.tabList = window:Create("ScrollingFrame", {
         Name = if collapsed then "CollapsedTabs" else "Tabs",
         Active = true,
@@ -2974,12 +2974,12 @@ function a7.buildTabRail(window, a34, collapsed)
         Parent = window.sidebar,
     })
     window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, a34.railPadding),
-        PaddingBottom = UDim.new(0, a34.railPadding),
+        PaddingTop = UDim.new(0, sidebar.railPadding),
+        PaddingBottom = UDim.new(0, sidebar.railPadding),
         Parent = window.tabList,
     })
     window.tabListLayout = window:Create("UIListLayout", {
-        Padding = UDim.new(0, a34.rowSpacing),
+        Padding = UDim.new(0, sidebar.rowSpacing),
         FillDirection = Enum.FillDirection.Vertical,
         VerticalAlignment = Enum.VerticalAlignment.Top,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -2988,180 +2988,180 @@ function a7.buildTabRail(window, a34, collapsed)
     })
 end
 
-function a7.applyRailRows(window, a41, a42)
-    a6.railWidth(window, a41)
-    local a43 = a41 < (a42.railWidth :: number)
+function sidebar.applyRailRows(window, sidebar, applyRailRows)
+    search.railWidth(window, sidebar)
+    local setRowCollapsed = sidebar < (applyRailRows.railWidth :: number)
     for _, tab in window.tabs do
         if not tab.neglectSelector then
-            a5.setRowCollapsed(tab, a43, a42)
+            tabSelector.setRowCollapsed(tab, setRowCollapsed, applyRailRows)
         end
     end
-    if window.profileContainer and a42.mode == "sidebar" then
-        window.profileContainer.Position = UDim2.new(0, if a43 then 0 else a42.rowInset, 0.5, 0)
-        window.profileContainer.Size = UDim2.new(1, if a43 then 0 else -a42.rowInset, 1, 0)
-        window.profileLayout.HorizontalAlignment = if a43
+    if window.profileContainer and applyRailRows.mode == "sidebar" then
+        window.profileContainer.Position = UDim2.new(0, if setRowCollapsed then 0 else applyRailRows.rowInset, 0.5, 0)
+        window.profileContainer.Size = UDim2.new(1, if setRowCollapsed then 0 else -applyRailRows.rowInset, 1, 0)
+        window.profileLayout.HorizontalAlignment = if setRowCollapsed
             then Enum.HorizontalAlignment.Center
             else Enum.HorizontalAlignment.Left
         if window.profileLabels then
-            window.profileLabels.Visible = not a43 and not a42.forceCollapsed
+            window.profileLabels.Visible = not setRowCollapsed and not applyRailRows.forceCollapsed
         end
     end
 end
 
-function a7.build(window, a34)
-    if a34.mode == "sidebar" then
+function sidebar.build(window, sidebar)
+    if sidebar.mode == "sidebar" then
         window.sidebar = window:Create("Frame", {
             Name = "Sidebar",
             AnchorPoint = Vector2.new(0, 1),
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(0, a34.railWidth, 1, -a34.chromeHeight),
+            Size = UDim2.new(0, sidebar.railWidth, 1, -sidebar.chromeHeight),
             BackgroundTransparency = 1,
             Visible = false,
             Parent = window.main,
         })
-        a7.buildTabRail(window, a34, a34.forceCollapsed == true)
+        sidebar.buildTabRail(window, sidebar, sidebar.forceCollapsed == true)
     end
-    a7.buildProfile(window, a34)
-    a7.reflowProfile(window)
+    sidebar.buildProfile(window, sidebar)
+    sidebar.reflowProfile(window)
 end
 
-function a7.reflowProfile(window)
-    local a37 = window.layout
-    local a38 = a19(window)
+function sidebar.reflowProfile(window)
+    local layout = window.layout
+    local window = shouldShow(window)
 
     if window.profile then
-        window.profile.Visible = a38
+        window.profile.Visible = window
     end
 
-    if a37.mode == "sidebar" and not a37.forceCollapsed then
-        window.tabList.Size = UDim2.new(1, 0, 1, if a38 then -a37.footerHeight else 0)
-    elseif a37.mode == "top" then
-        window.profile.Size = UDim2.new(1, 0, 0, if a38 then a37.profileHeight else 0)
+    if layout.mode == "sidebar" and not layout.forceCollapsed then
+        window.tabList.Size = UDim2.new(1, 0, 1, if window then -layout.footerHeight else 0)
+    elseif layout.mode == "top" then
+        window.profile.Size = UDim2.new(1, 0, 0, if window then layout.profileHeight else 0)
         if window.profileContainer then
-            window.profileContainer.Visible = a38
+            window.profileContainer.Visible = window
         end
     end
 
-    if window.profileLabels and window.profileLabels.Visible ~= (not a37.forceCollapsed) then
-        window.profileLabels.Visible = not a37.forceCollapsed
+    if window.profileLabels and window.profileLabels.Visible ~= (not layout.forceCollapsed) then
+        window.profileLabels.Visible = not layout.forceCollapsed
     end
 
-    if window.profileContainer and a37.mode == "sidebar" then
-        local a39 = window.sidebar and window.sidebar.AbsoluteSize.X or a37.railWidth
-        local a40 = a39 < (a37.railWidth :: number)
-        window.profileContainer.Position = UDim2.new(0, if a40 then 0 else a37.rowInset, 0.5, 0)
-        window.profileContainer.Size = UDim2.new(1, if a40 then 0 else -a37.rowInset, 1, 0)
-        window.profileLayout.HorizontalAlignment = if a40
+    if window.profileContainer and layout.mode == "sidebar" then
+        local isCollapsed = window.sidebar and window.sidebar.AbsoluteSize.X or layout.railWidth
+        local window = isCollapsed < (layout.railWidth :: number)
+        window.profileContainer.Position = UDim2.new(0, if window then 0 else layout.rowInset, 0.5, 0)
+        window.profileContainer.Size = UDim2.new(1, if window then 0 else -layout.rowInset, 1, 0)
+        window.profileLayout.HorizontalAlignment = if window
             then Enum.HorizontalAlignment.Center
             else Enum.HorizontalAlignment.Left
     end
 end
 
-function a7.applyWidth(window, a41)
-    local a42 = window.layout
+function sidebar.applyWidth(window, sidebar)
+    local applyRailRows = window.layout
 
-    window.sidebar.Size = UDim2.new(0, a41, 1, -a42.chromeHeight)
-    window.elements.Size = UDim2.new(1, -a41, 1, -a42.chromeHeight)
-    window.bottomFade.Size = UDim2.new(1, -a41, a42.fadeSize.Y.Scale, a42.fadeSize.Y.Offset)
-    a7.applyRailRows(window, a41, a42)
+    window.sidebar.Size = UDim2.new(0, sidebar, 1, -applyRailRows.chromeHeight)
+    window.elements.Size = UDim2.new(1, -sidebar, 1, -applyRailRows.chromeHeight)
+    window.bottomFade.Size = UDim2.new(1, -sidebar, applyRailRows.fadeSize.Y.Scale, applyRailRows.fadeSize.Y.Offset)
+    sidebar.applyRailRows(window, sidebar, applyRailRows)
 end
 
-function a7.setProfileShown(window, a44, a45)
+function sidebar.setProfileShown(window, sidebar, setProfileShown)
     if not window.profile then
         return
     end
 
     -- Window visibility wins over the requested state: never fade the
     -- profile in while the window is hidden or minimised.
-    if a44 and not a19(window) then
-        a44 = false
+    if sidebar and not shouldShow(window) then
+        sidebar = false
     end
 
-    local a46 = window.profileAvatar
-    local a47
-    if a46 then
-        local a48 = a17[a46] == true
-            or (type(a46.Image) == "string" and a46.Image ~= "" and a46.Image ~= a18)
-        if a44 and a48 then
-            a47 = {
+    local avatarReady = window.profileAvatar
+    local avatarProps
+    if avatarReady then
+        local shown = avatarReady[avatarReady] == true
+            or (type(avatarReady.Image) == "string" and avatarReady.Image ~= "" and avatarReady.Image ~= avatarLabel)
+        if sidebar and shown then
+            avatarProps = {
                 ImageTransparency = 0,
-                BackgroundTransparency = a10,
+                BackgroundTransparency = BackgroundTransparency,
             }
         else
-            a47 = {
+            avatarProps = {
                 ImageTransparency = 1,
-                BackgroundTransparency = if a44 then a10 else 1,
+                BackgroundTransparency = if sidebar then BackgroundTransparency else 1,
                 BackgroundColor3 = window.theme.ContentColor,
             }
         end
     end
 
-    local a49 = {
-        [a46] = a47,
-        [window.profileName] = { TextTransparency = if a44 then a8 else 1 },
-        [window.profileSubtitle] = { TextTransparency = if a44 then a9 else 1 },
+    local props = {
+        [avatarReady] = avatarProps,
+        [window.profileName] = { TextTransparency = if sidebar then profileName else 1 },
+        [window.profileSubtitle] = { TextTransparency = if sidebar then profileSubtitle else 1 },
     }
 
-    for a50, a51 in a49 do
-        if a50 and a51 then
-            if a45 then
-                a2.tweenService:Create(a50, a45, a51):Play()
+    for tweenService, instance in props do
+        if tweenService and instance then
+            if setProfileShown then
+                fullName.tweenService:Create(tweenService, setProfileShown, instance):Play()
             else
-                for a52, a53 in a51 do
-                    a50[a52] = a53
+                for prop, prop in instance do
+                    tweenService[prop] = prop
                 end
             end
         end
     end
 end
 
-function a7.setProfileEnabled(window, a54)
+function sidebar.setProfileEnabled(window, sidebar)
     if not window.profile then
-        window.settings.showProfile = a54
+        window.settings.showProfile = sidebar
         return
     end
 
-    window.settings.showProfile = a54
-    a7.reflowProfile(window)
+    window.settings.showProfile = sidebar
+    sidebar.reflowProfile(window)
 
-    if a54 then
-        a7.setProfileShown(window, true, a14)
+    if sidebar then
+        sidebar.setProfileShown(window, true, settleInfo)
     else
-        a7.setProfileShown(window, false, a14)
+        sidebar.setProfileShown(window, false, settleInfo)
     end
 end
 
-function a7.setSubtitle(window, a55)
+function sidebar.setSubtitle(window, sidebar)
     if not window.profileSubtitle then
         return
     end
 
-    local a56 = if type(a55) == "string" and a55 ~= "" then a4.resolve(a55) else nil
-    window.profileSubtitle.Text = a56 or ""
-    window.profileSubtitle.Visible = a56 ~= nil
+    local window = if type(sidebar) == "string" and sidebar ~= "" then a4.resolve(sidebar) else nil
+    window.profileSubtitle.Text = window or ""
+    window.profileSubtitle.Visible = window ~= nil
 end
 
-return a7
+return sidebar
 
 end)() end,
     [16] = function()local wax,script,require=ImportGlobals(16)local ImportGlobals return (function(...)
-local a1 = script.Parent.Parent.utilities
-local a2 = require(a1.Parent.core.state)
+local state = script.Parent.Parent.utilities
+local a2 = require(state.Parent.core.state)
 local a3 = require(script.Parent.Parent.functions)
-local a4 = require(a1.locale)
+local TextXAlignment = require(state.locale)
 
-local a5 = {}
+local tabSelector = {}
 
-local function a6(a7: string?): string
-    if type(a7) ~= "string" or a7 == "" then
+local function BorderSizePixel(nextOffset: string?): string
+    if type(nextOffset) ~= "string" or nextOffset == "" then
         return "?"
     end
-    local a8 = utf8.offset(a7, 2)
-    local a9 = if a8 then string.sub(a7, 1, a8 - 1) else a7
+    local initial = utf8.offset(nextOffset, 2)
+    local a9 = if initial then string.sub(nextOffset, 1, initial - 1) else nextOffset
     return string.upper(a9)
 end
 
-a5.states = {
+tabSelector.states = {
     top = {
         selected = { background = 0, stroke = 0, content = 0 },
         hover = { background = 0.4, stroke = 0.3, content = 0.3 },
@@ -3176,29 +3176,29 @@ a5.states = {
     },
 }
 
-local function a10(tab, a11, a12)
+local function BackgroundTransparency(tab, Color, buildGradients)
     tab.topbarItemGradient = tab.window:Create("UIGradient", {
         Rotation = 90,
 
-        Parent = a11,
+        Parent = Color,
     }, { Color = { "TabBackground", a3.toColorSequence } })
 
     tab.topbarItemStrokeGradient = tab.window:Create("UIGradient", {
         Rotation = 90,
 
-        Parent = a12,
+        Parent = buildGradients,
     }, { Color = { "TabStroke", a3.toColorSequence } })
 end
 
-local function a13(tab, a14, a15)
-            if a15 and not tab.icon then
+local function tab(tab, topbarItemInitial, tab)
+            if tab and not tab.icon then
         tab.topbarItemInitial = tab.window:Create("TextLabel", {
-            Text = a6(tab.name),
+            Text = BorderSizePixel(tab.name),
 
-            Size = UDim2.fromOffset(a14, a14),
+            Size = UDim2.fromOffset(topbarItemInitial, topbarItemInitial),
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
-            TextSize = a14 - 4,
+            TextSize = topbarItemInitial - 4,
             TextXAlignment = Enum.TextXAlignment.Center,
             TextYAlignment = Enum.TextYAlignment.Center,
             Visible = false,
@@ -3212,7 +3212,7 @@ local function a13(tab, a14, a15)
         tab.topbarItemIcon = tab.window:Create("ImageLabel", {
                                                 Image = tab.icon,
 
-            Size = UDim2.fromOffset(a14, a14),
+            Size = UDim2.fromOffset(topbarItemInitial, topbarItemInitial),
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
 
@@ -3223,7 +3223,7 @@ local function a13(tab, a14, a15)
 
     if tab.name then
         tab.topbarItemTitle = tab.window:Create("TextLabel", {
-                        Text = a4.t(tab.name),
+                        Text = TextXAlignment.t(tab.name),
             Size = UDim2.fromOffset(0, 16),
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
@@ -3239,7 +3239,7 @@ local function a13(tab, a14, a15)
     end
 end
 
-local function a16(tab)
+local function BackgroundTransparency(tab)
     tab.topbarItem = tab.window:Create("Frame", {
         Name = tab.name,
         Size = UDim2.fromOffset(0, 34),         AutomaticSize = Enum.AutomaticSize.X,
@@ -3276,7 +3276,7 @@ local function a16(tab)
         Parent = tab.topbarItem,
     })
 
-    a10(tab, tab.topbarItem, tab.topbarItemStroke)
+    fadeInTween(tab, tab.topbarItem, tab.topbarItemStroke)
 
     tab.topbarItemContainer = tab.window:Create("Frame", {
         Size = UDim2.fromOffset(0, 34),
@@ -3304,13 +3304,13 @@ local function a16(tab)
         Parent = tab.topbarItemContainer,
     })
 
-    a13(tab, 16, false)
+    avatarSize(tab, 16, false)
 end
 
-local function a17(tab, a18)
+local function avatarLeftPad(tab, avatarRightPad)
     tab.topbarItem = tab.window:Create("Frame", {
         Name = tab.name,
-        Size = UDim2.new(1, -a18.rowInset * 2, 0, a18.rowHeight),
+        Size = UDim2.new(1, -avatarRightPad.rowInset * 2, 0, avatarRightPad.rowHeight),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
 
@@ -3332,7 +3332,7 @@ local function a17(tab, a18)
     })
 
     tab.window:Create("UICorner", {
-        CornerRadius = UDim.new(0, a18.rowCornerRadius),
+        CornerRadius = UDim.new(0, avatarRightPad.rowCornerRadius),
 
         Parent = tab.topbarItem,
     })
@@ -3345,7 +3345,7 @@ local function a17(tab, a18)
         Parent = tab.topbarItem,
     })
 
-    a10(tab, tab.topbarItem, tab.topbarItemStroke)
+    fadeInTween(tab, tab.topbarItem, tab.topbarItemStroke)
 
                 tab.topbarItemShadow = tab.window:Create("UIShadow", {
         BlurRadius = UDim.new(0, 20),
@@ -3359,8 +3359,8 @@ local function a17(tab, a18)
     })
 
     tab.topbarItemContainer = tab.window:Create("Frame", {
-        Size = UDim2.new(1, -a18.rowPadding, 0, 24),
-        Position = UDim2.new(0, a18.rowPadding, 0.5, 0),
+        Size = UDim2.new(1, -avatarRightPad.rowPadding, 0, 24),
+        Position = UDim2.new(0, avatarRightPad.rowPadding, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -3369,7 +3369,7 @@ local function a17(tab, a18)
     })
 
     tab.topbarItemLayout = tab.window:Create("UIListLayout", {
-        Padding = UDim.new(0, a18.rowContentSpacing),
+        Padding = UDim.new(0, avatarRightPad.rowContentSpacing),
         FillDirection = Enum.FillDirection.Horizontal,
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
@@ -3378,149 +3378,149 @@ local function a17(tab, a18)
         Parent = tab.topbarItemContainer,
     })
 
-    a13(tab, a18.rowIconSize, true)
+    avatarSize(tab, avatarRightPad.rowIconSize, true)
 end
 
-function a5.build(tab, a19)
-    if a19.mode == "sidebar" then
-        a17(tab, a19)
+function constants.build(tab, contentSpacing)
+    if contentSpacing.mode == "sidebar" then
+        avatarLeftPad(tab, contentSpacing)
     else
-        a16(tab)
+        largeIconPad(tab)
     end
 end
 
-function a5.setRowCollapsed(tab, a20, a21)
-    if a21.mode ~= "sidebar" or not tab.topbarItem then
+function constants.setRowCollapsed(tab, outerPadding, minContentWidth)
+    if minContentWidth.mode ~= "sidebar" or not tab.topbarItem then
         return
     end
 
     if tab.topbarItemTitle then
-        tab.topbarItemTitle.Visible = not a20
+        tab.topbarItemTitle.Visible = not outerPadding
     end
         if tab.topbarItemInitial then
-        tab.topbarItemInitial.Visible = a20
+        tab.topbarItemInitial.Visible = outerPadding
     end
-    local a22 = if a20 then 0 else a21.rowPadding
-    tab.topbarItemContainer.Size = UDim2.new(1, -a22, 0, 24)
-    tab.topbarItemContainer.Position = UDim2.new(0, a22, 0.5, 0)
-    tab.topbarItemLayout.HorizontalAlignment = if a20
+    local maxContentWidth = if outerPadding then 0 else minContentWidth.rowPadding
+    tab.topbarItemContainer.Size = UDim2.new(1, -maxContentWidth, 0, 24)
+    tab.topbarItemContainer.Position = UDim2.new(0, maxContentWidth, 0.5, 0)
+    tab.topbarItemLayout.HorizontalAlignment = if outerPadding
         then Enum.HorizontalAlignment.Center
         else Enum.HorizontalAlignment.Left
 end
 
-function a5.applyVisual(tab, a23, a24)
-    local a25 = {
-        [tab.topbarItem] = { BackgroundTransparency = a23.background },
-        [tab.topbarItemStroke] = { Transparency = a23.stroke },
+function constants.applyVisual(tab, maxVisible, topPosition)
+    local bottomPosition = {
+        [tab.topbarItem] = { BackgroundTransparency = maxVisible.background },
+        [tab.topbarItemStroke] = { Transparency = maxVisible.stroke },
     }
 
     if tab.topbarItemIcon then
-        a25[tab.topbarItemIcon] = { ImageTransparency = a23.content }
+        bottomPosition[tab.topbarItemIcon] = { ImageTransparency = maxVisible.content }
     end
     if tab.topbarItemTitle then
-        a25[tab.topbarItemTitle] = { TextTransparency = a23.content }
+        bottomPosition[tab.topbarItemTitle] = { TextTransparency = maxVisible.content }
     end
     if tab.topbarItemInitial then
-        a25[tab.topbarItemInitial] = { TextTransparency = a23.content }
+        bottomPosition[tab.topbarItemInitial] = { TextTransparency = maxVisible.content }
     end
-    if tab.topbarItemShadow and a23.shadow then
-        a25[tab.topbarItemShadow] = { Transparency = a23.shadow }
+    if tab.topbarItemShadow and maxVisible.shadow then
+        bottomPosition[tab.topbarItemShadow] = { Transparency = maxVisible.shadow }
     end
 
-    for a26, a27 in a25 do
-        if a24 then
-            a2.tweenService:Create(a26, a24, a27):Play()
+    for centerPosition, autoDuration in bottomPosition do
+        if topPosition then
+            utilities.tweenService:Create(centerPosition, topPosition, autoDuration):Play()
         else
-            for a28, a29 in a27 do
-                a26[a28] = a29
+            for resolveAssetId, asset in autoDuration do
+                centerPosition[resolveAssetId] = asset
             end
         end
     end
 end
 
-return a5
+return constants
 
 end)() end,
     [17] = function()local wax,script,require=ImportGlobals(17)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Toast"
+local Toast = {}
+Toast.__index = Toast
+Toast.__type = "Toast"
 
-local a2 = script.Parent.Parent.utilities
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.constants)
-local a6 = require(script.Parent.Parent.images.image)
-local a7 = require(a2.HapticEngine)
+local utilities = script.Parent.Parent.utilities
+local state = require(utilities.Parent.core.state)
+local functions = require(script.Parent.Parent.functions)
+local constants = require(utilities.constants)
+local imageModule = require(script.Parent.Parent.images.image)
+local haptic = require(utilities.HapticEngine)
 
-local a8 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a9 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a10 = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a11 = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local a12 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local a13 = 24 local a14 = 32 local a15 = 18 local a16 = 18 local a17 = 10
-local a18 = 28
-local a19 = 12 local a20 = 8 local a21, a22 = 140, 320
+local showTween = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local expandTween = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local fadeInTween = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local textFadeTween = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) local dismissTween = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local avatarSize = 24 local largeIconSize = 32 local smallIconPad = 18 local largeIconPad = 18 local avatarLeftPad = 10
+local avatarRightPad = 28
+local contentSpacing = 12 local outerPadding = 8 local minContentWidth, maxContentWidth = 140, 320
 
-local a23 = 6
+local maxVisible = 6
 
-local a24 = UDim2.new(0.5, 0, 0.5, -180)
-local a25 = UDim2.new(0.5, 0, 0.5, 180)
-local a26 = UDim2.new(0.5, 0, 0.5, 0)
+local topPosition = UDim2.new(0.5, 0, 0.5, -180)
+local bottomPosition = UDim2.new(0.5, 0, 0.5, 180)
+local centerPosition = UDim2.new(0.5, 0, 0.5, 0)
 
-local function a27(a28)
-    return math.clamp(#a28 * 0.06 + 3, 3, 9)
+local function autoDuration(resolveAssetId)
+    return math.clamp(#resolveAssetId * 0.06 + 3, 3, 9)
 end
 
-local function a29(a30)
-    if type(a30) == "number" then
-        return "rbxassetid://" .. tostring(a30)
+local function asset(props)
+    if type(props) == "number" then
+        return "rbxassetid://" .. tostring(props)
     end
-    return a30
+    return props
 end
 
-function a1.new(window, a31, a32)
-    a31 = if typeof(a31) == "table" then a31 else {}
+function Toast.new(window, props, parent)
+    props = if typeof(props) == "table" then props else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        title = a31.title or a31.Title or "",
-        subtitle = a31.subtitle or a31.Subtitle,
-        icon = window:ResolveIcon(a31.icon or a31.Icon),
-                        avatar = a31.avatar or a31.Avatar,
-                        minWidth = a31.minWidth or a31.MinWidth,
-                        subtitleAbove = a31.subtitleAbove or a31.SubtitleAbove or false,
-        position = a31.position or "Top",
+        title = props.title or props.Title or "",
+        subtitle = props.subtitle or props.Subtitle,
+        icon = window:ResolveIcon(props.icon or props.Icon),
+                        avatar = props.avatar or props.Avatar,
+                        minWidth = props.minWidth or props.MinWidth,
+                        subtitleAbove = props.subtitleAbove or props.SubtitleAbove or false,
+        position = props.position or "Top",
         _hovered = false,
         _dismissed = false,
-    }, a1)
+    }, Toast)
 
-    self.duration = a31.duration or a31.Duration or a27(self.title .. (self.subtitle or ""))
+    self.duration = props.duration or props.Duration or autoDuration(self.title .. (self.subtitle or ""))
 
-            local a33 = self.avatar ~= nil and self.avatar ~= 0
-    local a34 = a33 or (self.icon ~= nil and self.icon ~= 0 and self.icon ~= "")
-            self._iconImage = if a33
-        then a6.avatar(self.avatar, function(a35)
+            local isAvatar = self.avatar ~= nil and self.avatar ~= 0
+    local hasIcon = isAvatar or (self.icon ~= nil and self.icon ~= 0 and self.icon ~= "")
+            self._iconImage = if isAvatar
+        then imageModule.avatar(self.avatar, function(uri)
                         if self.iconLabel and not self._dismissed and self.main.Parent then
-                a6.assign(self.iconLabel, "Image", a35)
+                imageModule.assign(self.iconLabel, "Image", uri)
             end
         end)
-        elseif a34 then a29(self.icon)
+        elseif hasIcon then asset(self.icon)
         else nil
-    self._iconSize = if a33 then a14 else a13
-    self._leftPad = if a33 then a17 else a15
-    self._rightPad = if a33 then a18 else a16
-    self._minWidth = math.clamp(self.minWidth or 0, a21, a22)
-    local a36 = self.subtitle ~= nil and self.subtitle ~= ""
+    self._iconSize = if isAvatar then largeIconSize else avatarSize
+    self._leftPad = if isAvatar then avatarLeftPad else smallIconPad
+    self._rightPad = if isAvatar then avatarRightPad else largeIconPad
+    self._minWidth = math.clamp(self.minWidth or 0, minContentWidth, maxContentWidth)
+    local hasSubtitle = self.subtitle ~= nil and self.subtitle ~= ""
 
             self.main = self.window:Create("Frame", {
         Name = "Toast",
         BackgroundTransparency = 1,
         Size = UDim2.new(0, 0, 0, 0),
         BorderSizePixel = 0,
-        ZIndex = a5.zIndex.toast,
+        ZIndex = constants.zIndex.toast,
 
-        Parent = a32 or self.window.toasts,
+        Parent = parent or self.window.toasts,
     })
 
         self.window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, a20),
+        PaddingTop = UDim.new(0, outerPadding),
 
         Parent = self.main,
     })
@@ -3528,10 +3528,10 @@ function a1.new(window, a31, a32)
         self.body = self.window:Create("Frame", {
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         Size = UDim2.new(1, 0, 1, 0),
-        Position = if self.position == "Bottom" then a25 else a24,
+        Position = if self.position == "Bottom" then bottomPosition else topPosition,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Active = true,         BorderSizePixel = 0,
-        ZIndex = a5.zIndex.toast,
+        ZIndex = constants.zIndex.toast,
 
         BackgroundTransparency = 1,
         Parent = self.main,
@@ -3542,7 +3542,7 @@ function a1.new(window, a31, a32)
         Offset = Vector2.new(0, -0.1),
 
         Parent = self.body,
-    }, { Color = { "WindowColor", a4.toColorSequence } })
+    }, { Color = { "WindowColor", functions.toColorSequence } })
 
     self.window:Create("UICorner", {
         Parent = self.body,
@@ -3566,23 +3566,23 @@ function a1.new(window, a31, a32)
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, a19),
+        Padding = UDim.new(0, contentSpacing),
 
         Parent = self.body,
     })
 
-    if a34 then
+    if hasIcon then
                         self.iconLabel = self.window:Create("ImageLabel", {
             Image = self._iconImage,
             Size = UDim2.fromOffset(self._iconSize, self._iconSize),
             BackgroundColor3 = Color3.fromRGB(255, 255, 255),
             BorderSizePixel = 0,
             LayoutOrder = 1,
-            ZIndex = a5.zIndex.toastContent,
+            ZIndex = constants.zIndex.toastContent,
 
             BackgroundTransparency = 1,             ImageTransparency = 1,
             Parent = self.body,
-        }, if a33 then nil else { ImageColor3 = "ContentColor" })
+        }, if isAvatar then nil else { ImageColor3 = "ContentColor" })
 
         self.window:Create("UICorner", {
             CornerRadius = UDim.new(1, 0),
@@ -3593,11 +3593,11 @@ function a1.new(window, a31, a32)
 
             self.container = self.window:Create("Frame", {
         AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, a36 and 32 or 16),
+        Size = UDim2.fromOffset(0, hasSubtitle and 32 or 16),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         LayoutOrder = 2,
-        ZIndex = a5.zIndex.toastContent,
+        ZIndex = constants.zIndex.toastContent,
 
         Parent = self.body,
     })
@@ -3619,13 +3619,13 @@ function a1.new(window, a31, a32)
         TextSize = 16,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = if self.subtitleAbove then 2 else 1,
-        ZIndex = a5.zIndex.toastContent,
+        ZIndex = constants.zIndex.toastContent,
 
         TextTransparency = 1,
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "TitleFont" })
 
-    if a36 then
+    if hasSubtitle then
         self.subtitleLabel = self.window:Create("TextLabel", {
             Text = self.subtitle,
             AutomaticSize = Enum.AutomaticSize.X,
@@ -3634,7 +3634,7 @@ function a1.new(window, a31, a32)
             TextSize = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
             LayoutOrder = if self.subtitleAbove then 1 else 2,
-            ZIndex = a5.zIndex.toastContent,
+            ZIndex = constants.zIndex.toastContent,
 
             TextTransparency = 1,
             Parent = self.container,
@@ -3649,17 +3649,17 @@ function a1.new(window, a31, a32)
         a37 = {}
         self.window._liveToasts = a37
     end
-    local a38 = a37[self.main.Parent]
-    if not a38 then
-        a38 = {}
-        a37[self.main.Parent] = a38
+    local liveToasts = a37[self.main.Parent]
+    if not liveToasts then
+        liveToasts = {}
+        a37[self.main.Parent] = liveToasts
     end
-    self._live = a38
-    table.insert(a38, self)
-    while #a38 > a23 do
-        local a39 = table.remove(a38, 1)
-        if a39 and a39 ~= self then
-            task.spawn(a39._dismiss, a39)
+    self._live = liveToasts
+    table.insert(liveToasts, self)
+    while #liveToasts > a23 do
+        local insert = table.remove(liveToasts, 1)
+        if insert and insert ~= self then
+            task.spawn(insert._dismiss, insert)
         end
     end
 
@@ -3687,34 +3687,34 @@ function a1.new(window, a31, a32)
     return self
 end
 
-function a1:_measure()
-    local a41 = a4.textWidth(self.window.theme.TitleFont, 16, self.title)
+function Toast:_measure()
+    local subtitleWidth = BorderSizePixel.textWidth(self.window.theme.TitleFont, 16, self.title)
     local a42 = if self.subtitleLabel
-        then a4.textWidth(self.window.theme.Font, 14, self.subtitle)
+        then BorderSizePixel.textWidth(self.window.theme.Font, 14, self.subtitle)
         else 0
-    local a43 = math.max(a41, a42)
+    local iconOffset = math.max(subtitleWidth, a42)
 
-    local a44 = if self.iconLabel then self._leftPad + self._iconSize + a19 else self._leftPad
-    local a45 = math.clamp(a44 + a43 + self._rightPad, self._minWidth, a22)
+    local textWidth = if self.iconLabel then self._leftPad + self._iconSize + PaddingRight else self._leftPad
+    local a45 = math.clamp(textWidth + iconOffset + self._rightPad, self._minWidth, new)
 
-            if a44 + a43 + self._rightPad > a22 then
-        local a46 = a22 - a44 - self._rightPad
+            if textWidth + iconOffset + self._rightPad > new then
+        local label = new - textWidth - self._rightPad
         for _, a47 in { self.titleLabel, self.subtitleLabel } do
             if a47 then
                 a47.AutomaticSize = Enum.AutomaticSize.None
                 a47.TextTruncate = Enum.TextTruncate.AtEnd
-                a47.Size = UDim2.fromOffset(a46, a47.Size.Y.Offset)
+                a47.Size = UDim2.fromOffset(label, a47.Size.Y.Offset)
             end
         end
     end
 
     local a48 = if self.subtitleLabel then 16 + 1 + 14 else 16
-    local a49 = math.max(a48, if self.iconLabel then self._iconSize else 0) + 18
+    local textHeight = math.max(a48, if self.iconLabel then self._iconSize else 0) + 18
 
-    return a45, a49
+    return a45, textHeight
 end
 
-function a1:_show()
+function Toast:_show()
     if self._dismissed or not self.main.Parent then
         return
     end
@@ -3726,19 +3726,19 @@ function a1:_show()
         return     end
     self.main.Size = UDim2.new(0, a50, 0, 0)
 
-        a3.tweenService:Create(self.main, a9, { Size = UDim2.new(0, a50, 0, a51 + a20) }):Play()
-    a3.tweenService:Create(self.body, a8, { Position = a26 }):Play()
-    a3.tweenService:Create(self.body, a10, { BackgroundTransparency = 0 }):Play()
-    a3.tweenService:Create(self.stroke, a10, { Transparency = 0.9 }):Play()
-    a3.tweenService:Create(self.shadow, a11, { Transparency = 0.6 }):Play()
-    a3.tweenService:Create(self.titleLabel, a11, { TextTransparency = 0 }):Play()
+        state.tweenService:Create(self.main, showTween, { Size = UDim2.new(0, a50, 0, a51 + textFadeTween) }):Play()
+    state.tweenService:Create(self.body, a8, { Position = a26 }):Play()
+    state.tweenService:Create(self.body, TweenInfo, { BackgroundTransparency = 0 }):Play()
+    state.tweenService:Create(self.stroke, TweenInfo, { Transparency = 0.9 }):Play()
+    state.tweenService:Create(self.shadow, new, { Transparency = 0.6 }):Play()
+    state.tweenService:Create(self.titleLabel, new, { TextTransparency = 0 }):Play()
 
     task.wait(0.05)
     if self._dismissed or not self.main.Parent then
         return     end
     if self.iconLabel then
-        a3.tweenService:Create(self.iconLabel, a11, { BackgroundTransparency = 0.95 }):Play()
-        a3.tweenService:Create(self.iconLabel, a11, { ImageTransparency = 0 }):Play()
+        state.tweenService:Create(self.iconLabel, new, { BackgroundTransparency = 0.95 }):Play()
+        state.tweenService:Create(self.iconLabel, new, { ImageTransparency = 0 }):Play()
     end
 
     task.wait(0.05)
@@ -3746,7 +3746,7 @@ function a1:_show()
         return
     end
     if self.subtitleLabel then
-        a3.tweenService:Create(self.subtitleLabel, a11, { TextTransparency = 0.5 }):Play()
+        state.tweenService:Create(self.subtitleLabel, new, { TextTransparency = 0.5 }):Play()
     end
 
         local a52 = 0
@@ -3760,7 +3760,7 @@ function a1:_show()
     self:_dismiss()
 end
 
-function a1:_dismiss()
+function Toast:_dismiss()
     if self._dismissed then
         return
     end
@@ -3776,29 +3776,29 @@ function a1:_dismiss()
         return
     end
 
-    a3.tweenService:Create(self.body, a10, { BackgroundTransparency = 1 }):Play()
-    a3.tweenService:Create(self.stroke, a10, { Transparency = 1 }):Play()
-    a3.tweenService:Create(self.shadow, a11, { Transparency = 1 }):Play()
-    a3.tweenService:Create(self.titleLabel, a11, { TextTransparency = 1 }):Play()
+    state.tweenService:Create(self.body, TweenInfo, { BackgroundTransparency = 1 }):Play()
+    state.tweenService:Create(self.stroke, TweenInfo, { Transparency = 1 }):Play()
+    state.tweenService:Create(self.shadow, new, { Transparency = 1 }):Play()
+    state.tweenService:Create(self.titleLabel, new, { TextTransparency = 1 }):Play()
     if self.subtitleLabel then
-        a3.tweenService:Create(self.subtitleLabel, a11, { TextTransparency = 1 }):Play()
+        state.tweenService:Create(self.subtitleLabel, new, { TextTransparency = 1 }):Play()
     end
     if self.iconLabel then
-        a3.tweenService
-            :Create(self.iconLabel, a11, { ImageTransparency = 1, BackgroundTransparency = 1 })
+        state.tweenService
+            :Create(self.iconLabel, new, { ImageTransparency = 1, BackgroundTransparency = 1 })
             :Play()
     end
 
-    a3.tweenService:Create(self.body, a12, { Size = UDim2.new(1, -60, 1, 0) }):Play()
-    local a55 =
-        a3.tweenService:Create(self.main, a12, { Size = UDim2.new(0, self.main.Size.X.Offset, 0, 0) })
-    local a56
-    a56 = a55.Completed:Connect(function(a57)
-        if a56 then
-            a56:Disconnect()
-            a56 = nil
+    state.tweenService:Create(self.body, tweenService, { Size = UDim2.new(1, -60, 1, 0) }):Play()
+    local Create =
+        state.tweenService:Create(self.main, tweenService, { Size = UDim2.new(0, self.main.Size.X.Offset, 0, 0) })
+    local state
+    state = Create.Completed:Connect(function(connection)
+        if state then
+            state:Disconnect()
+            state = nil
         end
-        if a57 ~= Enum.PlaybackState.Completed or not self._dismissed or not self.main.Parent then
+        if connection ~= Enum.PlaybackState.Completed or not self._dismissed or not self.main.Parent then
             return
         end
 
@@ -3807,48 +3807,48 @@ function a1:_dismiss()
         end
         self.window:DestroySubtree(self.main)
     end)
-    a55:Play()
+    Create:Play()
 end
 
-return a1
+return Toast
 
 end)() end,
     [18] = function()local wax,script,require=ImportGlobals(18)local ImportGlobals return (function(...)
-local a1 = script.Parent.Parent.utilities
-local a2 = require(script.Parent.Parent.images.image)
-local a3 = require(script.Parent.Parent.icons)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a1.persistence)
-local a6 = require(a1.constants)
-local a7 = require(a1.locale)
-local a8 = require(a1.log)
-local a9 = require(a1.HapticEngine)
-local a10 = require(a1.windowSizing)
-local a11 = require(a1.layouts)
-local a12 = require(script.Parent.chrome)
-local a13 = require(script.Parent.search)
-local a14 = require(script.Parent.sidebar)
+local persistence = script.Parent.Parent.utilities
+local image = require(script.Parent.Parent.images.image)
+local icon = require(script.Parent.Parent.icons)
+local Color = require(script.Parent.Parent.functions)
+local a5 = require(persistence.persistence)
+local icons = require(persistence.constants)
+local locale = require(persistence.locale)
+local log = require(persistence.log)
+local haptic = require(persistence.HapticEngine)
+local Scale = require(persistence.windowSizing)
+local isSidebar = require(persistence.layouts)
+local chrome = require(script.Parent.chrome)
+local search = require(script.Parent.search)
+local sidebar = require(script.Parent.sidebar)
 
-local a15 = require(a1.Parent.core.state)
+local size = require(persistence.Parent.core.state)
 
-local a16 = require(script.Parent.Parent.themes)
+local coerceValue = require(script.Parent.Parent.themes)
 
-local a17 = {}
-a17.__index = a17
+local Window = {}
+Window.__index = Window
 
-local a18 = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local a19 = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local instance = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local Create = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 local a20 = UDim2.fromOffset(185, 50)
-local a21 = UDim2.fromOffset(50, 50)
-local a22 = UDim2.new(0.5, 0, 0, 20)
+local size = UDim2.fromOffset(50, 50)
+local toastsTopWhenCollapsed = UDim2.new(0.5, 0, 0, 20)
 local a23 = UDim2.new(0.5, 0, 0, 12)
-local a24 = UDim2.new(0.5, 0, 0, a22.Y.Offset + a20.Y.Offset + 12)
-local a25 = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local targetPos = UDim2.new(0.5, 0, 0, toastsTopWhenCollapsed.Y.Offset + a20.Y.Offset + 12)
+local Create = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local a26 = 320
+local Size = 320
 
-local a27 = 41
+local Size = 41
 
 local a28 = 0.55
 local a29 = 0.55
@@ -3856,11 +3856,11 @@ local a29 = 0.55
 local a30 = 0.04
 local a31 = 8
 
-local a32 = 2
+local elapsed = 2
 
-local function a33(a34): UDim2
-    local a35 = a15.workspace.CurrentCamera
-    return a10.fit(a35 and a35.ViewportSize, a34)
+local function size(size): UDim2
+    local windowSizing = size.workspace.CurrentCamera
+    return Scale.fit(windowSizing and windowSizing.ViewportSize, size)
 end
 
 local a37 = { "TopLeftRadius", "TopRightRadius", "BottomLeftRadius", "BottomRightRadius" }
@@ -3868,88 +3868,88 @@ local a37 = { "TopLeftRadius", "TopRightRadius", "BottomLeftRadius", "BottomRigh
 local a38 = (function()
     return (
         pcall(function()
-            local a39 = Instance.new("UICorner")
-            a39.TopLeftRadius = UDim.new(0, 1)
-            a39:Destroy()
+            local instance = Instance.new("UICorner")
+            instance.TopLeftRadius = UDim.new(0, 1)
+            instance:Destroy()
         end)
     )
 end)()
 
 local function a40(a41)
-    return if a41 then a11.sidebar else a11.top
+    return if a41 then isSidebar.sidebar else isSidebar.top
 end
 
-local function a42(a43)
-    if a43.mode == "sidebar" and a43.forceCollapsed then
+local function initialLayout(layout)
+    if layout.mode == "sidebar" and layout.forceCollapsed then
         return "collapsedSidebar"
     end
-    return a43.mode
+    return layout.mode
 end
 
-local a44 = a16.coerceValue
-local a45 = a16.firstColor
-local a46 = a16.deriveStrokes
-local a47 = a16.resolve
+local theme = coerceValue.coerceValue
+local BackgroundColor3 = coerceValue.firstColor
+local deriveStrokes = coerceValue.deriveStrokes
+local theme = coerceValue.resolve
 
-local function a48(window, a49)
-    local a50 = window._toastsTop
-    if not a50 then
+local function updateToastPosition(window, a49)
+    local toastsTop = window._toastsTop
+    if not toastsTop then
         return
     end
 
-    local a51 = if window._collapsedShown then a24 else a23
-    if not a49 or a50.Position == a51 then
-        a50.Position = a51
+    local animate = if window._collapsedShown then targetPos else a23
+    if not a49 or toastsTop.Position == animate then
+        toastsTop.Position = animate
         return
     end
 
-    a15.tweenService:Create(a50, a25, { Position = a51 }):Play()
+    size.tweenService:Create(toastsTop, Create, { Position = animate }):Play()
 end
 
-function a17:ResolveIcon(a52, a53)
-    return a3.resolve(a52, a53 or self.iconPack)
+function Window:ResolveIcon(Window, ResolveIcon)
+    return icon.resolve(Window, ResolveIcon or self.iconPack)
 end
 
-function a17.new(a54)
-    a54 = if typeof(a54) == "table" then a54 else {}
+function Window.new(Window)
+    Window = if typeof(Window) == "table" then Window else {}
 
-                if a54.translations or a54.Translations then
-        a7.register(a54.translations or a54.Translations)
+                if Window.translations or Window.Translations then
+        locale.register(Window.translations or Window.Translations)
     end
-    if a54.translator or a54.Translator then
-        a7.translator = a54.translator or a54.Translator
+    if Window.translator or Window.Translator then
+        locale.translator = Window.translator or Window.Translator
     end
-    a7.setActive(a54.locale or a54.Locale or a7.detect())
+    locale.setActive(Window.locale or Window.Locale or locale.detect())
 
-            local a55 = a54.fallbackFont or a54.FallbackFont
-    if a55 then
-        a15.setFallbackFont(a55)
+            local setFallbackFont = Window.fallbackFont or Window.FallbackFont
+    if setFallbackFont then
+        size.setFallbackFont(setFallbackFont)
     end
 
-        local a56 = a11.top -- layout is controlled via Settings (Astra Settings → Bar Layout); CreateWindow no longer takes sidebarLayout
-    local a57 = a54.iconPack
-    local a58 = a54.IconPack
-    if a57 ~= nil and a58 ~= nil then
+        local layout = isSidebar.top -- layout is controlled via Settings (Astra Settings → Bar Layout); CreateWindow no longer takes sidebarLayout
+    local iconPack = Window.iconPack
+    local iconPackLower = Window.IconPack
+    if iconPack ~= nil and iconPackLower ~= nil then
         error("Astra: choose exactly one icon pack; provide either iconPack or IconPack, not both.", 2)
     end
-    local a59 = a57 or a58 or a3.Lucide
-    if not a3.isPack(a59) then
+    local iconPack = iconPack or iconPackLower or icon.Lucide
+    if not icon.isPack(iconPack) then
         error("Astra: iconPack must be exactly one supported pack: lucide, material, tabler, phosphor, heroicons, or feather.", 2)
     end
 
     local self = setmetatable({
-        name = a54.name or a54.Name or "Astra Window",
-        subheading = a54.subtitle or a54.Subtitle,
-        layout = a56,
-        size = a33(a56.mode),
+        name = Window.name or Window.Name or "Astra Window",
+        subheading = Window.subtitle or Window.Subtitle,
+        layout = layout,
+        size = size(layout.mode),
         instances = {},
         connections = {},
 
-        iconPack = a59,
-        icon = a3.resolve(a6.icons.window, a59),
-        showName = a54.showName or a54.ShowName or "Astra",
-        showIcon = a3.resolve(a6.icons.window, a59),
-                showIconOnly = a54.showIconOnly or a54.ShowIconOnly or false,
+        iconPack = iconPack,
+        icon = icon.resolve(icons.icons.window, iconPack),
+        showName = Window.showName or Window.ShowName or "Astra",
+        showIcon = icon.resolve(icons.icons.window, iconPack),
+                showIconOnly = Window.showIconOnly or Window.ShowIconOnly or false,
                 profileText = nil,
 
         themeProperties = {},
@@ -3961,44 +3961,44 @@ function a17.new(a54)
         _settingsLayoutActive = false,
         _settingsTabs = {},
         _settingsMode = false,
-        theme = a47(a54.theme or a54.Theme),
+        theme = theme(Window.theme or Window.Theme),
 
         controls = {},
 
         configuration = (function()
-            local a60 = a54.configuration or a54.Configuration
-            if not a60 then
+            local autoSave = Window.configuration or Window.Configuration
+            if not autoSave then
                 return {}
             end
             return {
-                autoSave = a60.autoSave or a60.AutoSave,
-                autoLoad = a60.autoLoad or a60.AutoLoad,
-                fileName = a60.fileName or a60.FileName,
-                customFolder = a60.customFolder or a60.CustomFolder,
+                autoSave = autoSave.autoSave or autoSave.AutoSave,
+                autoLoad = autoSave.autoLoad or autoSave.AutoLoad,
+                fileName = autoSave.fileName or autoSave.FileName,
+                customFolder = autoSave.customFolder or autoSave.CustomFolder,
             }
         end)(),
-    }, a17)
+    }, Window)
 
             self.Flags = setmetatable({}, {
-        __index = function(_, a61)
-            local a62 = self.controls[a61]
-            return a62 and a62.value
+        __index = function(_, control)
+            local control = self.controls[control]
+            return control and control.value
         end,
-        __newindex = function(_, a63, a64)
-            local a65 = self.controls[a63]
-            if not a65 then
-                a8.warn("Astra: no flag '" .. tostring(a63) .. "' to set")
+        __newindex = function(_, control, Set)
+            local control = self.controls[control]
+            if not control then
+                log.warn("Astra: no flag '" .. tostring(control) .. "' to set")
                 return
             end
-            a65:Set(a64)
+            control:Set(Set)
         end,
         __iter = function()
-            local a66
+            local key
             return function()
-                local a67
-                a66, a67 = next(self.controls, a66)
-                if a66 then
-                    return a66, a67.value
+                local value
+                key, value = next(self.controls, key)
+                if key then
+                    return key, value.value
                 end
                 return nil
             end
@@ -4011,24 +4011,24 @@ function a17.new(a54)
         showProfile = true,
         showFullUsername = false,
         antiWindowDuplicate = true,
-        layoutMode = a56.mode,
+        layoutMode = layout.mode,
         activeSubTab = 1,
     }
         self._layoutTransitioning = false
 
         self.screenGui = self:Create("ScreenGui", {
-        Name = a15.httpService:GenerateGUID(false),
+        Name = size.httpService:GenerateGUID(false),
         IgnoreGuiInset = true,
         ResetOnSpawn = false,
         Enabled = true,
-        DisplayOrder = a6.displayOrder.window,
+        DisplayOrder = icons.displayOrder.window,
         ZIndexBehavior = Enum.ZIndexBehavior.Global,
 
-        Parent = a15.guiContainer,
+        Parent = size.guiContainer,
     })
         -- Responsive: UIScale keeps desktop/mobile same perceived size (tiered occupancy + scale)
         self.uiScale = self:Create("UIScale", {
-                Scale = a10.scaleForViewport(a15.workspace.CurrentCamera and a15.workspace.CurrentCamera.ViewportSize),
+                Scale = Scale.scaleForViewport(size.workspace.CurrentCamera and size.workspace.CurrentCamera.ViewportSize),
                 Parent = self.screenGui,
         })
 
@@ -4061,7 +4061,7 @@ function a17.new(a54)
         Offset = Vector2.new(0, -0.1),
 
         Parent = self.main,
-    }, { Color = { "WindowColor", a4.toColorSequence } })
+    }, { Color = { "WindowColor", Color.toColorSequence } })
 
                 self.bottomFade = self:Create("Frame", {
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -4069,7 +4069,7 @@ function a17.new(a54)
         AnchorPoint = Vector2.new(1, 1),
         Position = UDim2.fromScale(1, 1),
         Size = self.layout.fadeSize,
-        ZIndex = a6.zIndex.bottomFade,
+        ZIndex = icons.zIndex.bottomFade,
 
                 BackgroundTransparency = 1,
         Parent = self.main,
@@ -4086,8 +4086,8 @@ function a17.new(a54)
     }, {
                         Color = {
             "WindowColor",
-            function(a68)
-                return ColorSequence.new(a4.toColorSequence(a68).Keypoints[1].Value)
+            function(ColorSequence)
+                return ColorSequence.new(Color.toColorSequence(ColorSequence).Keypoints[1].Value)
             end,
         },
     })
@@ -4143,8 +4143,8 @@ function a17.new(a54)
 
     if self.name then
         self.title = self:Create("TextLabel", {
-                        Text = a7.t(self.name),
-            FontFace = a15.brandFont(Enum.FontWeight.Medium),
+                        Text = locale.t(self.name),
+            FontFace = size.brandFont(Enum.FontWeight.Medium),
 
             Size = UDim2.fromOffset(50, 20),
             AutomaticSize = Enum.AutomaticSize.X,
@@ -4173,7 +4173,7 @@ function a17.new(a54)
 
     if self.subheading then
         self.subtitle = self:Create("TextLabel", {
-                        Text = a7.t(self.subheading),
+                        Text = locale.t(self.subheading),
             Size = UDim2.fromOffset(50, 12),
             AutomaticSize = Enum.AutomaticSize.X,
             BackgroundTransparency = 1,
@@ -4256,9 +4256,9 @@ function a17.new(a54)
         Parent = self.elements,
     })
 
-            local initialLayout = a11.implementation(a42(self.layout))
+            local initialLayout = isSidebar.implementation(initialLayout(self.layout))
     initialLayout.Build(self, self.layout)
-    initialLayout.ApplyWidth(self, a11.railWidthFor(self.layout, self.size.X.Offset))
+    initialLayout.ApplyWidth(self, isSidebar.railWidthFor(self.layout, self.size.X.Offset))
 
         self.actionContainer = self:Create("Frame", {
 
@@ -4293,7 +4293,7 @@ function a17.new(a54)
 
     require(script.Parent.action).new(self, {
         name = "Close",
-        icon = a6.icons.close,
+        icon = icons.icons.close,
         order = 1,
 
         callback = function()
@@ -4316,7 +4316,7 @@ function a17.new(a54)
 
     self.minimiseAction = require(script.Parent.action).new(self, {
         name = "Minimise",
-        icon = a6.icons.minimise,
+        icon = icons.icons.minimise,
         order = 2,
 
         callback = function()
@@ -4326,16 +4326,16 @@ function a17.new(a54)
 
     self.settingsAction = require(script.Parent.action).new(self, {
         name = "Settings",
-        icon = a6.icons.settings,
+        icon = icons.icons.settings,
         order = 3,
         linkedTab = self.rfSettings,
 
         callback = function()
             if self._settingsMode then
-                local a69 = self._previousTab
+                local previousTab = self._previousTab
                 self._previousTab = nil
-                if a69 and a69.window == self and a69.tabPage and not a69._isSettingsTab then
-                    a69:Select()
+                if previousTab and previousTab.window == self and previousTab.tabPage and not previousTab._isSettingsTab then
+                    previousTab:Select()
                     return
                 end
                 for _, tab in self.tabs do
@@ -4352,7 +4352,7 @@ function a17.new(a54)
         end,
     })
 
-    a13.build(self)
+    search.build(self)
         self:_applyRailWidth()
 
     self.unloaded = false
@@ -4370,33 +4370,33 @@ function a17.new(a54)
         self:_setLayoutMode(self.settings.layoutMode)
     end
     if self.layout.mode == "sidebar" then
-        a14.reflowProfile(self)
-        a14.setSubtitle(self, self.profileText)
+        sidebar.reflowProfile(self)
+        sidebar.setSubtitle(self, self.profileText)
     end
 
     task.defer(function()
-        if self.unloaded or a15.localPlayer or not self.profile then
+        if self.unloaded or size.localPlayer or not self.profile then
             return
         end
-        local a70 = os.clock() + 2
-        local a71
-        a71 = a15.runService.RenderStepped:Connect(function()
+        local state = os.clock() + 2
+        local connection
+        connection = size.runService.RenderStepped:Connect(function()
             if self.unloaded then
-                a71:Disconnect()
+                connection:Disconnect()
                 return
             end
-            if a15.localPlayer or os.clock() > a70 then
-                a71:Disconnect()
-                if a15.localPlayer and self.profile then
-                    a14.refreshProfileName(self)
-                    a14.reflowProfile(self)
-                    a14.setProfileShown(self, true, a14.settleInfo)
+            if size.localPlayer or os.clock() > state then
+                connection:Disconnect()
+                if size.localPlayer and self.profile then
+                    sidebar.refreshProfileName(self)
+                    sidebar.reflowProfile(self)
+                    sidebar.setProfileShown(self, true, sidebar.settleInfo)
                 end
             end
         end)
-        self:Connect(a71)
+        self:Connect(connection)
     end)
-    a9.setContainer(self.screenGui)     a9.setEnabled(self.settings.haptics)     a12.buildCollapsedFace(self)
+    haptic.setContainer(self.screenGui)     haptic.setEnabled(self.settings.haptics)     chrome.buildCollapsedFace(self)
     self:_bindKeybind()
     self:_bindMouseOverride()
     self:_bindTopbarDrag()
@@ -4409,7 +4409,7 @@ function a17.new(a54)
     return self
 end
 
-function a17:_syncLiveAnimation()
+function Window:_syncLiveAnimation()
     if not self.theme.LiveAnimation then
         self._liveAnimating = false         return
     end
@@ -4420,19 +4420,19 @@ function a17:_syncLiveAnimation()
             self._liveGeneration = (self._liveGeneration or 0) + 1
     local a72 = self._liveGeneration
     task.spawn(function()
-        local a73 = true
-        local a74 = TweenInfo.new(10, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local Offset = true
+        local state = TweenInfo.new(10, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
         while self._liveGeneration == a72 and self._liveAnimating and not self.unloaded do
-            local a75 = a15.tweenService:Create(self.windowGradient, a74, {
-                Offset = Vector2.new(if a73 then 0.4 else -0.2, 0),
-                Rotation = (if a73 then 220 else 280),
+            local tween = size.tweenService:Create(self.windowGradient, state, {
+                Offset = Vector2.new(if Offset then 0.4 else -0.2, 0),
+                Rotation = (if Offset then 220 else 280),
             })
 
-            self._liveTween = a75
-            a75:Play()
-            a75.Completed:Wait()
-            a73 = not a73
+            self._liveTween = tween
+            tween:Play()
+            tween.Completed:Wait()
+            Offset = not Offset
         end
         if self._liveGeneration == a72 then
             self._liveAnimating = false
@@ -4441,26 +4441,26 @@ function a17:_syncLiveAnimation()
     end)
 end
 
-function a17:ChangeTheme(a76)
-            local a77 = if typeof(a76) == "table" then a76 else a47(a76)
-    for a78, a79 in a77 do
-        self.theme[a78] = a44(a78, a79)
+function Window:ChangeTheme(Window)
+            local value = if typeof(Window) == "table" then Window else theme(Window)
+    for key, key in value do
+        self.theme[key] = theme(key, key)
     end
-        if typeof(a76) == "table" then
-        a46(self.theme, a77)
+        if typeof(Window) == "table" then
+        deriveStrokes(self.theme, value)
     end
 
-    for a80, a81 in self.themeProperties do
-        for a82, a83 in a81 do
-            local a84 = if typeof(a83) == "table" then a83[2](self.theme[a83[1]]) else self.theme[a83]
+    for tweenService, instance in self.themeProperties do
+        for instance, prop in instance do
+            local prop = if typeof(prop) == "table" then prop[2](self.theme[prop[1]]) else self.theme[prop]
 
-            if a80[a82] == a84 then
+            if tweenService[instance] == prop then
                 continue
             end
-            if typeof(a84) == "Color3" or typeof(a84) == "number" then
-                a15.tweenService:Create(a80, a19, { [a82] = a84 }):Play()
+            if typeof(prop) == "Color3" or typeof(prop) == "number" then
+                size.tweenService:Create(tweenService, Create, { [instance] = prop }):Play()
             else
-                a80[a82] = a84
+                tweenService[instance] = prop
             end
         end
     end
@@ -4474,7 +4474,7 @@ function a17:ChangeTheme(a76)
     self:_syncLiveAnimation()
 end
 
-function a17:_refreshElementThemes()
+function Window:_refreshElementThemes()
     for _, tab in self.tabs do
         for _, element in tab.elements do
             if element._refreshTheme then
@@ -4484,88 +4484,88 @@ function a17:_refreshElementThemes()
     end
 end
 
-function a17:CreateTab(a85)
+function Window:CreateTab(Window)
     assert(not self.unloaded, "Cannot create a tab on an unloaded window.")
-    local a86 = require(script.Parent.Parent.elements.tab).new(self, a85)
+    local tab = require(script.Parent.Parent.elements.tab).new(self, Window)
 
-    table.insert(self.tabs, a86)
+    table.insert(self.tabs, tab)
 
-    if not a86.neglectSelector then
-        local a87 = true
+    if not tab.neglectSelector then
+        local isFirst = true
         for _, tab in self.tabs do
-            if tab ~= a86 and not tab.neglectSelector and tab._isSettingsTab == a86._isSettingsTab then
-                a87 = false
+            if tab ~= tab and not tab.neglectSelector and tab._isSettingsTab == tab._isSettingsTab then
+                isFirst = false
                 break
             end
         end
-        if a87 then
-            a86:Select(true)
+        if isFirst then
+            tab:Select(true)
         end
 
                         if not self.hidden and not self.minimised then
-            a86.topbarItem.Visible = true
-            a86:_applyVisual(
-                if self.selectedTab == a86 then "selected" else "unselected",
+            tab.topbarItem.Visible = true
+            tab:_applyVisual(
+                if self.selectedTab == tab then "selected" else "unselected",
                 TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
             )
         end
     end
 
-    return a86
+    return tab
 end
 
-function a17:CreateSection(a88)
+function Window:CreateSection(Window)
     assert(not self.unloaded, "Cannot create a section on an unloaded window.")
-    local a89 = require(script.Parent.Parent.elements.tabSection).new(self, a88)
-    table.insert(self.tabSections, a89)
+    local section = require(script.Parent.Parent.elements.tabSection).new(self, Window)
+    table.insert(self.tabSections, section)
 
-            if not a89.inert and not self.hidden and not self.minimised then
-        a89:_setVisible(true)
-        a89:_setShown(true, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out))
+            if not section.inert and not self.hidden and not self.minimised then
+        section:_setVisible(true)
+        section:_setShown(true, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out))
     end
 
-    return a89
+    return section
 end
 
-function a17:_setTabSectionsShown(a90, a91)
-    for _, a92 in self.tabSections do
-        a92:_setShown(a90, a91)
-    end
-end
-
-function a17:_setTabSectionsVisible(a93)
-    for _, a94 in self.tabSections do
-        a94:_setVisible(a93)
+function Window:_setTabSectionsShown(Window, shown)
+    for _, section in self.tabSections do
+        section:_setShown(Window, shown)
     end
 end
 
-function a17:CreateTag(a95)
+function Window:_setTabSectionsVisible(Window)
+    for _, section in self.tabSections do
+        section:_setVisible(Window)
+    end
+end
+
+function Window:CreateTag(Window)
     assert(not self.unloaded, "Cannot create a tag on an unloaded window.")
-    local a96 = require(script.Parent.Parent.elements.tag).new(self, a95)
+    local a96 = require(script.Parent.Parent.elements.tag).new(self, Window)
     table.insert(self.tags, a96)
     return a96
 end
 
-function a17:_registerControl(a97)
-    if not a97.flag or a97.flag == "" or a97.forgetState then
+function Window:_registerControl(Window)
+    if not Window.flag or Window.flag == "" or Window.forgetState then
         return
     end
 
-    local a98 = a97.flag
-    if self.controls[a98] then
+    local flag = Window.flag
+    if self.controls[flag] then
         local n = 2
-        while self.controls[a98 .. n] do
+        while self.controls[flag .. n] do
             n += 1
         end
-        a98 = a98 .. n
+        flag = flag .. n
     end
 
-    a97.flag = a98
-    self.controls[a98] = a97
-    return a98
+    Window.flag = flag
+    self.controls[flag] = Window
+    return flag
 end
 
-function a17:_restoreLate(element)
+function Window:_restoreLate(element)
     if not self._loadedConfig or not element.flag or element.forgetState then
         return
     end
@@ -4575,25 +4575,25 @@ function a17:_restoreLate(element)
     self._loading = a99
 end
 
-function a17:_persist(a100)
-            if a100.flag and not a100.forgetState and self.configuration.autoSave and not self._loading then
+function Window:_persist(Window)
+            if Window.flag and not Window.forgetState and self.configuration.autoSave and not self._loading then
         task.spawn(self.Save, self)
     end
 end
 
-function a17:_unregisterControl(a101)
-    if a101.flag and self.controls[a101.flag] == a101 then
-        self.controls[a101.flag] = nil
+function Window:_unregisterControl(Window)
+    if Window.flag and self.controls[Window.flag] == Window then
+        self.controls[Window.flag] = nil
     end
 end
 
-function a17:_keybindUsing(a102, a103)
-    if typeof(a102) ~= "EnumItem" or a102 == Enum.KeyCode.Unknown then
+function Window:_keybindUsing(Window, a103)
+    if typeof(Window) ~= "EnumItem" or Window == Enum.KeyCode.Unknown then
         return nil
     end
     for _, tab in self.tabs do
         for _, element in tab.elements do
-            if element ~= a103 and element.__type == "Keybind" and element.value == a102 then
+            if element ~= a103 and element.__type == "Keybind" and element.value == Window then
                 return element
             end
         end
@@ -4601,7 +4601,7 @@ function a17:_keybindUsing(a102, a103)
     return nil
 end
 
-function a17:Notify(a104)
+function Window:Notify(Window)
     if self.unloaded then
         return     end
     if not self.notifications then
@@ -4626,61 +4626,61 @@ function a17:Notify(a104)
         })
     end
 
-    return require(script.Parent.Parent.components.notification).new(self, a104)
+    return require(script.Parent.Parent.components.notification).new(self, Window)
 end
 
-function a17:Toast(a105)
+function Window:Toast(Window)
     if self.unloaded then
         return
     end
 
-        a105 = if typeof(a105) == "table" then a105 else {}
-    local a106 = a105.position or a105.Position or "Top"
-    local a107 = typeof(a106) ~= "string" or a106:lower() ~= "bottom"
-    a105.position = if a107 then "Top" else "Bottom"
-    local a108 = if a107 then "_toastsTop" else "_toastsBottom"
-    local a109 = self[a108]
+        Window = if typeof(Window) == "table" then Window else {}
+    local isTop = Window.position or Window.Position or "Top"
+    local position = typeof(isTop) ~= "string" or isTop:lower() ~= "bottom"
+    Window.position = if position then "Top" else "Bottom"
+    local container = if position then "_toastsTop" else "_toastsBottom"
+    local container = self[container]
 
-    if not a109 then
-        a109 = self:Create("Frame", {
+    if not container then
+        container = self:Create("Frame", {
             Name = "Toasts",
-            Size = UDim2.new(0, a26, 1, -24),
-            Position = if a107 then a23 else UDim2.new(0.5, 0, 1, -12),
-            AnchorPoint = if a107 then Vector2.new(0.5, 0) else Vector2.new(0.5, 1),
+            Size = UDim2.new(0, Size, 1, -24),
+            Position = if position then a23 else UDim2.new(0.5, 0, 1, -12),
+            AnchorPoint = if position then Vector2.new(0.5, 0) else Vector2.new(0.5, 1),
             BackgroundTransparency = 1,
-            ZIndex = a6.zIndex.toast,
+            ZIndex = icons.zIndex.toast,
 
             Parent = self.screenGui,
         })
 
         self:Create("UIListLayout", {
             FillDirection = Enum.FillDirection.Vertical,
-            VerticalAlignment = if a107 then Enum.VerticalAlignment.Top else Enum.VerticalAlignment.Bottom,
+            VerticalAlignment = if position then Enum.VerticalAlignment.Top else Enum.VerticalAlignment.Bottom,
             HorizontalAlignment = Enum.HorizontalAlignment.Center,
             SortOrder = Enum.SortOrder.LayoutOrder,
                         Padding = UDim.new(0, 0),
 
-            Parent = a109,
+            Parent = container,
         })
 
-        self[a108] = a109
+        self[container] = container
 
-                        if a107 then
-            a48(self, false)
+                        if position then
+            updateToastPosition(self, false)
         end
     end
 
-    return require(script.Parent.Parent.components.toast).new(self, a105, a109)
+    return require(script.Parent.Parent.components.toast).new(self, Window, container)
 end
 
-function a17:Popup(a110)
+function Window:Popup(Window)
     if self.unloaded then
         return
     end
-    return require(script.Parent.Parent.components.popup).new(self, a110)
+    return require(script.Parent.Parent.components.popup).new(self, Window)
 end
 
-function a17:Close()
+function Window:Close()
     if self.animating or self.unloaded then
         return
     end
@@ -4689,42 +4689,42 @@ function a17:Close()
     self.collapsedInteract.Visible = false
     self._closeTransitionId = (self._closeTransitionId or 0) + 1
     local a111 = self._closeTransitionId
-    local a112 = self.main.Size
-    local a113 = self.main.Position
+    local Size = self.main.Size
+    local originalPosition = self.main.Position
     local a114 = UDim2.new(
-        a113.X.Scale,
-        a113.X.Offset,
-        a113.Y.Scale - a112.Y.Scale / 2,
-        a113.Y.Offset - a112.Y.Offset / 2
+        originalPosition.X.Scale,
+        originalPosition.X.Offset,
+        originalPosition.Y.Scale - Size.Y.Scale / 2,
+        originalPosition.Y.Offset - Size.Y.Offset / 2
     )
-    local a115 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+    local tweenService = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 
     self.main.ClipsDescendants = true
     self.main.AnchorPoint = Vector2.new(0.5, 0)
     self.main.Position = a114
     self.drag.drag.Visible = false
-    a15.tweenService:Create(self.windowShadow, a115, { Transparency = 1 }):Play()
-    a15.tweenService:Create(self.windowStroke, a115, { Transparency = 1 }):Play()
-    local a116 = a15.tweenService:Create(self.main, a115, {
-        Size = UDim2.new(a112.X.Scale, a112.X.Offset, 0, 0),
+    size.tweenService:Create(self.windowShadow, tweenService, { Transparency = 1 }):Play()
+    size.tweenService:Create(self.windowStroke, tweenService, { Transparency = 1 }):Play()
+    local tween = size.tweenService:Create(self.main, tweenService, {
+        Size = UDim2.new(Size.X.Scale, Size.X.Offset, 0, 0),
     })
-    a116.Completed:Connect(function()
+    tween.Completed:Connect(function()
         if not self.unloaded and self._closeTransitionId == a111 then
             self.drag.drag.Visible = false
             self:Unload()
         end
     end)
-    a116:Play()
-    a15.tweenService:Create(self.windowCorner, a115, { CornerRadius = UDim.new(1, 0) }):Play()
+    tween:Play()
+    size.tweenService:Create(self.windowCorner, tweenService, { CornerRadius = UDim.new(1, 0) }):Play()
 end
 
-function a17:Hide()
+function Window:Hide()
             if self.animating or self.hidden then
         return
     end
 
             if self._searching then
-        a13.close(self, { showTabs = false, jumpTo = self.selectedTab and self.selectedTab.tabPage })
+        search.close(self, { showTabs = false, jumpTo = self.selectedTab and self.selectedTab.tabPage })
     end
 
             if self._recordingKeybind then
@@ -4737,22 +4737,22 @@ function a17:Hide()
     self.collapsedInteract.Visible = false
                 if self.minimised then
         self.minimised = false
-        a2.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(a6.icons.minimise))     end
+        image.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(icons.icons.minimise))     end
 
         self._restorePosition = self.main.Position
 
-    local a117, a118 = self:_collapsedRect()
+    local Create, collapsedPos = self:_collapsedRect()
 
-    local a119 = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-            local a120 = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
-    local a121 = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
-    local a122 = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local Create = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+            local state = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
+    local tweenService = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
+    local setCollapsedShown = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
             self._hideTransitionId = (self._hideTransitionId or 0) + 1
     local a123 = self._hideTransitionId
 
-            a15.tweenService
-        :Create(self.drag.dragCosmetic, a119, { Size = UDim2.fromOffset(0, 4), BackgroundTransparency = 1 })
+            size.tweenService
+        :Create(self.drag.dragCosmetic, Create, { Size = UDim2.fromOffset(0, 4), BackgroundTransparency = 1 })
         :Play()
     task.delay(0.18, function()
         if self.unloaded or not self.hidden or self._hideTransitionId ~= a123 then
@@ -4761,51 +4761,51 @@ function a17:Hide()
         self.drag.drag.Visible = false
     end)
 
-            self:_fadeSurfaces(false, a119)
+            self:_fadeSurfaces(false, Create)
 
     if self.title then
-        a15.tweenService:Create(self.title, a119, { TextTransparency = 1 }):Play()
+        size.tweenService:Create(self.title, Create, { TextTransparency = 1 }):Play()
     end
     if self.subtitle then
-        a15.tweenService:Create(self.subtitle, a119, { TextTransparency = 1 }):Play()
+        size.tweenService:Create(self.subtitle, Create, { TextTransparency = 1 }):Play()
     end
     if self.topbarIcon then
-        a15.tweenService:Create(self.topbarIcon, a119, { ImageTransparency = 1 }):Play()
+        size.tweenService:Create(self.topbarIcon, Create, { ImageTransparency = 1 }):Play()
     end
 
-    for _, a124 in ipairs(self.actionContainer:GetChildren()) do
-        if a124:IsA("Frame") then
-            a15.tweenService:Create(a124.ImageLabel, a119, { ImageTransparency = 1 }):Play()
+    for _, tweenService in ipairs(self.actionContainer:GetChildren()) do
+        if tweenService:IsA("Frame") then
+            size.tweenService:Create(tweenService.ImageLabel, Create, { ImageTransparency = 1 }):Play()
         end
     end
 
-    for _, a125 in self.tags do
-        a125:_setShown(false, a119)
+    for _, tag in self.tags do
+        tag:_setShown(false, Create)
     end
 
     for _, tab in pairs(self.tabs) do
         if not tab.neglectSelector and tab.topbarItem then
-            tab:_applyVisual("hidden", a119)
+            tab:_applyVisual("hidden", Create)
         end
     end
-    self:_setTabSectionsShown(false, a119)
+    self:_setTabSectionsShown(false, Create)
 
     self:_fadeSelectedElementsOut()
 
-            local a126 = a15.tweenService:Create(self.main, a120, { Size = a118, Position = a117 })
-    a126.Completed:Connect(function()
+            local tween = size.tweenService:Create(self.main, state, { Size = collapsedPos, Position = Create })
+    tween.Completed:Connect(function()
                         if self.unloaded or not self.hidden or self._hideTransitionId ~= a123 then
             return
         end
 
                         self._collapsedShown = true
-        a48(self, true)
+        updateToastPosition(self, true)
         self.collapsedInteract.Visible = true
         self.animating = false
         self._revealing = false
     end)
-    a126:Play()
-    a15.tweenService:Create(self.windowCorner, a121, { CornerRadius = UDim.new(1, 0) }):Play()
+    tween:Play()
+    size.tweenService:Create(self.windowCorner, tweenService, { CornerRadius = UDim.new(1, 0) }):Play()
 
             task.delay(0.18, function()
         if self.unloaded or not self.hidden or self._hideTransitionId ~= a123 then
@@ -4814,11 +4814,11 @@ function a17:Hide()
         self.topbar.Visible = false
         self:_setContentVisible(false)
 
-        a12.setCollapsedShown(self, true, a122)
+        chrome.setCollapsedShown(self, true, setCollapsedShown)
     end)
 end
 
-function a17:ToggleHide()
+function Window:ToggleHide()
     if self.animating then
         return
     end
@@ -4829,33 +4829,33 @@ function a17:ToggleHide()
     end
 end
 
-function a17:ToggleMinimise()
+function Window:ToggleMinimise()
     if self.animating or self.hidden then
         return
     end
 
         if self._searching then
-        a13.close(self, { showTabs = true })
+        search.close(self, { showTabs = true })
     end
 
     self.animating = true
     self.drag.drag.Visible = false
     self.collapsedInteract.Visible = false
 
-    local a127 = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-    local a128 = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+    local tweenService = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+    local tab = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
     self._hideTransitionId = (self._hideTransitionId or 0) + 1
 
     if self.minimised then
         self.minimised = false
         self.drag.drag.Visible = false
-        a2.assign(self.minimiseAction.iconLabel, "Image", a6.icons.minimise)
-        a15.tweenService:Create(self.main, a127, { Size = self.size }):Play()
-        self:_fadeSurfaces(true, a128)	a12.setCollapsedShown(self, false, a128)
+        image.assign(self.minimiseAction.iconLabel, "Image", icons.icons.minimise)
+        size.tweenService:Create(self.main, tweenService, { Size = self.size }):Play()
+        self:_fadeSurfaces(true, tab)	chrome.setCollapsedShown(self, false, tab)
 
-        a15.tweenService
-            :Create(self.drag.drag, a127, {
+        size.tweenService
+            :Create(self.drag.drag, tweenService, {
                 Position = UDim2.new(
                     self.main.Position.X.Scale,
                     self.main.Position.X.Offset,
@@ -4873,11 +4873,11 @@ function a17:ToggleMinimise()
             for _, tab in pairs(self.tabs) do
                 if not tab.neglectSelector and tab.topbarItem then
                     tab.topbarItem.Visible = true
-                    tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected", a128)
+                    tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected", tab)
                 end
             end
             self:_setTabSectionsVisible(true)
-            self:_setTabSectionsShown(true, a128)
+            self:_setTabSectionsShown(true, tab)
 
             self:_revealElements(0.035, 0.4)
         end)
@@ -4888,14 +4888,14 @@ function a17:ToggleMinimise()
     else
         self.minimised = true
         self.drag.drag.Visible = false
-        a2.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(a6.icons.maximise))
+        image.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(icons.icons.maximise))
                         self:_fadeSelectedElementsOut()
         for _, tab in pairs(self.tabs) do
             if not tab.neglectSelector and tab.topbarItem then
-                tab:_applyVisual("hidden", a128)
+                tab:_applyVisual("hidden", tab)
             end
         end
-        self:_setTabSectionsShown(false, a128)
+        self:_setTabSectionsShown(false, tab)
 
         task.delay(0.3, function()
             if self.unloaded or not self.minimised then
@@ -4909,13 +4909,13 @@ function a17:ToggleMinimise()
             self:_setTabSectionsVisible(false)
         end)
 
-        self:_fadeSurfaces(false, a128)	a12.setCollapsedShown(self, true, a128)
-        a15.tweenService
-            :Create(self.main, a127, { Size = UDim2.fromOffset(self.size.X.Offset, self.layout.topbarHeight) })
+        self:_fadeSurfaces(false, tab)	chrome.setCollapsedShown(self, true, tab)
+        size.tweenService
+            :Create(self.main, tweenService, { Size = UDim2.fromOffset(self.size.X.Offset, self.layout.topbarHeight) })
             :Play()
 
-        a15.tweenService
-            :Create(self.drag.drag, a127, {
+        size.tweenService
+            :Create(self.drag.drag, tweenService, {
                 Position = UDim2.new(
                     self.main.Position.X.Scale,
                     self.main.Position.X.Offset,
@@ -4938,49 +4938,49 @@ function a17:ToggleMinimise()
     end
 end
 
-function a17:_syncDragBar()
-    local a129 = self.drag and self.drag.drag
-    if not a129 then
+function Window:_syncDragBar()
+    local dragFrame = self.drag and self.drag.drag
+    if not dragFrame then
         return
     end
-    local a130 = self.main.Position
+    local Position = self.main.Position
     local a131 = if self.minimised then self.layout.topbarHeight / 2 + 15 else self.size.Y.Offset / 2 + 15
-    a129.Position = UDim2.new(a130.X.Scale, a130.X.Offset, a130.Y.Scale, a130.Y.Offset + a131)
+    dragFrame.Position = UDim2.new(Position.X.Scale, Position.X.Offset, Position.Y.Scale, Position.Y.Offset + a131)
 end
 
-function a17:_clampedPosition(a132: UDim2): UDim2
+function Window:_clampedPosition(Window: UDim2): UDim2
     if not self.settings or not self.settings.keepOnScreen then
-        return a132
+        return Window
     end
-            if a132.X.Scale ~= 0 or a132.Y.Scale ~= 0 then
-        return a132
+            if Window.X.Scale ~= 0 or Window.Y.Scale ~= 0 then
+        return Window
     end
 
     local a133 = self.screenGui.AbsoluteSize
-    local a134, a135 = self.size.X.Offset / 2, self.size.Y.Offset / 2
-    local a136 = 8
-        local x = math.clamp(a132.X.Offset, a134 + a136, math.max(a134 + a136, a133.X - a134 - a136))
-    local y = math.clamp(a132.Y.Offset, a135 + a136, math.max(a135 + a136, a133.Y - a135 - a136))
-    if x == a132.X.Offset and y == a132.Y.Offset then
-        return a132
+    local clamp, halfW = self.size.X.Offset / 2, self.size.Y.Offset / 2
+    local position = 8
+        local x = math.clamp(Window.X.Offset, clamp + position, math.max(clamp + position, a133.X - clamp - position))
+    local y = math.clamp(Window.Y.Offset, halfW + position, math.max(halfW + position, a133.Y - halfW - position))
+    if x == Window.X.Offset and y == Window.Y.Offset then
+        return Window
     end
     return UDim2.fromOffset(x, y)
 end
 
-function a17:_clampToScreen()
+function Window:_clampToScreen()
     self.main.Position = self:_clampedPosition(self.main.Position)
 end
 
-function a17:_applyWindowSize()
+function Window:_applyWindowSize()
     if self.unloaded then
         return
     end
-    local vp = a15.workspace.CurrentCamera and a15.workspace.CurrentCamera.ViewportSize or nil
-    local a137 = a33(self.layout.mode)
-    local newScale = a10.scaleForViewport(vp)
-    local a138 = a137 ~= self.size
+    local vp = size.workspace.CurrentCamera and size.workspace.CurrentCamera.ViewportSize or nil
+    local sizeChanged = size(self.layout.mode)
+    local newScale = Scale.scaleForViewport(vp)
+    local a138 = sizeChanged ~= self.size
     local scaleChanged = self.uiScale and self.uiScale.Scale ~= newScale
-    self.size = a137
+    self.size = sizeChanged
     if self.uiScale and scaleChanged then
         self.uiScale.Scale = newScale
     end
@@ -4993,196 +4993,196 @@ function a17:_applyWindowSize()
         return
     end
     self._pendingResize = false
-    self.main.Size = a137
+    self.main.Size = sizeChanged
     self:_clampToScreen()
     self:_syncDragBar()
 end
 
-function a17:_applyRailWidth()
-    local a139 = a11.railWidthFor(self.layout, self.size.X.Offset)
-    local implementation = a11.implementation(a42(self.layout))
-    implementation.ApplyWidth(self, a139)
+function Window:_applyRailWidth()
+    local implementation = isSidebar.railWidthFor(self.layout, self.size.X.Offset)
+    local implementation = isSidebar.implementation(initialLayout(self.layout))
+    implementation.ApplyWidth(self, implementation)
 
     if self._settingsLayoutActive or self.selectedTab == self.rfSettings then
         self:_applySettingsLayout(true)
     end
 end
 
-function a17:_watchViewport()
-    local a140: RBXScriptConnection? = nil
-    local a141 = false
+function Window:_watchViewport()
+    local cameraConnection: RBXScriptConnection? = nil
+    local pending = false
 
-    local function a142()
-                if a141 then
+    local function Connect()
+                if pending then
             return
         end
-        a141 = true
+        pending = true
         task.defer(function()
-            a141 = false
+            pending = false
             self:_applyWindowSize()
         end)
     end
 
-    local function a143()
-        if a140 then
-            self:Disconnect(a140)
-            a140 = nil
+    local function Connect()
+        if cameraConnection then
+            self:Disconnect(cameraConnection)
+            cameraConnection = nil
         end
-        local a144 = a15.workspace.CurrentCamera
+        local a144 = size.workspace.CurrentCamera
         if a144 then
-            a140 = self:Connect(a144:GetPropertyChangedSignal("ViewportSize"), a142)
+            cameraConnection = self:Connect(a144:GetPropertyChangedSignal("ViewportSize"), Connect)
         end
-        a142()
+        Connect()
     end
 
-    self:Connect(a15.workspace:GetPropertyChangedSignal("CurrentCamera"), a143)
-    a143()
+    self:Connect(size.workspace:GetPropertyChangedSignal("CurrentCamera"), Connect)
+    Connect()
 
-            local a145 = 0
-    self:Connect(a15.runService.Heartbeat, function(a146: number)
-        a145 += a146
-        if a145 < a32 then
+            local elapsed = 0
+    self:Connect(size.runService.Heartbeat, function(Connect: number)
+        elapsed += Connect
+        if elapsed < elapsed then
             return
         end
-        a145 = 0
+        elapsed = 0
         self:_applyWindowSize()
     end)
 end
 
-function a17:_bindKeybind()
-    self:Connect(a15.userInputService.InputBegan, function(a147, a148)
-        if a148 or self._recordingKeybind then
+function Window:_bindKeybind()
+    self:Connect(size.userInputService.InputBegan, function(Connect, state)
+        if state or self._recordingKeybind then
             return         end
-        if a147.KeyCode == self.settings.toggleKeybind or a147.UserInputType == self.settings.toggleKeybind then
+        if Connect.KeyCode == self.settings.toggleKeybind or Connect.UserInputType == self.settings.toggleKeybind then
             self:ToggleHide()
         end
     end)
 end
 
-function a17:_bindMouseOverride()
-    local a149 = a15.userInputService
+function Window:_bindMouseOverride()
+    local inputService = size.userInputService
 
     local function a150()
         return self.settings.mouseOverride and not self.hidden and not self.minimised
     end
 
-    local function a151()
+    local function Connect()
         if not a150() then
             return
         end
-                        if a149:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+                        if inputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             return
         end
-        if a149.MouseBehavior ~= Enum.MouseBehavior.Default then
-            a149.MouseBehavior = Enum.MouseBehavior.Default
+        if inputService.MouseBehavior ~= Enum.MouseBehavior.Default then
+            inputService.MouseBehavior = Enum.MouseBehavior.Default
         end
-        if not a149.MouseIconEnabled then
-            a149.MouseIconEnabled = true
+        if not inputService.MouseIconEnabled then
+            inputService.MouseIconEnabled = true
         end
     end
 
-            self:Connect(a149:GetPropertyChangedSignal("MouseBehavior"), a151)
-    self:Connect(a149:GetPropertyChangedSignal("MouseIconEnabled"), a151)
+            self:Connect(inputService:GetPropertyChangedSignal("MouseBehavior"), Connect)
+    self:Connect(inputService:GetPropertyChangedSignal("MouseIconEnabled"), Connect)
 
-            self:Connect(a149.InputEnded, function(a152)
-        if a152.UserInputType == Enum.UserInputType.MouseButton2 then
-            a151()
+            self:Connect(inputService.InputEnded, function(Connect)
+        if Connect.UserInputType == Enum.UserInputType.MouseButton2 then
+            Connect()
         end
     end)
 
-        self._freeMouse = a151
+        self._freeMouse = Connect
 end
 
-function a17:_bindTopbarDrag()
-    local a153 = a15.userInputService
-    local a154 = false
-    local a155 = Vector2.zero
-    local a156
-    local a179 = Vector2.zero
+function Window:_bindTopbarDrag()
+    local rawPos = size.userInputService
+    local isDragging = false
+    local inputService = Vector2.zero
+    local renderConnection
+    local startMousePos = Vector2.zero
 
-            local a157 = Vector2.zero
+            local guiInset = Vector2.zero
     if self.screenGui and self.screenGui.IgnoreGuiInset then
-        a157 = a15.guiService:GetGuiInset()
+        guiInset = size.guiService:GetGuiInset()
     end
 
-    local function a158()
-        local a159 = a153:GetMouseLocation() + a155 + a157
+    local function constrainedPos()
+        local a159 = rawPos:GetMouseLocation() + inputService + guiInset
         local x, y = a159.X, a159.Y
 
         if self.settings and self.settings.keepOnScreen then
-            local a160 = self.main.AbsoluteSize
-            local a161 = self.screenGui.AbsoluteSize
+            local halfH = self.main.AbsoluteSize
+            local halfW = self.screenGui.AbsoluteSize
             local a162 = 8
-            local a163, a164 = a160.X / 2, a160.Y / 2
-            x = math.clamp(x, a163 + a162, math.max(a163 + a162, a161.X - a163 - a162))
-            y = math.clamp(y, a164 + a162, math.max(a164 + a162, a161.Y - a164 - a162))
+            local clamp, halfW = halfH.X / 2, halfH.Y / 2
+            x = math.clamp(x, clamp + a162, math.max(clamp + a162, halfW.X - clamp - a162))
+            y = math.clamp(y, halfW + a162, math.max(halfW + a162, halfW.Y - halfW - a162))
         end
 
         return UDim2.fromOffset(x, y)
     end
 
-    local function a165()
-        a154 = false
-        if a156 then
-            self:Disconnect(a156)
-            a156 = nil
+    local function endDrag()
+        isDragging = false
+        if renderConnection then
+            self:Disconnect(renderConnection)
+            renderConnection = nil
         end
     end
 
-    local function a166()
-        if not a154 then
-            a165()
+    local function Connect()
+        if not isDragging then
+            endDrag()
             return
         end
         if self.unloaded or not self:_interactive() then
-            a165()
+            endDrag()
             return
         end
 
         -- Do not reposition the window for a simple click/tap. Wait until
         -- the pointer has actually moved before treating the gesture as drag.
-        local pointer = a153:GetMouseLocation()
-        if (pointer - a179).Magnitude < 4 then
+        local pointer = rawPos:GetMouseLocation()
+        if (pointer - startMousePos).Magnitude < 4 then
             return
         end
 
-        local a167 = a158()
+        local a167 = constrainedPos()
         if self.main.Position == a167 then
             return
         end
         self.main.Position = a167
         if self.drag and self.drag.drag then
-            local a168 = self.main.Position
+            local mainPos = self.main.Position
             self.drag.drag.Position = UDim2.new(
-                a168.X.Scale,
-                a168.X.Offset,
-                a168.Y.Scale,
-                a168.Y.Offset + (self.main.Size.Y.Offset / 2 + 15)
+                mainPos.X.Scale,
+                mainPos.X.Offset,
+                mainPos.Y.Scale,
+                mainPos.Y.Offset + (self.main.Size.Y.Offset / 2 + 15)
             )
         end
     end
 
                 local function a169(x, y)
-        for _, a170 in { self.tabList, self.actionContainer } do
-            local a171, a172 = a170.AbsolutePosition, a170.AbsoluteSize
-            if x >= a171.X and x <= a171.X + a172.X and y >= a171.Y and y <= a171.Y + a172.Y then
+        for _, absSize in { self.tabList, self.actionContainer } do
+            local a171, absPos = absSize.AbsolutePosition, absSize.AbsoluteSize
+            if x >= a171.X and x <= a171.X + absPos.X and y >= a171.Y and y <= a171.Y + absPos.Y then
                 return true
             end
         end
         return false
     end
 
-    self:Connect(self.topbar.InputBegan, function(a173, a174)
-        if a174 then
+    self:Connect(self.topbar.InputBegan, function(inputType, Connect)
+        if Connect then
             return
         end
 
-        local a175 = a173.UserInputType.Name
-        if a175 ~= "MouseButton1" and a175 ~= "Touch" then
+        local inputType = inputType.UserInputType.Name
+        if inputType ~= "MouseButton1" and inputType ~= "Touch" then
             return
         end
 
-        if a169(a173.Position.X, a173.Position.Y) then
+        if a169(inputType.Position.X, inputType.Position.Y) then
             return
         end
 
@@ -5190,34 +5190,34 @@ function a17:_bindTopbarDrag()
             return
         end
 
-        a154 = true
-        if a156 then
-            self:Disconnect(a156)
-            a156 = nil
+        isDragging = true
+        if renderConnection then
+            self:Disconnect(renderConnection)
+            renderConnection = nil
         end
-        a156 = self:Connect(a15.runService.RenderStepped, a166)
+        renderConnection = self:Connect(size.runService.RenderStepped, Connect)
 
         if self.screenGui and self.screenGui.IgnoreGuiInset then
-            a157 = a15.guiService:GetGuiInset()
+            guiInset = size.guiService:GetGuiInset()
         end
 
-        a179 = a153:GetMouseLocation()
-        a155 = self.main.AbsolutePosition + self.main.AbsoluteSize * self.main.AnchorPoint - a153:GetMouseLocation()
+        startMousePos = rawPos:GetMouseLocation()
+        inputService = self.main.AbsolutePosition + self.main.AbsoluteSize * self.main.AnchorPoint - rawPos:GetMouseLocation()
     end)
 
-    self:Connect(a153.InputEnded, function(a176)
-        local a177 = a176.UserInputType.Name
-        if a177 == "MouseButton1" or a177 == "Touch" then
-            a165()
+    self:Connect(rawPos.InputEnded, function(Connect)
+        local inputType = Connect.UserInputType.Name
+        if inputType == "MouseButton1" or inputType == "Touch" then
+            endDrag()
         end
     end)
 
-            self:Connect(a153.WindowFocusReleased, function()
-        a165()
+            self:Connect(rawPos.WindowFocusReleased, function()
+        endDrag()
     end)
 end
 
-function a17:_buildSettingsUI()
+function Window:_buildSettingsUI()
     local appearance = self:CreateTab({ name = "Appearance", icon = "palette", customOrder = 1001, forgetState = true, isSettingsTab = true })
     local behavior = self:CreateTab({ name = "Behavior", icon = "shield-check", customOrder = 1002, forgetState = true, isSettingsTab = true })
     local performance = self:CreateTab({ name = "Performance", icon = "gauge", customOrder = 1003, forgetState = true, isSettingsTab = true })
@@ -5229,7 +5229,7 @@ function a17:_buildSettingsUI()
 
     self.rfSettings:CreateSection({ name = "General" })
     self.rfSettings:CreateKeybind({
-        name = "Toggle Keybind", icon = a6.icons.search, value = self.settings.toggleKeybind,
+        name = "Toggle Keybind", icon = icons.icons.search, value = self.settings.toggleKeybind,
         isMenuToggle = true, onChanged = function(value)
             self.settings.toggleKeybind = value
             self:SaveSettings()
@@ -5261,7 +5261,7 @@ function a17:_buildSettingsUI()
             local requested
             for key, label in layouts do if choice == label then requested = key break end end
             if not requested then return end
-            local active = a42(self.layout)
+            local active = initialLayout(self.layout)
             if requested == active then
                 self:Notify({ title = "Bar layout", content = "The " .. choice .. " layout is already active." })
                 layoutDropdown:Set(layouts[active], true)
@@ -5281,7 +5281,7 @@ function a17:_buildSettingsUI()
                             layoutDropdown:Set(layouts[requested], true)
                             self:Notify({ title = "Bar layout changed", content = "Switched to the " .. layouts[requested] .. " layout." })
                         else
-                            currentLayout = a42(self.layout)
+                            currentLayout = initialLayout(self.layout)
                             layoutDropdown:Set(layouts[currentLayout], true)
                             self:Notify({ title = "Bar layout", content = "The selected bar layout could not be applied right now." })
                         end
@@ -5295,14 +5295,14 @@ function a17:_buildSettingsUI()
         name = "Show profile", description = "Shows your account profile in the active bar layout.", value = self.settings.showProfile,
         callback = function(value)
             self.settings.showProfile = value == true
-            a14.reflowProfile(self); a14.setProfileShown(self, self.settings.showProfile, a14.settleInfo); self:SaveSettings()
+            sidebar.reflowProfile(self); sidebar.setProfileShown(self, self.settings.showProfile, sidebar.settleInfo); self:SaveSettings()
         end,
     })
     appearance:CreateToggle({
         name = "Reveal full username", description = "Shows your full Roblox username in the sidebar instead of the masked version.", value = self.settings.showFullUsername,
         callback = function(value)
             self.settings.showFullUsername = value == true
-            a14.refreshProfileName(self); self:SaveSettings()
+            sidebar.refreshProfileName(self); self:SaveSettings()
         end,
     })
 
@@ -5314,7 +5314,7 @@ function a17:_buildSettingsUI()
     performance:CreateSection({ name = "Performance" })
     performance:CreateToggle({
         name = "Haptics", description = "A subtle tap as you interact, on devices that support haptics.", value = self.settings.haptics,
-        callback = function(value) self.settings.haptics = value; a9.setEnabled(value); self:SaveSettings() end,
+        callback = function(value) self.settings.haptics = value; haptic.setEnabled(value); self:SaveSettings() end,
     })
 
     appearance:CreateSection({ name = "Window" })
@@ -5324,8 +5324,8 @@ function a17:_buildSettingsUI()
     })
     appearance:CreateButton({
         name = "Reset Window Position", callback = function()
-            a15.tweenService:Create(self.main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
-            a15.tweenService:Create(self.drag.drag, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, self.size.Y.Offset / 2 + 15) }):Play()
+            size.tweenService:Create(self.main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
+            size.tweenService:Create(self.drag.drag, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, self.size.Y.Offset / 2 + 15) }):Play()
         end,
     })
 
@@ -5338,108 +5338,108 @@ function a17:_buildSettingsUI()
             if selected and not table.find(configs, selected) then selected = configs[1] end
             if selected then configDropdown:Set(selected, true) end
         end
-        configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = a6.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
+        configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = icons.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
         configName = persistence:CreateInput({ name = "Configuration Name", description = "Name a new configuration, or leave blank to overwrite the selected one.", placeholder = "e.g. PvP Loadout", clearOnFocus = false })
         local group = persistence:CreateGroup()
-        group:CreateButton({ name = "Save", icon = a6.icons.config, callback = function()
+        group:CreateButton({ name = "Save", icon = icons.icons.config, callback = function()
             local name = configName.value; if name == "" then name = selected end
-            if not name or name == "" then self:Toast({ title = a7.resolve("Name your configuration first") }); return end
-            if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = a7.resolve("Saved configuration"), subtitle = name, icon = a6.icons.config }) else self:Toast({ title = a7.resolve("Couldn't save configuration"), subtitle = name }) end
+            if not name or name == "" then self:Toast({ title = locale.resolve("Name your configuration first") }); return end
+            if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = locale.resolve("Saved configuration"), subtitle = name, icon = icons.icons.config }) else self:Toast({ title = locale.resolve("Couldn't save configuration"), subtitle = name }) end
         end })
         group:CreateButton({ name = "Load", callback = function()
-            if not selected or selected == "" then self:Toast({ title = a7.resolve("Pick a configuration to load") }); return end
-            if self:_applyNamedConfig(selected) then self:Toast({ title = a7.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = a7.resolve("Couldn't load configuration"), subtitle = selected }) end
+            if not selected or selected == "" then self:Toast({ title = locale.resolve("Pick a configuration to load") }); return end
+            if self:_applyNamedConfig(selected) then self:Toast({ title = locale.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = locale.resolve("Couldn't load configuration"), subtitle = selected }) end
         end })
         group:CreateButton({ name = "Delete", callback = function()
             local name = selected
-            if not name or name == "" then self:Toast({ title = a7.resolve("Pick a configuration to delete") }); return end
-            if self:DeleteConfig(name) then refresh(); self:Toast({ title = a7.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = a7.resolve("Couldn't delete configuration"), subtitle = name }) end
+            if not name or name == "" then self:Toast({ title = locale.resolve("Pick a configuration to delete") }); return end
+            if self:DeleteConfig(name) then refresh(); self:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name }) end
         end })
     end
 end
 
-function a17:SetProfile(a203)
-    self.profileText = a203
-    a14.setSubtitle(self, a203)
+function Window:SetProfile(Window)
+    self.profileText = Window
+    sidebar.setSubtitle(self, Window)
 end
 
-function a17:SaveSettings()
+function Window:SaveSettings()
     return a5.saveSettings(self)
 end
 
-function a17:LoadSettings()
+function Window:LoadSettings()
     return a5.loadSettings(self)
 end
 
-function a17:_roundCorners(a204, a205)
+function Window:_roundCorners(Window, a205)
     if not a205 or not a38 then
         return self:Create("UICorner", {
-            Parent = a204,
+            Parent = Window,
         }, { CornerRadius = "CornerRoundness" })
     end
 
-    local a206 = { Parent = a204 }
+    local props = { Parent = Window }
     local a207 = {}
-    for _, a208 in a37 do
-        a206[a208] = UDim.new(0, 0)
+    for _, key in a37 do
+        props[key] = UDim.new(0, 0)
     end
-    for _, a209 in a205 do
-        a206[a209] = nil         a207[a209] = "CornerRoundness"
+    for _, corner in a205 do
+        props[corner] = nil         a207[corner] = "CornerRoundness"
     end
 
-    return self:Create("UICorner", a206, a207)
+    return self:Create("UICorner", props, a207)
 end
 
-function a17:_setElementLocked(element, a210, a211)
-    a210 = a210 == true
+function Window:_setElementLocked(element, Window, Text)
+    Window = Window == true
                 local a212 = element.locked == true
-    if a212 == a210 and not (a210 and a211) then
+    if a212 == Window and not (Window and Text) then
         return
     end
-    element.locked = a210
+    element.locked = Window
 
     if not element.lockScrim then
         self:_buildLockScrim(element)
     end
 
-    local a213 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local Create = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-    if a210 then
+    if Window then
         element.lockScrim.Visible = true
     end
-    a15.tweenService
-        :Create(element.lockScrim, a213, {
-            BackgroundTransparency = if a210 then a28 else 1,
+    size.tweenService
+        :Create(element.lockScrim, Create, {
+            BackgroundTransparency = if Window then a28 else 1,
         })
         :Play()
-    if not a210 then
-        task.delay(a213.Time, function()
+    if not Window then
+        task.delay(Create.Time, function()
             if not element.locked and element.lockScrim and element.lockScrim.Parent then
                 element.lockScrim.Visible = false             end
         end)
     end
 
-        local a214 = element.descriptor
-    if not a214 then
+        local element = element.descriptor
+    if not element then
         return
     end
 
-    if a210 then
-                        element._descriptionBefore = element._descriptionBefore or a214.titleLabel.Text
-        a214.titleLabel.Text = a7.resolve(a211 or "This element is locked.")
+    if Window then
+                        element._descriptionBefore = element._descriptionBefore or element.titleLabel.Text
+        element.titleLabel.Text = locale.resolve(Text or "This element is locked.")
     elseif element._descriptionBefore then
-        a214.titleLabel.Text = element._descriptionBefore
+        element.titleLabel.Text = element._descriptionBefore
         element._descriptionBefore = nil
     end
 
-    a15.tweenService
-        :Create(a214.titleLabel, a213, {
-            TextTransparency = if a210 then a29 else 0.7,
+    size.tweenService
+        :Create(element.titleLabel, Create, {
+            TextTransparency = if Window then a29 else 0.7,
         })
         :Play()
 end
 
-function a17:_buildLockScrim(element)
+function Window:_buildLockScrim(element)
     element.lockScrim = self:Create("TextButton", {
         Name = "ElementLock",
         Active = true,
@@ -5448,28 +5448,28 @@ function a17:_buildLockScrim(element)
         BorderSizePixel = 0,
         Text = "",
         TextTransparency = 1,
-        ZIndex = a6.zIndex.elementLock,
+        ZIndex = icons.zIndex.elementLock,
         Visible = false,
 
                         BackgroundTransparency = 1,
         Parent = element.main,
-    }, { BackgroundColor3 = { "WindowColor", a45 } })
+    }, { BackgroundColor3 = { "WindowColor", BackgroundColor3 } })
 
     self:Create("UICorner", {
         Parent = element.lockScrim,
     }, { CornerRadius = "ElementCornerRadius" })
 end
 
-function a17:_setLayoutMode(a215)
+function Window:_setLayoutMode(Window)
     if self.unloaded then
         return false
     end
     if self.animating or self.minimised or (self.hidden and self.hasShownOnce) then
         return false
     end
-    local a216 = a11.get(a215)
-    local a217 = a42(self.layout)
-    if not a216 or a215 == a217 then
+    local implementation = isSidebar.get(Window)
+    local newLayout = initialLayout(self.layout)
+    if not implementation or Window == newLayout then
         return false
     end
     if self._layoutTransitioning then
@@ -5478,12 +5478,12 @@ function a17:_setLayoutMode(a215)
     self._layoutTransitioning = true
     self._layoutTransitionId = (self._layoutTransitionId or 0) + 1
     local a218 = self._layoutTransitionId
-    local a219 = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    self:_fadeSurfaces(false, a219)
+    local tab = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    self:_fadeSurfaces(false, tab)
     self:_fadeSelectedElementsOut()
     for _, tab in self.tabs do
         if not tab.neglectSelector and tab.topbarItem then
-            tab:_applyVisual("hidden", a219)
+            tab:_applyVisual("hidden", tab)
         end
     end
     task.wait(0.12)
@@ -5492,30 +5492,30 @@ function a17:_setLayoutMode(a215)
         return false
     end
     if self._searching then
-        a13.close(self, { showTabs = true, jumpTo = self.selectedTab and self.selectedTab.tabPage })
+        search.close(self, { showTabs = true, jumpTo = self.selectedTab and self.selectedTab.tabPage })
     end
-    local a220 = a42(self.layout)
-    self.layout = a216
-    self.settings.layoutMode = a215
+    local a220 = initialLayout(self.layout)
+    self.layout = implementation
+    self.settings.layoutMode = Window
     if self.sidebar then
         self:DestroySubtree(self.sidebar)
         self.sidebar = nil
     elseif self.tabList then
         self:DestroySubtree(self.tabList)
     end
-    local implementation = a11.implementation(a215)
-    implementation.Build(self, a216)
-    if a216.mode == "sidebar" then
+    local implementation = isSidebar.implementation(Window)
+    implementation.Build(self, implementation)
+    if implementation.mode == "sidebar" then
         if not self.elementsCorner then
-            self.elementsCorner = self:_roundCorners(self.elements, a216.cardCorners)
+            self.elementsCorner = self:_roundCorners(self.elements, implementation.cardCorners)
             self.elementsStroke = self:Create("UIStroke", {
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
                 Transparency = 1,
                 Parent = self.elements,
             }, { Color = "SurfaceStroke" })
             self:Create("UIGradient", {
-                Rotation = a216.cardStrokeRotation,
-                Transparency = a216.cardStrokeTransparency,
+                Rotation = implementation.cardStrokeRotation,
+                Transparency = implementation.cardStrokeTransparency,
                 Parent = self.elementsStroke,
             })
         end
@@ -5526,11 +5526,11 @@ function a17:_setLayoutMode(a215)
         if self.elementsStroke then
             self.elementsStroke.Transparency = 1
         end
-        self.elements.Size = UDim2.new(1, 0, 1, -a216.chromeHeight)
-        self.bottomFade.Size = UDim2.new(1, 0, a216.fadeSize.Y.Scale, a216.fadeSize.Y.Offset)
+        self.elements.Size = UDim2.new(1, 0, 1, -implementation.chromeHeight)
+        self.bottomFade.Size = UDim2.new(1, 0, implementation.fadeSize.Y.Scale, implementation.fadeSize.Y.Offset)
     end
-    implementation.ApplyWidth(self, a11.railWidthFor(a216, self.size.X.Offset))
-    self.elementsLayout.FillDirection = a216.pageDirection
+    implementation.ApplyWidth(self, isSidebar.railWidthFor(implementation, self.size.X.Offset))
+    self.elementsLayout.FillDirection = implementation.pageDirection
 
     for _, tab in self.tabs do
         if not tab.neglectSelector then
@@ -5544,17 +5544,17 @@ function a17:_setLayoutMode(a215)
         self:_jumpTo(self.selectedTab.tabPage)
         self.selectedTab:_applyVisual("selected")
     end
-    self:_fadeSurfaces(true, a219)
-    self:_setTabSectionsShown(true, a219)
+    self:_fadeSurfaces(true, tab)
+    self:_setTabSectionsShown(true, tab)
     task.spawn(function()
         if not self.unloaded and self._layoutTransitionId == a218 then
             self:_revealElements(0.02, 0.5, a218)
         end
     end)
     self._layoutTransitioning = false
-    return a220 ~= a215
+    return a220 ~= Window
 end
-function a17:_applySettingsLayout(isSettings)
+function Window:_applySettingsLayout(isSettings)
     self._settingsLayoutActive = isSettings == true
     if self.tabList then
         self.tabList.Visible = not self.hidden and not self.minimised
@@ -5574,7 +5574,7 @@ function a17:_applySettingsLayout(isSettings)
     end
 end
 
-function a17:_setSettingsMode(active)
+function Window:_setSettingsMode(active)
     active = active == true
     self._settingsMode = active
     if active and self._previousTab == nil and self.selectedTab and not self.selectedTab._isSettingsTab then
@@ -5589,7 +5589,7 @@ function a17:_setSettingsMode(active)
     self:_updateWindowTitle()
 end
 
-function a17:_updateWindowTitle()
+function Window:_updateWindowTitle()
     if not self.title then return end
     local text = self.name
     if self._settingsMode then
@@ -5600,12 +5600,12 @@ function a17:_updateWindowTitle()
             text ..= " • General"
         end
     end
-    self.title.Text = a7.resolve(text)
+    self.title.Text = locale.resolve(text)
 end
 
-function a17:_setContentVisible(a245)
-    self.elements.Visible = a245
-    if not a245 then
+function Window:_setContentVisible(Window)
+    self.elements.Visible = Window
+    if not Window then
         self.tabList.Visible = false
         if self.sidebar then
             self.sidebar.Visible = false
@@ -5616,35 +5616,35 @@ function a17:_setContentVisible(a245)
     self:_applySettingsLayout(self._settingsMode)
 end
 
-function a17:_fadeSurfaces(a246, a247)
-    local a248 = {
-        [self.windowShadow] = { Transparency = if a246 then 0.6 else 1 },
-        [self.windowStroke] = { Transparency = if a246 then 0.95 else 1 },
-        [self.bottomFade] = { BackgroundTransparency = if a246 then 0 else 1 },
+function Window:_fadeSurfaces(Window, Create)
+    local targets = {
+        [self.windowShadow] = { Transparency = if Window then 0.6 else 1 },
+        [self.windowStroke] = { Transparency = if Window then 0.95 else 1 },
+        [self.bottomFade] = { BackgroundTransparency = if Window then 0 else 1 },
     }
 
     if self.elementsStroke then
-        a248[self.elements] = {
-            BackgroundTransparency = if a246 then self.layout.cardTransparency else 1,
+        targets[self.elements] = {
+            BackgroundTransparency = if Window then self.layout.cardTransparency else 1,
         }
-        a248[self.elementsStroke] = { Transparency = if a246 then 0 else 1 }
+        targets[self.elementsStroke] = { Transparency = if Window then 0 else 1 }
     end
 
-    for a249, a250 in a248 do
-        if a247 then
-            a15.tweenService:Create(a249, a247, a250):Play()
+    for tweenService, instance in targets do
+        if Create then
+            size.tweenService:Create(tweenService, Create, instance):Play()
         else
-            for a251, a252 in a250 do
-                a249[a251] = a252
+            for prop, prop in instance do
+                tweenService[prop] = prop
             end
         end
     end
 
-    a14.reflowProfile(self)
-    a14.setProfileShown(self, a246, a247)
+    sidebar.reflowProfile(self)
+    sidebar.setProfileShown(self, Window, Create)
 end
 
-function a17:_fadeSelectedElementsOut()
+function Window:_fadeSelectedElementsOut()
     if self.selectedTab then
         for _, element in ipairs(self.selectedTab.elements) do
             element:_setShown(false, true)
@@ -5652,12 +5652,12 @@ function a17:_fadeSelectedElementsOut()
     end
 end
 
-function a17:_revealElements(a253, a254, a255)
+function Window:_revealElements(Window, maxReveals, stepDelay)
     local function a256()
         return not self.unloaded
             and not self.hidden
             and not self.minimised
-            and (a255 == nil or self._layoutTransitionId == a255)
+            and (stepDelay == nil or self._layoutTransitionId == stepDelay)
     end
 
     if not a256() then
@@ -5679,23 +5679,23 @@ function a17:_revealElements(a253, a254, a255)
         return
     end
 
-    local a257 = tab.tabPage
-    local a258 = a257.AbsolutePosition.Y
-    local a259 = a258 + a257.AbsoluteWindowSize.Y
+    local viewTop = tab.tabPage
+    local viewBottom = viewTop.AbsolutePosition.Y
+    local main = viewBottom + viewTop.AbsoluteWindowSize.Y
 
-    local a260 = math.floor(a254 / a253)
-    local a261 = 0
+    local revealed = math.floor(maxReveals / Window)
+    local revealed = 0
     for _, element in ipairs(tab.elements) do
         if not a256() then
             return
         end
-        local a262 = element.main.AbsolutePosition.Y
-        local a263 = (a262 + element.main.AbsoluteSize.Y) > a258 and a262 < a259
+        local isVisible = element.main.AbsolutePosition.Y
+        local a263 = (isVisible + element.main.AbsoluteSize.Y) > viewBottom and isVisible < main
         if a263 then
             element:_setShown(true, true)
-            a261 += 1
-            if a261 <= a260 then
-                task.wait(a253)
+            revealed += 1
+            if revealed <= revealed then
+                task.wait(Window)
                 if not a256() then
                     return
                 end
@@ -5705,7 +5705,7 @@ function a17:_revealElements(a253, a254, a255)
     end
 end
 
-function a17:Show()
+function Window:Show()
         if self.animating or not self.hidden then
         return
     end
@@ -5717,14 +5717,14 @@ function a17:Show()
         self._autoLoaded = true
         local ok, a264 = pcall(self.Load, self)
         if not ok then
-            a8.warn("Astra: Failed to load configuration - " .. tostring(a264))
+            log.warn("Astra: Failed to load configuration - " .. tostring(a264))
         end
     end
 
     self.hidden = false
     self.minimised = false
     self._collapsedShown = false
-    a12.setCollapsedShown(self, false)
+    chrome.setCollapsedShown(self, false)
 
         if self._themeRefreshPending then
         self._themeRefreshPending = false
@@ -5747,10 +5747,10 @@ function a17:Show()
     end
 end
 
-function a17:_quickRestore()
-    local a265 = self:_clampedPosition(self._restorePosition or UDim2.new(0.5, 0, 0.5, 0))
-    self._restorePosition = a265
-    local a266 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+function Window:_quickRestore()
+    local tweenService = self:_clampedPosition(self._restorePosition or UDim2.new(0.5, 0, 0.5, 0))
+    self._restorePosition = tweenService
+    local state = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
     self.main.ClipsDescendants = true
     self.main.BackgroundTransparency = 0
@@ -5778,14 +5778,14 @@ function a17:_quickRestore()
     if self.subtitle then
         self.subtitle.TextTransparency = 0.7
     end
-    for _, a267 in ipairs(self.actionContainer:GetChildren()) do
-        if a267:IsA("Frame") and a267.ImageLabel then
-            a267.ImageLabel.ImageTransparency = 0.6
+    for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
+        if actionFrame:IsA("Frame") and actionFrame.ImageLabel then
+            actionFrame.ImageLabel.ImageTransparency = 0.6
         end
     end
 
-    local a268 = a15.tweenService:Create(self.main, a266, { Size = self.size, Position = a265 })
-    a268.Completed:Connect(function()
+    local tween = size.tweenService:Create(self.main, state, { Size = self.size, Position = tweenService })
+    tween.Completed:Connect(function()
         if self.hidden or self.unloaded then
             return
         end
@@ -5795,12 +5795,12 @@ function a17:_quickRestore()
         self.drag.drag.Visible = false
         self.animating = false
         self._revealing = false
-        a48(self, true)
+        updateToastPosition(self, true)
     end)
-    a268:Play()
-    a15.tweenService:Create(self.windowCorner, a266, { CornerRadius = self.theme.CornerRoundness }):Play()
+    tween:Play()
+    size.tweenService:Create(self.windowCorner, state, { CornerRadius = self.theme.CornerRoundness }):Play()
 end
-function a17:_firstShow()
+function Window:_firstShow()
     self.drag.drag.Visible = false
     self.main.Visible = true
     self.main.ClipsDescendants = true
@@ -5817,7 +5817,7 @@ function a17:_firstShow()
             element:_setShown(true, false)
         end
     end
-    local a269 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local state = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     if self.topbarIcon then
         self.topbarIcon.ImageTransparency = 0
     end
@@ -5827,17 +5827,17 @@ function a17:_firstShow()
     if self.subtitle then
         self.subtitle.TextTransparency = 0.7
     end
-    for _, a270 in ipairs(self.actionContainer:GetChildren()) do
-        if a270:IsA("Frame") and a270.ImageLabel then
-            a270.ImageLabel.ImageTransparency = 0.6
+    for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
+        if actionFrame:IsA("Frame") and actionFrame.ImageLabel then
+            actionFrame.ImageLabel.ImageTransparency = 0.6
         end
     end
 
-    local a271 = a15.tweenService:Create(self.main, a269, {
+    local tween = size.tweenService:Create(self.main, state, {
         BackgroundTransparency = 0,
         Size = self.size,
     })
-    a271.Completed:Connect(function()
+    tween.Completed:Connect(function()
         if self.unloaded then
             return
         end
@@ -5847,41 +5847,41 @@ function a17:_firstShow()
         self.animating = false
         self._revealing = false
     end)
-    a271:Play()
-    a15.tweenService:Create(self.windowCorner, a269, { CornerRadius = self.theme.CornerRoundness }):Play()
+    tween:Play()
+    size.tweenService:Create(self.windowCorner, state, { CornerRadius = self.theme.CornerRoundness }):Play()
 
-    local a272 = a15.localPlayer
-    if a272 and self.settings.welcomeToast and a12.isNewUser() then
+    local title = size.localPlayer
+    if title and self.settings.welcomeToast and chrome.isNewUser() then
         self:Toast({
-            title = a272.DisplayName,
-            subtitle = a7.resolve("Signed in as"),
+            title = title.DisplayName,
+            subtitle = locale.resolve("Signed in as"),
             subtitleAbove = true,
-            avatar = a272.UserId,
+            avatar = title.UserId,
             minWidth = 220,
         })
     end
 end
 
-function a17:GetPath()
+function Window:GetPath()
     return a5.getPath(self)
 end
 
-function a17:Save(a273)
-    if a273 ~= nil and (type(a273) ~= "string" or a273 == "") then
+function Window:Save(Window)
+    if Window ~= nil and (type(Window) ~= "string" or Window == "") then
         return false
     end
-    return a5.save(self, a273)
+    return a5.save(self, Window)
 end
 
-function a17:Load(a274)
-    if a274 ~= nil and (type(a274) ~= "string" or a274 == "") then
+function Window:Load(Window)
+    if Window ~= nil and (type(Window) ~= "string" or Window == "") then
         return false
     end
-    return a5.load(self, a274)
+    return a5.load(self, Window)
 end
 
-function a17:_applyNamedConfig(a275)
-    if not self:Load(a275) then
+function Window:_applyNamedConfig(Window)
+    if not self:Load(Window) then
         return false
     end
             local _, a276 = a5.getPath(self)
@@ -5890,126 +5890,126 @@ function a17:_applyNamedConfig(a275)
     return true
 end
 
-function a17:ListConfigs()
+function Window:ListConfigs()
     return a5.list(self)
 end
 
-function a17:DeleteConfig(a277)
-    return a5.delete(self, a277)
+function Window:DeleteConfig(Window)
+    return a5.delete(self, Window)
 end
 
-function a17:Get(a278)
-    local a279 = self.controls[a278]
-    return a279 and a279.value
+function Window:Get(Window)
+    local control = self.controls[Window]
+    return control and control.value
 end
 
-function a17:Set(a280, a281)
-    local a282 = self.controls[a280]
-    if not a282 then
+function Window:Set(Window, Set)
+    local control = self.controls[Window]
+    if not control then
         return false
     end
-    a282:Set(a281)
+    control:Set(Set)
     return true
 end
 
-function a17:_jumpTo(a283)
-    if not a283 then
+function Window:_jumpTo(Window)
+    if not Window then
         return
     end
-    if a283.Parent == self.elements then
-        self.elementsLayout:JumpTo(a283)
+    if Window.Parent == self.elements then
+        self.elementsLayout:JumpTo(Window)
     end
 end
 
-function a17:Navigate(tab)
+function Window:Navigate(tab)
     if tab == nil then
         return
     end
 
-    local a284
-    for _, a285 in self.tabs do
-                if a285 == tab or a285.name == tab or a285.tabPage == tab then
-            a284 = a285
+    local found
+    for _, tab in self.tabs do
+                if tab == tab or tab.name == tab or tab.tabPage == tab then
+            found = tab
             break
         end
     end
 
-    if not a284 then
+    if not found then
         return
     end
-    a284:Select()
+    found:Select()
 end
 
-function a17:Create(a286, a287, a288)
-    assert(typeof(a286) == "string", "Invalid argument #1 (string expected)")
-    local a289 = Instance.new(a286)
+function Window:Create(Window, Create, className)
+    assert(typeof(Window) == "string", "Invalid argument #1 (string expected)")
+    local instance = Instance.new(Window)
 
-            if a288 and self.theme then
-        for a290, a291 in a288 do
-            a289[a290] = (
-                if typeof(a291) == "table" then a291[2](self.theme[a291[1]]) else self.theme[a291]
+            if className and self.theme then
+        for prop, prop in className do
+            instance[prop] = (
+                if typeof(prop) == "table" then prop[2](self.theme[prop[1]]) else self.theme[prop]
             )
         end
 
-        self.themeProperties[a289] = a288
+        self.themeProperties[instance] = className
     end
 
-    if a287 then
-        for a292, a293 in a287 do
-            if a7.isToken(a293) then
-                self:_bindLocale(a289, a292, a7.sourceOf(a293))
+    if Create then
+        for instance, prop in Create do
+            if locale.isToken(prop) then
+                self:_bindLocale(instance, instance, locale.sourceOf(prop))
             else
-                a2.assign(a289, a292, a293)
+                image.assign(instance, instance, prop)
             end
         end
     end
 
-    table.insert(self.instances, a289)
-    return a289
+    table.insert(self.instances, instance)
+    return instance
 end
 
-function a17:_bindLocale(a294, a295, a296)
-    a294[a295] = a7.resolve(a296)
+function Window:_bindLocale(Window, prop, instance)
+    Window[prop] = locale.resolve(instance)
 
-    local a297 = self.localeProperties[a294]
-    if not a297 then
-        a297 = {}
-        self.localeProperties[a294] = a297
+    local bindings = self.localeProperties[Window]
+    if not bindings then
+        bindings = {}
+        self.localeProperties[Window] = bindings
     end
-    a297[a295] = a296
+    bindings[prop] = instance
 end
 
-function a17:SetLocale(a298)
-    a7.setActive(a298)
-    for a299, a300 in self.localeProperties do
-        for a301, a302 in a300 do
-            a299[a301] = a7.resolve(a302)
+function Window:SetLocale(Window)
+    locale.setActive(Window)
+    for instance, instance in self.localeProperties do
+        for prop, prop in instance do
+            instance[prop] = locale.resolve(prop)
         end
     end
 end
 
-function a17:SetTranslator(a303)
-    a7.translator = a303
+function Window:SetTranslator(Window)
+    locale.translator = Window
 end
 
-function a17:RegisterTranslations(a304)
-    a7.register(a304)
-    self:SetLocale(a7.current)
+function Window:RegisterTranslations(Window)
+    locale.register(Window)
+    self:SetLocale(locale.current)
 end
 
-function a17:CreateGlow(a305, a306, a307, a308)
-    local a309 = {
-        BlurRadius = UDim.new(0, a307),
-        Transparency = a308,
+function Window:CreateGlow(Window, CreateGlow, parent, color)
+    local props = {
+        BlurRadius = UDim.new(0, parent),
+        Transparency = color,
         ZIndex = -1,
 
-        Parent = a305,
+        Parent = Window,
     }
 
-    if typeof(a306) == "string" then
-        return self:Create("UIShadow", a309, {
+    if typeof(CreateGlow) == "string" then
+        return self:Create("UIShadow", props, {
             Color = {
-                a306,
+                CreateGlow,
                 function(a310)
                     return if typeof(a310) == "ColorSequence" then a310.Keypoints[1].Value else a310
                 end,
@@ -6017,28 +6017,28 @@ function a17:CreateGlow(a305, a306, a307, a308)
         })
     end
 
-    a309.Color = a306
-    return self:Create("UIShadow", a309)
+    props.Color = CreateGlow
+    return self:Create("UIShadow", props)
 end
 
-function a17:_flashResult(element, ok)
-    local a311 = element.box
-    if not a311 then
+function Window:_flashResult(element, ok)
+    local tweenService = element.box
+    if not tweenService then
         return
     end
-    local a312 = element.glow
-    local a313 = element.boxStroke
-    local a314 = ok and a6.accent.on or self.theme.ErrorColor
-    local a315 = ok and a6.accent.onStroke or self.theme.ErrorStrokeColor
-    local a316 = TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local a317 = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local tweenService = element.glow
+    local tweenService = element.boxStroke
+    local box = ok and icons.accent.on or self.theme.ErrorColor
+    local boxStroke = ok and icons.accent.onStroke or self.theme.ErrorStrokeColor
+    local Create = TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local Create = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-        a15.tweenService:Create(a311, a316, { BackgroundColor3 = a314 }):Play()
-    if a313 then
-        a15.tweenService:Create(a313, a316, { Color = a315, Transparency = 0.4 }):Play()
+        size.tweenService:Create(tweenService, Create, { BackgroundColor3 = box }):Play()
+    if tweenService then
+        size.tweenService:Create(tweenService, Create, { Color = boxStroke, Transparency = 0.4 }):Play()
     end
-    if a312 then
-        a15.tweenService:Create(a312, a316, { Color = a315, Transparency = 0.6 }):Play()
+    if tweenService then
+        size.tweenService:Create(tweenService, Create, { Color = boxStroke, Transparency = 0.6 }):Play()
     end
 
         element._flashToken = (element._flashToken or 0) + 1
@@ -6047,74 +6047,74 @@ function a17:_flashResult(element, ok)
         if element._flashToken ~= a318 then
             return
         end
-        a15.tweenService:Create(a311, a317, { BackgroundColor3 = self.theme.FieldBackground }):Play()
-        if a313 then
-            a15.tweenService
-                :Create(a313, a317, { Color = self.theme.SurfaceStroke, Transparency = 0.85 })
+        size.tweenService:Create(tweenService, Create, { BackgroundColor3 = self.theme.FieldBackground }):Play()
+        if tweenService then
+            size.tweenService
+                :Create(tweenService, Create, { Color = self.theme.SurfaceStroke, Transparency = 0.85 })
                 :Play()
         end
-        if a312 then
-            a15.tweenService
-                :Create(a312, a317, { Color = self.theme.FieldGlow, Transparency = element._glowIdle or 1 })
+        if tweenService then
+            size.tweenService
+                :Create(tweenService, Create, { Color = self.theme.FieldGlow, Transparency = element._glowIdle or 1 })
                 :Play()
         end
     end)
 end
 
-function a17:CreateHoverOverlay(a319)
-    local a320 = self:Create("Frame", {
+function Window:CreateHoverOverlay(Window)
+    local Parent = self:Create("Frame", {
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
         BorderSizePixel = 0,
         ZIndex = 1,
 
-        Parent = a319,
+        Parent = Window,
     })
 
     self:Create("UICorner", {
-        Parent = a320,
+        Parent = Parent,
     }, { CornerRadius = "ElementCornerRadius" })
 
-    return a320
+    return Parent
 end
 
-function a17:_wireElementHover(element)
-    local a321 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local a322 = self.theme
+function Window:_wireElementHover(element)
+    local hoverTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local Transparency = self.theme
 
     self:ConnectFor(element, element.main.MouseEnter, function()
         if not self:_interactive() then
             return         end
-        a15.tweenService
+        size.tweenService
             :Create(
                 element.stroke,
-                a321,
-                { Transparency = a322.ElementStrokeHoverTransparency, Color = a322.ElementStrokeHover }
+                hoverTween,
+                { Transparency = Transparency.ElementStrokeHoverTransparency, Color = Transparency.ElementStrokeHover }
             )
             :Play()
-        a15.tweenService:Create(element.title, a321, { TextColor3 = a322.ElementTextHoverColor }):Play()
+        size.tweenService:Create(element.title, hoverTween, { TextColor3 = Transparency.ElementTextHoverColor }):Play()
         if element.hoverOverlay then
-            a15.tweenService:Create(element.hoverOverlay, a321, { BackgroundTransparency = 0.97 }):Play()
+            size.tweenService:Create(element.hoverOverlay, hoverTween, { BackgroundTransparency = 0.97 }):Play()
         end
     end)
 
     self:ConnectFor(element, element.main.MouseLeave, function()
-        a15.tweenService
+        size.tweenService
             :Create(
                 element.stroke,
-                a321,
-                { Transparency = a322.ElementStrokeTransparency, Color = a322.ElementStroke }
+                hoverTween,
+                { Transparency = Transparency.ElementStrokeTransparency, Color = Transparency.ElementStroke }
             )
             :Play()
-        a15.tweenService:Create(element.title, a321, { TextColor3 = a322.ContentColor }):Play()
+        size.tweenService:Create(element.title, hoverTween, { TextColor3 = Transparency.ContentColor }):Play()
         if element.hoverOverlay then
-            a15.tweenService:Create(element.hoverOverlay, a321, { BackgroundTransparency = 1 }):Play()
+            size.tweenService:Create(element.hoverOverlay, hoverTween, { BackgroundTransparency = 1 }):Play()
         end
     end)
 end
 
-function a17:_runGuarded(element, fn, ...)
+function Window:_runGuarded(element, fn, ...)
             if element.locked then
         return
     end
@@ -6129,32 +6129,32 @@ function a17:_runGuarded(element, fn, ...)
         end
         element._errored = true
 
-        local a325 = element.flashTarget or element.main
-        local a326 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-        a15.tweenService:Create(a325, a326, { BackgroundColor3 = self.theme.ErrorColor }):Play()
-        a15.tweenService:Create(element.stroke, a326, { Color = self.theme.ErrorStrokeColor }):Play()
+        local tweenService = element.flashTarget or element.main
+        local Create = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        size.tweenService:Create(tweenService, Create, { BackgroundColor3 = self.theme.ErrorColor }):Play()
+        size.tweenService:Create(element.stroke, Create, { Color = self.theme.ErrorStrokeColor }):Play()
                 if element.title then
-            element.title.Text = a7.resolve("Error, log recorded in console.")
+            element.title.Text = locale.resolve("Error, log recorded in console.")
         end
 
-        a8.warn(
+        log.warn(
             `Astra encountered an error, with the callback for a {element.__type} component named '{element.name}':`
         )
-        a8.print(a324)
+        log.print(a324)
 
         task.wait(1)
 
         if element.title then
-            element.title.Text = a7.resolve(element.name)
+            element.title.Text = locale.resolve(element.name)
         end
-        a15.tweenService
+        size.tweenService
             :Create(
-                a325,
+                tweenService,
                 TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
                 { BackgroundColor3 = Color3.fromRGB(255, 255, 255) }
             )
             :Play()
-        a15.tweenService
+        size.tweenService
             :Create(
                 element.stroke,
                 TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -6165,41 +6165,41 @@ function a17:_runGuarded(element, fn, ...)
     end)
 end
 
-function a17:StyleElementBody(a327)
+function Window:StyleElementBody(Window)
     self:Create("UIGradient", {
         Rotation = 270,
 
-        Parent = a327,
+        Parent = Window,
     }, { Color = "ElementGradient" })
 
     self:Create("UICorner", {
-        Parent = a327,
+        Parent = Window,
     }, { CornerRadius = "ElementCornerRadius" })
 
     return self:Create("UIStroke", {
         Transparency = 1,
 
-        Parent = a327,
+        Parent = Window,
     }, { Color = "ElementStroke", Transparency = "ElementStrokeTransparency" })
 end
 
-function a17:_buildCompactRow(a328, a329, a330)
-    local a331 = self:Create("Frame", {
-        Name = a329,
-        Size = UDim2.fromOffset(0, a27),
+function Window:_buildCompactRow(Window, Name, tab)
+    local stroke = self:Create("Frame", {
+        Name = Name,
+        Size = UDim2.fromOffset(0, Size),
         AutomaticSize = Enum.AutomaticSize.X,
         ClipsDescendants = true,         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
 
         BackgroundTransparency = 1,
-        Parent = a328.tabPage,
+        Parent = Window.tabPage,
     }, { BackgroundTransparency = "ElementTransparency" })
 
-    local a332 = self:StyleElementBody(a331)
+    local row = self:StyleElementBody(stroke)
 
         self:Create("UIFlexItem", {
         FlexMode = Enum.UIFlexMode.Fill,
-        Parent = a331,
+        Parent = stroke,
     })
 
         self:Create("UIListLayout", {
@@ -6207,239 +6207,239 @@ function a17:_buildCompactRow(a328, a329, a330)
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalFlex = Enum.UIFlexAlignment.Fill,
 
-        Parent = a331,
+        Parent = stroke,
     })
 
-        local a333 = self:Create("TextButton", {
+        local Parent = self:Create("TextButton", {
         Text = "",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BackgroundTransparency = 1,         AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, a27),
+        Size = UDim2.fromOffset(0, Size),
         BorderSizePixel = 0,
         TextTransparency = 1,
-        ZIndex = a330 or 1,
+        ZIndex = tab or 1,
 
-        Parent = a331,
+        Parent = stroke,
     })
 
     self:Create("UICorner", {
-        Parent = a333,
+        Parent = Parent,
     }, { CornerRadius = "ElementCornerRadius" })
 
-    return a331, a332, a333
+    return stroke, row, Parent
 end
 
-function a17:StyleElementPanel(a334)
+function Window:StyleElementPanel(Window)
     self:Create("UIGradient", {
         Rotation = 270,
 
-        Parent = a334,
+        Parent = Window,
     }, { Color = "ElementGradient" })
 
     self:Create("UICorner", {
-        Parent = a334,
+        Parent = Window,
     }, { CornerRadius = "ElementCornerRadius" })
 
-    local a335 = self:Create("UIStroke", {
+    local Parent = self:Create("UIStroke", {
         Color = Color3.fromRGB(255, 255, 255),
         Transparency = 1,
-        Parent = a334,
+        Parent = Window,
     })
 
     self:Create("UIGradient", {
         Rotation = 270,
 
-        Parent = a335,
+        Parent = Parent,
     }, { Color = "ElementStrokeGradient" })
 
-    return a335
+    return Parent
 end
 
-function a17:_reveal(a336, a337, a338, a339)
-    if not a336 then
+function Window:_reveal(Window, value, instance, targets)
+    if not Window then
         return
     end
-    local a340 = false
-    for a341, a342 in a337 do
-        if a336[a341] ~= a342 then
-            a340 = true
+    local needsUpdate = false
+    for instance, prop in value do
+        if Window[instance] ~= prop then
+            needsUpdate = true
             break
         end
     end
-    if not a340 then
+    if not needsUpdate then
         return
     end
-    if a338 then
-        a15.tweenService:Create(a336, a339 or a18, a337):Play()
+    if instance then
+        size.tweenService:Create(Window, targets or instance, value):Play()
     else
-        for a343, a344 in a337 do
-            a336[a343] = a344
+        for prop, prop in value do
+            Window[prop] = prop
         end
     end
 end
 
-function a17:_revealCommon(element, a345)
-    self:_reveal(element.stroke, { Transparency = self.theme.ElementStrokeTransparency }, a345)
-    self:_reveal(element.title, { TextTransparency = 0 }, a345)
-    self:_reveal(element.main, { BackgroundTransparency = self.theme.ElementTransparency or 0 }, a345)
+function Window:_revealCommon(element, Window)
+    self:_reveal(element.stroke, { Transparency = self.theme.ElementStrokeTransparency }, Window)
+    self:_reveal(element.title, { TextTransparency = 0 }, Window)
+    self:_reveal(element.main, { BackgroundTransparency = self.theme.ElementTransparency or 0 }, Window)
     if element.iconLabel then
-        self:_reveal(element.iconLabel, { ImageTransparency = 0 }, a345)
+        self:_reveal(element.iconLabel, { ImageTransparency = 0 }, Window)
     end
     if element.descriptor then
-        self:_reveal(element.descriptor.titleLabel, { TextTransparency = 0.7 }, a345)
+        self:_reveal(element.descriptor.titleLabel, { TextTransparency = 0.7 }, Window)
     end
 end
 
-function a17:_hideCommon(element, a346)
-    self:_reveal(element.stroke, { Transparency = 1 }, a346)
-    self:_reveal(element.title, { TextTransparency = 1 }, a346)
-    self:_reveal(element.main, { BackgroundTransparency = 1 }, a346)
+function Window:_hideCommon(element, Window)
+    self:_reveal(element.stroke, { Transparency = 1 }, Window)
+    self:_reveal(element.title, { TextTransparency = 1 }, Window)
+    self:_reveal(element.main, { BackgroundTransparency = 1 }, Window)
     if element.iconLabel then
-        self:_reveal(element.iconLabel, { ImageTransparency = 1 }, a346)
+        self:_reveal(element.iconLabel, { ImageTransparency = 1 }, Window)
     end
     if element.descriptor then
-        self:_reveal(element.descriptor.titleLabel, { TextTransparency = 1 }, a346)
+        self:_reveal(element.descriptor.titleLabel, { TextTransparency = 1 }, Window)
     end
 end
 
-function a17:_collapsedRect()
-    local a347 = if self.showIconOnly then a21 else a20
+function Window:_collapsedRect()
+    local position = if self.showIconOnly then size else a20
         if self._collapsedPosition then
-        return self._collapsedPosition, a347
+        return self._collapsedPosition, position
     end
     local a348 = UDim2.new(
-        a22.X.Scale,
-        a22.X.Offset,
-        a22.Y.Scale,
-        a22.Y.Offset + a347.Y.Offset / 2
+        toastsTopWhenCollapsed.X.Scale,
+        toastsTopWhenCollapsed.X.Offset,
+        toastsTopWhenCollapsed.Y.Scale,
+        toastsTopWhenCollapsed.Y.Offset + position.Y.Offset / 2
     )
-    return a348, a347
+    return a348, position
 end
 
-function a17:_interactive()
+function Window:_interactive()
     return not self.animating and not self.hidden
 end
 
-function a17:_settled()
+function Window:_settled()
     return not self.hidden and not self._revealing
 end
 
-function a17:Connect(a349, a350)
-    local a351 = a349:Connect(a350)
+function Window:Connect(Window, Connect)
+    local a351 = Window:Connect(Connect)
     table.insert(self.connections, a351)
     return a351
 end
 
-function a17:ConnectFor(a352, a353, a354)
-    local a355 = self:Connect(a353, a354)
-    a352.connections = a352.connections or {}
-    table.insert(a352.connections, a355)
-    return a355
+function Window:ConnectFor(Window, ConnectFor, element)
+    local insert = self:Connect(ConnectFor, element)
+    Window.connections = Window.connections or {}
+    table.insert(Window.connections, insert)
+    return insert
 end
 
-function a17:Disconnect(a356)
-    if not a356 then
+function Window:Disconnect(Window)
+    if not Window then
         return
     end
-    local a357 = table.find(self.connections, a356)
+    local a357 = table.find(self.connections, Window)
     if a357 then
         table.remove(self.connections, a357)
     end
-    a356:Disconnect()
+    Window:Disconnect()
 end
 
-function a17:DestroySubtree(a358)
-    if not a358 then
+function Window:DestroySubtree(Window)
+    if not Window then
         return
     end
 
-    local a359 = { [a358] = true }
-    for _, a360 in a358:GetDescendants() do
-        a359[a360] = true
+    local descendants = { [Window] = true }
+    for _, desc in Window:GetDescendants() do
+        descendants[desc] = true
     end
     for i = #self.instances, 1, -1 do
-        local a361 = self.instances[i]
-        if a359[a361] then
+        local descendants = self.instances[i]
+        if descendants[descendants] then
             table.remove(self.instances, i)
-            self.themeProperties[a361] = nil
-            self.localeProperties[a361] = nil
+            self.themeProperties[descendants] = nil
+            self.localeProperties[descendants] = nil
         end
     end
 
-    a358:Destroy()
+    Window:Destroy()
 end
 
-function a17:DisconnectMany(a362, a363)
-    if not a363 or #a363 == 0 then
+function Window:DisconnectMany(Window, DisconnectMany)
+    if not DisconnectMany or #DisconnectMany == 0 then
         return
     end
 
-    local a364 = {}
-    for _, a365 in a363 do
-        a364[a365] = true
-        a365:Disconnect()
+    local removed = {}
+    for _, conn in DisconnectMany do
+        removed[conn] = true
+        conn:Disconnect()
     end
 
-    local function a366(a367)
-        if not a367 then
+    local function compact(conn)
+        if not conn then
             return
         end
-        local a368 = 0
-        for a369 = 1, #a367 do
-            local a370 = a367[a369]
-            if not a364[a370] then
-                a368 += 1
-                a367[a368] = a370
+        local write = 0
+        for list = 1, #conn do
+            local conn = conn[list]
+            if not removed[conn] then
+                write += 1
+                conn[write] = conn
             end
         end
-        for a371 = #a367, a368 + 1, -1 do
-            a367[a371] = nil
+        for a371 = #conn, write + 1, -1 do
+            conn[a371] = nil
         end
     end
 
-    a366(self.connections)
-    if a362 and a362 ~= self then
-        a366(a362.connections)
+    compact(self.connections)
+    if Window and Window ~= self then
+        compact(Window.connections)
     end
 end
 
-function a17:DestroySubtrees(a372)
-    if not a372 or #a372 == 0 then
+function Window:DestroySubtrees(Window)
+    if not Window or #Window == 0 then
         return
     end
 
-    local a373 = {}
-    for _, a374 in a372 do
-        a373[a374] = true
-        for _, a375 in a374:GetDescendants() do
-            a373[a375] = true
+    local descendants = {}
+    for _, root in Window do
+        descendants[root] = true
+        for _, desc in root:GetDescendants() do
+            descendants[desc] = true
         end
     end
 
-    local a376 = 0
-    for a377 = 1, #self.instances do
-        local a378 = self.instances[a377]
-        if a373[a378] then
-            self.themeProperties[a378] = nil
-            self.localeProperties[a378] = nil
+    local write = 0
+    for inst = 1, #self.instances do
+        local descendants = self.instances[inst]
+        if descendants[descendants] then
+            self.themeProperties[descendants] = nil
+            self.localeProperties[descendants] = nil
         else
-            a376 += 1
-            self.instances[a376] = a378
+            write += 1
+            self.instances[write] = descendants
         end
     end
-    for a379 = #self.instances, a376 + 1, -1 do
+    for a379 = #self.instances, write + 1, -1 do
         self.instances[a379] = nil
     end
 
-    for _, a380 in a372 do
-        a380:Destroy()
+    for _, root in Window do
+        root:Destroy()
     end
 end
 
-function a17:Unload()
+function Window:Unload()
     self.unloaded = true
-            a9.teardown()
-    a9.releaseContainer(self.screenGui)
+            haptic.teardown()
+    haptic.releaseContainer(self.screenGui)
     if self._liveTween then
         self._liveTween:Cancel()         self._liveTween = nil
     end
@@ -6458,36 +6458,36 @@ function a17:Unload()
     table.clear(self.tabs)
 end
 
-return a17
+return Window
 
 end)() end,
     [20] = function()local wax,script,require=ImportGlobals(20)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Button"
+local state = {}
+state.__index = state
+state.__type = "Button"
 
-local a2 = script.Parent.Parent.utilities
+local Button = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
+local Button = require(Button.Parent.core.state)
 local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.moveable)
-local a6 = require(a2.lockable)
-local a7 = require(a2.locale)
-local a8 = require(a2.HapticEngine)
-local a9 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local props = require(Button.moveable)
+local name = require(Button.lockable)
+local Text = require(Button.locale)
+local callback = require(Button.HapticEngine)
+local element = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-function a1.new(tab, a10)
-    a10 = if typeof(a10) == "table" then a10 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a10.name or a10.Name or "Button",
-        icon = tab.window:ResolveIcon(a10.icon or a10.Icon),
-        description = a10.description or a10.Description,
+        name = state.name or state.Name or "Button",
+        icon = tab.window:ResolveIcon(state.icon or state.Icon),
+        description = state.description or state.Description,
         compact = tab.compact or false,
-        callback = a10.callback or a10.Callback or function() end,
-    }, a1)
+        callback = state.callback or state.Callback or function() end,
+    }, state)
 
     if self.compact then
         self:_buildCompact()
@@ -6502,11 +6502,11 @@ function a1.new(tab, a10)
     return self
 end
 
-function a1:_runCallback()
+function state:_runCallback()
     self.window:_runGuarded(self, self.callback)
 end
 
-function a1:_buildFull()
+function state:_buildFull()
     self.main = self.window:Create("Frame", {
         Size = UDim2.new(1, -20, 0, 43),
         BorderSizePixel = 0,
@@ -6552,7 +6552,7 @@ function a1:_buildFull()
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a7.t(self.name),
+        Text = Text.t(self.name),
 
         Size = UDim2.fromOffset(250, 16),
         BorderSizePixel = 0,
@@ -6581,15 +6581,15 @@ function a1:_buildFull()
     self.window:_wireElementHover(self)
 
         self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
-        a8.click()
-        a3.tweenService
+        callback.click()
+        Button.tweenService
             :Create(
                 self.stroke,
-                a9,
+                element,
                 { Transparency = 1 }
             )
             :Play()
-        a3.tweenService
+        Button.tweenService
             :Create(
                 self.main,
                 TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
@@ -6605,24 +6605,24 @@ function a1:_buildFull()
             return
         end
 
-        a3.tweenService
+        Button.tweenService
             :Create(
                 self.main,
                 TweenInfo.new(0.25, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
                 { Size = UDim2.new(1, -20, 0, 43) }
             )
             :Play()
-        a3.tweenService
+        Button.tweenService
             :Create(
                 self.stroke,
-                a9,
+                element,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
     end)
 end
 
-function a1:_buildCompact()
+function state:_buildCompact()
     local window = self.window
 
     self.main, self.stroke, self.interact = window:_buildCompactRow(self.tab, self.name)
@@ -6658,7 +6658,7 @@ function a1:_buildCompact()
     end
 
     self.title = window:Create("TextLabel", {
-        Text = a7.t(self.name),
+        Text = Text.t(self.name),
         Size = UDim2.fromOffset(0, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -6680,11 +6680,11 @@ function a1:_buildCompact()
     self.window:_wireElementHover(self)
 
         self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
-        a8.click()
-        a3.tweenService
+        callback.click()
+        Button.tweenService
             :Create(
                 self.stroke,
-                a9,
+                element,
                 { Transparency = 1 }
             )
             :Play()
@@ -6697,53 +6697,53 @@ function a1:_buildCompact()
             return
         end
 
-        a3.tweenService
+        Button.tweenService
             :Create(
                 self.stroke,
-                a9,
+                element,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
     end)
 end
 
-function a1:_setShown(a11, a12)
-    if a11 then
+function state:_setShown(state, a12)
+    if state then
         self.window:_revealCommon(self, a12)
     else
         self.window:_hideCommon(self, a12)
     end
 end
 
-function a1:_minWidth()
+function state:_minWidth()
     local w = 32     if self.icon then
         w += 22     end
-        w += a4.textWidth(self.window.theme.Font, 16, a7.resolve(self.name))
+        w += a4.textWidth(self.window.theme.Font, 16, Text.resolve(self.name))
     return w
 end
 
-a5(a1)
-a6(a1)
+props(state)
+name(state)
 
-return a1
+return state
 
 end)() end,
     [21] = function()local wax,script,require=ImportGlobals(21)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "ColorPicker"
+local state = {}
+state.__index = state
+state.__type = "ColorPicker"
 
-local a2 = script.Parent.Parent.utilities
+local ColorPicker = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
+local ColorPicker = require(ColorPicker.Parent.core.state)
 local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.moveable)
-local a6 = require(a2.lockable)
-local a7 = require(a2.constants)
-local a8 = require(a2.locale)
-local a9 = require(a2.HapticEngine)
+local props = require(ColorPicker.moveable)
+local name = require(ColorPicker.lockable)
+local Image = require(ColorPicker.constants)
+local Text = require(ColorPicker.locale)
+local alpha = require(ColorPicker.HapticEngine)
 
-local a10 = ColorSequence.new({
+local Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
     ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
     ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
@@ -6753,48 +6753,48 @@ local a10 = ColorSequence.new({
     ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0)),
 })
 
-local a11 = 41
-local a12 = 52 local a13 = Vector2.new(150, 120)
-local a14 = 184 local a15 = 10
-local a16 = 214 local a17 = 10
-local a18 = 240 local a19 = 62 local a20 = 8
+local Size = 41
+local previewPos = 52 local frame = Vector2.new(150, 120)
+local Position = 184 local sat = 10
+local Position = 214 local isDragging = 10
+local previewSize = 240 local alphaFieldPos = 62 local new = 8
 local a21 = 400
 
 local a22 = {
     wide = {
         height = 190,
-        previewPos = UDim2.new(1, -20, 0, a12 + 39),
-        previewSize = UDim2.new(1, -(a18 + 20), 0, 78),
-        hexPos = UDim2.new(0, a18, 0, a12 + 90),
-        hexSize = UDim2.new(1, -(a18 + 20 + a19 + a20), 0, 30),
-        alphaFieldPos = UDim2.new(1, -(20 + a19), 0, a12 + 90),
-        alphaFieldSize = UDim2.new(0, a19, 0, 30),
+        previewPos = UDim2.new(1, -20, 0, previewPos + 39),
+        previewSize = UDim2.new(1, -(previewSize + 20), 0, 78),
+        hexPos = UDim2.new(0, previewSize, 0, previewPos + 90),
+        hexSize = UDim2.new(1, -(previewSize + 20 + alphaFieldPos + new), 0, 30),
+        alphaFieldPos = UDim2.new(1, -(20 + alphaFieldPos), 0, previewPos + 90),
+        alphaFieldSize = UDim2.new(0, alphaFieldPos, 0, 30),
     },
     narrow = {
         height = 296,
-        previewPos = UDim2.new(1, -20, 0, a12 + a13.Y + 40),
+        previewPos = UDim2.new(1, -20, 0, previewPos + frame.Y + 40),
         previewSize = UDim2.new(1, -40, 0, 56),
-        hexPos = UDim2.new(0, 20, 0, a12 + a13.Y + 78),
-        hexSize = UDim2.new(1, -(40 + a19 + a20), 0, 30),
-        alphaFieldPos = UDim2.new(1, -(20 + a19), 0, a12 + a13.Y + 78),
-        alphaFieldSize = UDim2.new(0, a19, 0, 30),
+        hexPos = UDim2.new(0, 20, 0, previewPos + frame.Y + 78),
+        hexSize = UDim2.new(1, -(40 + alphaFieldPos + new), 0, 30),
+        alphaFieldPos = UDim2.new(1, -(20 + alphaFieldPos), 0, previewPos + frame.Y + 78),
+        alphaFieldSize = UDim2.new(0, alphaFieldPos, 0, 30),
     },
 }
 
-local a23 = UDim2.new(1, -16, 0, a11 / 2)
-local a24 = UDim2.fromOffset(40, 22)
+local Position = UDim2.new(1, -16, 0, Size / 2)
+local Size = UDim2.fromOffset(40, 22)
 
-local a25 = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local a26 = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local a27 = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local tweenService = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local Create = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local tweenService = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local a28 = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local a29 = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local tweenService = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local function a30(n)
+local function fromHSV(n)
     return math.clamp(n, 0, 1)
 end
 
-local function a31(n)
+local function fromRGB(n)
     return math.clamp(math.round(n), 0, 255)
 end
 
@@ -6819,7 +6819,7 @@ local function a33(h, s, l)
     if s <= 0 then
         return Color3.new(l, l, l)
     end
-    local function a34(p, q, t)
+    local function Color3(p, q, t)
         t = t % 1
         if t < 1 / 6 then
             return p + (q - p) * 6 * t
@@ -6832,7 +6832,7 @@ local function a33(h, s, l)
     end
     local q = if l < 0.5 then l * (1 + s) else l + s - l * s
     local p = 2 * l - q
-    return Color3.new(a34(p, q, h + 1 / 3), a34(p, q, h), a34(p, q, h - 1 / 3))
+    return Color3.new(Color3(p, q, h + 1 / 3), Color3(p, q, h), Color3(p, q, h - 1 / 3))
 end
 
 local function a35(s)
@@ -6857,24 +6857,24 @@ local function a37(a38)
     end
 
     local a39 = s:match("^(%a+)")
-    local a40 = a35(s)
+    local hsv = a35(s)
 
-    if (a39 == "hsv" or a39 == "hsb") and #a40 >= 3 then
-        local h = (a40[1] % 360) / 360
-        local a41 = if a40[2] > 1 then a40[2] / 100 else a40[2]
-        local v = if a40[3] > 1 then a40[3] / 100 else a40[3]
-        return Color3.fromHSV(h, a30(a41), a30(v))
+    if (a39 == "hsv" or a39 == "hsb") and #hsv >= 3 then
+        local h = (hsv[1] % 360) / 360
+        local Color3 = if hsv[2] > 1 then hsv[2] / 100 else hsv[2]
+        local v = if hsv[3] > 1 then hsv[3] / 100 else hsv[3]
+        return Color3.fromHSV(h, fromHSV(Color3), fromHSV(v))
     end
 
-    if a39 == "hsl" and #a40 >= 3 then
-        local h = (a40[1] % 360) / 360
-        local a42 = if a40[2] > 1 then a40[2] / 100 else a40[2]
-        local l = if a40[3] > 1 then a40[3] / 100 else a40[3]
-        return a33(h, a30(a42), a30(l))
+    if a39 == "hsl" and #hsv >= 3 then
+        local h = (hsv[1] % 360) / 360
+        local a42 = if hsv[2] > 1 then hsv[2] / 100 else hsv[2]
+        local l = if hsv[3] > 1 then hsv[3] / 100 else hsv[3]
+        return a33(h, fromHSV(a42), fromHSV(l))
     end
 
-    if (a39 == "rgb" or a39 == "rgba") and #a40 >= 3 then
-        return Color3.fromRGB(a31(a40[1]), a31(a40[2]), a31(a40[3]))
+    if (a39 == "rgb" or a39 == "rgba") and #hsv >= 3 then
+        return Color3.fromRGB(fromRGB(hsv[1]), fromRGB(hsv[2]), fromRGB(hsv[3]))
     end
 
         local a43 = s:match("^#?(%x%x%x%x%x%x)$") or s:match("^#?(%x%x%x)$") or s:match("^0x(%x%x%x%x%x%x)$")
@@ -6885,11 +6885,11 @@ local function a37(a38)
         end
     end
 
-        if #a40 >= 3 and not a39 then
-        if a40[1] <= 1 and a40[2] <= 1 and a40[3] <= 1 then
-            return Color3.new(a30(a40[1]), a30(a40[2]), a30(a40[3]))
+        if #hsv >= 3 and not a39 then
+        if hsv[1] <= 1 and hsv[2] <= 1 and hsv[3] <= 1 then
+            return Color3.new(fromHSV(hsv[1]), fromHSV(hsv[2]), fromHSV(hsv[3]))
         end
-        return Color3.fromRGB(a31(a40[1]), a31(a40[2]), a31(a40[3]))
+        return Color3.fromRGB(fromRGB(hsv[1]), fromRGB(hsv[2]), fromRGB(hsv[3]))
     end
 
     return nil
@@ -6905,39 +6905,39 @@ local function a45(a46, a47)
     return a47
 end
 
-function a1.new(tab, a48)
-    a48 = if typeof(a48) == "table" then a48 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a48.name or a48.Name or "Color Picker",
-        icon = tab.window:ResolveIcon(a48.icon or a48.Icon),
-        description = a48.description or a48.Description,
-        forgetState = a48.forgetState or a48.ForgetState or tab.forgetState,
+        name = state.name or state.Name or "Color Picker",
+        icon = tab.window:ResolveIcon(state.icon or state.Icon),
+        description = state.description or state.Description,
+        forgetState = state.forgetState or state.ForgetState or tab.forgetState,
 
-        callback = a48.callback or a48.Callback or function() end,
+        callback = state.callback or state.Callback or function() end,
 
         _isOpen = false,
-    }, a1)
+    }, state)
 
     self.value = a45(
-        a48.color or a48.Color or a48.value or a48.Value or a48.default,
+        state.color or state.Color or state.value or state.Value or state.default,
         Color3.fromRGB(255, 255, 255)
     )
 
             self.hue, self.sat, self.val = self.value:ToHSV()
 
-        local a = a48.alpha or a48.Alpha
-    self.alpha = if type(a) == "number" then a30(a) else 1
+        local a = state.alpha or state.Alpha
+    self.alpha = if type(a) == "number" then fromHSV(a) else 1
 
-    self.flag = a48.flag
-        or a48.Flag
+    self.flag = state.flag
+        or state.Flag
         or (not self.forgetState and a4.deriveFlagFromName(self.name) or nil)
     self.window:_registerControl(self)
 
             self.main = self.window:Create("Frame", {
-        Size = UDim2.new(1, -20, 0, a11),
+        Size = UDim2.new(1, -20, 0, Size),
         BorderSizePixel = 0,
         Name = self.name,
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -6952,7 +6952,7 @@ function a1.new(tab, a48)
     self:_buildPicker()
 
     self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
-        a9.click()
+        alpha.click()
         if self._isOpen then
             self:_close()
         else
@@ -6964,28 +6964,28 @@ function a1.new(tab, a48)
         if self._isOpen or not self.window:_interactive() then
             return
         end
-        local a49 = self.window.theme
-        a3.tweenService
-            :Create(self.stroke, a26, {
-                Transparency = a49.ElementStrokeHoverTransparency,
-                Color = a49.ElementStrokeHover,
+        local Transparency = self.window.theme
+        ColorPicker.tweenService
+            :Create(self.stroke, Create, {
+                Transparency = Transparency.ElementStrokeHoverTransparency,
+                Color = Transparency.ElementStrokeHover,
             })
             :Play()
-        a3.tweenService:Create(self.title, a26, { TextColor3 = a49.ElementTextHoverColor }):Play()
-        a3.tweenService:Create(self.hoverOverlay, a26, { BackgroundTransparency = 0.97 }):Play()
+        ColorPicker.tweenService:Create(self.title, Create, { TextColor3 = Transparency.ElementTextHoverColor }):Play()
+        ColorPicker.tweenService:Create(self.hoverOverlay, Create, { BackgroundTransparency = 0.97 }):Play()
     end)
 
     self.window:ConnectFor(self, self.main.MouseLeave, function()
-        local a50 = self.window.theme
-        a3.tweenService
+        local Transparency = self.window.theme
+        ColorPicker.tweenService
             :Create(
                 self.stroke,
-                a26,
-                { Transparency = a50.ElementStrokeTransparency, Color = a50.ElementStroke }
+                Create,
+                { Transparency = Transparency.ElementStrokeTransparency, Color = Transparency.ElementStroke }
             )
             :Play()
-        a3.tweenService:Create(self.title, a26, { TextColor3 = a50.ContentColor }):Play()
-        a3.tweenService:Create(self.hoverOverlay, a26, { BackgroundTransparency = 1 }):Play()
+        ColorPicker.tweenService:Create(self.title, Create, { TextColor3 = Transparency.ContentColor }):Play()
+        ColorPicker.tweenService:Create(self.hoverOverlay, Create, { BackgroundTransparency = 1 }):Play()
     end)
 
     if self.description then
@@ -7007,10 +7007,10 @@ function a1.new(tab, a48)
     return self
 end
 
-function a1:_buildHeader()
+function state:_buildHeader()
     self.container = self.window:Create("Frame", {
         Size = UDim2.new(0, 170, 0, 16),
-        Position = UDim2.new(0, 20, 0, a11 / 2),
+        Position = UDim2.new(0, 20, 0, Size / 2),
         AnchorPoint = Vector2.new(0, 0.5),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -7042,7 +7042,7 @@ function a1:_buildHeader()
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a8.t(self.name),
+        Text = Text.t(self.name),
         Size = UDim2.fromOffset(150, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -7058,8 +7058,8 @@ function a1:_buildHeader()
 
             self.preview = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(1, 0.5),
-        Position = a23,
-        Size = a24,
+        Position = Position,
+        Size = Size,
         BackgroundColor3 = self.value,
         BorderSizePixel = 0,
         ZIndex = 3,
@@ -7097,7 +7097,7 @@ function a1:_buildHeader()
     })
 
     self.invisibleIcon = self.window:Create("ImageLabel", {
-        Image = a7.icons.colorpicker,
+        Image = Image.icons.colorpicker,
         Size = UDim2.fromOffset(16, 16),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -7108,7 +7108,7 @@ function a1:_buildHeader()
     }, { ImageColor3 = "ContentColor" })
 
     self.invisibleText = self.window:Create("TextLabel", {
-        Text = a8.t("Invisible"),
+        Text = Text.t("Invisible"),
         Size = UDim2.fromOffset(0, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
@@ -7123,7 +7123,7 @@ function a1:_buildHeader()
 
         self.interact = self.window:Create("TextButton", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, a11),
+        Size = UDim2.new(1, 0, 0, Size),
         Position = UDim2.fromScale(0, 0),
         BorderSizePixel = 0,
         Text = "",
@@ -7135,10 +7135,10 @@ function a1:_buildHeader()
     })
 end
 
-function a1:_buildMap()
+function state:_buildMap()
     self.map = self.window:Create("Frame", {
-        Position = UDim2.fromOffset(20, a12),
-        Size = UDim2.fromOffset(a13.X, a13.Y),
+        Position = UDim2.fromOffset(20, previewPos),
+        Size = UDim2.fromOffset(frame.X, frame.Y),
         BackgroundColor3 = Color3.fromHSV(self.hue, 1, 1),
         BorderSizePixel = 0,
         ZIndex = 2,
@@ -7193,7 +7193,7 @@ function a1:_buildMap()
     })
 end
 
-function a1:_buildPicker()
+function state:_buildPicker()
     self:_buildMap()
 
     self.satCursor = self.window:Create("Frame", {
@@ -7231,8 +7231,8 @@ function a1:_buildPicker()
     })
 
         self.hueBar = self.window:Create("Frame", {
-        Position = UDim2.fromOffset(a14, a12),
-        Size = UDim2.fromOffset(a15, a13.Y),
+        Position = UDim2.fromOffset(Position, previewPos),
+        Size = UDim2.fromOffset(sat, frame.Y),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 2,
@@ -7247,7 +7247,7 @@ function a1:_buildPicker()
     })
 
     self.window:Create("UIGradient", {
-        Color = a10,
+        Color = Color,
         Rotation = 90,
 
         Parent = self.hueBar,
@@ -7256,7 +7256,7 @@ function a1:_buildPicker()
     self.hueHandle = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0, 0),
-        Size = UDim2.fromOffset(a15 + 8, 8),
+        Size = UDim2.fromOffset(sat + 8, 8),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 4,
@@ -7291,8 +7291,8 @@ function a1:_buildPicker()
     })
 
                 self.alphaBar = self.window:Create("Frame", {
-        Position = UDim2.fromOffset(a16, a12),
-        Size = UDim2.fromOffset(a17, a13.Y),
+        Position = UDim2.fromOffset(Position, previewPos),
+        Size = UDim2.fromOffset(isDragging, frame.Y),
         BackgroundColor3 = self.value,
         BorderSizePixel = 0,
         ZIndex = 2,
@@ -7318,7 +7318,7 @@ function a1:_buildPicker()
     self.alphaHandle = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0, 0),
-        Size = UDim2.fromOffset(a17 + 8, 8),
+        Size = UDim2.fromOffset(isDragging + 8, 8),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 4,
@@ -7353,8 +7353,8 @@ function a1:_buildPicker()
     })
 
         self.hexBox = self.window:Create("Frame", {
-        Position = UDim2.new(0, a18, 0, a12 + 90),
-        Size = UDim2.new(1, -(a18 + 20), 0, 30),
+        Position = UDim2.new(0, previewSize, 0, previewPos + 90),
+        Size = UDim2.new(1, -(previewSize + 20), 0, 30),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 2,
@@ -7376,7 +7376,7 @@ function a1:_buildPicker()
 
     self.hexInput = self.window:Create("TextBox", {
         Text = "#" .. self.value:ToHex():upper(),
-        PlaceholderText = a8.t("Smart Input"),
+        PlaceholderText = Text.t("Smart Input"),
         Size = UDim2.new(1, -14, 1, 0),
         Position = UDim2.fromScale(0.5, 0.5),
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -7392,8 +7392,8 @@ function a1:_buildPicker()
     }, { TextColor3 = "ContentColor", FontFace = "Font", PlaceholderColor3 = "PlaceholderColor" })
 
         self.alphaBox = self.window:Create("Frame", {
-        Position = UDim2.new(0, a18, 0, a12 + 90),
-        Size = UDim2.fromOffset(a19, 30),
+        Position = UDim2.new(0, previewSize, 0, previewPos + 90),
+        Size = UDim2.fromOffset(alphaFieldPos, 30),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 2,
@@ -7457,9 +7457,9 @@ function a1:_buildPicker()
         end
     end)
 
-    self.window:ConnectFor(self, a3.userInputService.InputEnded, function(a54)
+    self.window:ConnectFor(self, ColorPicker.userInputService.InputEnded, function(window)
         if
-            (a54.UserInputType == Enum.UserInputType.MouseButton1 or a54.UserInputType == Enum.UserInputType.Touch)
+            (window.UserInputType == Enum.UserInputType.MouseButton1 or window.UserInputType == Enum.UserInputType.Touch)
             and self._drag
         then
             self:_endDrag()
@@ -7478,20 +7478,20 @@ function a1:_buildPicker()
         self.window:ConnectFor(self, self.alphaInput.FocusLost, function()
         local n = tonumber((self.alphaInput.Text:gsub("[^%d%.]", "")))
         if n then
-            self:SetAlpha(a30(n / 100))
+            self:SetAlpha(fromHSV(n / 100))
         else
             self.alphaInput.Text = tostring(math.round(self.alpha * 100)) .. "%"
         end
     end)
 end
 
-function a1:_beginDrag(a56, a57)
+function state:_beginDrag(state, a57)
             if not self._isOpen then
         return
     end
-    self._drag = a56
+    self._drag = state
     self._dragIsMouse = a57
-    self:_setHeld(a56)
+    self:_setHeld(state)
     self:_pump()
 
     if self._dragConnection then
@@ -7499,9 +7499,9 @@ function a1:_beginDrag(a56, a57)
         self._dragConnection = nil
     end
 
-    self._dragConnection = a3.runService.RenderStepped:Connect(function()
+    self._dragConnection = ColorPicker.runService.RenderStepped:Connect(function()
         local a58 = self._dragIsMouse
-            and not a3.userInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+            and not ColorPicker.userInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
         if self.window.unloaded or not self._drag or a58 then
             if a58 then
                 self:_endDrag()
@@ -7517,7 +7517,7 @@ function a1:_beginDrag(a56, a57)
     end)
 end
 
-function a1:_endDrag()
+function state:_endDrag()
     self._drag = nil
     self:_setHeld(nil)
     if self._dragConnection then
@@ -7528,56 +7528,56 @@ function a1:_endDrag()
     self.window:_persist(self)
 end
 
-function a1:_setHeld(a59)
-    local a60 = if a59 == "sat" then UDim2.fromOffset(16, 16) else UDim2.fromOffset(12, 12)
-    local a61 = if a59 == "hue" then UDim2.fromOffset(a15 + 12, 10) else UDim2.fromOffset(a15 + 8, 8)
-    local a62 = if a59 == "alpha"
-        then UDim2.fromOffset(a17 + 12, 10)
-        else UDim2.fromOffset(a17 + 8, 8)
-    a3.tweenService:Create(self.satCursor, a29, { Size = a60 }):Play()
-    a3.tweenService:Create(self.hueHandle, a29, { Size = a61 }):Play()
-    a3.tweenService:Create(self.alphaHandle, a29, { Size = a62 }):Play()
+function state:_setHeld(state)
+    local Create = if state == "sat" then UDim2.fromOffset(16, 16) else UDim2.fromOffset(12, 12)
+    local Create = if state == "hue" then UDim2.fromOffset(sat + 12, 10) else UDim2.fromOffset(sat + 8, 8)
+    local Create = if state == "alpha"
+        then UDim2.fromOffset(isDragging + 12, 10)
+        else UDim2.fromOffset(isDragging + 8, 8)
+    ColorPicker.tweenService:Create(self.satCursor, tweenService, { Size = Create }):Play()
+    ColorPicker.tweenService:Create(self.hueHandle, tweenService, { Size = Create }):Play()
+    ColorPicker.tweenService:Create(self.alphaHandle, tweenService, { Size = Create }):Play()
 end
 
-function a1:_mouseLocation()
-    local a63 = a3.userInputService:GetMouseLocation()
+function state:_mouseLocation()
+    local a63 = ColorPicker.userInputService:GetMouseLocation()
     local a64 = self.window.screenGui
     if a64 and a64.IgnoreGuiInset then
-        return a63 - a3.guiService:GetGuiInset()
+        return a63 - ColorPicker.guiService:GetGuiInset()
     end
     return a63
 end
 
-function a1:_pump()
-        local a65, a66, a67, a68 = self.hue, self.sat, self.val, self.alpha
+function state:_pump()
+        local a65, a66, hue, a68 = self.hue, self.sat, self.val, self.alpha
 
     if self._drag == "sat" then
         local a69 = self.map.AbsoluteSize
         if a69.X <= 0 or a69.Y <= 0 then
             return
         end
-        local a70 = self:_mouseLocation()
-        self.sat = a30((a70.X - self.map.AbsolutePosition.X) / a69.X)
-        self.val = 1 - a30((a70.Y - self.map.AbsolutePosition.Y) / a69.Y)
+        local sat = self:_mouseLocation()
+        self.sat = fromHSV((sat.X - self.map.AbsolutePosition.X) / a69.X)
+        self.val = 1 - fromHSV((sat.Y - self.map.AbsolutePosition.Y) / a69.Y)
     elseif self._drag == "hue" then
         local a71 = self.hueBar.AbsoluteSize.Y
         if a71 <= 0 then
             return
         end
-        local a72 = self:_mouseLocation()
-        self.hue = a30((a72.Y - self.hueBar.AbsolutePosition.Y) / a71)
+        local hue = self:_mouseLocation()
+        self.hue = fromHSV((hue.Y - self.hueBar.AbsolutePosition.Y) / a71)
     elseif self._drag == "alpha" then
         local a73 = self.alphaBar.AbsoluteSize.Y
         if a73 <= 0 then
             return
         end
-        local a74 = self:_mouseLocation()
-                self.alpha = 1 - a30((a74.Y - self.alphaBar.AbsolutePosition.Y) / a73)
+        local alpha = self:_mouseLocation()
+                self.alpha = 1 - fromHSV((alpha.Y - self.alphaBar.AbsolutePosition.Y) / a73)
     else
         return
     end
 
-                if self.hue == a65 and self.sat == a66 and self.val == a67 and self.alpha == a68 then
+                if self.hue == a65 and self.sat == a66 and self.val == hue and self.alpha == a68 then
         return
     end
 
@@ -7586,43 +7586,43 @@ function a1:_pump()
     self:_fireCallback()
 end
 
-function a1:_render(a75)
-    local a76 = Color3.fromHSV(self.hue, 1, 1)
+function state:_render(state)
+    local hueHandle = Color3.fromHSV(self.hue, 1, 1)
     local a77 = UDim2.new(self.sat, 0, 1 - self.val, 0)
-    local a78 = UDim2.new(0.5, 0, self.hue, 0)
+    local Create = UDim2.new(0.5, 0, self.hue, 0)
     local a79 = UDim2.new(0.5, 0, 1 - self.alpha, 0)
-    local a80 = 1 - self.alpha     local a81 = 1 - 0.4 * self.alpha
-    if a75 == "instant" then
-        self.map.BackgroundColor3 = a76
+    local BackgroundTransparency = 1 - self.alpha     local Transparency = 1 - 0.4 * self.alpha
+    if state == "instant" then
+        self.map.BackgroundColor3 = hueHandle
         self.satCursor.Position, self.satCursor.BackgroundColor3 = a77, self.value
-        self.hueHandle.Position, self.hueHandle.BackgroundColor3 = a78, a76
+        self.hueHandle.Position, self.hueHandle.BackgroundColor3 = Create, hueHandle
         self.alphaBar.BackgroundColor3 = self.value
         self.alphaHandle.Position, self.alphaHandle.BackgroundColor3 = a79, self.value
         self.preview.BackgroundColor3 = self.value
         self.previewShadow.Color = self.value
         if not self.window.hidden then
-            self.preview.BackgroundTransparency = a80
-            self.previewShadow.Transparency = a81
+            self.preview.BackgroundTransparency = BackgroundTransparency
+            self.previewShadow.Transparency = Transparency
         end
     else
-        local a82 = if a75 == "drag" then a28 else a27
-        a3.tweenService:Create(self.map, a82, { BackgroundColor3 = a76 }):Play()
-        a3.tweenService
-            :Create(self.satCursor, a82, { Position = a77, BackgroundColor3 = self.value })
+        local tweenService = if state == "drag" then a28 else tweenService
+        ColorPicker.tweenService:Create(self.map, tweenService, { BackgroundColor3 = hueHandle }):Play()
+        ColorPicker.tweenService
+            :Create(self.satCursor, tweenService, { Position = a77, BackgroundColor3 = self.value })
             :Play()
-        a3.tweenService:Create(self.hueHandle, a82, { Position = a78, BackgroundColor3 = a76 }):Play()
-        a3.tweenService
-            :Create(self.alphaHandle, a82, { Position = a79, BackgroundColor3 = self.value })
+        ColorPicker.tweenService:Create(self.hueHandle, tweenService, { Position = Create, BackgroundColor3 = hueHandle }):Play()
+        ColorPicker.tweenService
+            :Create(self.alphaHandle, tweenService, { Position = a79, BackgroundColor3 = self.value })
             :Play()
-                a3.tweenService:Create(self.alphaBar, a27, { BackgroundColor3 = self.value }):Play()
-        local a83 = { BackgroundColor3 = self.value }
-        local a84 = { Color = self.value }
+                ColorPicker.tweenService:Create(self.alphaBar, tweenService, { BackgroundColor3 = self.value }):Play()
+        local Create = { BackgroundColor3 = self.value }
+        local Create = { Color = self.value }
         if not self.window.hidden then
-            a83.BackgroundTransparency = a80
-            a84.Transparency = a81
+            Create.BackgroundTransparency = BackgroundTransparency
+            Create.Transparency = Transparency
         end
-        a3.tweenService:Create(self.preview, a27, a83):Play()
-        a3.tweenService:Create(self.previewShadow, a27, a84):Play()
+        ColorPicker.tweenService:Create(self.preview, tweenService, Create):Play()
+        ColorPicker.tweenService:Create(self.previewShadow, tweenService, Create):Play()
     end
 
         if not self.hexInput:IsFocused() then
@@ -7632,33 +7632,33 @@ function a1:_render(a75)
         self.alphaInput.Text = tostring(math.round(self.alpha * 100)) .. "%"
     end
 
-    self:_renderInvisible(a75 ~= "instant")
+    self:_renderInvisible(state ~= "instant")
 end
 
-function a1:_renderInvisible(a85)
+function state:_renderInvisible(state)
     local a86 = 0
     if self._isOpen and not self.window.hidden then
-        a86 = a30((0.12 - self.alpha) / 0.12)
+        a86 = fromHSV((0.12 - self.alpha) / 0.12)
     end
     local t = 1 - a86
-    if a85 then
-        a3.tweenService:Create(self.invisibleIcon, a26, { ImageTransparency = t }):Play()
-        a3.tweenService:Create(self.invisibleText, a26, { TextTransparency = t }):Play()
+    if state then
+        ColorPicker.tweenService:Create(self.invisibleIcon, Create, { ImageTransparency = t }):Play()
+        ColorPicker.tweenService:Create(self.invisibleText, Create, { TextTransparency = t }):Play()
     else
         self.invisibleIcon.ImageTransparency = t
         self.invisibleText.TextTransparency = t
     end
 end
 
-function a1:_renderTooltip(a87)
-    self._renderTooltipState = a87
+function state:_renderTooltip(state)
+    self._renderTooltipState = state
 end
 
-function a1:_fireCallback()
+function state:_fireCallback()
     self.window:_runGuarded(self, self.callback, self.value, self.alpha)
 end
 
-function a1:_open()
+function state:_open()
     if self._isOpen then
         return
     end
@@ -7667,7 +7667,7 @@ function a1:_open()
     if self._outsideClickConn then
         self.window:Disconnect(self._outsideClickConn)
     end
-    self._outsideClickConn = self.window:Connect(a3.userInputService.InputBegan, function(a88)
+    self._outsideClickConn = self.window:Connect(ColorPicker.userInputService.InputBegan, function(a88)
         if
             a88.UserInputType ~= Enum.UserInputType.MouseButton1
             and a88.UserInputType ~= Enum.UserInputType.Touch
@@ -7687,15 +7687,15 @@ function a1:_open()
         end
     end)
 
-    a3.tweenService:Create(self.main, a25, { Size = UDim2.new(1, -20, 0, self._openHeight) }):Play()
-        a3.tweenService
-        :Create(self.preview, a25, { Position = self._previewOpenPos, Size = self._previewOpenSize })
+    ColorPicker.tweenService:Create(self.main, tweenService, { Size = UDim2.new(1, -20, 0, self._openHeight) }):Play()
+        ColorPicker.tweenService
+        :Create(self.preview, tweenService, { Position = self._previewOpenPos, Size = self._previewOpenSize })
         :Play()
     self:_applyPickerVisibility(true, true)
     self:_renderInvisible(true)
 end
 
-function a1:_close()
+function state:_close()
     if not self._isOpen then
         return
     end
@@ -7718,58 +7718,58 @@ function a1:_close()
 
     self:_applyPickerVisibility(false, true)
     self:_renderInvisible(true)
-    a3.tweenService
-        :Create(self.preview, a25, { Position = a23, Size = a24 })
+    ColorPicker.tweenService
+        :Create(self.preview, tweenService, { Position = Position, Size = Size })
         :Play()
-    a3.tweenService:Create(self.main, a25, { Size = UDim2.new(1, -20, 0, a11) }):Play()
+    ColorPicker.tweenService:Create(self.main, tweenService, { Size = UDim2.new(1, -20, 0, Size) }):Play()
 
-            task.delay(a26.Time, function()
+            task.delay(Create.Time, function()
         if not self._isOpen and not self.window.unloaded then
             self:_setControlsVisible(false)
         end
     end)
 end
 
-function a1:_applyPickerVisibility(a92, a93)
+function state:_applyPickerVisibility(state, a93)
     local a94 = {
-        [self.map] = { BackgroundTransparency = if a92 then 0 else 1 },
-        [self.satOverlay] = { BackgroundTransparency = if a92 then 0 else 1 },
-        [self.valOverlay] = { BackgroundTransparency = if a92 then 0 else 1 },
-        [self.mapStroke] = { Transparency = if a92 then 0.9 else 1 },
-        [self.satCursor] = { BackgroundTransparency = if a92 then 0 else 1 },
-        [self.satCursorStroke] = { Transparency = if a92 then 0 else 1 },
-        [self.hueBar] = { BackgroundTransparency = if a92 then 0 else 1 },
-        [self.hueHandle] = { BackgroundTransparency = if a92 then 0 else 1 },
-        [self.hueHandleStroke] = { Transparency = if a92 then 0 else 1 },
-        [self.alphaBar] = { BackgroundTransparency = if a92 then 0 else 1 },
-        [self.alphaHandle] = { BackgroundTransparency = if a92 then 0 else 1 },
-        [self.alphaHandleStroke] = { Transparency = if a92 then 0 else 1 },
-        [self.hexBox] = { BackgroundTransparency = if a92 then 0.9 else 1 },
-        [self.hexBoxStroke] = { Transparency = if a92 then 0.85 else 1 },
-        [self.hexInput] = { TextTransparency = if a92 then 0.4 else 1 },
-        [self.alphaBox] = { BackgroundTransparency = if a92 then 0.9 else 1 },
-        [self.alphaBoxStroke] = { Transparency = if a92 then 0.85 else 1 },
-        [self.alphaInput] = { TextTransparency = if a92 then 0.4 else 1 },
+        [self.map] = { BackgroundTransparency = if state then 0 else 1 },
+        [self.satOverlay] = { BackgroundTransparency = if state then 0 else 1 },
+        [self.valOverlay] = { BackgroundTransparency = if state then 0 else 1 },
+        [self.mapStroke] = { Transparency = if state then 0.9 else 1 },
+        [self.satCursor] = { BackgroundTransparency = if state then 0 else 1 },
+        [self.satCursorStroke] = { Transparency = if state then 0 else 1 },
+        [self.hueBar] = { BackgroundTransparency = if state then 0 else 1 },
+        [self.hueHandle] = { BackgroundTransparency = if state then 0 else 1 },
+        [self.hueHandleStroke] = { Transparency = if state then 0 else 1 },
+        [self.alphaBar] = { BackgroundTransparency = if state then 0 else 1 },
+        [self.alphaHandle] = { BackgroundTransparency = if state then 0 else 1 },
+        [self.alphaHandleStroke] = { Transparency = if state then 0 else 1 },
+        [self.hexBox] = { BackgroundTransparency = if state then 0.9 else 1 },
+        [self.hexBoxStroke] = { Transparency = if state then 0.85 else 1 },
+        [self.hexInput] = { TextTransparency = if state then 0.4 else 1 },
+        [self.alphaBox] = { BackgroundTransparency = if state then 0.9 else 1 },
+        [self.alphaBoxStroke] = { Transparency = if state then 0.85 else 1 },
+        [self.alphaInput] = { TextTransparency = if state then 0.4 else 1 },
     }
 
-    for a95, a96 in a94 do
+    for tweenService, a96 in a94 do
         if a93 then
-            a3.tweenService:Create(a95, a26, a96):Play()
+            ColorPicker.tweenService:Create(tweenService, Create, a96):Play()
         else
             for a97, a98 in a96 do
-                a95[a97] = a98
+                tweenService[a97] = a98
             end
         end
     end
 end
 
-function a1:_setControlsVisible(a99)
+function state:_setControlsVisible(state)
     for _, a100 in { self.map, self.hueBar, self.alphaBar, self.hexBox, self.alphaBox } do
-        a100.Visible = a99
+        a100.Visible = state
     end
 end
 
-function a1:_applyLayout()
+function state:_applyLayout()
     local a101 = self.main.AbsoluteSize.X
     local a102 = if a101 > 0 and a101 < a21 then "narrow" else "wide"
     if a102 == self._layoutMode then
@@ -7787,40 +7787,40 @@ function a1:_applyLayout()
     self.alphaBox.Size = l.alphaFieldSize
 
     if self._isOpen then
-        a3.tweenService:Create(self.main, a25, { Size = UDim2.new(1, -20, 0, self._openHeight) }):Play()
-        a3.tweenService
-            :Create(self.preview, a25, { Position = self._previewOpenPos, Size = self._previewOpenSize })
+        ColorPicker.tweenService:Create(self.main, tweenService, { Size = UDim2.new(1, -20, 0, self._openHeight) }):Play()
+        ColorPicker.tweenService
+            :Create(self.preview, tweenService, { Position = self._previewOpenPos, Size = self._previewOpenSize })
             :Play()
     end
 end
 
-function a1:Set(a103, a104)
-    self.value = a45(a103, self.value)
+function state:Set(state, Set)
+    self.value = a45(state, self.value)
     self.hue, self.sat, self.val = self.value:ToHSV()
         self:_render(if self._isOpen then "animate" else "instant")
 
-    if not a104 then
+    if not Set then
         self:_fireCallback()
         self.window:_persist(self)
     end
 end
 
-function a1:SetAlpha(a105, a106)
-    self.alpha = a30(if type(a105) == "number" then a105 else self.alpha)
+function state:SetAlpha(state, SetAlpha)
+    self.alpha = fromHSV(if type(state) == "number" then state else self.alpha)
     self:_render(if self._isOpen then "animate" else "instant")
 
-    if not a106 then
+    if not SetAlpha then
         self:_fireCallback()
         self.window:_persist(self)
     end
 end
 
-function a1:_serialize()
+function state:_serialize()
     return self.value:ToHex() .. string.format("%02x", math.clamp(math.round((self.alpha or 1) * 255), 0, 255))
 end
 
-function a1:_deserialize(a107)
-    local a108 = tostring(a107)
+function state:_deserialize(state)
+    local a108 = tostring(state)
     local a109 = nil
     if #a108 >= 8 then
         a109 = (tonumber(a108:sub(7, 8), 16) or 255) / 255
@@ -7837,9 +7837,9 @@ function a1:_deserialize(a107)
     self:Set(a110)
 end
 
-function a1:_setShown(a111, a112)
+function state:_setShown(state, a112)
     local w = self.window
-    if a111 then
+    if state then
         w:_revealCommon(self, a112)
                 w:_reveal(self.preview, { BackgroundTransparency = 1 - self.alpha }, a112)
         w:_reveal(self.previewShadow, { Transparency = 1 - 0.4 * self.alpha }, a112)
@@ -7853,52 +7853,52 @@ function a1:_setShown(a111, a112)
     end
 end
 
-a5(a1)
-a6(a1)
+props(state)
+name(state)
 
-return a1
+return state
 
 end)() end,
     [22] = function()local wax,script,require=ImportGlobals(22)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Console"
+local state = {}
+state.__index = state
+state.__type = "Console"
 
-local a2 = script.Parent.Parent.utilities
+local Console = script.Parent.Parent.utilities
 
-local a3 = require(a2.moveable)
-local a4 = require(a2.locale)
+local Console = require(Console.moveable)
+local Text = require(Console.locale)
 
-local a5 = 120
+local max = 120
 local a6 = 48
-local a7 = 24 local a8 = 17
-local a9 = 12 local a10 = 12
-local a11 = 1.25
-local a12 = 200
+local a7 = 24 local text = 17
+local Size = 12 local follow = 12
+local LineHeight = 1.25
+local max = 200
 
-local a13 = Font.fromEnum(Enum.Font.Code)
+local FontFace = Font.fromEnum(Enum.Font.Code)
 
-function a1.new(tab, a14)
-    a14 = if typeof(a14) == "table" then a14 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a14.name or a14.Name,
-        description = a14.description or a14.Description,
+        name = state.name or state.Name,
+        description = state.description or state.Description,
 
-        height = math.max(tonumber(a14.height or a14.Height) or a5, a6),
-                follow = a14.follow or a14.Follow or false,
-        maxLines = math.max(tonumber(a14.maxLines or a14.MaxLines) or a12, 1),
+        height = math.max(tonumber(state.height or state.Height) or max, a6),
+                follow = state.follow or state.Follow or false,
+        maxLines = math.max(tonumber(state.maxLines or state.MaxLines) or max, 1),
 
         lines = {},
                                 lineLabels = {},
         head = 1,         nextOrder = 1,
         textDirty = true,
-    }, a1)
+    }, state)
 
     self:_build()
-    self:_setLines(a14.text or a14.Text or "")
+    self:_setLines(state.text or state.Text or "")
 
     if self.description then
         self.descriptor = require(script.Parent.descriptor).new(self.tab, { description = self.description })
@@ -7907,7 +7907,7 @@ function a1.new(tab, a14)
     return self
 end
 
-function a1:Get(): string
+function state:Get(): string
     if self.textDirty then
         self.text = table.concat(self.lines, "\n")
         self.textDirty = false
@@ -7915,12 +7915,12 @@ function a1:Get(): string
     return self.text
 end
 
-function a1:_setLines(a15)
-    a15 = if type(a15) == "string" then a15 else tostring(a15)
+function state:_setLines(state)
+    state = if type(state) == "string" then state else tostring(state)
 
     table.clear(self.lines)
-    if a15 ~= "" then
-        for a16 in string.gmatch(a15 .. "\n", "([^\n]*)\n") do
+    if state ~= "" then
+        for a16 in string.gmatch(state .. "\n", "([^\n]*)\n") do
             table.insert(self.lines, a16)
         end
     end
@@ -7928,7 +7928,7 @@ function a1:_setLines(a15)
     self:_flush()
 end
 
-function a1:_trim()
+function state:_trim()
     local a17 = #self.lines - self.maxLines
     if a17 <= 0 then
         return
@@ -7939,18 +7939,18 @@ function a1:_trim()
     end
 end
 
-function a1:_makeLabel()
+function state:_makeLabel()
     return self.window:Create("TextLabel", {
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        FontFace = a13,
-        TextSize = a10,
+        FontFace = FontFace,
+        TextSize = follow,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Top,
         TextWrapped = true,
-        LineHeight = a11,
+        LineHeight = LineHeight,
         RichText = false,
                 TextTransparency = self._textTransparency or 1,
 
@@ -7958,22 +7958,22 @@ function a1:_makeLabel()
     }, { TextColor3 = "ContentColor" })
 end
 
-local function a19(a20: string): string
+local function Text(a20: string): string
     return if a20 == "" then " " else a20
 end
 
-function a1:_flush()
+function state:_flush()
     self.textDirty = true
 
-    for a21, a22 in self.lines do
-        local a23 = self.lineLabels[a21]
-        if not a23 then
-            a23 = self:_makeLabel()
-            self.lineLabels[a21] = a23
+    for LayoutOrder, a22 in self.lines do
+        local lineLabels = self.lineLabels[LayoutOrder]
+        if not lineLabels then
+            lineLabels = self:_makeLabel()
+            self.lineLabels[LayoutOrder] = lineLabels
         end
-        a23.LayoutOrder = a21
-        a23.Text = a19(a22)
-        a23.Visible = true
+        lineLabels.LayoutOrder = LayoutOrder
+        lineLabels.Text = Text(a22)
+        lineLabels.Visible = true
     end
 
     for a24 = #self.lines + 1, #self.lineLabels do
@@ -7985,41 +7985,41 @@ function a1:_flush()
     self:_follow()
 end
 
-function a1:_pushLine(a25: string)
+function state:_pushLine(state: string)
     self.textDirty = true
 
     if #self.lines < self.maxLines then
-        table.insert(self.lines, a25)
+        table.insert(self.lines, state)
         local a26 = #self.lines
-        local a27 = self.lineLabels[a26]
-        if not a27 then
-            a27 = self:_makeLabel()
-            self.lineLabels[a26] = a27
+        local lineLabels = self.lineLabels[a26]
+        if not lineLabels then
+            lineLabels = self:_makeLabel()
+            self.lineLabels[a26] = lineLabels
         end
-        a27.LayoutOrder = self.nextOrder
-        a27.Text = a19(a25)
-        a27.Visible = true
+        lineLabels.LayoutOrder = self.nextOrder
+        lineLabels.Text = Text(state)
+        lineLabels.Visible = true
         self.nextOrder += 1
         return
     end
 
             table.move(self.lines, 2, #self.lines, 1)
-    self.lines[#self.lines] = a25
+    self.lines[#self.lines] = state
 
     local a28 = self.lineLabels[self.head]
     a28.LayoutOrder = self.nextOrder
-    a28.Text = a19(a25)
+    a28.Text = Text(state)
     a28.Visible = true
 
     self.nextOrder += 1
     self.head = (self.head % #self.lineLabels) + 1
 end
 
-function a1:_build()
-    local a29 = if self.name then a7 else 0
+function state:_build()
+    local Size = if self.name then a7 else 0
 
     self.main = self.window:Create("Frame", {
-        Size = UDim2.new(1, -20, 0, self.height + a29 + a8 * 2),
+        Size = UDim2.new(1, -20, 0, self.height + Size + text * 2),
         BorderSizePixel = 0,
         Name = self.name or "Console",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -8032,8 +8032,8 @@ function a1:_build()
 
     if self.name then
         self.container = self.window:Create("Frame", {
-            Size = UDim2.new(1, -a8 * 2, 0, 16),
-            Position = UDim2.new(0, a8, 0, a8),
+            Size = UDim2.new(1, -text * 2, 0, 16),
+            Position = UDim2.new(0, text, 0, text),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
 
@@ -8041,7 +8041,7 @@ function a1:_build()
         })
 
         self.title = self.window:Create("TextLabel", {
-            Text = a4.t(self.name),
+            Text = Text.t(self.name),
 
             Size = UDim2.fromScale(1, 1),
             BorderSizePixel = 0,
@@ -8056,8 +8056,8 @@ function a1:_build()
 
             self.panel = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0.5, 1),
-        Position = UDim2.new(0.5, 0, 1, -a8),
-        Size = UDim2.new(1, -a8 * 2, 0, self.height),
+        Position = UDim2.new(0.5, 0, 1, -text),
+        Size = UDim2.new(1, -text * 2, 0, self.height),
         BorderSizePixel = 0,
         ClipsDescendants = true,
 
@@ -8077,7 +8077,7 @@ function a1:_build()
     }, { Color = "SurfaceStroke" })
 
     self.scroll = self.window:Create("ScrollingFrame", {
-        Size = UDim2.new(1, -a9 * 2, 1, -a9 * 2),
+        Size = UDim2.new(1, -Size * 2, 1, -Size * 2),
         Position = UDim2.fromScale(0.5, 0.5),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundTransparency = 1,
@@ -8102,15 +8102,15 @@ function a1:_build()
     self:_watchCanvas()
 end
 
-function a1:_pin()
-    local a30 = self.scroll
-    if not a30 or not a30.Parent then
+function state:_pin()
+    local CanvasPosition = self.scroll
+    if not CanvasPosition or not CanvasPosition.Parent then
         return
     end
-    a30.CanvasPosition = Vector2.new(0, a30.AbsoluteCanvasSize.Y)
+    CanvasPosition.CanvasPosition = Vector2.new(0, CanvasPosition.AbsoluteCanvasSize.Y)
 end
 
-function a1:_follow()
+function state:_follow()
     if not self.follow then
         return
     end
@@ -8120,7 +8120,7 @@ function a1:_follow()
     end)
 end
 
-function a1:_watchCanvas()
+function state:_watchCanvas()
     self.window:ConnectFor(self, self.scrollLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
         if self.follow then
             self:_pin()
@@ -8128,24 +8128,24 @@ function a1:_watchCanvas()
     end)
 end
 
-function a1:Set(a31)
-    self:_setLines(a31)
+function state:Set(state)
+    self:_setLines(state)
 end
 
-function a1:Append(a32)
-    a32 = if type(a32) == "string" then a32 else tostring(a32)
-    for a33 in string.gmatch(a32 .. "\n", "([^\n]*)\n") do
+function state:Append(state)
+    state = if type(state) == "string" then state else tostring(state)
+    for a33 in string.gmatch(state .. "\n", "([^\n]*)\n") do
         self:_pushLine(a33)
     end
     self:_follow()
 end
 
-function a1:Clear()
+function state:Clear()
     table.clear(self.lines)
     self:_flush()
 end
 
-function a1:Copy(): boolean
+function state:Copy(): boolean
     local a34 = (getgenv and getgenv().setclipboard) or setclipboard
     if typeof(a34) ~= "function" then
         return false
@@ -8153,61 +8153,61 @@ function a1:Copy(): boolean
     return (pcall(a34, self:Get()))
 end
 
-function a1:SetHeight(a35)
-    self.height = math.max(tonumber(a35) or a5, a6)
+function state:SetHeight(state)
+    self.height = math.max(tonumber(state) or max, a6)
     local a36 = if self.name then a7 else 0
-    self.panel.Size = UDim2.new(1, -a8 * 2, 0, self.height)
-    self.main.Size = UDim2.new(1, -20, 0, self.height + a36 + a8 * 2)
+    self.panel.Size = UDim2.new(1, -text * 2, 0, self.height)
+    self.main.Size = UDim2.new(1, -20, 0, self.height + a36 + text * 2)
 end
 
-function a1:_setShown(a37, a38)
+function state:_setShown(state, a38)
     local w = self.window
 
-        w:_reveal(self.main, { BackgroundTransparency = if a37 then w.theme.ElementTransparency or 0 else 1 }, a38)
-    w:_reveal(self.stroke, { Transparency = if a37 then w.theme.ElementStrokeTransparency else 1 }, a38)
-    w:_reveal(self.panel, { BackgroundTransparency = if a37 then 0 else 1 }, a38)
-    w:_reveal(self.panelStroke, { Transparency = if a37 then 0.9 else 1 }, a38)
+        w:_reveal(self.main, { BackgroundTransparency = if state then w.theme.ElementTransparency or 0 else 1 }, a38)
+    w:_reveal(self.stroke, { Transparency = if state then w.theme.ElementStrokeTransparency else 1 }, a38)
+    w:_reveal(self.panel, { BackgroundTransparency = if state then 0 else 1 }, a38)
+    w:_reveal(self.panelStroke, { Transparency = if state then 0.9 else 1 }, a38)
 
-    self._textTransparency = if a37 then 0.15 else 1
+    self._textTransparency = if state then 0.15 else 1
     for _, a39 in self.lineLabels do
         w:_reveal(a39, { TextTransparency = self._textTransparency }, a38)
     end
 
     if self.title then
-        w:_reveal(self.title, { TextTransparency = if a37 then 0 else 1 }, a38)
+        w:_reveal(self.title, { TextTransparency = if state then 0 else 1 }, a38)
     end
     if self.descriptor then
-        w:_reveal(self.descriptor.titleLabel, { TextTransparency = if a37 then 0.7 else 1 }, a38)
+        w:_reveal(self.descriptor.titleLabel, { TextTransparency = if state then 0.7 else 1 }, a38)
     end
 end
 
-function a1:Remove()
+function state:Remove()
     if self.descriptor then
         self.descriptor:Remove()
     end
     self.main:Destroy()
 end
 
-a3(a1)
+Console(state)
 
-return a1
+return state
 
 end)() end,
     [23] = function()local wax,script,require=ImportGlobals(23)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Descriptor"
+local state = {}
+state.__index = state
+state.__type = "Descriptor"
 
-local a2 = require(script.Parent.Parent.utilities.locale)
+local Text = require(script.Parent.Parent.utilities.locale)
 
-function a1.new(tab, a3)
-    a3 = if typeof(a3) == "table" then a3 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        description = a3.description or a3.Description or "",
-    }, a1)
+        description = state.description or state.Description or "",
+    }, state)
 
     self.main = self.window:Create("Frame", {
         AutomaticSize = Enum.AutomaticSize.Y,
@@ -8227,7 +8227,7 @@ function a1.new(tab, a3)
         BackgroundTransparency = 1,
         RichText = true,
         Size = UDim2.new(1, -90, 0, 0),
-        Text = a2.t(self.description),
+        Text = Text.t(self.description),
         TextSize = 12,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -8247,43 +8247,43 @@ function a1.new(tab, a3)
     return self
 end
 
-function a1:Remove()
+function state:Remove()
     self.main:Destroy()
 end
 
-return a1
+return state
 
 end)() end,
     [24] = function()local wax,script,require=ImportGlobals(24)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Divider"
+local state = {}
+state.__index = state
+state.__type = "Divider"
 
-local a2 = require(script.Parent.Parent.utilities.moveable)
-local a3 = require(script.Parent.Parent.utilities.locale)
+local constants = require(script.Parent.Parent.utilities.moveable)
+local Text = require(script.Parent.Parent.utilities.locale)
 
-local a4 = 1
+local Size = 1
 local a5 = 12
-local a6 = 10
-local a7 = 14
-local a8 = 12
+local Padding = 10
+local Size = 14
+local TextSize = 12
 
 local a9 = 0.88
 local a10 = 0.55
 
-function a1.new(tab, a11)
-    a11 = if typeof(a11) == "table" then a11 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
-    local a12 = a11.spacing or a11.Spacing
-    local a13 = a11.text or a11.Text
+    local spacing = state.spacing or state.Spacing
+    local text = state.text or state.Text
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        text = if a13 ~= nil then tostring(a13) else "",
-        spacing = if type(a12) == "number" then math.max(a12, 0) else a5,
-                        line = a11.line ~= false and a11.Line ~= false,
-    }, a1)
+        text = if text ~= nil then tostring(text) else "",
+        spacing = if type(spacing) == "number" then math.max(spacing, 0) else a5,
+                        line = state.line ~= false and state.Line ~= false,
+    }, state)
 
     self.main = self.window:Create("Frame", {
         Size = UDim2.new(1, -40, 0, 0),
@@ -8296,7 +8296,7 @@ function a1.new(tab, a11)
 
     self.window:Create("UIListLayout", {
         FillDirection = Enum.FillDirection.Horizontal,
-        Padding = UDim.new(0, a6),
+        Padding = UDim.new(0, Padding),
         SortOrder = Enum.SortOrder.LayoutOrder,
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -8317,11 +8317,11 @@ function a1.new(tab, a11)
     return self
 end
 
-function a1:_buildHalf(a14)
-    local a15 = self.window:Create("Frame", {
-        Size = UDim2.new(0, 0, 0, a4),
+function state:_buildHalf(state)
+    local Parent = self.window:Create("Frame", {
+        Size = UDim2.new(0, 0, 0, Size),
         BorderSizePixel = 0,
-        LayoutOrder = a14,
+        LayoutOrder = state,
 
                 BackgroundTransparency = 1,
         Parent = self.main,
@@ -8330,20 +8330,20 @@ function a1:_buildHalf(a14)
     self.window:Create("UIFlexItem", {
         FlexMode = Enum.UIFlexMode.Fill,
 
-        Parent = a15,
+        Parent = Parent,
     })
 
-    return a15
+    return Parent
 end
 
-function a1:_buildLabel()
+function state:_buildLabel()
     self.title = self.window:Create("TextLabel", {
-        Text = a3.t(self.text),
-        Size = UDim2.fromOffset(0, a7),
+        Text = Text.t(self.text),
+        Size = UDim2.fromOffset(0, Size),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
-        TextSize = a8,
+        TextSize = TextSize,
         TextXAlignment = Enum.TextXAlignment.Center,
         LayoutOrder = 2,
 
@@ -8356,13 +8356,13 @@ function a1:_buildLabel()
     end
 end
 
-function a1:_applyHeight()
-    local a16 = if self.text ~= "" then a7 elseif self.line then a4 else 0
+function state:_applyHeight()
+    local a16 = if self.text ~= "" then Size elseif self.line then Size else 0
     self.main.Size = UDim2.new(1, -40, 0, self.spacing * 2 + a16)
 end
 
-function a1:Set(a17)
-    self.text = if a17 ~= nil then tostring(a17) else ""
+function state:Set(state)
+    self.text = if state ~= nil then tostring(state) else ""
 
     if self.text ~= "" and not self.title then
         self:_buildLabel()
@@ -8385,69 +8385,69 @@ function a1:Set(a17)
     self:_applyHeight()
 end
 
-function a1:_setShown(a19, a20)
+function state:_setShown(state, a20)
     local w = self.window
-    local a21 = if a19 then a9 else 1
+    local a21 = if state then a9 else 1
 
     w:_reveal(self.left, { BackgroundTransparency = a21 }, a20)
     w:_reveal(self.right, { BackgroundTransparency = a21 }, a20)
-    w:_reveal(self.title, { TextTransparency = if a19 then a10 else 1 }, a20)
+    w:_reveal(self.title, { TextTransparency = if state then a10 else 1 }, a20)
 end
 
-a2(a1)
+constants(state)
 
-return a1
+return state
 
 end)() end,
     [25] = function()local wax,script,require=ImportGlobals(25)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Dropdown"
+local state = {}
+state.__index = state
+state.__type = "Dropdown"
 
-local a2 = script.Parent.Parent.utilities
+local Dropdown = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
+local Dropdown = require(Dropdown.Parent.core.state)
 local a4 = require(script.Parent.Parent.functions)
-local a5 = require(script.Parent.Parent.images.image)
-local a6 = require(a2.constants)
-local a7 = require(a2.locale)
-local a8 = require(a2.HapticEngine)
-local a9 = require(a2.windowSizing)
-local a10 = require(a2.lockable)
+local props = require(script.Parent.Parent.images.image)
+local placeholder = require(Dropdown.constants)
+local placeholderText = require(Dropdown.locale)
+local options = require(Dropdown.HapticEngine)
+local a9 = require(Dropdown.windowSizing)
+local multiSelect = require(Dropdown.lockable)
 
-local a11 = a6.icons.chevron
-local a12 = a6.icons.check
-local a13 = a6.icons.dot
-local a14 = a6.icons.search
+local Image = placeholder.icons.chevron
+local checkIcon = placeholder.icons.check
+local Image = placeholder.icons.dot
+local Image = placeholder.icons.search
 
 local a15 = UDim.new(0, 12)
-local a16 = UDim.new(0, 7)
+local CornerRadius = UDim.new(0, 7)
 
-local a17 = 30
-local a18 = 38
+local Size = 30
+local Size = 38
 
-local a19 = 38
-local a20 = 5
-local a21 = 2
-local a22 = 41
+local Size = 38
+local max = 5
+local PaddingTop = 2
+local Size = 41
 local a23 = 6
-local a24 = 7
-local a25 = 6
-local a26 = a24 + a25
+local PaddingTop = 7
+local PaddingBottom = 6
+local a26 = PaddingTop + PaddingBottom
 
 local a27 = 4
 
-local a28 = 22
-local a29 = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local a30 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local Size = 22
+local Create = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local Create = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local a31 = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local a32 = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 local a33 = TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-local a34 = 0.4
-local a35 = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local list = 0.4
+local tweenService = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-local function a36(a37)
+local function options(a37)
     local a38 = {}
     local a39 = {}
     for _, v in a37 do
@@ -8459,7 +8459,7 @@ local function a36(a37)
     return a39
 end
 
-local function a40(a41, a42)
+local function value(a41, a42)
     if a41 == nil then
         return {}
     end
@@ -8467,7 +8467,7 @@ local function a40(a41, a42)
         return { a41 }
     end
     if typeof(a41) == "table" then
-        local a43 = a36(a41)
+        local a43 = options(a41)
         if not a42 and #a43 > 1 then
             return { a43[1] }
         end
@@ -8498,40 +8498,40 @@ local function a48(a, b)
     return true
 end
 
-function a1.new(tab, a49)
-    a49 = if typeof(a49) == "table" then a49 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
-    local a50 = a49.options or a49.Options or {}
-    local a51 = a49.multiSelect or a49.MultiSelect or a49.MultipleOptions or false
+    local a50 = state.options or state.Options or {}
+    local multiSelect = state.multiSelect or state.MultiSelect or state.MultipleOptions or false
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a49.name or a49.Name or "Dropdown",
-        icon = tab.window:ResolveIcon(a49.icon or a49.Icon),
-        description = a49.description or a49.Description,
-        forgetState = a49.forgetState or a49.ForgetState or tab.forgetState,
-        flag = a49.flag
-            or a49.Flag
+        name = state.name or state.Name or "Dropdown",
+        icon = tab.window:ResolveIcon(state.icon or state.Icon),
+        description = state.description or state.Description,
+        forgetState = state.forgetState or state.ForgetState or tab.forgetState,
+        flag = state.flag
+            or state.Flag
             or (
-                not (a49.forgetState or a49.ForgetState or tab.forgetState)
-                    and a4.deriveFlagFromName(a49.name or a49.Name or "Dropdown")
+                not (state.forgetState or state.ForgetState or tab.forgetState)
+                    and a4.deriveFlagFromName(state.name or state.Name or "Dropdown")
                 or nil
             ),
 
-        callback = a49.callback or a49.Callback or function() end,
+        callback = state.callback or state.Callback or function() end,
 
-        options = a36(a50),
-        multiSelect = a51,
-        placeholderText = a7.resolve(a49.placeholder or a49.Placeholder or "None"),
-        value = a40(
-            a49.value or a49.Value or a49.currentOption or a49.CurrentOption,
-            a51
+        options = options(a50),
+        multiSelect = multiSelect,
+        placeholderText = placeholderText.resolve(state.placeholder or state.Placeholder or "None"),
+        value = value(
+            state.value or state.Value or state.currentOption or state.CurrentOption,
+            multiSelect
         ),
 
         _isOpen = false,
         _optionFrames = {},
-    }, a1)
+    }, state)
 
             self._desiredValue = self.value
     self.value = a44(self.value, self.options)
@@ -8595,7 +8595,7 @@ function a1.new(tab, a49)
     end
 
     self.title = self.window:Create("TextLabel", {
-                Text = a7.t(self.name),
+                Text = placeholderText.t(self.name),
 
         Size = UDim2.fromOffset(150, 16),
         BorderSizePixel = 0,
@@ -8632,7 +8632,7 @@ function a1.new(tab, a49)
         Size = UDim2.fromOffset(16, 16),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
-        Image = "rbxassetid://" .. tostring(a11),
+        Image = "rbxassetid://" .. tostring(Image),
         Rotation = 180,
 
                 ImageTransparency = 1,
@@ -8656,7 +8656,7 @@ function a1.new(tab, a49)
                     self.panel = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(1, 1),
         Position = UDim2.new(1, 0, 1, 0),
-        Size = UDim2.new(1, 0, 1, -(a22 + a23)),
+        Size = UDim2.new(1, 0, 1, -(Size + a23)),
         BorderSizePixel = 0,
         ClipsDescendants = true,
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -8679,8 +8679,8 @@ function a1.new(tab, a49)
     })
 
     self.window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, a24),
-        PaddingBottom = UDim.new(0, a25),
+        PaddingTop = UDim.new(0, PaddingTop),
+        PaddingBottom = UDim.new(0, PaddingBottom),
 
         Parent = self.panel,
     })
@@ -8730,17 +8730,17 @@ function a1.new(tab, a49)
     })
 
             self.window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, a21),
-        PaddingBottom = UDim.new(0, a21),
+        PaddingTop = UDim.new(0, PaddingTop),
+        PaddingBottom = UDim.new(0, PaddingTop),
 
         Parent = self.list,
     })
 
             self.emptyLabel = self.window:Create("TextLabel", {
         Name = "Empty",
-        Size = UDim2.new(1, -12, 0, a19),
+        Size = UDim2.new(1, -12, 0, Size),
         BackgroundTransparency = 1,
-        Text = a7.t("No matches"),
+        Text = placeholderText.t("No matches"),
         TextSize = 14,
         TextTransparency = 0.55,
         Visible = false,
@@ -8753,26 +8753,26 @@ function a1.new(tab, a49)
         return table.find(self.value, a53) ~= nil
     end
 
-    local function a54(a55, a56)
-        local a57 = a52(a55.name)
-        local a58 = if self._isOpen then (a57 and 0.9 or 0.95) else 1
-        local a59 = if self._isOpen then (a57 and 0 or 0.3) else 1
-                local a60 = if self._isOpen then (a57 and 0 or 0.7) else 1
-        local a61 = if self._isOpen then (a57 and 0.85 or 0.93) else 1
+    local function a54(assign, a56)
+        local a57 = a52(assign.name)
+        local frame = if self._isOpen then (a57 and 0.9 or 0.95) else 1
+        local title = if self._isOpen then (a57 and 0 or 0.3) else 1
+                local checkIcon = if self._isOpen then (a57 and 0 or 0.7) else 1
+        local stroke = if self._isOpen then (a57 and 0.85 or 0.93) else 1
 
-        a5.assign(a55.checkIcon, "Image", if a57 then a12 else a13)
+        props.assign(assign.checkIcon, "Image", if a57 then checkIcon else Image)
 
         if a56 then
-            local a62 = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-            a3.tweenService:Create(a55.frame, a62, { BackgroundTransparency = a58 }):Play()
-            a3.tweenService:Create(a55.title, a62, { TextTransparency = a59 }):Play()
-            a3.tweenService:Create(a55.checkIcon, a62, { ImageTransparency = a60 }):Play()
-            a3.tweenService:Create(a55.stroke, a62, { Transparency = a61 }):Play()
+            local Create = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+            Dropdown.tweenService:Create(assign.frame, Create, { BackgroundTransparency = frame }):Play()
+            Dropdown.tweenService:Create(assign.title, Create, { TextTransparency = title }):Play()
+            Dropdown.tweenService:Create(assign.checkIcon, Create, { ImageTransparency = checkIcon }):Play()
+            Dropdown.tweenService:Create(assign.stroke, Create, { Transparency = stroke }):Play()
         else
-            a55.frame.BackgroundTransparency = a58
-            a55.title.TextTransparency = a59
-            a55.checkIcon.ImageTransparency = a60
-            a55.stroke.Transparency = a61
+            assign.frame.BackgroundTransparency = frame
+            assign.title.TextTransparency = title
+            assign.checkIcon.ImageTransparency = checkIcon
+            assign.stroke.Transparency = stroke
         end
     end
 
@@ -8784,7 +8784,7 @@ function a1.new(tab, a49)
             elseif n == 1 then
                 self.selectedLabel.Text = self.value[1]
             else
-                self.selectedLabel.Text = a7.resolve("Various")
+                self.selectedLabel.Text = placeholderText.resolve("Various")
             end
         else
             self.selectedLabel.Text = self.value[1] or self.placeholderText
@@ -8794,9 +8794,9 @@ function a1.new(tab, a49)
     self._renderOptionState = a54
     self._updateSelectedLabel = a63
 
-    local function a64(a65)
-        local a66 = self.window:Create("Frame", {
-            Size = UDim2.new(1, -12, 0, a19),
+    local function a64(Text)
+        local Parent = self.window:Create("Frame", {
+            Size = UDim2.new(1, -12, 0, Size),
             BorderSizePixel = 0,
                                     LayoutOrder = #self._optionFrames + 1,
 
@@ -8805,33 +8805,33 @@ function a1.new(tab, a49)
             Parent = self.list,
         }, { BackgroundColor3 = "DropdownHighlight" })
 
-                local a67 = self.window:Create("UICorner", {
-            CornerRadius = a16,
-            Parent = a66,
+                local corner = self.window:Create("UICorner", {
+            CornerRadius = CornerRadius,
+            Parent = Parent,
         })
 
-                local a68 = self.window:Create("UIStroke", {
+                local stroke = self.window:Create("UIStroke", {
             Color = Color3.fromRGB(255, 255, 255),
-            Transparency = 1,             Parent = a66,
+            Transparency = 1,             Parent = Parent,
         })
 
-        local a69 = self.window:Create("TextButton", {
+        local interact = self.window:Create("TextButton", {
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
             Text = "",
             TextTransparency = 1,
             ZIndex = 50,
-            Parent = a66,
+            Parent = Parent,
         })
 
-        local a70 = self.window:Create("Frame", {
+        local Parent = self.window:Create("Frame", {
             AnchorPoint = Vector2.new(0, 0.5),
             Position = UDim2.new(0, 14, 0.5, 0),
             Size = UDim2.fromOffset(170, 16),
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
             ZIndex = 5,
-            Parent = a66,
+            Parent = Parent,
         })
 
         self.window:Create("UIListLayout", {
@@ -8839,21 +8839,21 @@ function a1.new(tab, a49)
             FillDirection = Enum.FillDirection.Horizontal,
             VerticalAlignment = Enum.VerticalAlignment.Center,
             SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = a70,
+            Parent = Parent,
         })
 
-        local a71 = self.window:Create("ImageLabel", {
-            Image = "rbxassetid://" .. tostring(a12),
+        local checkIcon = self.window:Create("ImageLabel", {
+            Image = "rbxassetid://" .. tostring(checkIcon),
             Size = UDim2.fromOffset(16, 16),
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
             ImageTransparency = 1,
             ZIndex = 5,
-            Parent = a70,
+            Parent = Parent,
         }, { ImageColor3 = "ContentColor" })
 
-        local a72 = self.window:Create("TextLabel", {
-            Text = a65,
+        local title = self.window:Create("TextLabel", {
+            Text = Text,
             Size = UDim2.fromOffset(170, 16),
             BorderSizePixel = 0,
             BackgroundTransparency = 1,
@@ -8863,41 +8863,41 @@ function a1.new(tab, a49)
             LayoutOrder = 1,
             TextTransparency = 1,
             ZIndex = 5,
-            Parent = a70,
+            Parent = Parent,
         }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
         local a73 = {
-            name = a65,
-            frame = a66,
-            interact = a69,
-            title = a72,
-            checkIcon = a71,
-            container = a70,
-            stroke = a68,
-            corner = a67,
+            name = Text,
+            frame = Parent,
+            interact = interact,
+            title = title,
+            checkIcon = checkIcon,
+            container = Parent,
+            stroke = stroke,
+            corner = corner,
                         connections = {},
         }
 
         table.insert(
             a73.connections,
-            self.window:ConnectFor(self, a66.MouseEnter, function()
+            self.window:ConnectFor(self, Parent.MouseEnter, function()
                 if not self._isOpen or not self.window:_interactive() then
                     return
                 end
                 if a52(a73.name) then
                     return
                 end
-                a3.tweenService
+                Dropdown.tweenService
                     :Create(
-                        a66,
-                        a29,
+                        Parent,
+                        Create,
                         { BackgroundTransparency = 0.9 }
                     )
                     :Play()
-                a3.tweenService
+                Dropdown.tweenService
                     :Create(
-                        a72,
-                        a29,
+                        title,
+                        Create,
                         { TextTransparency = 0.15 }
                     )
                     :Play()
@@ -8906,24 +8906,24 @@ function a1.new(tab, a49)
 
         table.insert(
             a73.connections,
-            self.window:ConnectFor(self, a66.MouseLeave, function()
+            self.window:ConnectFor(self, Parent.MouseLeave, function()
                 if not self._isOpen then
                     return
                 end
                 if a52(a73.name) then
                     return
                 end
-                a3.tweenService
+                Dropdown.tweenService
                     :Create(
-                        a66,
-                        a29,
+                        Parent,
+                        Create,
                         { BackgroundTransparency = 0.95 }
                     )
                     :Play()
-                a3.tweenService
+                Dropdown.tweenService
                     :Create(
-                        a72,
-                        a29,
+                        title,
+                        Create,
                         { TextTransparency = 0.3 }
                     )
                     :Play()
@@ -8932,11 +8932,11 @@ function a1.new(tab, a49)
 
         table.insert(
             a73.connections,
-            self.window:ConnectFor(self, a69.MouseButton1Click, function()
+            self.window:ConnectFor(self, interact.MouseButton1Click, function()
                                 if not self._isOpen then
                     return
                 end
-                a8.click()
+                options.click()
                 local a74 = a52(a73.name)
 
                 if not self.multiSelect then
@@ -8992,7 +8992,7 @@ function a1.new(tab, a49)
     self:_updateCorners()
 
         self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
-        a8.click()
+        options.click()
         if self._isOpen then
             self:_close()
         else
@@ -9004,12 +9004,12 @@ function a1.new(tab, a49)
         if self._isOpen or not self.window:_interactive() then
             return
         end
-        a3.tweenService
-            :Create(self.title, a30, { TextColor3 = self.window.theme.ElementTextHoverColor })
+        Dropdown.tweenService
+            :Create(self.title, Create, { TextColor3 = self.window.theme.ElementTextHoverColor })
             :Play()
-        a3.tweenService:Create(self.hoverOverlay, a30, { BackgroundTransparency = 0.97 }):Play()
-        a3.tweenService
-            :Create(self.stroke, a30, {
+        Dropdown.tweenService:Create(self.hoverOverlay, Create, { BackgroundTransparency = 0.97 }):Play()
+        Dropdown.tweenService
+            :Create(self.stroke, Create, {
                 Transparency = self.window.theme.ElementStrokeHoverTransparency,
                 Color = self.window.theme.ElementStrokeHover,
             })
@@ -9017,10 +9017,10 @@ function a1.new(tab, a49)
     end)
 
     self.window:ConnectFor(self, self.main.MouseLeave, function()
-        a3.tweenService:Create(self.title, a30, { TextColor3 = self.window.theme.ContentColor }):Play()
-        a3.tweenService:Create(self.hoverOverlay, a30, { BackgroundTransparency = 1 }):Play()
-        a3.tweenService
-            :Create(self.stroke, a30, {
+        Dropdown.tweenService:Create(self.title, Create, { TextColor3 = self.window.theme.ContentColor }):Play()
+        Dropdown.tweenService:Create(self.hoverOverlay, Create, { BackgroundTransparency = 1 }):Play()
+        Dropdown.tweenService
+            :Create(self.stroke, Create, {
                 Transparency = self.window.theme.ElementStrokeTransparency,
                 Color = self.window.theme.ElementStroke,
             })
@@ -9034,19 +9034,19 @@ function a1.new(tab, a49)
     return self
 end
 
-function a1:_callbackValue()
+function state:_callbackValue()
     if self.multiSelect then
         return table.clone(self.value)
     end
     return self.value[1]
 end
 
-function a1:_buildSearch()
+function state:_buildSearch()
     self._searchOpen = false
 
     self.searchbar = self.window:Create("Frame", {
         Name = "Search",
-        Size = UDim2.new(1, -12, 0, a17),
+        Size = UDim2.new(1, -12, 0, Size),
         BorderSizePixel = 0,
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BackgroundTransparency = 1,         LayoutOrder = 1,
@@ -9078,7 +9078,7 @@ function a1:_buildSearch()
 
     self.searchInput = self.window:Create("TextBox", {
         Text = "",
-        PlaceholderText = a7.t("Search..."),
+        PlaceholderText = placeholderText.t("Search..."),
         Size = UDim2.new(1, -58, 0, 16),
         Position = UDim2.new(0, 44, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
@@ -9093,7 +9093,7 @@ function a1:_buildSearch()
     }, { TextColor3 = "ContentColor", FontFace = "Font", PlaceholderColor3 = "PlaceholderColor" })
 
     self.searchIcon = self.window:Create("ImageButton", {
-        Image = "rbxassetid://" .. tostring(a14),
+        Image = "rbxassetid://" .. tostring(Image),
         Size = UDim2.fromOffset(20, 20),
         Position = UDim2.new(0, 24, 0.5, 0),         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundTransparency = 1,
@@ -9127,7 +9127,7 @@ function a1:_buildSearch()
     end)
 end
 
-function a1:_expandSearch()
+function state:_expandSearch()
     if self._searchOpen then
         return
     end
@@ -9135,21 +9135,21 @@ function a1:_expandSearch()
     self.searchInput.TextEditable = true
     self.searchInput.Interactable = true
 
-    a3.tweenService
+    Dropdown.tweenService
         :Create(
             self.searchbar,
-            a35,
-            { Size = UDim2.new(1, -12, 0, a18), BackgroundTransparency = 0.92 }
+            tweenService,
+            { Size = UDim2.new(1, -12, 0, Size), BackgroundTransparency = 0.92 }
         )
         :Play()
-    a3.tweenService:Create(self.searchStroke, a35, { Transparency = 0.86 }):Play()
-    a3.tweenService:Create(self.searchShadow, a35, { Transparency = 0.92 }):Play()
-    a3.tweenService:Create(self.searchInput, a35, { TextTransparency = 0.3 }):Play()
+    Dropdown.tweenService:Create(self.searchStroke, tweenService, { Transparency = 0.86 }):Play()
+    Dropdown.tweenService:Create(self.searchShadow, tweenService, { Transparency = 0.92 }):Play()
+    Dropdown.tweenService:Create(self.searchInput, tweenService, { TextTransparency = 0.3 }):Play()
 
     self:_resizeToOptions()     self.searchInput:CaptureFocus()
 end
 
-function a1:_collapseSearch()
+function state:_collapseSearch()
     if not self._searchOpen then
         return
     end
@@ -9158,38 +9158,38 @@ function a1:_collapseSearch()
     self.searchInput.Interactable = false
     self.searchInput:ReleaseFocus()
     self.searchInput.Text = ""
-    a3.tweenService
+    Dropdown.tweenService
         :Create(
             self.searchbar,
-            a35,
-            { Size = UDim2.new(1, -12, 0, a17), BackgroundTransparency = 1 }
+            tweenService,
+            { Size = UDim2.new(1, -12, 0, Size), BackgroundTransparency = 1 }
         )
         :Play()
-    a3.tweenService:Create(self.searchStroke, a35, { Transparency = 1 }):Play()
-    a3.tweenService:Create(self.searchShadow, a35, { Transparency = 1 }):Play()
-    a3.tweenService:Create(self.searchInput, a35, { TextTransparency = 1 }):Play()
+    Dropdown.tweenService:Create(self.searchStroke, tweenService, { Transparency = 1 }):Play()
+    Dropdown.tweenService:Create(self.searchShadow, tweenService, { Transparency = 1 }):Play()
+    Dropdown.tweenService:Create(self.searchInput, tweenService, { TextTransparency = 1 }):Play()
 
     self:_resizeToOptions()
 end
 
-function a1:_applyFilter(a78)
-    a78 = string.lower(a78 or "")
+function state:_applyFilter(state)
+    state = string.lower(state or "")
     local a79 = 0
     for _, a80 in self._optionFrames do
-        local a81 = a78 == "" or string.find(string.lower(a80.name), a78, 1, true) ~= nil
-        a80.frame.Visible = a81
-        if a81 then
+        local frame = state == "" or string.find(string.lower(a80.name), state, 1, true) ~= nil
+        a80.frame.Visible = frame
+        if frame then
             a79 += 1
         end
     end
 
-            self.emptyLabel.Visible = a79 == 0 and a78 ~= ""
+            self.emptyLabel.Visible = a79 == 0 and state ~= ""
     self:_updateCorners()
     self:_resizeToOptions()
     self:_syncScrollHint()
 end
 
-function a1:_syncScrollHint()
+function state:_syncScrollHint()
         local a82, a83, at =
         self.list.AbsoluteCanvasSize, self.list.AbsoluteWindowSize, self.list.CanvasPosition
     if not a82 or not a83 or not at then
@@ -9198,28 +9198,28 @@ function a1:_syncScrollHint()
 
     local a84 = self._isOpen and a83.Y > 0 and a82.Y - (at.Y + a83.Y) > 1
 
-    a3.tweenService
-        :Create(self.list, a29, { ScrollBarImageTransparency = if a84 then a34 else 1 })
+    Dropdown.tweenService
+        :Create(self.list, Create, { ScrollBarImageTransparency = if a84 then list else 1 })
         :Play()
 end
 
-function a1:_visibleOptions(): { string }
+function state:_visibleOptions(): { string }
     local a85 = {}
-    for _, a86 in self._optionFrames do
-        if a86.frame.Visible then
-            table.insert(a85, a86.name)
+    for _, insert in self._optionFrames do
+        if insert.frame.Visible then
+            table.insert(a85, insert.name)
         end
     end
     return a85
 end
 
-function a1:_buildActions()
+function state:_buildActions()
     if not self.multiSelect then
         return     end
 
     self.actions = self.window:Create("Frame", {
         Name = "Actions",
-        Size = UDim2.new(1, -12, 0, a28),
+        Size = UDim2.new(1, -12, 0, Size),
         BackgroundTransparency = 1,
         LayoutOrder = 2,
 
@@ -9235,30 +9235,30 @@ function a1:_buildActions()
         Parent = self.actions,
     })
 
-    local function a87(a88: string, a89: number, a90: () -> ())
-        local a91 = self.window:Create("TextButton", {
+    local function a87(flag: string, TextTransparency: number, a90: () -> ())
+        local tweenService = self.window:Create("TextButton", {
             AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2.fromOffset(0, a28),
+            Size = UDim2.fromOffset(0, Size),
             BackgroundTransparency = 1,
-            Text = a7.t(a88),
+            Text = placeholderText.t(flag),
             TextSize = 13,
-            TextTransparency = 0.45,             LayoutOrder = a89,
+            TextTransparency = 0.45,             LayoutOrder = TextTransparency,
 
             Parent = self.actions,
         }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-        self.window:ConnectFor(self, a91.MouseEnter, function()
-            a3.tweenService:Create(a91, a29, { TextTransparency = 0.15 }):Play()
+        self.window:ConnectFor(self, tweenService.MouseEnter, function()
+            Dropdown.tweenService:Create(tweenService, Create, { TextTransparency = 0.15 }):Play()
         end)
-        self.window:ConnectFor(self, a91.MouseLeave, function()
-            a3.tweenService:Create(a91, a29, { TextTransparency = 0.45 }):Play()
+        self.window:ConnectFor(self, tweenService.MouseLeave, function()
+            Dropdown.tweenService:Create(tweenService, Create, { TextTransparency = 0.45 }):Play()
         end)
-        self.window:ConnectFor(self, a91.MouseButton1Click, function()
+        self.window:ConnectFor(self, tweenService.MouseButton1Click, function()
             a90()
             self:_afterBulkChange()
         end)
 
-        return a91
+        return tweenService
     end
 
                 a87("Select all", 1, function()
@@ -9279,7 +9279,7 @@ function a1:_buildActions()
     end)
 end
 
-function a1:_afterBulkChange()
+function state:_afterBulkChange()
             self._desiredValue = table.clone(self.value)
 
     for _, a96 in self._optionFrames do
@@ -9289,48 +9289,48 @@ function a1:_afterBulkChange()
     self:_updateCorners()
     self.window:_runGuarded(self, self.callback, self:_callbackValue())
     self.window:_persist(self)
-    a8.click()
+    options.click()
 end
 
-function a1:_resizeToOptions()
+function state:_resizeToOptions()
     if not self._isOpen then
         return
     end
-    a3.tweenService:Create(self.main, a35, { Size = UDim2.new(1, -20, 0, self:_openHeight()) }):Play()
+    Dropdown.tweenService:Create(self.main, tweenService, { Size = UDim2.new(1, -20, 0, self:_openHeight()) }):Play()
 end
 
-function a1:_updateCorners()
+function state:_updateCorners()
     local a97 = {}
-    for _, a98 in self._optionFrames do
-        if a98.frame.Visible then
-            table.insert(a97, a98)
+    for _, insert in self._optionFrames do
+        if insert.frame.Visible then
+            table.insert(a97, insert)
         end
     end
 
     for i, a99 in a97 do
-        local a100 = if i == 1 then a15 else a16
-        local a101 = if i == #a97 then a15 else a16
-        a99.corner.TopLeftRadius = a100
-        a99.corner.TopRightRadius = a100
-        a99.corner.BottomLeftRadius = a101
-        a99.corner.BottomRightRadius = a101
+        local corner = if i == 1 then a15 else CornerRadius
+        local corner = if i == #a97 then a15 else CornerRadius
+        a99.corner.TopLeftRadius = corner
+        a99.corner.TopRightRadius = corner
+        a99.corner.BottomLeftRadius = corner
+        a99.corner.BottomRightRadius = corner
     end
 end
 
 local function a102(a103: number): number
-    return a103 * a19 + math.max(0, a103 - 1) * a20 + a21 * 2
+    return a103 * Size + math.max(0, a103 - 1) * max + PaddingTop * 2
 end
 
 local function a104(a105: number): number
-    return math.max(math.floor((a105 - a21 * 2 + a20) / (a19 + a20)), 1)
+    return math.max(math.floor((a105 - PaddingTop * 2 + max) / (Size + max)), 1)
 end
 
-function a1:_pageHeight(): number
-    local a106 = self.window.size
-    return a9.pageHeight(a106 and a106.Y.Offset, self.window.layout.mode)
+function state:_pageHeight(): number
+    local value = self.window.size
+    return a9.pageHeight(value and value.Y.Offset, self.window.layout.mode)
 end
 
-function a1:_openHeight()
+function state:_openHeight()
     local n = 0
     for _, a107 in self._optionFrames do
         if a107.frame.Visible then
@@ -9338,21 +9338,21 @@ function a1:_openHeight()
         end
     end
 
-            local a108 = if self._searchOpen then a18 else a17
-    local a109 = a22
+            local a108 = if self._searchOpen then Size else Size
+    local a109 = Size
         + a23
         + a26
         + a108
-        + a20
-        + (if self.actions then a28 + a20 else 0)
+        + max
+        + (if self.actions then Size + max else 0)
 
-    local a110 = self:_pageHeight()
-        local a111 = math.min(math.max(n, 1), a27, a104(a110 - a109))
+    local min = self:_pageHeight()
+        local min = math.min(math.max(n, 1), a27, a104(min - a109))
 
-    return math.min(a109 + a102(a111), a110)
+    return math.min(a109 + a102(min), min)
 end
 
-function a1:_open()
+function state:_open()
     if self._isOpen then
         return
     end
@@ -9361,7 +9361,7 @@ function a1:_open()
     if self._outsideClickConn then
         self.window:Disconnect(self._outsideClickConn)
     end
-    self._outsideClickConn = self.window:Connect(a3.userInputService.InputBegan, function(a112)
+    self._outsideClickConn = self.window:Connect(Dropdown.userInputService.InputBegan, function(a112)
         if
             a112.UserInputType ~= Enum.UserInputType.MouseButton1
             and a112.UserInputType ~= Enum.UserInputType.Touch
@@ -9382,35 +9382,35 @@ function a1:_open()
         end
     end)
 
-    a3.tweenService
+    Dropdown.tweenService
         :Create(
             self.main,
             a32,
             { Size = UDim2.new(1, -20, 0, self:_openHeight()) }
         )
         :Play()
-    a3.tweenService
+    Dropdown.tweenService
         :Create(
             self.chevron,
             a33,
             { Rotation = 0 }
         )
         :Play()
-    a3.tweenService
+    Dropdown.tweenService
         :Create(
             self.panel,
             a31,
             { BackgroundTransparency = self.window.theme.ElementTransparency or 0 }
         )
         :Play()
-    a3.tweenService
+    Dropdown.tweenService
         :Create(
             self.panelStroke,
             a31,
             { Transparency = self.window.theme.ElementStrokeTransparency }
         )
         :Play()
-    a3.tweenService
+    Dropdown.tweenService
         :Create(
             self.searchIcon,
             a31,
@@ -9426,14 +9426,14 @@ function a1:_open()
     self:_bringIntoView()
 end
 
-function a1:_bringIntoView()
-    local a117 = self.tab and self.tab.tabPage
-    if not a117 then
+function state:_bringIntoView()
+    local AbsoluteWindowSize = self.tab and self.tab.tabPage
+    if not AbsoluteWindowSize then
         return
     end
 
         local a118, at, a119, a120 =
-        a117.AbsoluteWindowSize, a117.CanvasPosition, a117.AbsolutePosition, self.main.AbsolutePosition
+        AbsoluteWindowSize.AbsoluteWindowSize, AbsoluteWindowSize.CanvasPosition, AbsoluteWindowSize.AbsolutePosition, self.main.AbsolutePosition
     if not a118 or not at or not a119 or not a120 or a118.Y <= 0 then
         return
     end
@@ -9444,15 +9444,15 @@ function a1:_bringIntoView()
     if a123 <= 0 then
         return     end
 
-            local a124 = math.min(at.Y + a123 + 8, a121)
-    a3.tweenService
-        :Create(a117, a31, {
-            CanvasPosition = Vector2.new(at.X, a124),
+            local CanvasPosition = math.min(at.Y + a123 + 8, a121)
+    Dropdown.tweenService
+        :Create(AbsoluteWindowSize, a31, {
+            CanvasPosition = Vector2.new(at.X, CanvasPosition),
         })
         :Play()
 end
 
-function a1:_close()
+function state:_close()
     if not self._isOpen then
         return
     end
@@ -9466,28 +9466,28 @@ function a1:_close()
     self:_collapseSearch()
     self:_syncScrollHint()
 
-    a3.tweenService
+    Dropdown.tweenService
         :Create(
             self.chevron,
             a33,
             { Rotation = 180 }
         )
         :Play()
-    a3.tweenService
+    Dropdown.tweenService
         :Create(
             self.panel,
             a31,
             { BackgroundTransparency = 1 }
         )
         :Play()
-    a3.tweenService
+    Dropdown.tweenService
         :Create(
             self.panelStroke,
             a31,
             { Transparency = 1 }
         )
         :Play()
-    a3.tweenService
+    Dropdown.tweenService
         :Create(
             self.searchIcon,
             a31,
@@ -9499,7 +9499,7 @@ function a1:_close()
         self._renderOptionState(a125, true)
     end
 
-    a3.tweenService
+    Dropdown.tweenService
         :Create(
             self.main,
             a32,
@@ -9508,57 +9508,57 @@ function a1:_close()
         :Play()
 end
 
-function a1:_destroyOption(a126)
-    if a126.connections then
-        for _, a127 in a126.connections do
+function state:_destroyOption(state)
+    if state.connections then
+        for _, a127 in state.connections do
             local a128 = table.find(self.connections, a127)
             if a128 then
                 table.remove(self.connections, a128)
             end
             self.window:Disconnect(a127)
         end
-        a126.connections = nil
+        state.connections = nil
     end
-    self.window:DestroySubtree(a126.frame)
+    self.window:DestroySubtree(state.frame)
 end
 
-function a1:_deriveSelection()
+function state:_deriveSelection()
     local a129 = self.value
     self.value = a44(self._desiredValue or self.value, self.options)
     return not a48(self.value, a129)
 end
 
-function a1:_reindexOptions()
-    for a130, a131 in self._optionFrames do
-        a131.frame.LayoutOrder = a130
+function state:_reindexOptions()
+    for frame, a131 in self._optionFrames do
+        a131.frame.LayoutOrder = frame
     end
 end
 
-function a1:_rebindOption(a132, a133, a134)
-    a132.name = a133
-    a132.title.Text = a133
-    a132.frame.LayoutOrder = a134
+function state:_rebindOption(state, name, frame)
+    state.name = name
+    state.title.Text = name
+    state.frame.LayoutOrder = frame
 end
 
-function a1:_destroyOptionsFrom(a135)
-    local a136, a137 = {}, {}
+function state:_destroyOptionsFrom(state)
+    local a136, connections = {}, {}
 
-    for a138 = #self._optionFrames, a135, -1 do
-        local a139 = self._optionFrames[a138]
-        table.insert(a136, a139.frame)
-        if a139.connections then
-            table.move(a139.connections, 1, #a139.connections, #a137 + 1, a137)
-            a139.connections = nil
+    for a138 = #self._optionFrames, state, -1 do
+        local insert = self._optionFrames[a138]
+        table.insert(a136, insert.frame)
+        if insert.connections then
+            table.move(insert.connections, 1, #insert.connections, #connections + 1, connections)
+            insert.connections = nil
         end
         self._optionFrames[a138] = nil
     end
 
-    self.window:DisconnectMany(self, a137)
+    self.window:DisconnectMany(self, connections)
     self.window:DestroySubtrees(a136)
 end
 
-function a1:Refresh(a140)
-    self.options = a36(a140 or {})
+function state:Refresh(state)
+    self.options = options(state or {})
 
     local a141 = self:_deriveSelection()
 
@@ -9569,9 +9569,9 @@ function a1:Refresh(a140)
         self:_rebindOption(self._optionFrames[a144], self.options[a144], a144)
     end
 
-    for a145 = a142 + 1, a143 do
-        local a146 = self._buildOption(self.options[a145])
-        a146.frame.LayoutOrder = a145
+    for frame = a142 + 1, a143 do
+        local a146 = self._buildOption(self.options[frame])
+        a146.frame.LayoutOrder = frame
         table.insert(self._optionFrames, a146)
     end
 
@@ -9592,16 +9592,16 @@ function a1:Refresh(a140)
     end
 end
 
-function a1:Add(a148)
-    if typeof(a148) ~= "string" or a148 == "" then
+function state:Add(state)
+    if typeof(state) ~= "string" or state == "" then
         return
     end
-    if table.find(self.options, a148) then
+    if table.find(self.options, state) then
         return
     end
 
-    table.insert(self.options, a148)
-    local a149 = self._buildOption(a148)
+    table.insert(self.options, state)
+    local a149 = self._buildOption(state)
     table.insert(self._optionFrames, a149)
 
         local a150 = self:_deriveSelection()
@@ -9619,8 +9619,8 @@ function a1:Add(a148)
     end
 end
 
-function a1:Remove(a151)
-    local a152 = table.find(self.options, a151)
+function state:Remove(state)
+    local a152 = table.find(self.options, state)
     if not a152 then
         return
     end
@@ -9628,7 +9628,7 @@ function a1:Remove(a151)
     table.remove(self.options, a152)
 
     for i, a153 in self._optionFrames do
-        if a153.name == a151 then
+        if a153.name == state then
             self:_destroyOption(a153)
             table.remove(self._optionFrames, i)
             self:_reindexOptions()
@@ -9637,13 +9637,13 @@ function a1:Remove(a151)
     end
 
             if self._desiredValue then
-        local a154 = table.find(self._desiredValue, a151)
+        local a154 = table.find(self._desiredValue, state)
         if a154 then
             table.remove(self._desiredValue, a154)
         end
     end
 
-    local a155 = table.find(self.value, a151)
+    local a155 = table.find(self.value, state)
     if a155 then
         table.remove(self.value, a155)
         self._updateSelectedLabel()
@@ -9654,81 +9654,81 @@ function a1:Remove(a151)
         self:_applyFilter(if self._searchOpen then self.searchInput.Text else "")
 end
 
-function a1:Set(a156, a157)
-    local a158 = a40(a156, self.multiSelect)
-        self._desiredValue = a158
-    self.value = a44(a158, self.options)
+function state:Set(state, Set)
+    local value = value(state, self.multiSelect)
+        self._desiredValue = value
+    self.value = a44(value, self.options)
 
     for _, a159 in self._optionFrames do
         self._renderOptionState(a159, true)
     end
     self._updateSelectedLabel()
 
-    if not a157 then
+    if not Set then
         self.window:_runGuarded(self, self.callback, self:_callbackValue())
         self.window:_persist(self)     end
 end
 
-function a1:_setShown(a160, a161)
+function state:_setShown(state, a161)
             local w = self.window
-    w:_reveal(self.stroke, { Transparency = if a160 then w.theme.ElementStrokeTransparency else 1 }, a161)
-    w:_reveal(self.title, { TextTransparency = if a160 then 0 else 1 }, a161)
-    w:_reveal(self.top, { BackgroundTransparency = if a160 then (w.theme.ElementTransparency or 0) else 1 }, a161)
+    w:_reveal(self.stroke, { Transparency = if state then w.theme.ElementStrokeTransparency else 1 }, a161)
+    w:_reveal(self.title, { TextTransparency = if state then 0 else 1 }, a161)
+    w:_reveal(self.top, { BackgroundTransparency = if state then (w.theme.ElementTransparency or 0) else 1 }, a161)
     if self.iconLabel then
-        w:_reveal(self.iconLabel, { ImageTransparency = if a160 then 0 else 1 }, a161)
+        w:_reveal(self.iconLabel, { ImageTransparency = if state then 0 else 1 }, a161)
     end
     if self.descriptor then
-        w:_reveal(self.descriptor.titleLabel, { TextTransparency = if a160 then 0.7 else 1 }, a161)
+        w:_reveal(self.descriptor.titleLabel, { TextTransparency = if state then 0.7 else 1 }, a161)
     end
-    w:_reveal(self.selectedLabel, { TextTransparency = if a160 then 0.5 else 1 }, a161)
-    w:_reveal(self.chevron, { ImageTransparency = if a160 then 0.5 else 1 }, a161)
+    w:_reveal(self.selectedLabel, { TextTransparency = if state then 0.5 else 1 }, a161)
+    w:_reveal(self.chevron, { ImageTransparency = if state then 0.5 else 1 }, a161)
 
-        if not a160 and self._isOpen then
+        if not state and self._isOpen then
         self:_close()
     end
 end
 
-function a1:MoveTo(a162)
-    self.tab:_moveElement(self, a162)
+function state:MoveTo(state)
+    self.tab:_moveElement(self, state)
 end
 
-function a1:MoveToTop()
+function state:MoveToTop()
     self.tab:_moveElement(self, 1)
 end
 
-function a1:MoveToBottom()
+function state:MoveToBottom()
     self.tab:_moveElement(self, #self.tab.elements)
 end
 
-function a1:MoveUp()
+function state:MoveUp()
     local a163 = table.find(self.tab.elements, self)
     if a163 then
         self.tab:_moveElement(self, a163 - 1)
     end
 end
 
-function a1:MoveDown()
+function state:MoveDown()
     local a164 = table.find(self.tab.elements, self)
     if a164 then
         self.tab:_moveElement(self, a164 + 1)
     end
 end
 
-a10(a1)
+multiSelect(state)
 
-return a1
+return state
 
 end)() end,
     [26] = function()local wax,script,require=ImportGlobals(26)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Group"
+local state = {}
+state.__index = state
+state.__type = "Group"
 
-local a2 = require(script.Parent.Parent.utilities.moveable)
-local a3 = require(script.Parent.Parent.utilities.log)
-local a4 = require(script.Parent.Parent.utilities.ordering)
+local constants = require(script.Parent.Parent.utilities.moveable)
+local Group = require(script.Parent.Parent.utilities.log)
+local tab = require(script.Parent.Parent.utilities.ordering)
 
-local a5 = 8
+local Padding = 8
 
 local a6 = {
     button = true,
@@ -9737,19 +9737,19 @@ local a6 = {
     slider = true,
 }
 
-function a1.new(tab, a7)
-    a7 = if typeof(a7) == "table" then a7 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
-    local a8 = string.lower(a7.direction or a7.Direction or "row")
-    local a9 = a8 == "column" or a8 == "vertical"
-    local a10 = not a9
-    local a11 = if a10 then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical
+    local frame = string.lower(state.direction or state.Direction or "row")
+    local a9 = frame == "column" or frame == "vertical"
+    local compact = not a9
+    local direction = if compact then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),         window = tab.window,
-        direction = a11,
-        compact = a10,         forgetState = tab.forgetState,         elements = {},
-    }, a1)
+        direction = direction,
+        compact = compact,         forgetState = tab.forgetState,         elements = {},
+    }, state)
 
         local a12 = tab.direction == Enum.FillDirection.Horizontal
 
@@ -9758,7 +9758,7 @@ function a1.new(tab, a7)
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         AutomaticSize = Enum.AutomaticSize.Y,
-                        Size = if a10 then UDim2.new(1, -20, 0, 0) else UDim2.new(1, 0, 0, 0),
+                        Size = if compact then UDim2.new(1, -20, 0, 0) else UDim2.new(1, 0, 0, 0),
 
         Parent = self.tab.tabPage,
     })
@@ -9774,11 +9774,11 @@ function a1.new(tab, a7)
         self.tabPage = self.main
 
     self.layout = self.window:Create("UIListLayout", {
-        FillDirection = a11,
+        FillDirection = direction,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, a5),
-        VerticalAlignment = if a10 then Enum.VerticalAlignment.Center else Enum.VerticalAlignment.Top,
-        HorizontalAlignment = if a10 then Enum.HorizontalAlignment.Left else Enum.HorizontalAlignment.Center,
+        Padding = UDim.new(0, Padding),
+        VerticalAlignment = if compact then Enum.VerticalAlignment.Center else Enum.VerticalAlignment.Top,
+        HorizontalAlignment = if compact then Enum.HorizontalAlignment.Left else Enum.HorizontalAlignment.Center,
 
         Parent = self.main,
     })
@@ -9786,17 +9786,17 @@ function a1.new(tab, a7)
     return self
 end
 
-function a1:_add(a13, a14)
-    if self.compact and not a6[a13] then
-        a3.warn(
-            `Astra: a row only holds compact elements (button/toggle/stat/slider), ignoring '{a13}'. Use a column for it.`
+function state:_add(state, element)
+    if self.compact and not a6[state] then
+        Group.warn(
+            `Astra: a row only holds compact elements (button/toggle/stat/slider), ignoring '{state}'. Use a column for it.`
         )
         return nil
     end
 
-    local element = require(script.Parent[a13]).new(self, a14)
+    local element = require(script.Parent[state]).new(self, element)
     table.insert(self.elements, element)
-    a4(element, #self.elements * 10)
+    tab(element, #self.elements * 10)
     self.window:_restoreLate(element)
 
     if self.compact then
@@ -9810,7 +9810,7 @@ function a1:_add(a13, a14)
     return element
 end
 
-function a1:_reflowRow()
+function state:_reflowRow()
     if self.direction ~= Enum.FillDirection.Horizontal then
         return
     end
@@ -9823,52 +9823,52 @@ function a1:_reflowRow()
         end
     end
 
-    self.layout.Padding = if a15 then UDim.new(0, -10) else UDim.new(0, a5)
+    self.layout.Padding = if a15 then UDim.new(0, -10) else UDim.new(0, Padding)
 end
 
-function a1:_wrapChild(element)
+function state:_wrapChild(element)
     self.layout.Wraps = true
     self.layout.HorizontalFlex = Enum.UIFlexAlignment.Fill
 
             element._widthManaged = true
 
-    local a16 = if element._minWidth then element:_minWidth() else 0
-    if a16 > 0 then
+    local element = if element._minWidth then element:_minWidth() else 0
+    if element > 0 then
         element.main.AutomaticSize = Enum.AutomaticSize.None
-        element.main.Size = UDim2.new(0, a16, element.main.Size.Y.Scale, element.main.Size.Y.Offset)
+        element.main.Size = UDim2.new(0, element, element.main.Size.Y.Scale, element.main.Size.Y.Offset)
     end
 end
 
-function a1:CreateButton(a17)
-    return self:_add("button", a17)
+function state:CreateButton(state)
+    return self:_add("button", state)
 end
-function a1:CreateToggle(a18)
-    return self:_add("toggle", a18)
+function state:CreateToggle(state)
+    return self:_add("toggle", state)
 end
-function a1:CreateSwitch(a19)
-    return self:_add("toggle", a19)
+function state:CreateSwitch(state)
+    return self:_add("toggle", state)
 end
-function a1:CreateStat(a20)
-    return self:_add("stat", a20)
+function state:CreateStat(state)
+    return self:_add("stat", state)
 end
-function a1:CreateSlider(a21)
-    return self:_add("slider", a21)
+function state:CreateSlider(state)
+    return self:_add("slider", state)
 end
-function a1:CreateDropdown(a22)
-    return self:_add("dropdown", a22)
+function state:CreateDropdown(state)
+    return self:_add("dropdown", state)
 end
-function a1:CreateSection(a23)
-    return self:_add("section", a23)
+function state:CreateSection(state)
+    return self:_add("section", state)
 end
-function a1:CreateText(a24)
-    return self:_add("text", a24)
+function state:CreateText(state)
+    return self:_add("text", state)
 end
-function a1:CreateDivider(a25)
-    return self:_add("divider", a25)
+function state:CreateDivider(state)
+    return self:_add("divider", state)
 end
 
-function a1:_addGroup(a26)
-    a26 = if typeof(a26) == "table" then table.clone(a26) else {}
+function state:_addGroup(state)
+    state = if typeof(state) == "table" then table.clone(state) else {}
 
         if self.direction == Enum.FillDirection.Horizontal then
                         self.layout.VerticalAlignment = Enum.VerticalAlignment.Top
@@ -9877,37 +9877,37 @@ function a1:_addGroup(a26)
         end
     end
 
-    local a27 = a1.new(self, a26)
+    local a27 = state.new(self, state)
     table.insert(self.elements, a27)
     a27.main.LayoutOrder = #self.elements * 10
     self:_reflowRow()
     return a27
 end
 
-function a1:CreateGroup(a28)
-    return self:_addGroup(a28)
+function state:CreateGroup(state)
+    return self:_addGroup(state)
 end
 
-function a1:_moveElement(element, a29)
+function state:_moveElement(element, state)
     local a30 = table.find(self.elements, element)
     if not a30 then
         return
     end
     table.remove(self.elements, a30)
-    a29 = math.clamp(a29, 1, #self.elements + 1)
-    table.insert(self.elements, a29, element)
+    state = math.clamp(state, 1, #self.elements + 1)
+    table.insert(self.elements, state, element)
     for i, el in self.elements do
-        a4(el, i * 10)
+        tab(el, i * 10)
     end
 end
 
-function a1:_setShown(a31, a32)
+function state:_setShown(state, a32)
     for _, el in self.elements do
-        el:_setShown(a31, a32)
+        el:_setShown(state, a32)
     end
 end
 
-function a1:_refreshTheme()
+function state:_refreshTheme()
     for _, el in self.elements do
         if el._refreshTheme then
             el:_refreshTheme()
@@ -9915,28 +9915,28 @@ function a1:_refreshTheme()
     end
 end
 
-a2(a1)
+constants(state)
 
-return a1
+return state
 
 end)() end,
     [27] = function()local wax,script,require=ImportGlobals(27)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Input"
+local state = {}
+state.__index = state
+state.__type = "Input"
 
-local a2 = script.Parent.Parent.utilities
+local Input = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
+local Input = require(Input.Parent.core.state)
 local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.moveable)
-local a6 = require(a2.lockable)
-local a7 = require(a2.locale)
-local a8 = require(a2.constants)
-local a9 = require(a2.HapticEngine)
+local props = require(Input.moveable)
+local name = require(Input.lockable)
+local Text = require(Input.locale)
+local callback = require(Input.constants)
+local clearOnFocus = require(Input.HapticEngine)
 
-local a10 = a8.pillResizeInfo
-local a11 = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local tweenService = callback.pillResizeInfo
+local tweenService = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 local function a12(a13)
     local a, b = a13:match("^([%d%.%-]+)%^([%d%.%-]+)$")
@@ -9949,27 +9949,27 @@ local function a12(a13)
     return tonumber(a13)
 end
 
-function a1.new(tab, a14)
-    a14 = if typeof(a14) == "table" then a14 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a14.name or a14.Name or "Input",
-        icon = tab.window:ResolveIcon(a14.icon or a14.Icon),
-        description = a14.description or a14.Description,
-        forgetState = a14.forgetState or a14.ForgetState or tab.forgetState,
-        placeholder = a14.placeholder or a14.Placeholder or "",
-        numeric = a14.numeric or a14.Numeric or false,         clearOnFocus = a14.clearOnFocus or a14.ClearOnFocus or false,
+        name = state.name or state.Name or "Input",
+        icon = tab.window:ResolveIcon(state.icon or state.Icon),
+        description = state.description or state.Description,
+        forgetState = state.forgetState or state.ForgetState or tab.forgetState,
+        placeholder = state.placeholder or state.Placeholder or "",
+        numeric = state.numeric or state.Numeric or false,         clearOnFocus = state.clearOnFocus or state.ClearOnFocus or false,
 
-        callback = a14.callback or a14.Callback or function() end,
-    }, a1)
+        callback = state.callback or state.Callback or function() end,
+    }, state)
 
     self.value =
-        tostring(a14.value or a14.Value or a14.currentValue or a14.CurrentValue or "")
+        tostring(state.value or state.Value or state.currentValue or state.CurrentValue or "")
 
-    self.flag = a14.flag
-        or a14.Flag
+    self.flag = state.flag
+        or state.Flag
         or (not self.forgetState and a4.deriveFlagFromName(self.name) or nil)
     self.window:_registerControl(self)
 
@@ -10019,7 +10019,7 @@ function a1.new(tab, a14)
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a7.t(self.name),
+        Text = Text.t(self.name),
         Size = UDim2.fromOffset(150, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -10057,7 +10057,7 @@ function a1.new(tab, a14)
     self._glowIdle = 1
     self.input = self.window:Create("TextBox", {
         Text = self.value,
-        PlaceholderText = a7.t(self.placeholder),
+        PlaceholderText = Text.t(self.placeholder),
         Size = UDim2.new(1, -15, 0, 15),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -10083,11 +10083,11 @@ function a1.new(tab, a14)
     end)
 
         self.window:ConnectFor(self, self.input.Focused, function()
-        a3.tweenService:Create(self.input, a11, { TextTransparency = 0 }):Play()
+        Input.tweenService:Create(self.input, tweenService, { TextTransparency = 0 }):Play()
     end)
 
         self.window:ConnectFor(self, self.input.FocusLost, function()
-        a3.tweenService:Create(self.input, a11, { TextTransparency = 0.6 }):Play()
+        Input.tweenService:Create(self.input, tweenService, { TextTransparency = 0.6 }):Play()
                         if self.clearOnFocus and self.input.Text == "" and self.value ~= "" then
             self.input.Text = self.value
             return
@@ -10107,52 +10107,52 @@ function a1.new(tab, a14)
     return self
 end
 
-function a1:_sizeBox(a16)
+function state:_sizeBox(state)
     local a17 = self.input.Text ~= "" and self.input.Text or self.placeholder
-    local a18 = math.clamp(a4.textWidth(self.window.theme.Font, 15, a17) + 30, 70, 220)
-    if a16 then
-        a3.tweenService:Create(self.box, a10, { Size = UDim2.fromOffset(a18, 30) }):Play()
+    local Create = math.clamp(a4.textWidth(self.window.theme.Font, 15, a17) + 30, 70, 220)
+    if state then
+        Input.tweenService:Create(self.box, tweenService, { Size = UDim2.fromOffset(Create, 30) }):Play()
     else
-        self.box.Size = UDim2.fromOffset(a18, 30)
+        self.box.Size = UDim2.fromOffset(Create, 30)
     end
 end
 
-function a1:_commit(a19, a20)
-    a19 = tostring(a19)
+function state:_commit(state, a20)
+    state = tostring(state)
     if self.numeric then
-        local n = a12(a19)
+        local n = a12(state)
         if not n or n ~= n or n == math.huge or n == -math.huge then
                         if self.input.Text ~= self.value then
                 self.input.Text = self.value
             end
             return
         end
-        a19 = tostring(n)
+        state = tostring(n)
     end
 
-    local a21 = a19 ~= self.value
-    self.value = a19
-    if self.input.Text ~= a19 then
-        self.input.Text = a19
+    local a21 = state ~= self.value
+    self.value = state
+    if self.input.Text ~= state then
+        self.input.Text = state
     end
 
     if not a20 then
-        self.window:_runGuarded(self, self.callback, a19)
+        self.window:_runGuarded(self, self.callback, state)
         self.window:_persist(self)
                         if a21 and not self.window._loading then
-            a9.click()
+            clearOnFocus.click()
             self.window:_flashResult(self, true)
         end
     end
 end
 
-function a1:Set(a22, a23)
-    self:_commit(a22, a23)
+function state:Set(state, Set)
+    self:_commit(state, Set)
 end
 
-function a1:_setShown(a24, a25)
+function state:_setShown(state, a25)
     local w = self.window
-    if a24 then
+    if state then
         w:_revealCommon(self, a25)
         w:_reveal(self.box, { BackgroundTransparency = w.theme.FieldTransparency }, a25)
         w:_reveal(self.boxStroke, { Transparency = 0.85 }, a25)
@@ -10165,8 +10165,8 @@ function a1:_setShown(a24, a25)
     end
 end
 
-function a1:_refreshTheme()
-    a3.tweenService
+function state:_refreshTheme()
+    Input.tweenService
         :Create(
             self.box,
             TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -10175,31 +10175,31 @@ function a1:_refreshTheme()
         :Play()
 end
 
-a5(a1)
-a6(a1)
+props(state)
+name(state)
 
-return a1
+return state
 
 end)() end,
     [28] = function()local wax,script,require=ImportGlobals(28)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Keybind"
+local state = {}
+state.__index = state
+state.__type = "Keybind"
 
-local a2 = script.Parent.Parent.utilities
+local Keybind = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
+local Keybind = require(Keybind.Parent.core.state)
 local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.moveable)
-local a6 = require(a2.lockable)
-local a7 = require(a2.locale)
-local a8 = require(a2.constants)
-local a9 = require(a2.HapticEngine)
-local a10 = require(a2.enums)
-local a11 = require(a2.log)
+local props = require(Keybind.moveable)
+local name = require(Keybind.lockable)
+local Text = require(Keybind.locale)
+local callback = require(Keybind.constants)
+local isMenuToggle = require(Keybind.HapticEngine)
+local a10 = require(Keybind.enums)
+local holdThreshold = require(Keybind.log)
 
-local a12 = a8.pillResizeInfo
-local a13 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local tweenService = callback.pillResizeInfo
+local tweenService = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 local a14 = {
     [Enum.UserInputType.MouseButton1] = "MB1",
@@ -10207,11 +10207,11 @@ local a14 = {
     [Enum.UserInputType.MouseButton3] = "MB3",
 }
 
-local function a15(a16)
-    if typeof(a16) ~= "EnumItem" or a16 == Enum.KeyCode.Unknown then
+local function Text(element)
+    if typeof(element) ~= "EnumItem" or element == Enum.KeyCode.Unknown then
         return "None"
     end
-    return a14[a16] or a16.Name
+    return a14[element] or element.Name
 end
 
 local function a17(a18)
@@ -10235,32 +10235,32 @@ local function a17(a18)
     return Enum.KeyCode.Unknown
 end
 
-function a1.new(tab, a22)
-    a22 = if typeof(a22) == "table" then a22 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a22.name or a22.Name or "Keybind",
-        icon = tab.window:ResolveIcon(a22.icon or a22.Icon),
-        description = a22.description or a22.Description,
-        forgetState = a22.forgetState or a22.ForgetState or tab.forgetState,
+        name = state.name or state.Name or "Keybind",
+        icon = tab.window:ResolveIcon(state.icon or state.Icon),
+        description = state.description or state.Description,
+        forgetState = state.forgetState or state.ForgetState or tab.forgetState,
 
-                        isMenuToggle = a22.isMenuToggle or a22.IsMenuToggle or false,
+                        isMenuToggle = state.isMenuToggle or state.IsMenuToggle or false,
 
-                callback = a22.callback or a22.Callback or function() end,
-                onChanged = a22.onChanged or a22.OnChanged or function() end,
+                callback = state.callback or state.Callback or function() end,
+                onChanged = state.onChanged or state.OnChanged or function() end,
 
-                        hold = a22.hold or a22.Hold or false,
-        holdThreshold = a22.holdThreshold or a22.HoldThreshold or 0.2,
+                        hold = state.hold or state.Hold or false,
+        holdThreshold = state.holdThreshold or state.HoldThreshold or 0.2,
 
         recording = false,
-    }, a1)
+    }, state)
 
-    self.value = a17(a22.value or a22.Value or a22.default or a22.Default)
+    self.value = a17(state.value or state.Value or state.default or state.Default)
 
-    self.flag = a22.flag
-        or a22.Flag
+    self.flag = state.flag
+        or state.Flag
         or (not self.forgetState and a4.deriveFlagFromName(self.name) or nil)
     self.window:_registerControl(self)
 
@@ -10310,7 +10310,7 @@ function a1.new(tab, a22)
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a7.t(self.name),
+        Text = Text.t(self.name),
         Size = UDim2.fromOffset(150, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -10349,7 +10349,7 @@ function a1.new(tab, a22)
         self.glow = self.window:CreateGlow(self.box, "FieldGlow", 20, 1)
     self._glowIdle = 0.9
     self.keyLabel = self.window:Create("TextLabel", {
-        Text = a15(self.value),
+        Text = Text(self.value),
         Size = UDim2.fromScale(1, 1),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -10362,7 +10362,7 @@ function a1.new(tab, a22)
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
     self.window:ConnectFor(self, self.box.MouseButton1Click, function()
-        a9.click()
+        isMenuToggle.click()
         if self.recording then
             self:_stopRecording()
         else
@@ -10370,20 +10370,20 @@ function a1.new(tab, a22)
         end
     end)
 
-                    self.window:ConnectFor(self, a3.userInputService.InputBegan, function(a23, a24)
-        if a24 then
+                    self.window:ConnectFor(self, Keybind.userInputService.InputBegan, function(window, ConnectFor)
+        if ConnectFor then
             return
         end
         if self.recording then
-            self:_capture(a23)
+            self:_capture(window)
             return
         end
                         if self.window._recordingKeybind then
             return
         end
-        if self:_matches(a23) then
+        if self:_matches(window) then
             if self.hold then
-                self:_beginHold(a23)
+                self:_beginHold(window)
             else
                 self.window:_runGuarded(self, self.callback, self.value)
             end
@@ -10400,28 +10400,28 @@ function a1.new(tab, a22)
     return self
 end
 
-function a1:_sizeBox(a25)
-    local a26 = math.clamp(a4.textWidth(self.window.theme.Font, 15, self.keyLabel.Text) + 28, 40, 200)
-    if a25 then
-        a3.tweenService:Create(self.box, a12, { Size = UDim2.fromOffset(a26, 30) }):Play()
+function state:_sizeBox(state)
+    local Create = math.clamp(a4.textWidth(self.window.theme.Font, 15, self.keyLabel.Text) + 28, 40, 200)
+    if state then
+        Keybind.tweenService:Create(self.box, tweenService, { Size = UDim2.fromOffset(Create, 30) }):Play()
     else
-        self.box.Size = UDim2.fromOffset(a26, 30)
+        self.box.Size = UDim2.fromOffset(Create, 30)
     end
 end
 
-function a1:_startRecording()
+function state:_startRecording()
         local a27 = self.window._recordingKeybind
     if a27 and a27 ~= self then
         a27:_stopRecording()
     end
     self.recording = true
-    self.window._recordingKeybind = self     self.keyLabel.Text = a7.resolve("Recording")
+    self.window._recordingKeybind = self     self.keyLabel.Text = Text.resolve("Recording")
     self:_sizeBox(true)
-    a3.tweenService:Create(self.glow, a13, { Transparency = 0.7 }):Play()
-    a3.tweenService:Create(self.keyLabel, a13, { TextTransparency = 0 }):Play()
+    Keybind.tweenService:Create(self.glow, tweenService, { Transparency = 0.7 }):Play()
+    Keybind.tweenService:Create(self.keyLabel, tweenService, { TextTransparency = 0 }):Play()
 end
 
-function a1:_stopRecording()
+function state:_stopRecording()
     self.recording = false
                 if self.window._recordingKeybind == self then
         local window = self.window
@@ -10431,29 +10431,29 @@ function a1:_stopRecording()
             end
         end)
     end
-    self.keyLabel.Text = a15(self.value)
+    self.keyLabel.Text = Text(self.value)
     self:_sizeBox(true)
-    a3.tweenService:Create(self.glow, a13, { Transparency = 0.9 }):Play()
-    a3.tweenService:Create(self.keyLabel, a13, { TextTransparency = 0.6 }):Play()
+    Keybind.tweenService:Create(self.glow, tweenService, { Transparency = 0.9 }):Play()
+    Keybind.tweenService:Create(self.keyLabel, tweenService, { TextTransparency = 0.6 }):Play()
 end
 
-function a1:_capture(a28)
+function state:_capture(state)
     local a29
-    if a28.UserInputType == Enum.UserInputType.Keyboard then
-        if a28.KeyCode == Enum.KeyCode.Escape then
+    if state.UserInputType == Enum.UserInputType.Keyboard then
+        if state.KeyCode == Enum.KeyCode.Escape then
             self:_stopRecording()
             return
         end
-        if a28.KeyCode == Enum.KeyCode.Backspace then
+        if state.KeyCode == Enum.KeyCode.Backspace then
             self:_bind(Enum.KeyCode.Unknown)
             return
         end
-        a29 = a28.KeyCode
+        a29 = state.KeyCode
     elseif
-        a28.UserInputType == Enum.UserInputType.MouseButton2
-        or a28.UserInputType == Enum.UserInputType.MouseButton3
+        state.UserInputType == Enum.UserInputType.MouseButton2
+        or state.UserInputType == Enum.UserInputType.MouseButton3
     then
-        a29 = a28.UserInputType
+        a29 = state.UserInputType
     end
     if not a29 then
         return
@@ -10463,12 +10463,12 @@ function a1:_capture(a28)
                         local a30 = self.window:_keybindUsing(a29, self)
         if a30 then
             self.window:Notify({
-                title = a7.resolve("Keybind unavailable"),
+                title = Text.resolve("Keybind unavailable"),
                 content = string.format(
-                    a7.resolve("%s is bound to %s. Kept %s."),
-                    a15(a29),
+                    Text.resolve("%s is bound to %s. Kept %s."),
+                    Text(a29),
                     a30.name,
-                    a15(self.value)
+                    Text(self.value)
                 ),
             })
             self:_stopRecording()
@@ -10476,11 +10476,11 @@ function a1:_capture(a28)
         end
     elseif a29 == self.window.settings.toggleKeybind then
                         self.window:Notify({
-            title = a7.resolve("Keybind unavailable"),
+            title = Text.resolve("Keybind unavailable"),
             content = string.format(
-                a7.resolve("%s is the menu toggle key. Kept %s."),
-                a15(a29),
-                a15(self.value)
+                Text.resolve("%s is the menu toggle key. Kept %s."),
+                Text(a29),
+                Text(self.value)
             ),
         })
         self:_stopRecording()
@@ -10490,35 +10490,35 @@ function a1:_capture(a28)
     self:_bind(a29)
 end
 
-function a1:_bind(a31)
-    self.value = a31
+function state:_bind(state)
+    self.value = state
     self:_stopRecording()
-    self.window:_runGuarded(self, self.onChanged, a31)
+    self.window:_runGuarded(self, self.onChanged, state)
     self.window:_persist(self)
 
     self.window:_flashResult(self, true) end
 
-function a1:_matches(a32)
+function state:_matches(state)
     local v = self.value
     if typeof(v) ~= "EnumItem" or v == Enum.KeyCode.Unknown then
         return false
     end
     if v.EnumType == Enum.KeyCode then
-        return a32.KeyCode == v
+        return state.KeyCode == v
     elseif v.EnumType == Enum.UserInputType then
-        return a32.UserInputType == v
+        return state.UserInputType == v
     end
     return false
 end
 
-function a1:_beginHold(a33)
+function state:_beginHold(state)
     if self._holding or self._holdPress then
         return     end
     local a34 = {}
     self._holdPress = a34
 
-            local a35 = a33.KeyCode
-    local a36 = a33.UserInputType
+            local a35 = state.KeyCode
+    local a36 = state.UserInputType
 
     task.delay(self.holdThreshold, function()
         if self._holdPress ~= a34 then
@@ -10531,10 +10531,10 @@ function a1:_beginHold(a33)
     end)
 
                 local a37
-    a37 = self.window:ConnectFor(self, a3.userInputService.InputEnded, function(a38)
+    a37 = self.window:ConnectFor(self, Keybind.userInputService.InputEnded, function(window)
         local a39 = if a35 ~= Enum.KeyCode.Unknown
-            then a38.KeyCode == a35
-            else a38.UserInputType == a36
+            then window.KeyCode == a35
+            else window.UserInputType == a36
         if not a39 then
             return
         end
@@ -10555,64 +10555,64 @@ function a1:_beginHold(a33)
     end)
 end
 
-function a1:Set(a41, a42)
-    local a43 = a17(a41)
+function state:Set(state, Set)
+    local Astra = a17(state)
 
-            if a43 ~= Enum.KeyCode.Unknown then
+            if Astra ~= Enum.KeyCode.Unknown then
         if self.isMenuToggle then
-            local a44 = self.window:_keybindUsing(a43, self)
+            local a44 = self.window:_keybindUsing(Astra, self)
             if a44 then
-                a11.warn(
+                holdThreshold.warn(
                     "Astra: "
-                        .. a15(a43)
+                        .. Text(Astra)
                         .. " is bound to '"
                         .. tostring(a44.name)
                         .. "'; kept "
-                        .. a15(self.value)
+                        .. Text(self.value)
                 )
                 return
             end
-        elseif a43 == self.window.settings.toggleKeybind then
-            a11.warn("Astra: " .. a15(a43) .. " is the menu toggle key; kept " .. a15(self.value))
+        elseif Astra == self.window.settings.toggleKeybind then
+            holdThreshold.warn("Astra: " .. Text(Astra) .. " is the menu toggle key; kept " .. Text(self.value))
             return
         end
     end
 
-    self.value = a43
+    self.value = Astra
     if self.recording then
         self:_stopRecording()     else
-        self.keyLabel.Text = a15(self.value)
+        self.keyLabel.Text = Text(self.value)
         self:_sizeBox(true)
     end
 
-    if not a42 then
+    if not Set then
         self.window:_runGuarded(self, self.onChanged, self.value)
         self.window:_persist(self)
     end
 end
 
-function a1:_serialize()
+function state:_serialize()
     return { tostring(self.value.EnumType), self.value.Value }
 end
 
-function a1:_deserialize(a45)
-        local a46 = tostring(a45[1]):gsub("^Enum%.", "")
-    local a47, a48 = pcall(function()
+function state:_deserialize(state)
+        local a46 = tostring(state[1]):gsub("^Enum%.", "")
+    local a47, hold = pcall(function()
         return Enum[a46]
     end)
-    if not a47 or not a48 then
+    if not a47 or not hold then
         return
     end
 
-    local a49 = a10.itemFromValue(a48, a45[2])
+    local a49 = a10.itemFromValue(hold, state[2])
     if a49 then
         self:Set(a49)
     end
 end
 
-function a1:_setShown(a50, a51)
+function state:_setShown(state, a51)
     local w = self.window
-    if a50 then
+    if state then
         w:_revealCommon(self, a51)
         w:_reveal(self.box, { BackgroundTransparency = w.theme.FieldTransparency }, a51)
         w:_reveal(self.boxStroke, { Transparency = 0.85 }, a51)
@@ -10627,8 +10627,8 @@ function a1:_setShown(a50, a51)
     end
 end
 
-function a1:_refreshTheme()
-    a3.tweenService
+function state:_refreshTheme()
+    Keybind.tweenService
         :Create(
             self.box,
             TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -10637,37 +10637,37 @@ function a1:_refreshTheme()
         :Play()
 end
 
-a5(a1)
-a6(a1)
+props(state)
+name(state)
 
-return a1
+return state
 
 end)() end,
     [29] = function()local wax,script,require=ImportGlobals(29)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Progress"
+local state = {}
+state.__index = state
+state.__type = "Progress"
 
-local a2 = script.Parent.Parent.utilities
+local Progress = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.moveable)
-local a6 = require(a2.locale)
+local Progress = require(Progress.Parent.core.state)
+local Color = require(script.Parent.Parent.functions)
+local props = require(Progress.moveable)
+local Text = require(Progress.locale)
 
-local a7 = 60
+local Size = 60
 local a8 = 8
-local a9 = 20
+local Position = 20
 local a10 = 6
-local a11 = 6
+local Padding = 6
 
-local a12 = 16
-local a13 = 14
+local Size = 16
+local Size = 14
 local a14 = 0.4
 
-local a15 = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local Create = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local a16 = NumberSequence.new({
+local Transparency = NumberSequence.new({
     NumberSequenceKeypoint.new(0, 0.85),
     NumberSequenceKeypoint.new(1, 0),
 })
@@ -10683,37 +10683,37 @@ local function a19(a20: unknown): number?
     return a21
 end
 
-function a1.new(tab, a22)
-    a22 = if typeof(a22) == "table" then a22 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
-            local a23 = a19(a22.steps or a22.Steps)
-    a23 = if a23 and a23 >= 2 then math.floor(a23) else nil
+            local steps = a19(state.steps or state.Steps)
+    steps = if steps and steps >= 2 then math.floor(steps) else nil
 
-    local a24 = a22.range or a22.Range
-    local a25 = a19(a24 and a24[1]) or 0
-    local a26 = a19(a24 and a24[2]) or a23 or 1
-    if a25 > a26 then
-        a25, a26 = a26, a25
+    local a24 = state.range or state.Range
+    local min = a19(a24 and a24[1]) or 0
+    local max = a19(a24 and a24[2]) or steps or 1
+    if min > max then
+        min, max = max, min
     end
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a22.name or a22.Name or "Progress",
-        icon = tab.window:ResolveIcon(a22.icon or a22.Icon),
-        description = a22.description or a22.Description,
+        name = state.name or state.Name or "Progress",
+        icon = tab.window:ResolveIcon(state.icon or state.Icon),
+        description = state.description or state.Description,
 
-        min = a25,
-        max = a26,
-        steps = a23,
+        min = min,
+        max = max,
+        steps = steps,
         value = 0,
-                text = a22.text or a22.Text,
-        format = a22.format or a22.Format,
-        showValue = if a22.showValue == nil then true else a22.showValue == true,
-        indeterminate = a22.indeterminate or a22.Indeterminate or false,
-    }, a1)
+                text = state.text or state.Text,
+        format = state.format or state.Format,
+        showValue = if state.showValue == nil then true else state.showValue == true,
+        indeterminate = state.indeterminate or state.Indeterminate or false,
+    }, state)
 
-    self.value = self:_clamp(a19(a22.value or a22.Value) or a25)
+    self.value = self:_clamp(a19(state.value or state.Value) or min)
 
     self:_build()
 
@@ -10724,11 +10724,11 @@ function a1.new(tab, a22)
     return self
 end
 
-function a1:_clamp(a27: number): number
-    return math.clamp(a19(a27) or self.min, self.min, self.max)
+function state:_clamp(state: number): number
+    return math.clamp(a19(state) or self.min, self.min, self.max)
 end
 
-function a1:_ratio(): number
+function state:_ratio(): number
     local a28 = self.max - self.min
     if a28 <= 0 then
         return 1
@@ -10736,14 +10736,14 @@ function a1:_ratio(): number
     return (self.value - self.min) / a28
 end
 
-function a1:_filledSteps(): number
+function state:_filledSteps(): number
     local a29 = self.steps :: number
     return math.clamp(math.round(self:_ratio() * a29), 0, a29)
 end
 
-function a1:_readout(): string
+function state:_readout(): string
     if self.text then
-        return a6.resolve(self.text)
+        return Text.resolve(self.text)
     end
     if self.format then
         local ok, a30 = pcall(self.format, self.value, self.min, self.max)
@@ -10757,9 +10757,9 @@ function a1:_readout(): string
     return string.format("%d%%", math.round(self:_ratio() * 100))
 end
 
-function a1:_build()
+function state:_build()
     self.main = self.window:Create("Frame", {
-        Size = UDim2.new(1, -20, 0, a7),
+        Size = UDim2.new(1, -20, 0, Size),
         BorderSizePixel = 0,
         Name = self.name,
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -10771,8 +10771,8 @@ function a1:_build()
     self.stroke = self.window:StyleElementBody(self.main)
 
         self.container = self.window:Create("Frame", {
-        Size = UDim2.new(0, 170, 0, a12),
-        Position = UDim2.new(0, a9, 0, 20),
+        Size = UDim2.new(0, 170, 0, Size),
+        Position = UDim2.new(0, Position, 0, 20),
         AnchorPoint = Vector2.new(0, 0.5),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -10803,12 +10803,12 @@ function a1:_build()
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a6.t(self.name),
+        Text = Text.t(self.name),
 
-        Size = UDim2.fromOffset(250, a12),
+        Size = UDim2.fromOffset(250, Size),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
-        TextSize = a12,
+        TextSize = Size,
         AutomaticSize = Enum.AutomaticSize.X,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextWrapped = true,
@@ -10822,12 +10822,12 @@ function a1:_build()
         Text = self:_readout(),
 
         AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -a9, 0, 20),
-        Size = UDim2.fromOffset(50, a13),
+        Position = UDim2.new(1, -Position, 0, 20),
+        Size = UDim2.fromOffset(50, Size),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
-        TextSize = a13,
+        TextSize = Size,
         TextXAlignment = Enum.TextXAlignment.Right,
         Visible = self.showValue,
 
@@ -10843,7 +10843,7 @@ function a1:_build()
                 self.track = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0.5, 1),
         Position = UDim2.new(0.5, 0, 1, -16),
-        Size = UDim2.new(1, -a9 * 2, 0, a8),
+        Size = UDim2.new(1, -Position * 2, 0, a8),
         BorderSizePixel = 0,
 
         BackgroundTransparency = 1,
@@ -10877,10 +10877,10 @@ function a1:_build()
     self.window:Create("UIGradient", {
         Offset = Vector2.new(0, 0.5),
         Rotation = 2,
-        Transparency = a16,
+        Transparency = Transparency,
 
         Parent = self.fill,
-    }, { Color = { "SliderProgress", a4.toColorSequence } })
+    }, { Color = { "SliderProgress", Color.toColorSequence } })
 
     self.fillGlow = self.window:CreateGlow(self.fill, "AccentColor", 20, 1)
 
@@ -10889,13 +10889,13 @@ function a1:_build()
     end
 end
 
-function a1:_buildSteps()
-    local a31 = self.steps :: number
+function state:_buildSteps()
+    local Size = self.steps :: number
 
     self.track = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0.5, 1),
         Position = UDim2.new(0.5, 0, 1, -17),
-        Size = UDim2.new(1, -a9 * 2, 0, a10),
+        Size = UDim2.new(1, -Position * 2, 0, a10),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
 
@@ -10903,7 +10903,7 @@ function a1:_buildSteps()
     })
 
     self.window:Create("UIListLayout", {
-        Padding = UDim.new(0, a11),
+        Padding = UDim.new(0, Padding),
         FillDirection = Enum.FillDirection.Horizontal,
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
@@ -10913,11 +10913,11 @@ function a1:_buildSteps()
     })
 
     self.stepFrames = {}
-    for a32 = 1, a31 do
-                local a33 = self.window:Create("Frame", {
-            Size = UDim2.new(1 / a31, -(a11 * (a31 - 1)) / a31, 1, 0),
+    for LayoutOrder = 1, Size do
+                local Parent = self.window:Create("Frame", {
+            Size = UDim2.new(1 / Size, -(Padding * (Size - 1)) / Size, 1, 0),
             BorderSizePixel = 0,
-            LayoutOrder = a32,
+            LayoutOrder = LayoutOrder,
                                                 BackgroundTransparency = 1,
             Parent = self.track,
         }, { BackgroundColor3 = "SliderBackground" })
@@ -10925,36 +10925,36 @@ function a1:_buildSteps()
         self.window:Create("UICorner", {
             CornerRadius = UDim.new(1, 0),
 
-            Parent = a33,
+            Parent = Parent,
         })
 
-                local a34 = self.window:Create("Frame", {
+                local Parent = self.window:Create("Frame", {
             Size = UDim2.fromScale(1, 1),
             BackgroundColor3 = Color3.fromRGB(255, 255, 255),
             BorderSizePixel = 0,
             ZIndex = 2,
 
             BackgroundTransparency = 1,
-            Parent = a33,
+            Parent = Parent,
         })
 
         self.window:Create("UICorner", {
             CornerRadius = UDim.new(1, 0),
 
-            Parent = a34,
+            Parent = Parent,
         })
 
                         self.window:Create("UIGradient", {
             Rotation = 90,
 
-            Parent = a34,
-        }, { Color = { "SliderProgress", a4.toColorSequence } })
+            Parent = Parent,
+        }, { Color = { "SliderProgress", Color.toColorSequence } })
 
-        table.insert(self.stepFrames, { segment = a33, fill = a34 })
+        table.insert(self.stepFrames, { segment = Parent, fill = Parent })
     end
 end
 
-function a1:_startSweep()
+function state:_startSweep()
     if self._sweep or self.steps then
         return     end
 
@@ -10962,11 +10962,11 @@ function a1:_startSweep()
     self.fill.Position = UDim2.fromScale(0, 0.5)
     self.fill.Size = UDim2.fromScale(0, 1)
 
-    self._sweep = a3.tweenService:Create(self.fill, a18, { Size = UDim2.fromScale(1, 1) })
+    self._sweep = Progress.tweenService:Create(self.fill, a18, { Size = UDim2.fromScale(1, 1) })
     self._sweep:Play()
 end
 
-function a1:_stopSweep()
+function state:_stopSweep()
     if not self._sweep then
         return
     end
@@ -10976,7 +10976,7 @@ function a1:_stopSweep()
     self.fill.Position = UDim2.fromScale(0, 0.5)
 end
 
-function a1:_render(a35: boolean?)
+function state:_render(state: boolean?)
     self.readout.Text = self:_readout()
 
     if self.steps then
@@ -10984,27 +10984,27 @@ function a1:_render(a35: boolean?)
             return
         end
         local a36 = self:_filledSteps()
-        for a37, a38 in self.stepFrames do
-            local a39 = if a37 <= a36 then 0 else 1
-            if a35 == false then
-                a38.fill.BackgroundTransparency = a39
+        for a37, tweenService in self.stepFrames do
+            local fill = if a37 <= a36 then 0 else 1
+            if state == false then
+                tweenService.fill.BackgroundTransparency = fill
             else
-                a3.tweenService:Create(a38.fill, a15, { BackgroundTransparency = a39 }):Play()
+                Progress.tweenService:Create(tweenService.fill, Create, { BackgroundTransparency = fill }):Play()
             end
         end
         return
     end
 
-    local a40 = UDim2.fromScale(self:_ratio(), 1)
-    if a35 == false then
-        self.fill.Size = a40
+    local Create = UDim2.fromScale(self:_ratio(), 1)
+    if state == false then
+        self.fill.Size = Create
     else
-        a3.tweenService:Create(self.fill, a15, { Size = a40 }):Play()
+        Progress.tweenService:Create(self.fill, Create, { Size = Create }):Play()
     end
 end
 
-function a1:Set(a41)
-    self.value = self:_clamp(a41)
+function state:Set(state)
+    self.value = self:_clamp(state)
 
     if self.indeterminate then
         self.indeterminate = false
@@ -11014,39 +11014,39 @@ function a1:Set(a41)
     self:_render()
 end
 
-function a1:Get(): number
+function state:Get(): number
     return self.value
 end
 
-function a1:GetPercentage(): number
+function state:GetPercentage(): number
     return self:_ratio()
 end
 
-function a1:SetRange(a42, a43)
-    a42 = a19(a42) or self.min
-    a43 = a19(a43) or self.max
-    if a42 > a43 then
-        a42, a43 = a43, a42
+function state:SetRange(state, SetRange)
+    state = a19(state) or self.min
+    SetRange = a19(SetRange) or self.max
+    if state > SetRange then
+        state, SetRange = SetRange, state
     end
 
-    self.min, self.max = a42, a43
+    self.min, self.max = state, SetRange
     self.value = self:_clamp(self.value)
     self:_render()
 end
 
-function a1:SetText(a44)
-    self.text = a44
+function state:SetText(state)
+    self.text = state
     self.readout.Text = self:_readout()
 end
 
-function a1:SetIndeterminate(a45)
-    a45 = a45 == true
-    if a45 == self.indeterminate then
+function state:SetIndeterminate(state)
+    state = state == true
+    if state == self.indeterminate then
         return
     end
-    self.indeterminate = a45
+    self.indeterminate = state
 
-    if a45 then
+    if state then
         self:_startSweep()
     else
         self:_stopSweep()
@@ -11054,33 +11054,33 @@ function a1:SetIndeterminate(a45)
     end
 end
 
-function a1:_setShown(a46, a47)
+function state:_setShown(state, BackgroundTransparency)
     local w = self.window
 
-    self._shown = a46
-    w:_reveal(self.readout, { TextTransparency = if a46 then a14 else 1 }, a47)
+    self._shown = state
+    w:_reveal(self.readout, { TextTransparency = if state then a14 else 1 }, BackgroundTransparency)
 
-    if a46 then
-        w:_revealCommon(self, a47)
+    if state then
+        w:_revealCommon(self, BackgroundTransparency)
     else
-        w:_hideCommon(self, a47)
+        w:_hideCommon(self, BackgroundTransparency)
     end
 
     if self.steps then
-        local a48 = self:_filledSteps()
+        local fill = self:_filledSteps()
         for a49, a50 in self.stepFrames do
-            w:_reveal(a50.segment, { BackgroundTransparency = if a46 then 0 else 1 }, a47)
-            w:_reveal(a50.fill, { BackgroundTransparency = if a46 and a49 <= a48 then 0 else 1 }, a47)
+            w:_reveal(a50.segment, { BackgroundTransparency = if state then 0 else 1 }, BackgroundTransparency)
+            w:_reveal(a50.fill, { BackgroundTransparency = if state and a49 <= fill then 0 else 1 }, BackgroundTransparency)
         end
         return
     end
 
-    w:_reveal(self.track, { BackgroundTransparency = if a46 then 0 else 1 }, a47)
-    w:_reveal(self.fill, { BackgroundTransparency = if a46 then 0 else 1 }, a47)
-    w:_reveal(self.fillGlow, { Transparency = if a46 then w.theme.AccentGlow else 1 }, a47)
+    w:_reveal(self.track, { BackgroundTransparency = if state then 0 else 1 }, BackgroundTransparency)
+    w:_reveal(self.fill, { BackgroundTransparency = if state then 0 else 1 }, BackgroundTransparency)
+    w:_reveal(self.fillGlow, { Transparency = if state then w.theme.AccentGlow else 1 }, BackgroundTransparency)
 end
 
-function a1:Remove()
+function state:Remove()
     self:_stopSweep()
     if self.descriptor then
         self.descriptor:Remove()
@@ -11088,42 +11088,42 @@ function a1:Remove()
     self.main:Destroy()
 end
 
-a5(a1)
+props(state)
 
-return a1
+return state
 
 end)() end,
     [30] = function()local wax,script,require=ImportGlobals(30)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Section"
+local state = {}
+state.__index = state
+state.__type = "Section"
 
-local a2 = require(script.Parent.Parent.utilities.moveable)
-local a3 = require(script.Parent.Parent.utilities.locale)
+local constants = require(script.Parent.Parent.utilities.moveable)
+local Text = require(script.Parent.Parent.utilities.locale)
 
-function a1.new(tab, a4)
-    a4 = if typeof(a4) == "table" then a4 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a4.name or a4.Name or "Section",
-        icon = tab.window:ResolveIcon(a4.icon or a4.Icon),
-    }, a1)
+        name = state.name or state.Name or "Section",
+        icon = tab.window:ResolveIcon(state.icon or state.Icon),
+    }, state)
 
-            local a5 = if #self.tab.elements == 0 then 0 else 13
+            local Size = if #self.tab.elements == 0 then 0 else 13
 
     self.main = self.window:Create("Frame", {
-        Size = UDim2.new(1, -40, 0, 20 + a5),
+        Size = UDim2.new(1, -40, 0, 20 + Size),
         BorderSizePixel = 0,
         Name = self.name,
         BackgroundTransparency = 1,
         Parent = self.tab.tabPage,
     })
 
-    if a5 > 0 then
+    if Size > 0 then
         self.window:Create("UIPadding", {
-            PaddingTop = UDim.new(0, a5),
+            PaddingTop = UDim.new(0, Size),
             Parent = self.main,
         })
     end
@@ -11149,7 +11149,7 @@ function a1.new(tab, a4)
     end
 
     self.title = self.window:Create("TextLabel", {
-                Text = a3.t(self.name),
+                Text = Text.t(self.name),
 
         Size = UDim2.fromOffset(0, 16),
         BorderSizePixel = 0,
@@ -11167,65 +11167,65 @@ function a1.new(tab, a4)
     return self
 end
 
-function a1:_setShown(a6, a7)
+function state:_setShown(state, a7)
     local w = self.window
-    w:_reveal(self.title, { TextTransparency = if a6 then 0.6 else 1 }, a7)
+    w:_reveal(self.title, { TextTransparency = if state then 0.6 else 1 }, a7)
     if self.iconLabel then
-        w:_reveal(self.iconLabel, { ImageTransparency = if a6 then 0.65 else 1 }, a7)
+        w:_reveal(self.iconLabel, { ImageTransparency = if state then 0.65 else 1 }, a7)
     end
 end
 
-a2(a1)
+constants(state)
 
-return a1
+return state
 
 end)() end,
     [31] = function()local wax,script,require=ImportGlobals(31)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Slider"
+local state = {}
+state.__index = state
+state.__type = "Slider"
 
-local a2 = script.Parent.Parent.utilities
+local Slider = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.odometer)
-local a6 = require(a2.moveable)
-local a7 = require(a2.lockable)
-local a8 = require(a2.locale)
-local a9 = require(a2.HapticEngine)
+local Slider = require(Slider.Parent.core.state)
+local Color = require(script.Parent.Parent.functions)
+local a5 = require(Slider.odometer)
+local name = require(Slider.moveable)
+local flag = require(Slider.lockable)
+local Text = require(Slider.locale)
+local value = require(Slider.HapticEngine)
 
-local function a10(a11)
-    local a12 = 0
-    while a12 < 6 do
-        local a13 = a11 * 10 ^ a12
+local function a10(callback)
+    local suffix = 0
+    while suffix < 6 do
+        local a13 = callback * 10 ^ suffix
         if math.abs(a13 - math.round(a13)) < 1e-9 then
             break
         end
-        a12 += 1
+        suffix += 1
     end
-    return a12
+    return suffix
 end
 
-local function a14(a15, a16, a17)
-    local a18 = a15[1] + math.round((a17 - a15[1]) / a16) * a16
-    return math.clamp(a18, a15[1], a15[2])
+local function element(min, element, frame)
+    local a18 = min[1] + math.round((frame - min[1]) / element) * element
+    return math.clamp(a18, min[1], min[2])
 end
 
-local a19 = TweenInfo.new(0.45, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local a20 = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local Create = TweenInfo.new(0.45, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local Create = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 local a21 = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 local a22 = 300
 
-local a23 = Vector2.new(35, 20)
+local Size = Vector2.new(35, 20)
 local a24 = Vector2.new(41, 22)
 
 local function a25(a26: number): UDim2
     return UDim2.new(a26, 0, 1, 0)
 end
 
-local function a27(): UDim2
+local function Position(): UDim2
     return UDim2.new(1, 0, 0.5, 0)
 end
 
@@ -11233,27 +11233,27 @@ local function a28(x: number, a29: number, a30: number): number
     return math.clamp((x - a29) / a30, 0, 1)
 end
 
-function a1.new(tab, a31)
-    a31 = if typeof(a31) == "table" then a31 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a31.name or a31.Name or "Slider",
-        icon = tab.window:ResolveIcon(a31.icon or a31.Icon),
-        description = a31.description or a31.Description,
-        forgetState = a31.forgetState or a31.ForgetState or tab.forgetState,
+        name = state.name or state.Name or "Slider",
+        icon = tab.window:ResolveIcon(state.icon or state.Icon),
+        description = state.description or state.Description,
+        forgetState = state.forgetState or state.ForgetState or tab.forgetState,
 
-        range = a31.range or a31.Range or { 0, 100 },
-        increment = a31.increment or a31.Increment or 1,
-        suffix = a31.suffix or a31.Suffix or "",
+        range = state.range or state.Range or { 0, 100 },
+        increment = state.increment or state.Increment or 1,
+        suffix = state.suffix or state.Suffix or "",
 
-        callback = a31.callback or a31.Callback or function() end,
+        callback = state.callback or state.Callback or function() end,
 
         dragging = false,
-        minimal = a31.minimal or a31.Minimal or false,
-                _handleWidth = a23.X,
-    }, a1)
+        minimal = state.minimal or state.Minimal or false,
+                _handleWidth = Size.X,
+    }, state)
 
         assert(
         typeof(self.range) == "table" and typeof(self.range[1]) == "number" and typeof(self.range[2]) == "number",
@@ -11267,20 +11267,20 @@ function a1.new(tab, a31)
         self.increment = 1
     end
 
-    self.value = if (a31.value or a31.Value) ~= nil
-        then (a31.value or a31.Value)
-        elseif (a31.currentValue or a31.CurrentValue) ~= nil then (
-            a31.currentValue or a31.CurrentValue
+    self.value = if (state.value or state.Value) ~= nil
+        then (state.value or state.Value)
+        elseif (state.currentValue or state.CurrentValue) ~= nil then (
+            state.currentValue or state.CurrentValue
         )
         else self.range[1]
 
-            self.value = a14(self.range, self.increment, self.value)
+            self.value = element(self.range, self.increment, self.value)
 
     self._decimals = a10(self.increment)
 
-    self.flag = a31.flag
-        or a31.Flag
-        or (not self.forgetState and a4.deriveFlagFromName(self.name) or nil)
+    self.flag = state.flag
+        or state.Flag
+        or (not self.forgetState and Color.deriveFlagFromName(self.name) or nil)
     self.window:_registerControl(self)
 
     self.main = self.window:Create("Frame", {
@@ -11342,13 +11342,13 @@ function a1.new(tab, a31)
         }),
 
         Parent = self.progress,
-    }, { Color = { "SliderProgress", a4.toColorSequence } })
+    }, { Color = { "SliderProgress", Color.toColorSequence } })
 
         self.progressGlow = self.window:CreateGlow(self.progress, "AccentColor", 20, 1)
 
         self.handle = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = a27(),         Size = UDim2.fromOffset(a23.X, a23.Y),
+        Position = Position(),         Size = UDim2.fromOffset(Size.X, Size.Y),
         BorderSizePixel = 0,
         ZIndex = 50,
         BackgroundTransparency = 1,
@@ -11381,14 +11381,14 @@ function a1.new(tab, a31)
         self.window:ConnectFor(self, self.main.MouseEnter, function()
         if not self.window:_interactive() then
             return         end
-        a3.tweenService
-            :Create(self.track, a19, { BackgroundColor3 = self.window.theme.SliderBackgroundHover })
+        Slider.tweenService
+            :Create(self.track, Create, { BackgroundColor3 = self.window.theme.SliderBackgroundHover })
             :Play()
     end)
 
     self.window:ConnectFor(self, self.main.MouseLeave, function()
-        a3.tweenService
-            :Create(self.track, a19, { BackgroundColor3 = self.window.theme.SliderBackground })
+        Slider.tweenService
+            :Create(self.track, Create, { BackgroundColor3 = self.window.theme.SliderBackground })
             :Play()
     end)
 
@@ -11397,7 +11397,7 @@ function a1.new(tab, a31)
             a32.UserInputType == Enum.UserInputType.MouseButton1
             or a32.UserInputType == Enum.UserInputType.Touch
         then
-            a9.click()             self.dragging = true
+            value.click()             self.dragging = true
             self:_setHeld(true)
             self:_updateFromMouse()
 
@@ -11406,7 +11406,7 @@ function a1.new(tab, a31)
                 self._dragConnection = nil
             end
 
-                                    self._dragConnection = a3.runService.RenderStepped:Connect(function()
+                                    self._dragConnection = Slider.runService.RenderStepped:Connect(function()
                 if self.window.unloaded or not self.dragging then
                     if self._dragConnection then
                         self._dragConnection:Disconnect()
@@ -11419,16 +11419,16 @@ function a1.new(tab, a31)
         end
     end)
 
-    self.window:ConnectFor(self, a3.userInputService.InputEnded, function(a33)
+    self.window:ConnectFor(self, Slider.userInputService.InputEnded, function(window)
         if
-            a33.UserInputType == Enum.UserInputType.MouseButton1
-            or a33.UserInputType == Enum.UserInputType.Touch
+            window.UserInputType == Enum.UserInputType.MouseButton1
+            or window.UserInputType == Enum.UserInputType.Touch
         then
             self:_endDrag()
         end
     end)
 
-            self.window:ConnectFor(self, a3.userInputService.WindowFocusReleased, function()
+            self.window:ConnectFor(self, Slider.userInputService.WindowFocusReleased, function()
         self:_endDrag()
     end)
 
@@ -11456,7 +11456,7 @@ function a1.new(tab, a31)
     return self
 end
 
-function a1:_buildLabel()
+function state:_buildLabel()
         self.container = self.window:Create("Frame", {
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 20, 0.5, 0),
@@ -11513,7 +11513,7 @@ function a1:_buildLabel()
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a8.t(self.name),
+        Text = Text.t(self.name),
         Size = UDim2.new(1, 0, 0, 16),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
@@ -11548,15 +11548,15 @@ function a1:_buildLabel()
     self.valueOdo:snap(self:_format(self.value))
 end
 
-function a1:_setMainHeight(a34)
+function state:_setMainHeight(state)
     if self._widthManaged then
-        self.main.Size = UDim2.new(self.main.Size.X.Scale, self.main.Size.X.Offset, 0, a34)
+        self.main.Size = UDim2.new(self.main.Size.X.Scale, self.main.Size.X.Offset, 0, state)
     else
-        self.main.Size = UDim2.new(1, -20, 0, a34)
+        self.main.Size = UDim2.new(1, -20, 0, state)
     end
 end
 
-function a1:_applyLayout()
+function state:_applyLayout()
     if self.minimal then
         return     end
     local a35 = self.main.AbsoluteSize.X
@@ -11596,39 +11596,39 @@ function a1:_applyLayout()
     end
 end
 
-function a1:_format(a37)
-    local a38 = string.format("%." .. self._decimals .. "f", a37)
+function state:_format(state)
+    local a38 = string.format("%." .. self._decimals .. "f", state)
     if self.suffix ~= "" then
         return a38 .. " " .. self.suffix
     end
     return a38
 end
 
-function a1:_pillTravel()
+function state:_pillTravel()
     return math.max(self.track.AbsoluteSize.X, 0)
 end
 
-function a1:_renderProgress(a39)
+function state:_renderProgress(state)
     local a40 = self.range[2] - self.range[1]
     local a41 = if a40 ~= 0 then math.clamp((self.value - self.range[1]) / a40, 0, 1) else 0
 
-    local a42 = a25(a41)
-    if a39 then
-        a3.tweenService:Create(self.progress, a39, { Size = a42 }):Play()
+    local Create = a25(a41)
+    if state then
+        Slider.tweenService:Create(self.progress, state, { Size = Create }):Play()
     else
-        self.progress.Size = a42
+        self.progress.Size = Create
     end
 end
 
-function a1:_updateFromMouse()
-    local a43 = self:_pillTravel()
-    if a43 <= 0 then
+function state:_updateFromMouse()
+    local userInputService = self:_pillTravel()
+    if userInputService <= 0 then
         return
     end
 
-    local a44 =
-        a28(a3.userInputService:GetMouseLocation().X, self.track.AbsolutePosition.X, a43)
-    local a45 = a14(self.range, self.increment, self.range[1] + a44 * (self.range[2] - self.range[1]))
+    local element =
+        a28(Slider.userInputService:GetMouseLocation().X, self.track.AbsolutePosition.X, userInputService)
+    local a45 = element(self.range, self.increment, self.range[1] + element * (self.range[2] - self.range[1]))
 
     if a45 ~= self.value then
         self.value = a45
@@ -11640,7 +11640,7 @@ function a1:_updateFromMouse()
     end
 end
 
-function a1:_endDrag()
+function state:_endDrag()
     if not self.dragging then
         return
     end
@@ -11655,48 +11655,48 @@ function a1:_endDrag()
     self.window:_persist(self)
 end
 
-function a1:_setHeld(a46)
-                if not a46 then
+function state:_setHeld(state)
+                if not state then
         self:_fireCallback(self.value)
     end
 
-    local a47 = if a46 then a24 else a23
-    self._handleWidth = a47.X
+    local Size = if state then a24 else Size
+    self._handleWidth = Size.X
 
-    a3.tweenService
-        :Create(self.handle, a20, {
-            Size = UDim2.fromOffset(a47.X, a47.Y),
-            BackgroundTransparency = if a46 then 0.7 else 0,
+    Slider.tweenService
+        :Create(self.handle, Create, {
+            Size = UDim2.fromOffset(Size.X, Size.Y),
+            BackgroundTransparency = if state then 0.7 else 0,
         })
         :Play()
-    a3.tweenService:Create(self.handleStroke, a20, { Transparency = if a46 then 0.6 else 1 }):Play()
-    self:_renderProgress(a20)
+    Slider.tweenService:Create(self.handleStroke, Create, { Transparency = if state then 0.6 else 1 }):Play()
+    self:_renderProgress(Create)
 end
 
-function a1:_fireCallback(a48)
-    self.window:_runGuarded(self, self.callback, a48, self.dragging == true)
+function state:_fireCallback(state)
+    self.window:_runGuarded(self, self.callback, state, self.dragging == true)
 end
 
-function a1:Set(a49, a50)
-    a49 = a14(self.range, self.increment, a49)
-    self.value = a49
+function state:Set(state, Set)
+    state = element(self.range, self.increment, state)
+    self.value = state
     if self.valueOdo then
-        self.valueOdo:to(self:_format(a49), a49 >= (self._lastValue or a49))
+        self.valueOdo:to(self:_format(state), state >= (self._lastValue or state))
     end
-    self._lastValue = a49
-    self:_renderProgress(a19)
+    self._lastValue = state
+    self:_renderProgress(Create)
 
-    if not a50 then
-        self:_fireCallback(a49)
+    if not Set then
+        self:_fireCallback(state)
         self.window:_persist(self)
     end
 end
 
 local a51 = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0.35)
 
-function a1:_setShown(a52, a53)
+function state:_setShown(state, a53)
     local w = self.window
-    if a52 then
+    if state then
         w:_revealCommon(self, a53)
         w:_reveal(self.track, { BackgroundTransparency = 0 }, a53)
         w:_reveal(self.progress, { BackgroundTransparency = 0 }, a53)
@@ -11719,8 +11719,8 @@ function a1:_setShown(a52, a53)
     end
 end
 
-function a1:_refreshTheme()
-    a3.tweenService
+function state:_refreshTheme()
+    Slider.tweenService
         :Create(
             self.progressGlow,
             TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -11729,47 +11729,47 @@ function a1:_refreshTheme()
         :Play()
 end
 
-function a1:_minWidth()
+function state:_minWidth()
     if self.minimal then
         return 100     end
     local w = 40     if self.icon then
         w += 22     end
-        w += a4.textWidth(self.window.theme.Font, 16, a8.resolve(self.name))
-    w += 12     w += a4.textWidth(self.window.theme.Font, 15, self:_format(self.value))
+        w += Color.textWidth(self.window.theme.Font, 16, Text.resolve(self.name))
+    w += 12     w += Color.textWidth(self.window.theme.Font, 15, self:_format(self.value))
     return math.max(w, 160)
 end
 
-a6(a1)
-a7(a1)
+name(state)
+flag(state)
 
-return a1
+return state
 
 end)() end,
     [32] = function()local wax,script,require=ImportGlobals(32)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Statistic"
+local state = {}
+state.__index = state
+state.__type = "Statistic"
 
-local a2 = script.Parent.Parent.utilities
+local Stat = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
+local Stat = require(Stat.Parent.core.state)
 local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.odometer)
-local a6 = require(a2.moveable)
-local a7 = require(a2.constants)
-local a8 = require(a2.locale)
-local a9 = require(a2.log)
+local a5 = require(Stat.odometer)
+local name = require(Stat.moveable)
+local element = require(Stat.constants)
+local Text = require(Stat.locale)
+local suffix = require(Stat.log)
 
-local a10 = a7.statAccents
+local Color = element.statAccents
 
-local a11 = NumberSequence.new({
+local Transparency = NumberSequence.new({
     NumberSequenceKeypoint.new(0, 0.85),
     NumberSequenceKeypoint.new(1, 0),
 })
 
-local a12 = 41
+local Size = 41
 
-local a13 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential)
+local Create = TweenInfo.new(0.6, Enum.EasingStyle.Exponential)
 
 local function a14(a15)
     return a15.fill.Keypoints[1].Value
@@ -11809,36 +11809,36 @@ local function a22(a23)
     end
 end
 
-function a1.new(tab, a25)
-    a25 = if typeof(a25) == "table" then a25 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a25.name or a25.Name or "Statistic",
-        icon = tab.window:ResolveIcon(a25.icon or a25.Icon),
-        description = a25.description or a25.Description,
+        name = state.name or state.Name or "Statistic",
+        icon = tab.window:ResolveIcon(state.icon or state.Icon),
+        description = state.description or state.Description,
 
-        value = if (a25.value or a25.Value) ~= nil then (a25.value or a25.Value) else 0,
-                        _hasValue = (a25.value or a25.Value) ~= nil,
+        value = if (state.value or state.Value) ~= nil then (state.value or state.Value) else 0,
+                        _hasValue = (state.value or state.Value) ~= nil,
 
-        numberEasing = if (a25.numberEasing ~= nil)
-            then a25.numberEasing
-            elseif a25.NumberEasing ~= nil then a25.NumberEasing
+        numberEasing = if (state.numberEasing ~= nil)
+            then state.numberEasing
+            elseif state.NumberEasing ~= nil then state.NumberEasing
             else true,
 
-        changeMode = a25.changeMode or a25.ChangeMode or "percentage",         changeBaseline = a25.changeBaseline or a25.ChangeBaseline or "previous",
+        changeMode = state.changeMode or state.ChangeMode or "percentage",         changeBaseline = state.changeBaseline or state.ChangeBaseline or "previous",
 
-        prefix = a25.prefix or a25.Prefix or "",
-        suffix = a25.suffix or a25.Suffix or "",
+        prefix = state.prefix or state.Prefix or "",
+        suffix = state.suffix or state.Suffix or "",
 
-                        compact = a25.compact or a25.Compact or tab.compact or false,
-        display = (a25.display or a25.Display or "value"),
-        _initialValue = if (a25.value or a25.Value) ~= nil
-            then (a25.value or a25.Value)
+                        compact = state.compact or state.Compact or tab.compact or false,
+        display = (state.display or state.Display or "value"),
+        _initialValue = if (state.value or state.Value) ~= nil
+            then (state.value or state.Value)
             else nil,
         _lastChange = 0,
-    }, a1)
+    }, state)
 
     if self.compact then
         self:_buildCompact()
@@ -11848,7 +11848,7 @@ function a1.new(tab, a25)
 
     if self.description then
         if self.compact then
-            a9.warn(`Astra: a compact stat has no room for a description, ignoring it on '{self.name}'.`)
+            suffix.warn(`Astra: a compact stat has no room for a description, ignoring it on '{self.name}'.`)
         else
             self.descriptor = require(script.Parent.descriptor).new(self.tab, { description = self.description })
         end
@@ -11857,7 +11857,7 @@ function a1.new(tab, a25)
     return self
 end
 
-function a1:_buildFull()
+function state:_buildFull()
     local window = self.window
 
     self.main = window:Create("Frame", {
@@ -11884,8 +11884,8 @@ function a1:_buildFull()
     self.strokeGradient = window:Create("UIGradient", {
         Rotation = 2,
         Offset = Vector2.new(0, 0.5),
-        Color = a10.neutral.stroke,
-        Transparency = a11,
+        Color = Color.neutral.stroke,
+        Transparency = Transparency,
 
         Parent = self.stroke,
     })
@@ -11911,10 +11911,10 @@ function a1:_buildFull()
         Parent = self.main,
     })
 
-            self.glow = window:CreateGlow(self.main, a14(a10.neutral), 13, 1)
+            self.glow = window:CreateGlow(self.main, a14(Color.neutral), 13, 1)
 
     self.title = window:Create("TextLabel", {
-        Text = a8.t(self.name),
+        Text = Text.t(self.name),
 
         Size = UDim2.fromOffset(300, 19),
         BorderSizePixel = 0,
@@ -11932,8 +11932,8 @@ function a1:_buildFull()
     self.mainGradient = window:Create("UIGradient", {
         Rotation = 2,
         Offset = Vector2.new(0, 0.5),
-        Color = a10.neutral.fill,
-        Transparency = a11,
+        Color = Color.neutral.fill,
+        Transparency = Transparency,
 
         Parent = self.gradientContainer,
     })
@@ -12003,15 +12003,15 @@ function a1:_buildFull()
     self._accentGradients = { self.strokeGradient, self.mainGradient }
 end
 
-function a1:_buildCompact()
+function state:_buildCompact()
     local window = self.window
 
-        local a26 = self.tab.compact or false
+        local Size = self.tab.compact or false
 
     self.main = window:Create("Frame", {
         Name = self.name,
-        Size = if a26 then UDim2.fromOffset(0, a12) else UDim2.new(1, -20, 0, a12),
-        AutomaticSize = if a26 then Enum.AutomaticSize.X else Enum.AutomaticSize.None,
+        Size = if Size then UDim2.fromOffset(0, Size) else UDim2.new(1, -20, 0, Size),
+        AutomaticSize = if Size then Enum.AutomaticSize.X else Enum.AutomaticSize.None,
         ClipsDescendants = true,
         BorderSizePixel = 0,
         ZIndex = 5,
@@ -12033,13 +12033,13 @@ function a1:_buildCompact()
     self.strokeGradient = window:Create("UIGradient", {
         Rotation = 2,
         Offset = Vector2.new(0, 0.5),
-        Color = a10.neutral.stroke,
-        Transparency = a11,
+        Color = Color.neutral.stroke,
+        Transparency = Transparency,
 
         Parent = self.stroke,
     })
 
-    if a26 then
+    if Size then
         window:Create("UIFlexItem", {
             FlexMode = Enum.UIFlexMode.Fill,
             Parent = self.main,
@@ -12056,7 +12056,7 @@ function a1:_buildCompact()
 
         self.card = window:Create("Frame", {
         AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, a12),
+        Size = UDim2.fromOffset(0, Size),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         ZIndex = 5,
@@ -12072,8 +12072,8 @@ function a1:_buildCompact()
     self.mainGradient = window:Create("UIGradient", {
         Rotation = 2,
         Offset = Vector2.new(0, 0.5),
-        Color = a10.neutral.fill,
-        Transparency = a11,
+        Color = Color.neutral.fill,
+        Transparency = Transparency,
 
         Parent = self.card,
     })
@@ -12134,7 +12134,7 @@ function a1:_buildCompact()
     end
 
     self.title = window:Create("TextLabel", {
-        Text = a8.t(self.name),
+        Text = Text.t(self.name),
         Size = UDim2.fromOffset(0, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -12174,89 +12174,89 @@ function a1:_buildCompact()
     self._accentGradients = { self.strokeGradient, self.mainGradient }
 end
 
-function a1:_setAccent(a27, a28)
-    local a29 = a10[a27]
-    self.strokeGradient.Color = a29.stroke
-    self.mainGradient.Color = a29.fill
+function state:_setAccent(state, a28)
+    local glow = Color[state]
+    self.strokeGradient.Color = glow.stroke
+    self.mainGradient.Color = glow.fill
     if self.glow then
-        self.glow.Color = a14(a29)
+        self.glow.Color = a14(glow)
     end
 
         local a30 = if a28 == 1 then 14 elseif a28 == -1 then -10 else 2
-    local a31 = if a28 == 1
+    local baseline = if a28 == 1
         then Vector2.new(0.04, 0.5)
         elseif a28 == -1 then Vector2.new(-0.04, 0.5)
         else Vector2.new(0, 0.5)
-    for _, a32 in self._accentGradients do
-        a3.tweenService:Create(a32, a13, { Rotation = a30, Offset = a31 }):Play()
+    for _, tweenService in self._accentGradients do
+        Stat.tweenService:Create(tweenService, Create, { Rotation = a30, Offset = baseline }):Play()
     end
 end
 
-function a1:_formatValue(a33)
-    return self.prefix .. a18(a33) .. self.suffix
+function state:_formatValue(state)
+    return self.prefix .. a18(state) .. self.suffix
 end
 
-function a1:_formatChange(a34)
+function state:_formatChange(state)
     if self.changeMode == "absolute" then
-        return a22(a34)
+        return a22(state)
     else
-        return a16(a34)
+        return a16(state)
     end
 end
 
-function a1:_showValue(a35, a36, a37, a38)
+function state:_showValue(state, snap, a37, a38)
     if self.numberEasing and not a38 then
-        a35:to(self:_formatValue(a36), a36 >= a37)
+        state:to(self:_formatValue(snap), snap >= a37)
     else
-        a35:snap(self:_formatValue(a36))
+        state:snap(self:_formatValue(snap))
     end
 end
 
-function a1:_updateFullReadouts(a39, a40, a41, a42, a43, a44)
-    self:_showValue(self.valueOdo, a39, a40, a44)
+function state:_updateFullReadouts(state, a40, changeOdo, a42, a43, a44)
+    self:_showValue(self.valueOdo, state, a40, a44)
 
     if a43 then
         self.changeOdo:snap(a43)
         self._lastChange = 0
     elseif self.numberEasing and not a42 then
-        self.changeOdo:to(self:_formatChange(a41), a41 >= self._lastChange)
-        self._lastChange = a41
+        self.changeOdo:to(self:_formatChange(changeOdo), changeOdo >= self._lastChange)
+        self._lastChange = changeOdo
     else
-        self.changeOdo:snap(self:_formatChange(a41 or 0))
-        self._lastChange = a41 or 0
+        self.changeOdo:snap(self:_formatChange(changeOdo or 0))
+        self._lastChange = changeOdo or 0
     end
 end
 
-function a1:_updateCompactReadout(a45, a46, a47, a48, a49, a50)
+function state:_updateCompactReadout(state, a46, readoutOdo, a48, a49, a50)
     if self.display == "change" then
         if a49 then
             self.readoutOdo:snap(a49)
             self._lastChange = 0
         elseif self.numberEasing and not a48 then
-            self.readoutOdo:to(self:_formatChange(a47), a47 >= self._lastChange)
-            self._lastChange = a47
+            self.readoutOdo:to(self:_formatChange(readoutOdo), readoutOdo >= self._lastChange)
+            self._lastChange = readoutOdo
         else
-            self.readoutOdo:snap(self:_formatChange(a47 or 0))
-            self._lastChange = a47 or 0
+            self.readoutOdo:snap(self:_formatChange(readoutOdo or 0))
+            self._lastChange = readoutOdo or 0
         end
-    else         self:_showValue(self.readoutOdo, a45, a46, a50)
+    else         self:_showValue(self.readoutOdo, state, a46, a50)
     end
 end
 
-function a1:Set(a51)
-    assert(typeof(a51) == "number", "Statistic:Set() - value must be a number, got " .. typeof(a51))
+function state:Set(state)
+    assert(typeof(state) == "number", "Statistic:Set() - value must be a number, got " .. typeof(state))
 
     local a52 = self.value
     local a53 = not self._hasValue
-    self.value = a51
+    self.value = state
     self._hasValue = true
 
     if a53 then
-        self._initialValue = a51
+        self._initialValue = state
     end
 
     local a54 = if self.changeBaseline == "initial" then self._initialValue else a52
-    local a55 = a53 or a54 == a51
+    local a55 = a53 or a54 == state
 
         local a56, a57, a58, a59
     if a55 then
@@ -12264,17 +12264,17 @@ function a1:Set(a51)
         a58 = "neutral"
         a59 = 0
     elseif a54 == 0 then
-        local a60 = if a51 > 0 then "+" else "-"
+        local a60 = if state > 0 then "+" else "-"
         local a61 = if self.changeMode == "percentage" then "∞%" else "∞"
         a57 = a60 .. a61
-        a58 = if a51 > 0 then "positive" else "negative"
-        a59 = if a51 > 0 then 1 else -1
+        a58 = if state > 0 then "positive" else "negative"
+        a59 = if state > 0 then 1 else -1
     elseif self.changeMode == "percentage" then
-        a56 = ((a51 - a54) / math.abs(a54)) * 100
+        a56 = ((state - a54) / math.abs(a54)) * 100
         a59 = if a56 > 0 then 1 elseif a56 < 0 then -1 else 0
         a58 = if a59 == 1 then "positive" elseif a59 == -1 then "negative" else "neutral"
     else
-        a56 = a51 - a54
+        a56 = state - a54
         a59 = if a56 > 0 then 1 elseif a56 < 0 then -1 else 0
         a58 = if a59 == 1 then "positive" elseif a59 == -1 then "negative" else "neutral"
     end
@@ -12282,16 +12282,16 @@ function a1:Set(a51)
     self:_setAccent(a58, a59)
 
     if self.compact then
-        self:_updateCompactReadout(a51, a52, a56, a55, a57, a53)
+        self:_updateCompactReadout(state, a52, a56, a55, a57, a53)
     else
-        self:_updateFullReadouts(a51, a52, a56, a55, a57, a53)
+        self:_updateFullReadouts(state, a52, a56, a55, a57, a53)
     end
 end
 
-function a1:ResetBaseline(a62)
+function state:ResetBaseline(state)
     local a63 = self.value
     local a64 = not self._hasValue
-    local a65 = if typeof(a62) == "number" then a62 else self.value
+    local a65 = if typeof(state) == "number" then state else self.value
     self._initialValue = a65
     self.value = a65
     self._hasValue = true
@@ -12311,82 +12311,82 @@ function a1:ResetBaseline(a62)
     self:_setAccent("neutral", 0)
 end
 
-function a1:_setShown(a66, a67)
+function state:_setShown(state, readoutOdo)
     local w = self.window
 
     if self.compact then
         w:_reveal(
             self.main,
-            { BackgroundTransparency = if a66 then (self.window.theme.ElementTransparency or 0) else 1 },
-            a67
+            { BackgroundTransparency = if state then (self.window.theme.ElementTransparency or 0) else 1 },
+            readoutOdo
         )
         w:_reveal(
             self.stroke,
-            { Transparency = if a66 then self.window.theme.ElementStrokeTransparency else 1 },
-            a67
+            { Transparency = if state then self.window.theme.ElementStrokeTransparency else 1 },
+            readoutOdo
         )
-        w:_reveal(self.card, { BackgroundTransparency = if a66 then 0 else 1 }, a67)
-        w:_reveal(self.title, { TextTransparency = if a66 then 0 else 1 }, a67)
+        w:_reveal(self.card, { BackgroundTransparency = if state then 0 else 1 }, readoutOdo)
+        w:_reveal(self.title, { TextTransparency = if state then 0 else 1 }, readoutOdo)
         if self.iconLabel then
-            w:_reveal(self.iconLabel, { ImageTransparency = if a66 then 0 else 1 }, a67)
+            w:_reveal(self.iconLabel, { ImageTransparency = if state then 0 else 1 }, readoutOdo)
         end
-        self.readoutOdo:reveal(if a66 then 0 else 1, a67)
+        self.readoutOdo:reveal(if state then 0 else 1, readoutOdo)
         return
     end
 
-    if a66 then
-        w:_revealCommon(self, a67)
-        w:_reveal(self.gradientContainer, { BackgroundTransparency = 0 }, a67)
-        w:_reveal(self.glow, { Transparency = 0.82 }, a67)
-        self.valueOdo:reveal(0, a67)
-        self.changeOdo:reveal(0, a67)
+    if state then
+        w:_revealCommon(self, readoutOdo)
+        w:_reveal(self.gradientContainer, { BackgroundTransparency = 0 }, readoutOdo)
+        w:_reveal(self.glow, { Transparency = 0.82 }, readoutOdo)
+        self.valueOdo:reveal(0, readoutOdo)
+        self.changeOdo:reveal(0, readoutOdo)
     else
-        w:_hideCommon(self, a67)
-        w:_reveal(self.gradientContainer, { BackgroundTransparency = 1 }, a67)
-        w:_reveal(self.glow, { Transparency = 1 }, a67)
-        self.valueOdo:reveal(1, a67)
-        self.changeOdo:reveal(1, a67)
+        w:_hideCommon(self, readoutOdo)
+        w:_reveal(self.gradientContainer, { BackgroundTransparency = 1 }, readoutOdo)
+        w:_reveal(self.glow, { Transparency = 1 }, readoutOdo)
+        self.valueOdo:reveal(1, readoutOdo)
+        self.changeOdo:reveal(1, readoutOdo)
     end
 end
 
-function a1:_minWidth()
+function state:_minWidth()
     local w = 30 + 10     if self.icon then
         w += 26     end
-        w += a4.textWidth(self.window.theme.Font, 16, a8.resolve(self.name))
-    local a68 = if self.display == "change" then self:_formatChange(0) else self:_formatValue(self.value)
-    w += a4.textWidth(self.window.theme.Font, 17, a68)
+        w += a4.textWidth(self.window.theme.Font, 16, Text.resolve(self.name))
+    local tab = if self.display == "change" then self:_formatChange(0) else self:_formatValue(self.value)
+    w += a4.textWidth(self.window.theme.Font, 17, tab)
     return w
 end
 
-a6(a1)
+name(state)
 
-return a1
+return state
 
 end)() end,
     [33] = function()local wax,script,require=ImportGlobals(33)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Tab"
+local state = {}
+state.__index = state
+state.__type = "Tab"
 
-local a2 = script.Parent.Parent.utilities
+local Tab = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(a2.ordering)
-local a5 = require(a2.HapticEngine)
-local a6 = require(script.Parent.Parent.components.search)
-local a7 = require(script.Parent.Parent.components.tabSelector)
+local Rotation = require(Tab.Parent.core.state)
+local window = require(Tab.ordering)
+local props = require(Tab.HapticEngine)
+local name = require(script.Parent.Parent.components.search)
+local icon = require(script.Parent.Parent.components.tabSelector)
 
-local function a8(window, a9)
+local function customOrder(window, a9)
     for _, element in a9 do
         if element.__type == "Group" then
-            a8(window, element.elements)
+            customOrder(window, element.elements)
         else
             window:_unregisterControl(element)
         end
 
                 if element.connections then
-            for _, a10 in element.connections do
-                window:Disconnect(a10)
+            for _, window in element.connections do
+                window:Disconnect(window)
             end
             element.connections = nil
         end
@@ -12408,45 +12408,45 @@ end
 local a11 = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local a12 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local function a13(a14)
+local function Size(a14)
     if a14.mode == "sidebar" then
         return UDim2.new(1, -35, 1, 0)
     end
     return UDim2.new(1, -20, 1, 0)
 end
 
-local function a15(a16)
+local function Position(a16)
     if a16.mode == "sidebar" then
         return UDim2.new(0, 35, 0, 0)
     end
     return UDim2.new(0, 0, 0, 0)
 end
 
-function a1.new(window, a17)
-    a17 = if typeof(a17) == "table" then a17 else {}
+function state.new(window, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        name = a17.name or a17.Name,
-        icon = window:ResolveIcon(a17.icon or a17.Icon),
-        neglectSelector = a17.neglectSelector or a17.NeglectSelector or false,
-        customOrder = a17.customOrder or a17.CustomOrder or 0,
-                forgetState = a17.forgetState or a17.ForgetState or false,
-        _isSettingsTab = a17.isSettingsTab == true or a17.IsSettingsTab == true,
+        name = state.name or state.Name,
+        icon = window:ResolveIcon(state.icon or state.Icon),
+        neglectSelector = state.neglectSelector or state.NeglectSelector or false,
+        customOrder = state.customOrder or state.CustomOrder or 0,
+                forgetState = state.forgetState or state.ForgetState or false,
+        _isSettingsTab = state.isSettingsTab == true or state.IsSettingsTab == true,
 
         elements = {},
-        connections = {},     }, a1)
+        connections = {},     }, state)
 
         assert(self.name or self.icon, "A tab needs a name or an icon.")
 
         if not self.neglectSelector then
-        a7.build(self, self.window.layout)
+        icon.build(self, self.window.layout)
     end
 
         self.tabPage = self.window:Create("ScrollingFrame", {
         Name = self.name,
-        Size = a13(self.window.layout),
-        Position = a15(self.window.layout),
+        Size = Size(self.window.layout),
+        Position = Position(self.window.layout),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -12481,12 +12481,12 @@ function a1.new(window, a17)
     return self
 end
 
-function a1:_bindSelector()
+function state:_bindSelector()
     if self.neglectSelector or not self.topbarItemInteract then
         return
     end
     table.insert(self.connections, self.window:Connect(self.topbarItemInteract.MouseButton1Click, function()
-        a5.click()
+        props.click()
         self:Select()
     end))
     table.insert(self.connections, self.window:Connect(self.topbarItemInteract.MouseEnter, function()
@@ -12505,7 +12505,7 @@ function a1:_bindSelector()
     end))
 end
 
-function a1:_rebuildSelector()
+function state:_rebuildSelector()
     if self.neglectSelector then
         return
     end
@@ -12516,37 +12516,37 @@ function a1:_rebuildSelector()
     if self.topbarItem then
         self.window:DestroySubtree(self.topbarItem)
     end
-    a7.build(self, self.window.layout)
+    icon.build(self, self.window.layout)
     self:_bindSelector()
 end
 
-function a1:_applyVisual(a19, a20)
+function state:_applyVisual(state, a20)
     if self.neglectSelector or not self.topbarItem then
         return
     end
 
-    local a21 = a7.states[self.window.layout.mode][a19]
-    if not a21 then
+    local applyVisual = icon.states[self.window.layout.mode][state]
+    if not applyVisual then
         return
     end
 
-    a7.applyVisual(self, a21, a20)
+    icon.applyVisual(self, applyVisual, a20)
 end
 
-function a1:_spinGradients()
+function state:_spinGradients()
     if self.neglectSelector then
         return
     end
 
     local a22 = TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     for _, a23 in { self.topbarItemGradient, self.topbarItemStrokeGradient } do
-        a23.Rotation = 90 - 360         a3.tweenService:Create(a23, a22, { Rotation = 90 }):Play()
+        a23.Rotation = 90 - 360         Rotation.tweenService:Create(a23, a22, { Rotation = 90 }):Play()
     end
 end
 
-function a1:Select(a24)
+function state:Select(state)
             if self.window._searching then
-        a6.close(self.window, { showTabs = true, jumpTo = false })
+        name.close(self.window, { showTabs = true, jumpTo = false })
     end
 
     self.window.selectedTab = self
@@ -12557,20 +12557,20 @@ function a1:Select(a24)
     end
     self.window:_jumpTo(self.tabPage)
 
-                    local a25 = a24 or not self.window:_interactive()
+                    local tab = state or not self.window:_interactive()
 
-    if not self.neglectSelector and not a25 then
+    if not self.neglectSelector and not tab then
         self:_applyVisual("selected", a11)
     end
 
     for _, tab in self.window.tabs do
         if tab ~= self.window.selectedTab then
-            tab:Deselect(a25)
+            tab:Deselect(tab)
         end
     end
 
-    if self ~= self.window.rfSettings and self.window.settingsAction and not a25 then
-        a3.tweenService
+    if self ~= self.window.rfSettings and self.window.settingsAction and not tab then
+        Rotation.tweenService
             :Create(
                 self.window.settingsAction.iconLabel,
                 TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -12580,15 +12580,15 @@ function a1:Select(a24)
     end
 end
 
-function a1:Deselect(a26)
-    if not self.neglectSelector and not a26 then
+function state:Deselect(state)
+    if not self.neglectSelector and not state then
         self:_applyVisual("unselected", a11)
     end
 end
 
-function a1:_register(element)
+function state:_register(element)
     table.insert(self.elements, element)
-    a4(element, #self.elements * 10)
+    window(element, #self.elements * 10)
     self.window:_restoreLate(element)
 
     if not self.window.hidden then
@@ -12598,84 +12598,84 @@ function a1:_register(element)
     return element
 end
 
-function a1:CreateButton(a27)
-    return self:_register(require(script.Parent.button).new(self, a27))
+function state:CreateButton(state)
+    return self:_register(require(script.Parent.button).new(self, state))
 end
 
-function a1:CreateToggle(a28)
-    return self:_register(require(script.Parent.toggle).new(self, a28))
+function state:CreateToggle(state)
+    return self:_register(require(script.Parent.toggle).new(self, state))
 end
 
-function a1:CreateSwitch(a29)
-    return self:CreateToggle(a29)
+function state:CreateSwitch(state)
+    return self:CreateToggle(state)
 end
 
-function a1:CreateSection(a30)
-    return self:_register(require(script.Parent.section).new(self, a30))
+function state:CreateSection(state)
+    return self:_register(require(script.Parent.section).new(self, state))
 end
 
-function a1:CreateText(a31)
-    return self:_register(require(script.Parent.text).new(self, a31))
+function state:CreateText(state)
+    return self:_register(require(script.Parent.text).new(self, state))
 end
 
-function a1:CreateDivider(a32)
-    return self:_register(require(script.Parent.divider).new(self, a32))
+function state:CreateDivider(state)
+    return self:_register(require(script.Parent.divider).new(self, state))
 end
 
-function a1:CreateProgress(a33)
-    return self:_register(require(script.Parent.progress).new(self, a33))
+function state:CreateProgress(state)
+    return self:_register(require(script.Parent.progress).new(self, state))
 end
 
-function a1:CreateConsole(a34)
-    return self:_register(require(script.Parent.console).new(self, a34))
+function state:CreateConsole(state)
+    return self:_register(require(script.Parent.console).new(self, state))
 end
 
-function a1:CreateStat(a35)
-    return self:_register(require(script.Parent.stat).new(self, a35))
+function state:CreateStat(state)
+    return self:_register(require(script.Parent.stat).new(self, state))
 end
 
-function a1:CreateSlider(a36)
-    return self:_register(require(script.Parent.slider).new(self, a36))
+function state:CreateSlider(state)
+    return self:_register(require(script.Parent.slider).new(self, state))
 end
 
-function a1:CreateDropdown(a37)
-    return self:_register(require(script.Parent.dropdown).new(self, a37))
+function state:CreateDropdown(state)
+    return self:_register(require(script.Parent.dropdown).new(self, state))
 end
 
-function a1:CreateInput(a38)
-    return self:_register(require(script.Parent.input).new(self, a38))
+function state:CreateInput(state)
+    return self:_register(require(script.Parent.input).new(self, state))
 end
 
-function a1:CreateKeybind(a39)
-    return self:_register(require(script.Parent.keybind).new(self, a39))
+function state:CreateKeybind(state)
+    return self:_register(require(script.Parent.keybind).new(self, state))
 end
 
-function a1:CreateColorPicker(a40)
-    return self:_register(require(script.Parent.colorpicker).new(self, a40))
+function state:CreateColorPicker(state)
+    return self:_register(require(script.Parent.colorpicker).new(self, state))
 end
 
-function a1:CreateGroup(a41)
-    return self:_register(require(script.Parent.group).new(self, a41))
+function state:CreateGroup(state)
+    return self:_register(require(script.Parent.group).new(self, state))
 end
 
-function a1:_moveElement(element, a42)
+function state:_moveElement(element, state)
     local a43 = table.find(self.elements, element)
     if not a43 then
         return
     end
     table.remove(self.elements, a43)
-    a42 = math.clamp(a42, 1, #self.elements + 1)
-    table.insert(self.elements, a42, element)
+    state = math.clamp(state, 1, #self.elements + 1)
+    table.insert(self.elements, state, element)
     for i, el in self.elements do
-        a4(el, i * 10)
+        window(el, i * 10)
     end
 end
 
-function a1:Remove()
+function state:Remove()
     local window = self.window
 
             if window._searching then
-        a6.close(window, { showTabs = true, jumpTo = window.selectedTab and window.selectedTab.tabPage })
+        name.close(window, { showTabs = true, jumpTo = window.selectedTab and window.selectedTab.tabPage })
     end
 
     local a44 = table.find(window.tabs, self)
@@ -12693,10 +12693,10 @@ function a1:Remove()
         end
     end
 
-            a8(window, self.elements)
+            customOrder(window, self.elements)
 
-            for _, a45 in self.connections do
-        window:Disconnect(a45)
+            for _, window in self.connections do
+        window:Disconnect(window)
     end
     self.connections = {}
 
@@ -12711,24 +12711,24 @@ function a1:Remove()
     self.elements = {}
 end
 
-return a1
+return state
 
 end)() end,
     [34] = function()local wax,script,require=ImportGlobals(34)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "TabSection"
+local state = {}
+state.__index = state
+state.__type = "TabSection"
 
-local a2 = require(script.Parent.Parent.utilities.locale)
-local a3 = require(script.Parent.Parent.utilities.log)
+local Text = require(script.Parent.Parent.utilities.locale)
+local TabSection = require(script.Parent.Parent.utilities.log)
 
-local a4 = 20
+local Size = 20
 
 local a5 = 6
 
-local a6 = 3
+local PaddingBottom = 3
 
-local function a7(window)
+local function PaddingTop(window)
     for _, tab in window.tabs do
         if not tab.neglectSelector then
             return true
@@ -12737,19 +12737,19 @@ local function a7(window)
     return #window.tabSections > 0
 end
 
-function a1.new(window, a8)
-    a8 = if typeof(a8) == "table" then a8 else {}
+function state.new(window, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        name = a8.name or a8.Name or "Section",
-        icon = window:ResolveIcon(a8.icon or a8.Icon),
-    }, a1)
+        name = state.name or state.Name or "Section",
+        icon = window:ResolveIcon(state.icon or state.Icon),
+    }, state)
 
             if window.layout.mode ~= "sidebar" then
         if not window._warnedTabSection then
             window._warnedTabSection = true
-            a3.warn("Astra: Window:CreateSection needs the sidebar layout; it does nothing on the top strip.")
+            TabSection.warn("Astra: Window:CreateSection needs the sidebar layout; it does nothing on the top strip.")
         end
         self.inert = true
         return self
@@ -12757,7 +12757,7 @@ function a1.new(window, a8)
 
         self.main = window:Create("Frame", {
         Name = self.name,
-        Size = UDim2.new(1, -a4 * 2, 0, 0),
+        Size = UDim2.new(1, -Size * 2, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -12767,8 +12767,8 @@ function a1.new(window, a8)
     })
 
     self.padding = window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, if a7(window) then a5 else 0),
-        PaddingBottom = UDim.new(0, a6),
+        PaddingTop = UDim.new(0, if PaddingTop(window) then a5 else 0),
+        PaddingBottom = UDim.new(0, PaddingBottom),
 
         Parent = self.main,
     })
@@ -12797,7 +12797,7 @@ function a1.new(window, a8)
     end
 
     self.title = window:Create("TextLabel", {
-        Text = a2.t(self.name),
+        Text = Text.t(self.name),
 
         Size = UDim2.fromOffset(0, 15),
         AutomaticSize = Enum.AutomaticSize.X,
@@ -12816,23 +12816,23 @@ function a1.new(window, a8)
     return self
 end
 
-function a1:_setShown(a9, a10)
+function state:_setShown(state, a10)
     if not self.main then
         return     end
     local w = self.window
-    w:_reveal(self.title, { TextTransparency = if a9 then 0.6 else 1 }, a10)
+    w:_reveal(self.title, { TextTransparency = if state then 0.6 else 1 }, a10)
     if self.iconLabel then
-        w:_reveal(self.iconLabel, { ImageTransparency = if a9 then 0.65 else 1 }, a10)
+        w:_reveal(self.iconLabel, { ImageTransparency = if state then 0.65 else 1 }, a10)
     end
 end
 
-function a1:_setVisible(a11)
+function state:_setVisible(state)
     if self.main then
-        self.main.Visible = a11
+        self.main.Visible = state
     end
 end
 
-function a1:Remove()
+function state:Remove()
     local a12 = table.find(self.window.tabSections, self)
     if a12 then
         table.remove(self.window.tabSections, a12)
@@ -12841,32 +12841,32 @@ function a1:Remove()
     self.main = nil
 end
 
-return a1
+return state
 
 end)() end,
     [35] = function()local wax,script,require=ImportGlobals(35)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Tag"
+local state = {}
+state.__index = state
+state.__type = "Tag"
 
-local a2 = script.Parent.Parent.utilities
+local Tag = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
-local a4 = require(script.Parent.Parent.functions)
-local a5 = require(script.Parent.Parent.images.image)
+local Tag = require(Tag.Parent.core.state)
+local color = require(script.Parent.Parent.functions)
+local props = require(script.Parent.Parent.images.image)
 
-local a6 = Color3.fromRGB(255, 175, 15)
-local a7 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local color = Color3.fromRGB(255, 175, 15)
+local element = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-function a1.new(window, a8)
-    a8 = if typeof(a8) == "table" then a8 else {}
+function state.new(window, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         window = assert(window, "Missing argument #1 (Window expected)"),
-        text = a8.text or a8.Text or a8.title or a8.Title,
-        icon = window:ResolveIcon(a8.icon or a8.Icon),
-        color = a8.color or a8.Color or a6,
-    }, a1)
+        text = state.text or state.Text or state.title or state.Title,
+        icon = window:ResolveIcon(state.icon or state.Icon),
+        color = state.color or state.Color or color,
+    }, state)
 
     assert(self.icon or (self.text and self.text ~= ""), "A Tag requires an icon, text, or both.")
 
@@ -12876,7 +12876,7 @@ function a1.new(window, a8)
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundColor3 = self.color,
         BorderSizePixel = 0,
-        LayoutOrder = a8.order or a8.Order or 0,
+        LayoutOrder = state.order or state.Order or 0,
 
                 BackgroundTransparency = 1,
         Parent = self.window.tagContainer,
@@ -12904,12 +12904,12 @@ function a1.new(window, a8)
         Parent = self.main,
     })
 
-    local a9 = a4.contrastColor(self.color)
+    local ImageColor3 = color.contrastColor(self.color)
 
     self.iconLabel = self.window:Create("ImageLabel", {
         Name = "Icon",
         Image = self.icon or "",
-        ImageColor3 = a9,
+        ImageColor3 = ImageColor3,
         Size = UDim2.fromOffset(16, 16),
         BackgroundTransparency = 1,
         Visible = self.icon ~= nil,
@@ -12926,7 +12926,7 @@ function a1.new(window, a8)
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
         Text = self.text or "",
-        TextColor3 = a9,
+        TextColor3 = ImageColor3,
         TextSize = 15,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextWrapped = true,
@@ -12942,59 +12942,59 @@ function a1.new(window, a8)
     self.window.tagContainer.Visible = true
 
         if not self.window.hidden then
-        self:_setShown(true, a7)
+        self:_setShown(true, element)
     end
 
     return self
 end
 
-function a1:_setShown(a10, a11)
-    local a12 = if a10 then 0 else 1
-    local a13 = if typeof(a11) == "TweenInfo" then a11 elseif a11 then a7 else nil
-    if a13 then
-        a3.tweenService:Create(self.main, a13, { BackgroundTransparency = a12 }):Play()
-        a3.tweenService:Create(self.iconLabel, a13, { ImageTransparency = a12 }):Play()
-        a3.tweenService:Create(self.title, a13, { TextTransparency = a12 }):Play()
+function state:_setShown(state, a11)
+    local Create = if state then 0 else 1
+    local tweenService = if typeof(a11) == "TweenInfo" then a11 elseif a11 then element else nil
+    if tweenService then
+        Tag.tweenService:Create(self.main, tweenService, { BackgroundTransparency = Create }):Play()
+        Tag.tweenService:Create(self.iconLabel, tweenService, { ImageTransparency = Create }):Play()
+        Tag.tweenService:Create(self.title, tweenService, { TextTransparency = Create }):Play()
     else
-        self.main.BackgroundTransparency = a12
-        self.iconLabel.ImageTransparency = a12
-        self.title.TextTransparency = a12
+        self.main.BackgroundTransparency = Create
+        self.iconLabel.ImageTransparency = Create
+        self.title.TextTransparency = Create
     end
 end
 
-function a1:SetColor(a14)
-    self.color = a14
-    local a15 = a4.contrastColor(a14)
-    a3.tweenService:Create(self.main, a7, { BackgroundColor3 = a14 }):Play()
-    a3.tweenService:Create(self.iconLabel, a7, { ImageColor3 = a15 }):Play()
-    a3.tweenService:Create(self.title, a7, { TextColor3 = a15 }):Play()
+function state:SetColor(state)
+    self.color = state
+    local Create = color.contrastColor(state)
+    Tag.tweenService:Create(self.main, element, { BackgroundColor3 = state }):Play()
+    Tag.tweenService:Create(self.iconLabel, element, { ImageColor3 = Create }):Play()
+    Tag.tweenService:Create(self.title, element, { TextColor3 = Create }):Play()
 end
 
-function a1:SetText(a16)
-    self.text = a16
-    self.title.Text = a16 or ""
-    self.title.Visible = a16 ~= nil and a16 ~= ""
+function state:SetText(state)
+    self.text = state
+    self.title.Text = state or ""
+    self.title.Visible = state ~= nil and state ~= ""
 end
 
-function a1:SetIcon(a17)
-    self.icon = a17
-    a5.assign(self.iconLabel, "Image", a17)
-    self.iconLabel.Visible = a17 ~= nil
+function state:SetIcon(state)
+    self.icon = state
+    props.assign(self.iconLabel, "Image", state)
+    self.iconLabel.Visible = state ~= nil
 end
 
-function a1:Set(a18)
-    if a18.color or a18.Color then
-        self:SetColor(a18.color or a18.Color)
+function state:Set(state)
+    if state.color or state.Color then
+        self:SetColor(state.color or state.Color)
     end
-    if a18.text or a18.Text or a18.title or a18.Title then
-        self:SetText(a18.text or a18.Text or a18.title or a18.Title)
+    if state.text or state.Text or state.title or state.Title then
+        self:SetText(state.text or state.Text or state.title or state.Title)
     end
-    if a18.icon ~= nil or a18.Icon ~= nil then
-        self:SetIcon(a18.icon or a18.Icon)
+    if state.icon ~= nil or state.Icon ~= nil then
+        self:SetIcon(state.icon or state.Icon)
     end
 end
 
-function a1:Remove()
+function state:Remove()
         self.window:DestroySubtree(self.main)
     local a19 = table.find(self.window.tags, self)
     if a19 then
@@ -13005,32 +13005,32 @@ function a1:Remove()
     end
 end
 
-return a1
+return state
 
 end)() end,
     [36] = function()local wax,script,require=ImportGlobals(36)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Text"
+local state = {}
+state.__index = state
+state.__type = "Text"
 
-local a2 = require(script.Parent.Parent.utilities.moveable)
-local a3 = require(script.Parent.Parent.utilities.locale)
+local constants = require(script.Parent.Parent.utilities.moveable)
+local Text = require(script.Parent.Parent.utilities.locale)
 
-local a4 = 16
-local a5 = 14
+local TextSize = 16
+local TextSize = 14
 
-local a6 = 0.45
+local window = 0.45
 
-function a1.new(tab, a7)
-    a7 = if typeof(a7) == "table" then a7 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = tostring(a7.name or a7.Name or ""),
-        text = tostring(a7.text or a7.Text or ""),
-        icon = tab.window:ResolveIcon(a7.icon or a7.Icon),
-    }, a1)
+        name = tostring(state.name or state.Name or ""),
+        text = tostring(state.text or state.Text or ""),
+        icon = tab.window:ResolveIcon(state.icon or state.Icon),
+    }, state)
 
             self.main = self.window:Create("Frame", {
         Size = UDim2.new(1, -20, 0, 0),
@@ -13094,13 +13094,13 @@ function a1.new(tab, a7)
     end
 
     self.title = self.window:Create("TextLabel", {
-        Text = a3.t(self.name),
+        Text = Text.t(self.name),
         Size = UDim2.new(1, if self.icon then -22 else 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         RichText = true,
-        TextSize = a4,
+        TextSize = TextSize,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 1,
@@ -13110,13 +13110,13 @@ function a1.new(tab, a7)
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 
     self.body = self.window:Create("TextLabel", {
-        Text = a3.t(self.text),
+        Text = Text.t(self.text),
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         RichText = true,
-        TextSize = a5,
+        TextSize = TextSize,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = 2,
@@ -13130,75 +13130,75 @@ function a1.new(tab, a7)
     return self
 end
 
-function a1:_applyPresence()
+function state:_applyPresence()
     self.titleRow.Visible = self.name ~= "" or self.icon ~= nil
     self.body.Visible = self.text ~= ""
 end
 
-function a1:Set(a8)
-    self.text = tostring(a8)
+function state:Set(state)
+    self.text = tostring(state)
     self.window:_bindLocale(self.body, "Text", self.text)
     self:_applyPresence()
 end
 
-function a1:SetTitle(a9)
-    self.name = tostring(a9)
+function state:SetTitle(state)
+    self.name = tostring(state)
     self.window:_bindLocale(self.title, "Text", self.name)
     self:_applyPresence()
 end
 
-function a1:_setShown(a10, a11)
-        if a10 then
+function state:_setShown(state, a11)
+        if state then
         self.window:_revealCommon(self, a11)
     else
         self.window:_hideCommon(self, a11)
     end
 
-    self.window:_reveal(self.body, { TextTransparency = if a10 then a6 else 1 }, a11)
+    self.window:_reveal(self.body, { TextTransparency = if state then window else 1 }, a11)
 end
 
-a2(a1)
+constants(state)
 
-return a1
+return state
 
 end)() end,
     [37] = function()local wax,script,require=ImportGlobals(37)local ImportGlobals return (function(...)
-local a1 = {}
-a1.__index = a1
-a1.__type = "Toggle"
+local state = {}
+state.__index = state
+state.__type = "Toggle"
 
-local a2 = script.Parent.Parent.utilities
+local Toggle = script.Parent.Parent.utilities
 
-local a3 = require(a2.Parent.core.state)
+local Toggle = require(Toggle.Parent.core.state)
 local a4 = require(script.Parent.Parent.functions)
-local a5 = require(a2.moveable)
-local a6 = require(a2.lockable)
-local a7 = require(a2.locale)
-local a8 = require(a2.HapticEngine)
-local a9 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local props = require(Toggle.moveable)
+local name = require(Toggle.lockable)
+local Text = require(Toggle.locale)
+local value = require(Toggle.HapticEngine)
+local callback = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-function a1.new(tab, a10)
-    a10 = if typeof(a10) == "table" then a10 else {}
+function state.new(tab, state)
+    state = if typeof(state) == "table" then state else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = a10.name or a10.Name or "Switch",
-        icon = tab.window:ResolveIcon(a10.icon or a10.Icon),
-        description = a10.description or a10.Description,
-        forgetState = a10.forgetState or a10.ForgetState or tab.forgetState,         compact = tab.compact or false,
-        flag = a10.flag
-            or a10.Flag
+        name = state.name or state.Name or "Switch",
+        icon = tab.window:ResolveIcon(state.icon or state.Icon),
+        description = state.description or state.Description,
+        forgetState = state.forgetState or state.ForgetState or tab.forgetState,         compact = tab.compact or false,
+        flag = state.flag
+            or state.Flag
             or (
-                not (a10.forgetState or a10.ForgetState or tab.forgetState)
-                    and a4.deriveFlagFromName(a10.name or a10.Name or "Switch")
+                not (state.forgetState or state.ForgetState or tab.forgetState)
+                    and a4.deriveFlagFromName(state.name or state.Name or "Switch")
                 or nil
             ),
 
-        callback = a10.callback or a10.Callback or function() end,
+        callback = state.callback or state.Callback or function() end,
 
-        value = if (a10.value or a10.Value) ~= nil then (a10.value or a10.Value) else false,
-    }, a1)
+        value = if (state.value or state.Value) ~= nil then (state.value or state.Value) else false,
+    }, state)
 
         self.window:_registerControl(self)
 
@@ -13215,7 +13215,7 @@ function a1.new(tab, a10)
     return self
 end
 
-function a1:_buildSwitch(a11)
+function state:_buildSwitch(state)
     local window = self.window
 
     self.functionContainer = window:Create("Frame", {
@@ -13223,7 +13223,7 @@ function a1:_buildSwitch(a11)
         Size = UDim2.fromOffset(50, 21),
 
         BackgroundTransparency = 1,
-        Parent = a11,
+        Parent = state,
     }, { BackgroundColor3 = "ToggleTrack" })
 
     window:Create("UICorner", {
@@ -13291,8 +13291,8 @@ function a1:_buildSwitch(a11)
     return self.functionContainer
 end
 
-function a1:_performToggle()
-    a8.click()
+function state:_performToggle()
+    value.click()
     self.value = not self.value
     self:_animateIndicator()
 
@@ -13300,7 +13300,7 @@ function a1:_performToggle()
     self.window:_persist(self)
 end
 
-function a1:_buildFull()
+function state:_buildFull()
     local window = self.window
 
     self.main = window:Create("Frame", {
@@ -13349,7 +13349,7 @@ function a1:_buildFull()
     end
 
     self.title = window:Create("TextLabel", {
-        Text = a7.t(self.name),
+        Text = Text.t(self.name),
         Size = UDim2.fromOffset(250, 16),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
@@ -13382,14 +13382,14 @@ function a1:_buildFull()
     self.window:_wireElementHover(self)
 
     self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
-        a3.tweenService
+        Toggle.tweenService
             :Create(
                 self.stroke,
-                a9,
+                callback,
                 { Transparency = 1 }
             )
             :Play()
-        a3.tweenService
+        Toggle.tweenService
             :Create(
                 self.main,
                 TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
@@ -13405,24 +13405,24 @@ function a1:_buildFull()
             return
         end
 
-        a3.tweenService
+        Toggle.tweenService
             :Create(
                 self.main,
                 TweenInfo.new(0.25, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
                 { Size = UDim2.new(1, -20, 0, 41) }
             )
             :Play()
-        a3.tweenService
+        Toggle.tweenService
             :Create(
                 self.stroke,
-                a9,
+                callback,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
     end)
 end
 
-function a1:_buildCompact()
+function state:_buildCompact()
     local window = self.window
 
         self.main, self.stroke, self.interact = window:_buildCompactRow(self.tab, self.name, 10)
@@ -13482,7 +13482,7 @@ function a1:_buildCompact()
     end
 
     self.title = window:Create("TextLabel", {
-        Text = a7.t(self.name),
+        Text = Text.t(self.name),
         Size = UDim2.fromOffset(0, 16),
         AutomaticSize = Enum.AutomaticSize.X,
         BorderSizePixel = 0,
@@ -13507,10 +13507,10 @@ function a1:_buildCompact()
     self.window:_wireElementHover(self)
 
     self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
-        a3.tweenService
+        Toggle.tweenService
             :Create(
                 self.stroke,
-                a9,
+                callback,
                 { Transparency = 1 }
             )
             :Play()
@@ -13523,92 +13523,92 @@ function a1:_buildCompact()
             return
         end
 
-        a3.tweenService
+        Toggle.tweenService
             :Create(
                 self.stroke,
-                a9,
+                callback,
                 { Transparency = self.window.theme.ElementStrokeTransparency }
             )
             :Play()
     end)
 end
 
-function a1:_animateIndicator()
-    local a12 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+function state:_animateIndicator()
+    local Create = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
     if self.indicatorGlow then
-        a3.tweenService
-            :Create(self.indicatorGlow, a12, { Transparency = self.value and self.window.theme.AccentGlow or 1 })
+        Toggle.tweenService
+            :Create(self.indicatorGlow, Create, { Transparency = self.value and self.window.theme.AccentGlow or 1 })
             :Play()
     end
     if self.value then
-        a3.tweenService
-            :Create(self.indicator, a12, {
+        Toggle.tweenService
+            :Create(self.indicator, Create, {
                 Position = UDim2.new(1, -28, 0.5, 0),
                 BackgroundColor3 = self.window.theme.AccentColor,
                 BackgroundTransparency = 0,
             })
             :Play()
-        a3.tweenService
-            :Create(self.indicatorStroke, a12, { Color = self.window.theme.AccentStroke, Transparency = 0 })
+        Toggle.tweenService
+            :Create(self.indicatorStroke, Create, { Color = self.window.theme.AccentStroke, Transparency = 0 })
             :Play()
     else
-        a3.tweenService
-            :Create(self.indicator, a12, {
+        Toggle.tweenService
+            :Create(self.indicator, Create, {
                 Position = UDim2.new(1, -47, 0.5, 0),
                 BackgroundColor3 = self.window.theme.ToggleKnobOff,
                 BackgroundTransparency = self.window.theme.ToggleKnobOffTransparency,
             })
             :Play()
-        a3.tweenService
-            :Create(self.indicatorStroke, a12, { Color = Color3.fromRGB(255, 255, 255), Transparency = 0.7 })
+        Toggle.tweenService
+            :Create(self.indicatorStroke, Create, { Color = Color3.fromRGB(255, 255, 255), Transparency = 0.7 })
             :Play()
     end
 end
 
-local a13 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local a14 = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0.35)
+local knob = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local accentTween = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0.35)
 
-function a1:_setShown(a15, a16)
+function state:_setShown(state, a16)
     local w = self.window
-    if a15 then
+    if state then
         w:_revealCommon(self, a16)
                 w:_reveal(self.indicator, {
             BackgroundColor3 = self.value and w.theme.AccentColor or w.theme.ToggleKnobOff,
             BackgroundTransparency = self.value and 0 or w.theme.ToggleKnobOffTransparency,
-        }, a16, a13)
+        }, a16, knob)
         w:_reveal(self.indicatorStroke, {
             Color = self.value and w.theme.AccentStroke or Color3.fromRGB(255, 255, 255),
             Transparency = self.value and 0 or 0.7,
-        }, a16, a13)
+        }, a16, knob)
         w:_reveal(
             self.indicatorGlow,
             { Transparency = self.value and w.theme.AccentGlow or 1 },
             a16,
-            a14
+            accentTween
         )
-        w:_reveal(self.overlay, { BackgroundTransparency = 0 }, a16, a13)
-        w:_reveal(self.containerStroke, { Transparency = 0.85 }, a16, a13)
+        w:_reveal(self.overlay, { BackgroundTransparency = 0 }, a16, knob)
+        w:_reveal(self.containerStroke, { Transparency = 0.85 }, a16, knob)
         w:_reveal(
             self.functionContainer,
             { BackgroundTransparency = w.theme.ToggleTrackTransparency },
             a16,
-            a13
+            knob
         )
     else
         w:_hideCommon(self, a16)
-        w:_reveal(self.indicator, { BackgroundTransparency = 1 }, a16, a13)
-        w:_reveal(self.indicatorStroke, { Transparency = 1 }, a16, a13)
-        w:_reveal(self.indicatorGlow, { Transparency = 1 }, a16, a14)
-        w:_reveal(self.overlay, { BackgroundTransparency = 1 }, a16, a13)
-        w:_reveal(self.containerStroke, { Transparency = 1 }, a16, a13)
-        w:_reveal(self.functionContainer, { BackgroundTransparency = 1 }, a16, a13)
+        w:_reveal(self.indicator, { BackgroundTransparency = 1 }, a16, knob)
+        w:_reveal(self.indicatorStroke, { Transparency = 1 }, a16, knob)
+        w:_reveal(self.indicatorGlow, { Transparency = 1 }, a16, accentTween)
+        w:_reveal(self.overlay, { BackgroundTransparency = 1 }, a16, knob)
+        w:_reveal(self.containerStroke, { Transparency = 1 }, a16, knob)
+        w:_reveal(self.functionContainer, { BackgroundTransparency = 1 }, a16, knob)
     end
 end
 
-function a1:_refreshTheme()
+function state:_refreshTheme()
     local t = self.window.theme
     local a17 = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local ts = a3.tweenService
+    local ts = Toggle.tweenService
     ts:Create(self.functionContainer, a17, { BackgroundTransparency = t.ToggleTrackTransparency }):Play()
     ts:Create(self.indicator, a17, {
         BackgroundColor3 = self.value and t.AccentColor or t.ToggleKnobOff,
@@ -13622,30 +13622,30 @@ function a1:_refreshTheme()
     end
 end
 
-function a1:_minWidth()
+function state:_minWidth()
     local w = 30 + 10 + 50     if self.icon then
         w += 21     end
-        w += a4.textWidth(self.window.theme.Font, 16, a7.resolve(self.name))
+        w += a4.textWidth(self.window.theme.Font, 16, Text.resolve(self.name))
     return w
 end
 
-a5(a1)
-a6(a1)
+props(state)
+name(state)
 
-function a1:Set(a18, a19)
-    local a20 = self.value ~= a18
-    self.value = a18
+function state:Set(state, Set)
+    local a20 = self.value ~= state
+    self.value = state
 
     if a20 then
         self:_animateIndicator()
     end
 
-        if not a19 then
+        if not Set then
         self.window:_runGuarded(self, self.callback, self.value)
         self.window:_persist(self)     end
 end
 
-return a1
+return state
 
 end)() end,
     [46] = function()local wax,script,require=ImportGlobals(46)local ImportGlobals return (function(...)
@@ -13677,18 +13677,18 @@ end)() end,
 
 local a1 = {}
 
-function a1.validate(a2: string, a3: any): (boolean, any)
-    if a2 == "keepOnScreen" or a2 == "showProfile" or a2 == "showFullUsername" then
-        return type(a3) == "boolean", a3 == true
+function a1.validate(appearance: string, validate: any): (boolean, any)
+    if appearance == "keepOnScreen" or appearance == "showProfile" or appearance == "showFullUsername" then
+        return type(validate) == "boolean", validate == true
     end
-    if a2 == "layoutMode" then
-        if a3 == "top" or a3 == "sidebar" or a3 == "collapsedSidebar" then
-            return true, a3
+    if appearance == "layoutMode" then
+        if validate == "top" or validate == "sidebar" or validate == "collapsedSidebar" then
+            return true, validate
         end
         return false, nil
     end
-    if a2 == "activeSubTab" then
-        return type(a3) == "number" and a3 >= 1, math.floor(a3)
+    if appearance == "activeSubTab" then
+        return type(validate) == "number" and validate >= 1, math.floor(validate)
     end
     return false, nil
 end
@@ -13700,12 +13700,12 @@ end)() end,
 
 local a1 = {}
 
-function a1.validate(a2: string, a3: any): (boolean, any)
-    if a2 == "toggleKeybind" then
-        return typeof(a3) == "EnumItem", a3
+function a1.validate(behavior: string, validate: any): (boolean, any)
+    if behavior == "toggleKeybind" then
+        return typeof(validate) == "EnumItem", validate
     end
-    if a2 == "mouseOverride" or a2 == "welcomeToast" or a2 == "antiWindowDuplicate" then
-        return type(a3) == "boolean", a3 == true
+    if behavior == "mouseOverride" or behavior == "welcomeToast" or behavior == "antiWindowDuplicate" then
+        return type(validate) == "boolean", validate == true
     end
     return false, nil
 end
@@ -13862,9 +13862,9 @@ end)() end,
 
 local a1 = {}
 
-function a1.validate(a2: string, a3: any): (boolean, any)
-    if a2 == "haptics" then
-        return type(a3) == "boolean", a3 == true
+function a1.validate(performance: string, validate: any): (boolean, any)
+    if performance == "haptics" then
+        return type(validate) == "boolean", validate == true
     end
     return false, nil
 end
@@ -13923,7 +13923,7 @@ return a3
 end)() end,
     [45] = function()local wax,script,require=ImportGlobals(45)local ImportGlobals return (function(...)
 
-local a1 = {}
+local registry = {}
 
 export type SettingDefinition = {
     key: string,
@@ -13932,7 +13932,7 @@ export type SettingDefinition = {
     description: string?,
 }
 
-a1.definitions = {
+registry.definitions = {
     toggleKeybind = {
         key = "toggleKeybind",
         kind = "keybind",
@@ -13995,20 +13995,20 @@ a1.definitions = {
     },
 }
 
-function a1.definition(a2: string): SettingDefinition?
-    return a1.definitions[a2]
+function registry.definition(registry: string): SettingDefinition?
+    return registry.definitions[registry]
 end
 
-function a1.keys(): { string }
+function registry.keys(): { string }
     local a3 = {}
-    for a4 in a1.definitions do
-        table.insert(a3, a4)
+    for insert in registry.definitions do
+        table.insert(a3, insert)
     end
     table.sort(a3)
     return a3
 end
 
-return a1
+return registry
 
 end)() end,
     [50] = function()local wax,script,require=ImportGlobals(50)local ImportGlobals return (function(...)
@@ -14024,10 +14024,10 @@ return a2
 end)() end,
     [47] = function()local wax,script,require=ImportGlobals(47)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.utilities.filesystem)
-local a2 = require(script.Parent.Parent.utilities.path)
-local a3 = require(script.Parent.Parent.core.state)
+local diskPath = require(script.Parent.Parent.utilities.path)
+local diskHits = require(script.Parent.Parent.core.state)
 local a4 = require(script.Parent.Parent.utilities.constants)
-local a5 = require(script.Parent.Parent.images.windowIcons)
+local manifest = require(script.Parent.Parent.images.windowIcons)
 
 export type RewriteMap = { [number]: string }
 export type CacheSettledCallback = (failed: number, failedRoles: { string }) -> ()
@@ -14041,240 +14041,240 @@ export type ThumbnailEntry = {
 export type ThumbnailResponse = {
     data: { ThumbnailEntry }?,
 }
-local a6 = {}
+local memoryHits = {}
 
 type RemoteCallback = (uri: string?) -> ()
 
-local a7 = a3.fileSystemManager:getRootFolder()
-local a8 = a3.fileSystemManager:getAssetsFolder()
-local a9 = a3.assetResolver
+local state = diskHits.fileSystemManager:getRootFolder()
+local state = diskHits.fileSystemManager:getAssetsFolder()
+local content = diskHits.assetResolver
 
-local a10 = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/assets/"
-local a11 = 48
+local githubBase = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/assets/"
+local thumbnailUrl = 48
 local a12 =
     "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=%dx%d&format=Png&isCircular=false"
 
-local a13: { [number]: string } = {}
-local a14 = a5.manifest()
+local remoteUrls: { [number]: string } = {}
+local a14 = manifest.manifest()
 for a15 in a14 do
-    a13[a15] = a10 .. tostring(a15) .. ".png"
+    remoteUrls[a15] = githubBase .. tostring(a15) .. ".png"
 end
-local a16 = 0
-for _ in a13 do
-    a16 += 1
+local totalIcons = 0
+for _ in remoteUrls do
+    totalIcons += 1
 end
 
-a6.rewrites = {} :: RewriteMap
-a6.onCached = nil :: OnCachedCallback?
-local a17 = "\137PNG\r\n\26\n"
-local a18: { [string]: string } = {}
-local a19: { [string]: { RemoteCallback } } = {}
+memoryHits.rewrites = {} :: RewriteMap
+memoryHits.onCached = nil :: OnCachedCallback?
+local content = "\137PNG\r\n\26\n"
+local cached: { [string]: string } = {}
+local queue: { [string]: { RemoteCallback } } = {}
 
-local function a20(a21: string, a22: string): string?
+local function uri(getAssetContentFromUrl: string, downloadAndRegister: string): string?
         if type(getfenv().getcustomasset) ~= "function" or typeof(a1.isfile) ~= "function" then
         return nil
     end
-    if not a1.isfile(a21) then
-        pcall(a1.ensureFolder, a7)
-        pcall(a1.ensureFolder, a8)
-        local a23 = a9:getAssetContentFromUrl(a22, a21, false)
-                        if not a23 or string.sub(a23, 1, 8) ~= a17 then
+    if not a1.isfile(getAssetContentFromUrl) then
+        pcall(a1.ensureFolder, state)
+        pcall(a1.ensureFolder, state)
+        local a23 = content:getAssetContentFromUrl(downloadAndRegister, getAssetContentFromUrl, false)
+                        if not a23 or string.sub(a23, 1, 8) ~= content then
             return nil
         end
-        if not pcall(a1.writefile, a21, a23) then
+        if not pcall(a1.writefile, getAssetContentFromUrl, a23) then
             return nil
         end
     end
-    local ok, a24 = pcall(getfenv().getcustomasset, a21)
+    local ok, a24 = pcall(getfenv().getcustomasset, getAssetContentFromUrl)
     return if ok and type(a24) == "string" then a24 else nil
 end
 
-local function a25(a26: string): string
-    local a27 = 0
+local function diskPath(a26: string): string
+    local hash = 0
     for a28 = 1, #a26 do
-        a27 = (a27 * 33 + string.byte(a26, a28)) % 2147483647
+        hash = (hash * 33 + string.byte(a26, a28)) % 2147483647
     end
-    return a2.join(a8, "icon_" .. tostring(a27) .. ".png")
+    return diskPath.join(state, "icon_" .. tostring(hash) .. ".png")
 end
 
-function a6.remote(a29: string, a30: RemoteCallback?): string
+function memoryHits.remote(memoryHits: string, remote: RemoteCallback?): string
     local a31 = getfenv()
     if type(a31.getcustomasset) ~= "function" or typeof(a1.isfile) ~= "function" then
-        if a30 then
-            task.defer(a30, nil)
+        if remote then
+            task.defer(remote, nil)
         end
         return ""
     end
 
-    local a32 = a18[a29]
+    local a32 = cached[memoryHits]
     if a32 then
-        if a30 then
-            task.defer(a30, a32)
+        if remote then
+            task.defer(remote, a32)
         end
         return a32
     end
 
-    local a33 = a25(a29)
-    if a1.isfile(a33) then
-        local ok, a34 = pcall(a31.getcustomasset, a33)
-        if ok and type(a34) == "string" then
-            a18[a29] = a34
-            if a30 then
-                task.defer(a30, a34)
+    local state = diskPath(memoryHits)
+    if a1.isfile(state) then
+        local ok, uri = pcall(a31.getcustomasset, state)
+        if ok and type(uri) == "string" then
+            cached[memoryHits] = uri
+            if remote then
+                task.defer(remote, uri)
             end
-            return a34
+            return uri
         end
     end
 
-    local a35 = a19[a29]
-    if not a35 then
-        a35 = {}
-        a19[a29] = a35
+    local queue = queue[memoryHits]
+    if not queue then
+        queue = {}
+        queue[memoryHits] = queue
         task.spawn(function()
-            local a36 = a20(a33, a29)
-            if a36 then
-                a18[a29] = a36
+            local uri = uri(state, memoryHits)
+            if uri then
+                cached[memoryHits] = uri
             end
-            local a37 = a19[a29]
-            a19[a29] = nil
+            local a37 = queue[memoryHits]
+            queue[memoryHits] = nil
             if a37 then
                 for _, a38 in a37 do
-                    pcall(a38, a36)
+                    pcall(a38, uri)
                 end
             end
         end)
     end
-    if a30 then
-        table.insert(a35, a30)
+    if remote then
+        table.insert(queue, remote)
     end
     return ""
 end
 
-local function a39(a40: number): string
-    return a2.join(a8, "avatar_" .. tostring(a40) .. ".png")
+local function downloadAndRegister(join: number): string
+    return diskPath.join(state, "avatar_" .. tostring(join) .. ".png")
 end
 
-local function a41(a42: string): string?
-    local a43, a44 = pcall(function()
-        return a3.httpService:JSONDecode(a42)
+local function url(memoryCache: string): string?
+    local a43, entries = pcall(function()
+        return diskHits.httpService:JSONDecode(memoryCache)
     end)
-    if not a43 or type(a44) ~= "table" then
+    if not a43 or type(entries) ~= "table" then
         return nil
     end
 
-    local a45 = (a44 :: ThumbnailResponse).data
-    if type(a45) ~= "table" then
+    local entry = (entries :: ThumbnailResponse).data
+    if type(entry) ~= "table" then
         return nil
     end
 
-    local a46 = a45[1]
-    if type(a46) ~= "table" then
+    local entry = entry[1]
+    if type(entry) ~= "table" then
         return nil
     end
 
-    local a47 = a46 :: ThumbnailEntry
-    if a47.state == "Completed" and type(a47.imageUrl) == "string" then
-        return a47.imageUrl
+    local entry = entry :: ThumbnailEntry
+    if entry.state == "Completed" and type(entry.imageUrl) == "string" then
+        return entry.imageUrl
     end
 
     return nil
 end
 
-local function a48(a49: number): string?
-    local a50: string? = nil
-    for a51 = 1, 4 do
-                local a52 = a9:getAssetContentFromUrl(
-            string.format(a12, a49, a11, a11),
-            "avatar:" .. tostring(a49),
-            a51 > 1
+local function uri(format: number): string?
+    local imageUrl: string? = nil
+    for attempt = 1, 4 do
+                local parseThumbnailResponse = content:getAssetContentFromUrl(
+            string.format(a12, format, thumbnailUrl, thumbnailUrl),
+            "avatar:" .. tostring(format),
+            attempt > 1
         )
-        if a52 then
-            local a53 = a41(a52)
-            if a53 then
-                a50 = a53
+        if parseThumbnailResponse then
+            local url = url(parseThumbnailResponse)
+            if url then
+                imageUrl = url
                 break
             end
         end
-        if a51 < 4 then
+        if attempt < 4 then
             task.wait(0.3)
         end
     end
-    if not a50 then
+    if not imageUrl then
         return nil
     end
 
-    return a20(a39(a49), a50)
+    return uri(downloadAndRegister(format), imageUrl)
 end
 
-local a54: { [number]: { AvatarCallback } } = {}
-local a55: { [number]: boolean } = {}
+local callbacks: { [number]: { AvatarCallback } } = {}
+local avatarFailed: { [number]: boolean } = {}
 
-function a6.preload(a56: PreloadCallback?): (boolean, number)
+function memoryHits.preload(memoryHits: PreloadCallback?): (boolean, number)
     local a57 = getfenv()
     if type(a57.getcustomasset) ~= "function" or typeof(a1.isfile) ~= "function" then
-        if a56 then
-            task.defer(a56, a16, a5.roleList())
+        if memoryHits then
+            task.defer(memoryHits, totalIcons, manifest.roleList())
         end
-        return false, a16
+        return false, totalIcons
     end
 
-    local a58 = a6.rewrites
-    table.clear(a58)
-    local function a59()
-        if not a56 then
+    local rewrites = memoryHits.rewrites
+    table.clear(rewrites)
+    local function notifyFailed()
+        if not memoryHits then
             return
         end
-        local a60 = 0
-        local a61 = {}
-        for id in a13 do
-            if not a58[id] then
-                a60 += 1
-                table.insert(a61, a5.roleForId(id))
+        local failedCount = 0
+        local failedRoles = {}
+        for id in remoteUrls do
+            if not rewrites[id] then
+                failedCount += 1
+                table.insert(failedRoles, manifest.roleForId(id))
             end
         end
-        table.sort(a61)
-        a56(a60, a61)
+        table.sort(failedRoles)
+        memoryHits(failedCount, failedRoles)
     end
 
-    local a62, a63 = 0, 0
-    local a64 = true     for id, a65 in a13 do
-        local a66 = a2.join(a8, tostring(id) .. ".png")
-        local a67: string? = nil
-        if a1.isfile(a66) then
-            local ok, a68 = pcall(a57.getcustomasset, a66)
-            a67 = if ok and type(a68) == "string" then a68 else nil
+    local pending, pending = 0, 0
+    local pending = true     for id, settled in remoteUrls do
+        local state = diskPath.join(state, tostring(id) .. ".png")
+        local uri: string? = nil
+        if a1.isfile(state) then
+            local ok, a68 = pcall(a57.getcustomasset, state)
+            uri = if ok and type(a68) == "string" then a68 else nil
         end
-        if a67 then
-                        a58[id] = a67
+        if uri then
+                        rewrites[id] = uri
         else
-                        a63 += 1
-            a62 += 1
+                        pending += 1
+            pending += 1
             task.spawn(function()
-                local a69 = a20(a66, a65)
+                local a69 = uri(state, settled)
                 if a69 then
-                    a58[id] = a69
-                    if a6.onCached then
-                                                pcall(a6.onCached, id)
+                    rewrites[id] = a69
+                    if memoryHits.onCached then
+                                                pcall(memoryHits.onCached, id)
                     end
                 end
-                a62 -= 1
-                if a62 == 0 and not a64 then
-                    a59()
+                pending -= 1
+                if pending == 0 and not pending then
+                    notifyFailed()
                 end
             end)
         end
     end
 
-    a64 = false
-    if a62 == 0 then
-        a59()
+    pending = false
+    if pending == 0 then
+        notifyFailed()
     end
 
-    return a63 == 0, a63
+    return pending == 0, pending
 end
 
-function a6.avatar(a70: unknown, a71: AvatarCallback?): string
-    if type(a70) ~= "number" then
+function memoryHits.avatar(memoryHits: unknown, avatar: AvatarCallback?): string
+    if type(memoryHits) ~= "number" then
         return ""
     end
 
@@ -14282,34 +14282,34 @@ function a6.avatar(a70: unknown, a71: AvatarCallback?): string
         return ""
     end
 
-    local a72 = a39(a70)
-    if a1.isfile(a72) then
-        local ok, a73 = pcall(getfenv().getcustomasset, a72)
+    local state = downloadAndRegister(memoryHits)
+    if a1.isfile(state) then
+        local ok, a73 = pcall(getfenv().getcustomasset, state)
         if ok and type(a73) == "string" then
             return a73
         end
     end
 
-        if a55[a70] then
+        if avatarFailed[memoryHits] then
         return ""
     end
 
-            local a74 = a54[a70]
+            local a74 = callbacks[memoryHits]
     if a74 then
-        if a71 then
-            table.insert(a74, a71)
+        if avatar then
+            table.insert(a74, avatar)
         end
         return ""
     end
 
-    if a71 then
-        a54[a70] = { a71 }
+    if avatar then
+        callbacks[memoryHits] = { avatar }
         task.spawn(function()
-            local a75 = a48(a70)
-            local a76 = a54[a70]
-            a54[a70] = nil
+            local a75 = uri(memoryHits)
+            local a76 = callbacks[memoryHits]
+            callbacks[memoryHits] = nil
             if not a75 then
-                a55[a70] = true
+                avatarFailed[memoryHits] = true
             end
             if a76 then
                 for _, a77 in a76 do
@@ -14322,7 +14322,7 @@ function a6.avatar(a70: unknown, a71: AvatarCallback?): string
     return ""
 end
 
-return a6
+return memoryHits
 
 end)() end,
     [48] = function()local wax,script,require=ImportGlobals(48)local ImportGlobals return (function(...)
@@ -14402,17 +14402,17 @@ end)() end,
     [51] = function()local wax,script,require=ImportGlobals(51)local ImportGlobals return (function(...)
 local a1 = {}
 
-function a1.contrastColor(a2: Color3): Color3
-    local a3 = 0.299 * a2.R + 0.587 * a2.G + 0.114 * a2.B
+function a1.contrastColor(colors: Color3): Color3
+    local a3 = 0.299 * colors.R + 0.587 * colors.G + 0.114 * colors.B
     return if a3 > 0.5 then Color3.fromRGB(0, 0, 0) else Color3.fromRGB(255, 255, 255)
 end
 
-function a1.toColorSequence(a4: Color3 | ColorSequence): ColorSequence
-    return if typeof(a4) == "ColorSequence" then a4 else ColorSequence.new(a4)
+function a1.toColorSequence(colors: Color3 | ColorSequence): ColorSequence
+    return if typeof(colors) == "ColorSequence" then colors else ColorSequence.new(colors)
 end
 
-function a1.contrastText(a5: Color3): Color3
-    local a6 = 0.299 * a5.R + 0.587 * a5.G + 0.114 * a5.B
+function a1.contrastText(colors: Color3): Color3
+    local a6 = 0.299 * colors.R + 0.587 * colors.G + 0.114 * colors.B
     return if a6 > 0.6 then Color3.fromRGB(20, 20, 20) else Color3.fromRGB(255, 255, 255)
 end
 
@@ -14422,27 +14422,27 @@ end)() end,
     [52] = function()local wax,script,require=ImportGlobals(52)local ImportGlobals return (function(...)
 local a1 = {}
 
-local a2 = 2166136261
-local a3 = 16777619
+local hash = 2166136261
+local prime = 16777619
 
-local function a4(a5: string): number
-    local a6 = a2
-    for a7 = 1, #a5 do
-        a6 = bit32.bxor(a6, string.byte(a5, a7))
-                local a8 = a6 % 65536
-        local a9 = (a6 - a8) / 65536
-        a6 = (((a9 * a3) % 65536) * 65536 + a8 * a3) % 4294967296
+local function a4(bxor: string): number
+    local hash = hash
+    for hash = 1, #bxor do
+        hash = bit32.bxor(hash, string.byte(bxor, hash))
+                local hash = hash % 65536
+        local high = (hash - hash) / 65536
+        hash = (((high * prime) % 65536) * 65536 + hash * prime) % 4294967296
     end
-    return a6
+    return hash
 end
 
-function a1.deriveFlagFromName(a10: string): string
-    local a11 = a10:gsub("(%S+)", function(w: string): string
+function a1.deriveFlagFromName(flagNames: string): string
+    local a11 = flagNames:gsub("(%S+)", function(w: string): string
         return w:sub(1, 1):upper() .. w:sub(2, -1)
     end):gsub("[^%w]", "")
 
-            if a11 == "" and a10 ~= "" then
-        return string.format("Flag%08x", a4(a10))
+            if a11 == "" and flagNames ~= "" then
+        return string.format("Flag%08x", a4(flagNames))
     end
 
     return a11
@@ -14452,107 +14452,107 @@ return a1
 
 end)() end,
     [53] = function()local wax,script,require=ImportGlobals(53)local ImportGlobals return (function(...)
-local a1 = require(script.Parent.Parent.core.state)
-local a2 = a1.textService
+local textService = require(script.Parent.Parent.core.state)
+local a2 = textService.textService
 
 local a3 = {}
 
-local a4: { [string]: number } = {}
-local a5 = 0
-local a6 = 1024
-local a7: { [string]: number } = {}
-local a8 = 0
-local a9 = 1024
+local cached: { [string]: number } = {}
+local widthCount = 0
+local widthCount = 1024
+local cached: { [string]: number } = {}
+local heightCount = 0
+local heightCount = 1024
 
-local function a10(a11: string, a12: Font, a13: number, a14: number): GetTextBoundsParams
-	local a15 = Instance.new("GetTextBoundsParams")
-	a15.Text = a11
-	a15.Font = a12
-	a15.Size = a13
-	a15.Width = a14
-	return a15
+local function measureAsync(Text: string, createParams: Font, text: number, Width: number): GetTextBoundsParams
+	local params = Instance.new("GetTextBoundsParams")
+	params.Text = Text
+	params.Font = createParams
+	params.Size = text
+	params.Width = Width
+	return params
 end
 
-local function a16(a17: GetTextBoundsParams): unknown
+local function extractAxis(textService: GetTextBoundsParams): unknown
     local ok, a18 = pcall(function()
-        return a2:GetTextBoundsAsync(a17)
+        return a2:GetTextBoundsAsync(textService)
     end)
     return if ok then a18 else nil
 end
 
-local function a19(a20: unknown, a21: "X" | "Y"): number?
-    if typeof(a20) == "Vector2" then
-        return if a21 == "X" then a20.X else a20.Y
+local function width(axis: unknown, extractAxis: "X" | "Y"): number?
+    if typeof(axis) == "Vector2" then
+        return if extractAxis == "X" then axis.X else axis.Y
     end
-    if type(a20) == "table" and type((a20 :: any)[a21]) == "number" then
-        return (a20 :: any)[a21]
+    if type(axis) == "table" and type((axis :: any)[extractAxis]) == "number" then
+        return (axis :: any)[extractAxis]
     end
     return nil
 end
 
-function a3.textWidth(a22: Font, a23: number, a24: any): number
-    a24 = tostring(a24)
-    local a25 = tostring(a22.Family)
+function a3.textWidth(textMetrics: Font, textWidth: number, font: any): number
+    font = tostring(font)
+    local widthCache = tostring(textMetrics.Family)
         .. "|"
-        .. tostring(a22.Weight)
+        .. tostring(textMetrics.Weight)
         .. "|"
-        .. tostring(a22.Style)
+        .. tostring(textMetrics.Style)
         .. "|"
-        .. tostring(a23)
+        .. tostring(textWidth)
         .. "|"
-        .. a24
-    local a26 = a4[a25]
+        .. font
+    local a26 = cached[widthCache]
     if a26 then
         return a26
     end
 
-    local a27 = a19(a16(a10(a24, a22, a23, math.huge)), "X")
-    if not a27 then
-        local a28 = utf8.len(a24) or #a24
-        return math.ceil(a23 * 0.55 * a28)
+    local ceiled = width(extractAxis(measureAsync(font, textMetrics, textWidth, math.huge)), "X")
+    if not ceiled then
+        local a28 = utf8.len(font) or #font
+        return math.ceil(textWidth * 0.55 * a28)
     end
 
-    local a29 = math.ceil(a27)
-    if a5 >= a6 then
-        a4 = {}
-        a5 = 0
+    local ceiled = math.ceil(ceiled)
+    if widthCount >= widthCount then
+        cached = {}
+        widthCount = 0
     end
-    a4[a25] = a29
-    a5 += 1
-    return a29
+    cached[widthCache] = ceiled
+    widthCount += 1
+    return ceiled
 end
 
-function a3.textHeight(a30: Font, a31: number, a32: any, a33: number): number
-    a32 = tostring(a32)
-    local a34 = tostring(a30.Family)
+function a3.textHeight(textMetrics: Font, textHeight: number, font: any, Font: number): number
+    font = tostring(font)
+    local heightCache = tostring(textMetrics.Family)
         .. "|"
-        .. tostring(a30.Weight)
+        .. tostring(textMetrics.Weight)
         .. "|"
-        .. tostring(a30.Style)
+        .. tostring(textMetrics.Style)
         .. "|"
-        .. tostring(a31)
+        .. tostring(textHeight)
         .. "|"
-        .. tostring(a33)
+        .. tostring(Font)
         .. "|"
-        .. a32
-    local a35 = a7[a34]
+        .. font
+    local a35 = cached[heightCache]
     if a35 then
         return a35
     end
 
-    local a36 = a19(a16(a10(a32, a30, a31, a33)), "Y")
-    if not a36 then
-        return a31
+    local ceiled = width(extractAxis(measureAsync(font, textMetrics, textHeight, Font)), "Y")
+    if not ceiled then
+        return textHeight
     end
 
-    local a37 = math.ceil(a36)
-    if a8 >= a9 then
-        a7 = {}
-        a8 = 0
+    local ceiled = math.ceil(ceiled)
+    if heightCount >= heightCount then
+        cached = {}
+        heightCount = 0
     end
-    a7[a34] = a37
-    a8 += 1
-    return a37
+    cached[heightCache] = ceiled
+    heightCount += 1
+    return ceiled
 end
 
 return a3
@@ -14747,22 +14747,22 @@ return a2
 
 end)() end,
     [59] = function()local wax,script,require=ImportGlobals(59)local ImportGlobals return (function(...)
-local a1 = require(script.Parent.Parent.cache.imageCache)
+local rewrites = require(script.Parent.Parent.cache.imageCache)
 local a2 = require(script.Parent.Parent.core.state)
 
 type AvatarCallback = imageCache.AvatarCallback
 type PreloadCallback = imageCache.PreloadCallback
 
-local a3 = {}
+local image = {}
 
-a3.rewrites = a1.rewrites
-a3.onBlock = nil :: ((unknown) -> ())?
+image.rewrites = rewrites.rewrites
+image.onBlock = nil :: ((unknown) -> ())?
 
 type PendingProperties = { [string]: boolean }
 
-a3.pending = {} :: { [number]: { [Instance]: PendingProperties } }
+image.pending = {} :: { [number]: { [Instance]: PendingProperties } }
 
-local a4 = false
+local assignedProps = false
 
 local a5: { [string]: boolean } = {
     Image = true,
@@ -14779,77 +14779,77 @@ local function a6(a7: unknown): number?
     return nil
 end
 
-local function a8(a9: unknown): string
-    if a3.onBlock then
-        a3.onBlock(a9)
+local function a8(onBlock: unknown): string
+    if image.onBlock then
+        image.onBlock(onBlock)
     end
     return ""
 end
 
-function a3.preload(a10: PreloadCallback?): (boolean, number)
-    a4 = false
-    return a1.preload(function(a11, a12)
-        a4 = true
-        table.clear(a3.pending)
-        if a10 then
-            a10(a11, a12)
+function image.preload(image: PreloadCallback?): (boolean, number)
+    assignedProps = false
+    return rewrites.preload(function(state, preload)
+        assignedProps = true
+        table.clear(image.pending)
+        if image then
+            image(state, preload)
         end
     end)
 end
 
-function a3.avatar(a13: number, a14: AvatarCallback?): string
-    local a15 = `rbxthumb://type=AvatarHeadShot&id={a13}&w=48&h=48`
+function image.avatar(image: number, avatar: AvatarCallback?): string
+    local a15 = `rbxthumb://type=AvatarHeadShot&id={image}&w=48&h=48`
     if not a2.secureMode then
-        if a14 then
-            task.defer(a14, a15)
+        if avatar then
+            task.defer(avatar, a15)
         end
         return a15
     end
 
-    return a1.avatar(a13, a14)
+    return rewrites.avatar(image, avatar)
 end
 
-function a3.assign(a16: Instance, a17: string, a18: unknown)
-    local a19 = a16 :: any
-    if not a5[a17] then
-        a19[a17] = a18
+function image.assign(image: Instance, assign: string, remote: unknown)
+    local a19 = image :: any
+    if not a5[assign] then
+        a19[assign] = remote
         return
     end
 
-    local a20 = type(a18) == "string" and string.match(a18, "^https?://") ~= nil
+    local a20 = type(remote) == "string" and string.match(remote, "^https?://") ~= nil
     if a20 then
-        a19[a17] = a1.remote(a18 :: string, function(a21)
-            if a16.Parent then
-                a19[a17] = a21 or ""
+        a19[assign] = rewrites.remote(remote :: string, function(a21)
+            if image.Parent then
+                a19[assign] = a21 or ""
             end
         end)
     else
-        a19[a17] = a3.resolve(a18)
+        a19[assign] = image.resolve(remote)
     end
-    if a2.secureMode and not a4 then
-        local id = a6(a18)
-        if id and not a3.rewrites[id] then
-            local a22 = a3.pending[id]
-            if not a22 then
-                a22 = setmetatable({}, { __mode = "k" }) :: any
-                a3.pending[id] = a22
+    if a2.secureMode and not assignedProps then
+        local id = a6(remote)
+        if id and not image.rewrites[id] then
+            local pending = image.pending[id]
+            if not pending then
+                pending = setmetatable({}, { __mode = "k" }) :: any
+                image.pending[id] = pending
             end
-            local a23 = a22[a16]
+            local a23 = pending[image]
             if not a23 then
                 a23 = {}
-                a22[a16] = a23
+                pending[image] = a23
             end
-            a23[a17] = true
+            a23[assign] = true
         end
     end
 end
 
-a1.onCached = function(id: number)
-    local a24 = a3.pending[id]
+rewrites.onCached = function(id: number)
+    local a24 = image.pending[id]
     if not a24 then
         return
     end
-    local a25 = a3.rewrites[id]
+    local a25 = image.rewrites[id]
     if a25 then
         for a26, a27 in a24 do
             if a26.Parent then
@@ -14860,60 +14860,60 @@ a1.onCached = function(id: number)
             end
         end
     end
-    a3.pending[id] = nil
+    image.pending[id] = nil
 end
 
-function a3.resolve(a30: unknown): string
-    if a30 == nil or a30 == 0 or a30 == "" then
+function image.resolve(image: unknown): string
+    if image == nil or image == 0 or image == "" then
         return ""
     end
 
-    if type(a30) == "string" then
-        if string.match(a30, "^https?://") then
-            return a1.remote(a30)
+    if type(image) == "string" then
+        if string.match(image, "^https?://") then
+            return rewrites.remote(image)
         end
-        if string.sub(a30, 1, 11) == "rbxasset://" then
-            return a30
+        if string.sub(image, 1, 11) == "rbxasset://" then
+            return image
         end
-        if string.sub(a30, 1, 11) == "rbxthumb://" then
-            return if a2.secureMode then a8(a30) else a30
+        if string.sub(image, 1, 11) == "rbxthumb://" then
+            return if a2.secureMode then a8(image) else image
         end
     end
 
     local id: number? = nil
-    if type(a30) == "number" then
-        id = a30
-    elseif type(a30) == "string" then
-        id = tonumber(string.match(a30, "^rbxassetid://(%d+)$"))
+    if type(image) == "number" then
+        id = image
+    elseif type(image) == "string" then
+        id = tonumber(string.match(image, "^rbxassetid://(%d+)$"))
     end
 
-    local a31 = if id then a3.rewrites[id] else nil
+    local a31 = if id then image.rewrites[id] else nil
     if a31 then
         return a31
     end
 
     if a2.secureMode then
-        return a8(a30)
+        return a8(image)
     end
 
-    if type(a30) == "number" then
-        return "rbxassetid://" .. a30
+    if type(image) == "number" then
+        return "rbxassetid://" .. image
     end
-    if type(a30) == "string" then
-        return a30
+    if type(image) == "string" then
+        return image
     end
 
-    return a8(a30)
+    return a8(image)
 end
 
-return a3
+return image
 
 end)() end,
     [60] = function()local wax,script,require=ImportGlobals(60)local ImportGlobals return (function(...)
 
-local a1 = {}
+local windowIcons = {}
 
-a1.ids = {
+windowIcons.ids = {
     window = 80387863064905,
     close = 83277910885129,
     minimise = 108115485663409,
@@ -14927,7 +14927,7 @@ a1.ids = {
     config = 125823673784681,
 }
 
-a1.roles = {
+windowIcons.roles = {
     close = "close",
     minimise = "minimise",
     maximise = "maximise",
@@ -14940,37 +14940,37 @@ a1.roles = {
     config = "config",
 }
 
-function a1.manifest()
-    local a2: { [number]: { roles: { string } } } = {}
-    for a3, id in a1.ids do
-        local a4 = a2[id]
-        if not a4 then
-            a4 = { roles = {} }
-            a2[id] = a4
+function windowIcons.manifest()
+    local entry: { [number]: { roles: { string } } } = {}
+    for entry, id in windowIcons.ids do
+        local entry = entry[id]
+        if not entry then
+            entry = { roles = {} }
+            entry[id] = entry
         end
-        table.insert(a4.roles, a1.roles[a3] or a3)
+        table.insert(entry.roles, windowIcons.roles[entry] or entry)
     end
-    return a2
+    return entry
 end
 
-function a1.roleForId(id: number): string
-    local a5 = a1.manifest()[id]
+function windowIcons.roleForId(id: number): string
+    local a5 = windowIcons.manifest()[id]
     if not a5 or #a5.roles == 0 then
         return "window icon"
     end
     return table.concat(a5.roles, "/")
 end
 
-function a1.roleList(): { string }
+function windowIcons.roleList(): { string }
     local a6 = {}
-    for a7 in a1.ids do
-        table.insert(a6, a1.roles[a7] or a7)
+    for list in windowIcons.ids do
+        table.insert(a6, windowIcons.roles[list] or list)
     end
     table.sort(a6)
     return a6
 end
 
-return a1
+return windowIcons
 
 end)() end,
     [68] = function()local wax,script,require=ImportGlobals(68)local ImportGlobals return (function(...)
@@ -25728,11 +25728,11 @@ return tabler
 end)() end,
     [75] = function()local wax,script,require=ImportGlobals(75)local ImportGlobals return (function(...)
 
-local a1 = script
-local a2 = require(script.Parent.core.state)
-local a3 = require(script.Parent.utilities.log)
+local child = script
+local Font = require(script.Parent.core.state)
+local state = require(script.Parent.utilities.log)
 
-local a4 = {}
+local baseColor = {}
 
 local a5 = {
     WindowColor = true,
@@ -25743,78 +25743,78 @@ local a5 = {
     SliderProgress = true,
 }
 
-function a4.coerceValue(a6, a7)
-    if a5[a6] and typeof(a7) == "Color3" then
-        return ColorSequence.new(a7)
+function baseColor.coerceValue(themeTable, coerceValue)
+    if a5[themeTable] and typeof(coerceValue) == "Color3" then
+        return ColorSequence.new(coerceValue)
     end
-    return a7
+    return coerceValue
 end
 
-function a4.firstColor(a8)
-    return if typeof(a8) == "ColorSequence" then a8.Keypoints[1].Value else a8
+function baseColor.firstColor(themeTable)
+    return if typeof(themeTable) == "ColorSequence" then themeTable.Keypoints[1].Value else themeTable
 end
 
-local function a9(a10, a11)
-    local a12 = 0.299 * a10.R + 0.587 * a10.G + 0.114 * a10.B
-    local a13 = if a12 > 0.5 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1)
-    return a10:Lerp(a13, a11)
+local function ElementStroke(lum, luminance)
+    local contrast = 0.299 * lum.R + 0.587 * lum.G + 0.114 * lum.B
+    local color = if contrast > 0.5 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1)
+    return lum:Lerp(color, luminance)
 end
 
-function a4.deriveStrokes(a14, a15)
-    if a15.ElementGradient then
-        local a16 = a4.firstColor(a14.ElementGradient)
-        if a15.ElementStroke == nil then
-            a14.ElementStroke = a9(a16, 0.28)
+function baseColor.deriveStrokes(themeTable, deriveStrokes)
+    if deriveStrokes.ElementGradient then
+        local luminance = baseColor.firstColor(themeTable.ElementGradient)
+        if deriveStrokes.ElementStroke == nil then
+            themeTable.ElementStroke = ElementStroke(luminance, 0.28)
         end
-        if a15.ElementStrokeGradient == nil then
-            a14.ElementStrokeGradient = ColorSequence.new(a9(a16, 0.4))
+        if deriveStrokes.ElementStrokeGradient == nil then
+            themeTable.ElementStrokeGradient = ColorSequence.new(ElementStroke(luminance, 0.4))
         end
-        if a15.ElementStrokeHover == nil then
-            a14.ElementStrokeHover = a9(a16, 0.52)
+        if deriveStrokes.ElementStrokeHover == nil then
+            themeTable.ElementStrokeHover = ElementStroke(luminance, 0.52)
         end
     end
-    if a15.TabBackground and a15.TabStroke == nil then
-        a14.TabStroke = ColorSequence.new(a9(a4.firstColor(a14.TabBackground), 0.4))
+    if deriveStrokes.TabBackground and deriveStrokes.TabStroke == nil then
+        themeTable.TabStroke = ColorSequence.new(ElementStroke(baseColor.firstColor(themeTable.TabBackground), 0.4))
     end
 end
 
-local function a17(a18)
-    if typeof(a18) == "table" then
-        return a18
-    elseif typeof(a18) == "string" then
-        local a19 = a1:FindFirstChild(string.lower(a18))
+local function overlay(themes)
+    if typeof(themes) == "table" then
+        return themes
+    elseif typeof(themes) == "string" then
+        local a19 = child:FindFirstChild(string.lower(themes))
         if a19 then
             return require(a19)
         end
-        a3.warn("Astra: unknown theme '" .. a18 .. "', using default")
-    elseif a18 ~= nil then
-        a3.warn("Astra: invalid theme (expected a built-in name or a theme table), using default")
+        state.warn("Astra: unknown theme '" .. themes .. "', using default")
+    elseif themes ~= nil then
+        state.warn("Astra: invalid theme (expected a built-in name or a theme table), using default")
     end
-    return require(a1["default"])
+    return require(child["default"])
 end
 
-function a4.resolve(a20)
-    local a21 = table.clone(require(a1["default"]))
-    local a22 = a17(a20)
-    for a23, a24 in a22 do
-        a21[a23] = a4.coerceValue(a23, a24)
+function baseColor.resolve(themeTable)
+    local base = table.clone(require(child["default"]))
+    local value = overlay(themeTable)
+    for key, key in value do
+        base[key] = baseColor.coerceValue(key, key)
     end
-    if typeof(a20) == "table" then
-        a4.deriveStrokes(a21, a22)
-    end
-
-    local a25 = if typeof(a20) == "table" then a20 else nil
-    if not (a25 and (a25.Font or a25.font)) then
-        a21.Font = a2.brandFont(Enum.FontWeight.Medium)
-    end
-    if not (a25 and (a25.TitleFont or a25.titleFont)) then
-        a21.TitleFont = a2.brandFont(Enum.FontWeight.SemiBold)
+    if typeof(themeTable) == "table" then
+        baseColor.deriveStrokes(base, value)
     end
 
-    return a21
+    local customTable = if typeof(themeTable) == "table" then themeTable else nil
+    if not (customTable and (customTable.Font or customTable.font)) then
+        base.Font = Font.brandFont(Enum.FontWeight.Medium)
+    end
+    if not (customTable and (customTable.TitleFont or customTable.titleFont)) then
+        base.TitleFont = Font.brandFont(Enum.FontWeight.SemiBold)
+    end
+
+    return base
 end
 
-return a4
+return baseColor
 
 end)() end,
     [69] = function()local wax,script,require=ImportGlobals(69)local ImportGlobals return (function(...)
@@ -26129,45 +26129,45 @@ end)() end,
     [76] = function()local wax,script,require=ImportGlobals(76)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.core.state)
 
-local a2 = {}
+local hapticService = {}
 
-a2.enabled = false
+hapticService.enabled = false
 type HapticTypes = {
     click: Enum.HapticEffectType?,
     notify: Enum.HapticEffectType?,
 }
 
-local a3: HapticTypes = {}
-local a4, a5 = pcall(function()
+local enabled: HapticTypes = {}
+local a4, container = pcall(function()
     Instance.new("HapticEffect"):Destroy()     return {
         click = Enum.HapticEffectType.UIHover,         notify = Enum.HapticEffectType.UIClick,     }
 end)
 if a4 then
-    a3 = a5
+    enabled = container
 end
 
 local a6: { [Enum.HapticEffectType]: Instance } = {}
 local a7: Instance? = nil
 
-function a2.setContainer(a8: Instance?)
-    a7 = a8
+function hapticService.setContainer(hapticService: Instance?)
+    a7 = hapticService
 end
 
-function a2.releaseContainer(a9: Instance?)
-    if a9 == nil or a7 == a9 then
+function hapticService.releaseContainer(hapticService: Instance?)
+    if hapticService == nil or a7 == hapticService then
         a7 = nil
     end
 end
 
-local function a10(): Instance
+local function Parent(): Instance
     if a7 and a7.Parent then
         return a7
     end
     return a1.guiContainer
 end
 
-local function a11(a12: Enum.HapticEffectType): Instance?
-    local a13 = a6[a12]
+local function a11(Type: Enum.HapticEffectType): Instance?
+    local a13 = a6[Type]
         if a13 and a13.Parent then
         return a13
     end
@@ -26176,20 +26176,20 @@ local function a11(a12: Enum.HapticEffectType): Instance?
         return nil
     end
     local a15 = a14 :: any
-    a15.Type = a12
+    a15.Type = Type
     local a16 = pcall(function()
-        a14.Parent = a10()
+        a14.Parent = Parent()
     end)
     if not a16 then
         a14:Destroy()
         return nil
     end
-    a6[a12] = a14
+    a6[Type] = a14
     return a14
 end
 
 local function a17(a18: Enum.HapticEffectType?)
-    if not a18 or not a2.enabled then
+    if not a18 or not hapticService.enabled then
         return
     end
     local a19 = a11(a18)
@@ -26199,29 +26199,29 @@ local function a17(a18: Enum.HapticEffectType?)
     end
 end
 
-function a2.click()
-    a17(a3.click)
+function hapticService.click()
+    a17(enabled.click)
 end
 
-function a2.notify()
-    a17(a3.notify)
+function hapticService.notify()
+    a17(enabled.notify)
 end
 
-function a2.setEnabled(a21: boolean?)
-    a2.enabled = a21 and true or false
-    if not a2.enabled then
-        a2.teardown()
+function hapticService.setEnabled(hapticService: boolean?)
+    hapticService.enabled = hapticService and true or false
+    if not hapticService.enabled then
+        hapticService.teardown()
     end
 end
 
-function a2.teardown()
+function hapticService.teardown()
     for a22, a23 in a6 do
         pcall(a23.Destroy, a23)
         a6[a22] = nil
     end
 end
 
-return a2
+return hapticService
 
 end)() end,
     [77] = function()local wax,script,require=ImportGlobals(77)local ImportGlobals return (function(...)
@@ -26260,13 +26260,13 @@ export type AssetResolver = AssetResolverState & {
 
 local a4 = 8
 
-function a3.new(a5: boolean?, a6: AssetDownloadUrl?): AssetResolver
-    local a7: { [CacheKey]: string }? = if a5 then {} else nil
+function a3.new(contentCacheOrder: boolean?, new: AssetDownloadUrl?): AssetResolver
+    local contentCache: { [CacheKey]: string }? = if contentCacheOrder then {} else nil
     local self = setmetatable(
         {
-            contentCache = a7,
-            contentCacheOrder = if a5 then {} :: { CacheKey } else nil,
-            contentDownloadUrl = a6 or a3.Enum.AssetDownloadUrl.RobloxDownloadUrl,
+            contentCache = contentCache,
+            contentCacheOrder = if contentCacheOrder then {} :: { CacheKey } else nil,
+            contentDownloadUrl = new or a3.Enum.AssetDownloadUrl.RobloxDownloadUrl,
             pendingRequests = {},
         } :: AssetResolverState,
         a3
@@ -26274,20 +26274,20 @@ function a3.new(a5: boolean?, a6: AssetDownloadUrl?): AssetResolver
     return self
 end
 
-function a3.resolve(a8: AssetResolver, a9: unknown): ResolvedAsset?
-    if type(a9) == "number" then
-        return a9
+function a3.resolve(a8: AssetResolver, resolve: unknown): ResolvedAsset?
+    if type(resolve) == "number" then
+        return resolve
     end
 
-    if type(a9) ~= "string" then
+    if type(resolve) ~= "string" then
         return nil
     end
 
-    if string.sub(a9, 1, 11) == "rbxasset://" or string.sub(a9, 1, 11) == "rbxthumb://" then
-        return a9
+    if string.sub(resolve, 1, 11) == "rbxasset://" or string.sub(resolve, 1, 11) == "rbxthumb://" then
+        return resolve
     end
 
-    local id = tonumber(string.match(a9, "^rbxassetid://(%d+)$"))
+    local id = tonumber(string.match(resolve, "^rbxassetid://(%d+)$"))
     if id then
         return id
     end
@@ -26316,36 +26316,36 @@ end
 
 function a3.getAssetContentFromUrl(
     self: AssetResolver,
-    a15: string,
-    a16: CacheKey?,
+    Url: string,
+    insert: CacheKey?,
     a17: boolean?
 ): string?
         local a18 = self.contentCache
-    if a16 ~= nil and a18 and not a17 then
-        local a19 = a18[a16]
+    if insert ~= nil and a18 and not a17 then
+        local a19 = a18[insert]
         if a19 then
             return a19
         end
     end
 
             local a20 = self.pendingRequests
-    if a16 ~= nil then
-        local a21 = a20[a16]
+    if insert ~= nil then
+        local a21 = a20[insert]
         if a21 then
             if not coroutine.isyieldable() then
                 return nil
             end
-            local a22 = coroutine.running()
-            if not a22 then
+            local insert = coroutine.running()
+            if not insert then
                 return nil
             end
-            table.insert(a21, a22)
+            table.insert(a21, insert)
             return coroutine.yield()
         end
-        a20[a16] = {}
+        a20[insert] = {}
     end
 
-    local a23: string? = nil
+    local coroutine: string? = nil
     local a24 = a1.getRequestFn()
     if not a24 then
         a2.warn("No request function available to download asset content.")
@@ -26353,42 +26353,42 @@ function a3.getAssetContentFromUrl(
         local a25, a26 = pcall(
             a24,
             {
-                Url = a15,
+                Url = Url,
                 Method = "GET",
             } :: AssetRequestPayload
         )
         if a25 and a10(a26) then
             local a27 = (a26 :: { Body: string }).Body
-            a23 = a27
-            if a16 ~= nil and a18 then
+            coroutine = a27
+            if insert ~= nil and a18 then
                 local a28 = self.contentCacheOrder
-                if a28 and a18[a16] == nil then
-                    table.insert(a28, a16)
+                if a28 and a18[insert] == nil then
+                    table.insert(a28, insert)
                     local a29 = if #a28 > a4 then table.remove(a28, 1) else nil
                     if a29 ~= nil then
                         a18[a29] = nil
                     end
                 end
-                a18[a16] = a27
+                a18[insert] = a27
             end
         elseif not a17 then
-            a2.warn("Failed to download asset content for url: " .. tostring(a15))
+            a2.warn("Failed to download asset content for url: " .. tostring(Url))
         end
     end
 
-            if a16 ~= nil then
-        local a30 = a20[a16]
-        a20[a16] = nil
+            if insert ~= nil then
+        local a30 = a20[insert]
+        a20[insert] = nil
         if a30 then
             for _, a31 in a30 do
-                pcall(coroutine.resume, a31, a23)
+                pcall(coroutine.resume, a31, coroutine)
             end
         end
     end
-    return a23
+    return coroutine
 end
 
-function a3.getAssetContentFromId(self: AssetResolver, id: AssetId, a32: boolean?): string?
+function a3.getAssetContentFromId(self: AssetResolver, id: AssetId, getAssetContentFromUrl: boolean?): string?
     local a33 = self:resolve(id)
         if not a33 or type(a33) ~= "number" then
         a2.warn("Invalid asset id: " .. tostring(a33))
@@ -26396,21 +26396,21 @@ function a3.getAssetContentFromId(self: AssetResolver, id: AssetId, a32: boolean
     end
 
     local a34 = string.format(self.contentDownloadUrl, a33)
-    return self:getAssetContentFromUrl(a34, a33, a32)
+    return self:getAssetContentFromUrl(a34, a33, getAssetContentFromUrl)
 end
 
 return a3
 
 end)() end,
     [78] = function()local wax,script,require=ImportGlobals(78)local ImportGlobals return (function(...)
-local a1 = require(script.Parent.Parent.images.windowIcons)
+local icons = require(script.Parent.Parent.images.windowIcons)
 local a2 = {}
 
 a2.fontAsset = "rbxassetid://12187375716"
 
 a2.pillResizeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-a2.icons = a1.ids
+a2.icons = icons.ids
 
 a2.accent = {
     on = Color3.fromRGB(23, 153, 110),
@@ -26499,12 +26499,12 @@ local a4 = not a3
     and typeof(delfolder) == "function"
 
 if a4 then
-        function a2.writefile(a5: string, a6: string)
-        writefile(a5, a6)
+        function a2.writefile(a5: string, log: string)
+        writefile(a5, log)
     end
 
-    function a2.readfile(a7: string): string
-        return readfile(a7)
+    function a2.readfile(log: string): string
+        return readfile(log)
     end
 
             if typeof(appendfile) == "function" then
@@ -26752,10 +26752,10 @@ export type FileSystemManager = {
 }
 
 function a4.new(a5: string?): FileSystemManager
-        local a6 = a5 or a3
+        local root = a5 or a3
     local self = setmetatable({
-        root = a6,
-        assets = a6 .. "/Assets",
+        root = root,
+        assets = root .. "/Assets",
     }, a4) :: any
     pcall(a1.ensureFolder, self.root)
     pcall(a1.ensureFolder, self.assets)
@@ -26769,9 +26769,9 @@ end
 
 function a4:getAssetsFolder(a8: string?): string
     if a8 then
-        local a9 = a2.join(self.assets, a8)
-        pcall(a1.ensureFolder, a9)
-        return a9
+        local filesystemManager = a2.join(self.assets, a8)
+        pcall(a1.ensureFolder, filesystemManager)
+        return filesystemManager
     end
     return self.assets
 end
@@ -26788,9 +26788,9 @@ local a1 = require(script.Parent.services)
 local a2 = a1.getService("HttpService")
 local a3 = a1.getService("RunService")
 local a4 = require(script.Parent.filesystem)
-local a5 = require(script.Parent.assetResolver)
+local assetResolver = require(script.Parent.assetResolver)
 local a6 = require(script.Parent.log)
-local a7 = require(script.Parent.path)
+local name = require(script.Parent.path)
 
 local function a8(a9: unknown): string?
     local a10, a11 = pcall(function()
@@ -26876,7 +26876,7 @@ local function a17(a18: unknown): FontManifest?
     if type(a19) ~= "table" or type(a19.name) ~= "string" or type(a19.faces) ~= "table" then
         return nil
     end
-    a19.name = a7.sanitizeFile(a19.name)
+    a19.name = name.sanitizeFile(a19.name)
     if #a19.name == 0 or #a19.faces == 0 then
         return nil
     end
@@ -26884,7 +26884,7 @@ local function a17(a18: unknown): FontManifest?
         if type(a20) ~= "table" or type(a20.name) ~= "string" or type(a20.assetId) ~= "string" then
             return nil
         end
-        a20.name = a7.sanitizeFile(a20.name)
+        a20.name = name.sanitizeFile(a20.name)
         if #a20.name == 0 then
             return nil
         end
@@ -26895,8 +26895,8 @@ end
 local a21 = { "\0\1\0\0", "OTTO", "true", "ttcf", "wOFF", "wOF2" }
 
 local function a22(a23: string): boolean
-    for _, a24 in a21 do
-        if string.sub(a23, 1, #a24) == a24 then
+    for _, sub in a21 do
+        if string.sub(a23, 1, #sub) == sub then
             return true
         end
     end
@@ -26936,8 +26936,8 @@ function a16.__index(self: FontManagerState, a30: unknown): unknown
     if a33 then
         local a34 = a33[a32]
         if a34 then
-            local a35 = a26(Enum.FontWeight.Regular, Enum.FontStyle.Normal)
-            local a36 = a34.variants and a34.variants[a35]
+            local variants = a26(Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+            local a36 = a34.variants and a34.variants[variants]
             if a36 then
                 return a36
             end
@@ -26952,30 +26952,30 @@ function a16.__index(self: FontManagerState, a30: unknown): unknown
 end
 
 function a16.new(
-    a38: string,
+    rootFolder: string,
     a39: boolean?,
-    a40: boolean?,
-    a41: assetResolver.AssetDownloadUrl?,
+    skipCache: boolean?,
+    new: assetResolver.AssetDownloadUrl?,
     a42: FontResolverOptions?
 ): FontManager
-    local a43 = a42
+    local defaultOptions = a42
         or {
             saveToDisk = true,
-            skipCache = not a40 or false,
+            skipCache = not skipCache or false,
             fallbackFont = Font.fromEnum(Enum.Font.SourceSans),
         }
     local self = setmetatable(
         {
-            rootFolder = a38,
-            fontCache = if a40 then {} :: FontCache else nil,
-            assetResolver = a5.new(a40, a41),
-            defaultOptions = a43,
+            rootFolder = rootFolder,
+            fontCache = if skipCache then {} :: FontCache else nil,
+            assetResolver = assetResolver.new(skipCache, new),
+            defaultOptions = defaultOptions,
             _debug = a39 or a3:IsStudio() or false,
             _pendingLoads = {},
         } :: FontManagerState,
         a16
     ) :: any
-        pcall(a4.ensureFolder, a38)
+        pcall(a4.ensureFolder, rootFolder)
     return self
 end
 
@@ -26990,24 +26990,24 @@ local function a44(
         if typeof(a4.isfile) ~= "function" then
         return self.defaultOptions.fallbackFont
     end
-    local a50: string? = nil
+    local writefile: string? = nil
     local a51 = false
     if a3:IsStudio() and self._debug then
         a6.warn("Font manifest loading is not supported in Studio. Using default font manifest for testing.")
-        a50 =
+        writefile =
             '{"name":"Inter","faces":[{"name":"Thin","weight":100,"style":"normal","assetId":"rbxassetid://12187277209"},{"name":"Extra Light","weight":200,"style":"normal","assetId":"rbxassetid://12187293441"},{"name":"Light","weight":300,"style":"normal","assetId":"rbxassetid://12187268450"},{"name":"Regular","weight":400,"style":"normal","assetId":"rbxassetid://12187266066"},{"name":"Medium","weight":500,"style":"normal","assetId":"rbxassetid://12187336822"},{"name":"Semi Bold","weight":600,"style":"normal","assetId":"rbxassetid://12187254443"},{"name":"Bold","weight":700,"style":"normal","assetId":"rbxassetid://12187275575"},{"name":"Extra Bold","weight":800,"style":"normal","assetId":"rbxassetid://12187267750"},{"name":"Black","weight":900,"style":"normal","assetId":"rbxassetid://12187359223"}]}'
     elseif a4.isfile(a49) then
         local ok, a52 = pcall(a4.readfile, a49)
-        a50 = ok and a52 or nil
+        writefile = ok and a52 or nil
     else
-                a50 = self.assetResolver:getAssetContentFromId(a45, false)
-        a51 = a50 ~= nil
+                writefile = self.assetResolver:getAssetContentFromId(a45, false)
+        a51 = writefile ~= nil
     end
-    local a53: FontManifest? = nil
-    if a50 then
-        local ok, a54 = pcall(a12, a50)
+    local manifest: FontManifest? = nil
+    if writefile then
+        local ok, a54 = pcall(a12, writefile)
         if ok and a54 then
-            a53 = a17(a54)
+            manifest = a17(a54)
         else
             if self._debug then
                 a6.warn(
@@ -27021,24 +27021,24 @@ local function a44(
     else
         return self.defaultOptions.fallbackFont
     end
-    if not a53 then
+    if not manifest then
         if self._debug then
             a6.warn("Font manifest is nil for font id: " .. tostring(a45))
         end
                 pcall(a4.delfile, a49)
         return self.defaultOptions.fallbackFont
     end
-    if a51 and a50 then
-        pcall(a4.writefile, a49, a50)
+    if a51 and writefile then
+        pcall(a4.writefile, a49, writefile)
     end
-    local a55 = self.rootFolder .. "/" .. a53.name
+    local a55 = self.rootFolder .. "/" .. manifest.name
     local a56 = true
         if not pcall(a4.ensureFolder, a55) then
         return self.defaultOptions.fallbackFont
     end
 
-            for i, a57 in ipairs(a53.faces) do
-        local a58 = a55 .. "/" .. a57.name:gsub(" ", "-") .. ".ttf"
+            for i, Loaded in ipairs(manifest.faces) do
+        local a58 = a55 .. "/" .. Loaded.name:gsub(" ", "-") .. ".ttf"
                         if a4.isfile(a58) then
             local a59, a60 = pcall(a4.readfile, a58)
             if not a59 or type(a60) ~= "string" or not a22(a60) then
@@ -27046,34 +27046,34 @@ local function a44(
             end
         end
         if not a4.isfile(a58) then
-            local a61 = self.assetResolver:resolve(a57.assetId)
-            local a62 = if a61 ~= nil
+            local a61 = self.assetResolver:resolve(Loaded.assetId)
+            local writefile = if a61 ~= nil
                 then self.assetResolver:getAssetContentFromId(a61, false)
                 else nil
-            if not a62 or not a22(a62) then
+            if not writefile or not a22(writefile) then
                 a56 = false
                 if self._debug then
                     a6.warn(
                         "Font face content is missing or not a font for font id: "
                             .. tostring(a45)
                             .. ", face: "
-                            .. a57.name
+                            .. Loaded.name
                     )
                 end
                 continue
             end
-            pcall(a4.writefile, a58, a62)
+            pcall(a4.writefile, a58, writefile)
         end
-        local ok, a63 = pcall(a25.getcustomasset, a58)
-        if ok and type(a63) == "string" then
-            a53.faces[i].assetId = a63
+        local ok, faces = pcall(a25.getcustomasset, a58)
+        if ok and type(faces) == "string" then
+            manifest.faces[i].assetId = faces
             if self._debug then
-                a6.print("Loaded font face for id: " .. tostring(a45) .. ", face: " .. a57.name)
+                a6.print("Loaded font face for id: " .. tostring(a45) .. ", face: " .. Loaded.name)
             end
         else
             a56 = false
             if self._debug then
-                a6.warn("Failed to load font face for id: " .. tostring(a45) .. ", face: " .. a57.name)
+                a6.warn("Failed to load font face for id: " .. tostring(a45) .. ", face: " .. Loaded.name)
             end
         end
     end
@@ -27081,18 +27081,18 @@ local function a44(
         return self.defaultOptions.fallbackFont
     end
 
-    local a64 = a8(a53)
+    local a64 = a8(manifest)
     if not a64 or not pcall(a4.writefile, a55 .. "/manifest.json", a64) then
         return self.defaultOptions.fallbackFont
     end
-    local a65, a66 = pcall(a25.getcustomasset, a55 .. "/manifest.json")
-    if not a65 or not a66 then
+    local a65, customId = pcall(a25.getcustomasset, a55 .. "/manifest.json")
+    if not a65 or not customId then
         if self._debug then
             a6.warn("Failed to load font manifest for id: " .. tostring(a45))
         end
         return self.defaultOptions.fallbackFont
     end
-        local ok, a67 = pcall(Font.new, a66 :: any, a46, a47)
+        local ok, a67 = pcall(Font.new, customId :: any, a46, a47)
     if not ok or not a67 then
         if self._debug then
             a6.warn("Failed to load font for id: " .. tostring(a45))
@@ -27103,8 +27103,8 @@ local function a44(
         local a68 = self.fontCache
     if a68 then
         a68[a45] = {
-            customId = a66,
-            manifest = a53,
+            customId = customId,
+            manifest = manifest,
             loadedFromDisk = true,
             variants = {
                 [a48] = a67,
@@ -27133,7 +27133,7 @@ function a16.loadFont(
     end
     local a73 = a69 or Enum.FontWeight.Regular
     local a74 = a70 or Enum.FontStyle.Normal
-    local a75 = a26(a73, a74)
+    local variants = a26(a73, a74)
     local a76 = self.assetResolver:resolve(id)
     local a77 = a29(a76)
     if not a77 then
@@ -27142,9 +27142,9 @@ function a16.loadFont(
     end
         local a78 = self.fontCache
     if a78 and not a72 then
-        local a79 = a78[a77]
-        if a79 then
-            local a80 = a79.variants and a79.variants[a75]
+        local variants = a78[a77]
+        if variants then
+            local a80 = variants.variants and variants.variants[variants]
             if a80 then
                 if self._debug then
                     a6.print("Loaded font from cache for id: " .. tostring(a77))
@@ -27152,10 +27152,10 @@ function a16.loadFont(
                 return a80
             end
 
-            local ok, a81 = pcall(Font.new, a79.customId :: any, a73, a74)
+            local ok, a81 = pcall(Font.new, variants.customId :: any, a73, a74)
             if ok and a81 then
-                a79.variants = a79.variants or {}
-                a79.variants[a75] = a81
+                variants.variants = variants.variants or {}
+                variants.variants[variants] = a81
                 if self._debug then
                     a6.print("Loaded font variant from cache for id: " .. tostring(a77))
                 end
@@ -27179,32 +27179,32 @@ function a16.loadFont(
     end
 
         local a82 = self._pendingLoads
-    local a83 = tostring(a77) .. "|" .. a75
+    local a83 = tostring(a77) .. "|" .. variants
     local a84 = a82[a83]
     if a84 then
         if not coroutine.isyieldable() then
             return self.defaultOptions.fallbackFont
         end
-        local a85 = coroutine.running()
-        if not a85 then
+        local insert = coroutine.running()
+        if not insert then
             return self.defaultOptions.fallbackFont
         end
-        table.insert(a84, a85)
+        table.insert(a84, insert)
         return coroutine.yield()
     end
     a82[a83] = {}
 
-    local ok, a86 = pcall(a44, self, a77, a73, a74, a75)
-    local a87 = if ok then a86 else self.defaultOptions.fallbackFont
+    local ok, a86 = pcall(a44, self, a77, a73, a74, variants)
+    local coroutine = if ok then a86 else self.defaultOptions.fallbackFont
 
                 a84 = a82[a83]
     a82[a83] = nil
     if a84 then
         for _, a88 in a84 do
-            pcall(coroutine.resume, a88, a87)
+            pcall(coroutine.resume, a88, coroutine)
         end
     end
-    return a87
+    return coroutine
 end
 
 function a16.resolve(self: FontManager, id: number | string): Font?
@@ -27255,16 +27255,16 @@ return a1
 
 end)() end,
     [84] = function()local wax,script,require=ImportGlobals(84)local ImportGlobals return (function(...)
-local a1 = {}
+local layouts = {}
 
 local aTopbar = require(script.Parent.Parent.layouts.Topbar)
 local aSidebar = require(script.Parent.Parent.layouts.Sidebar)
 local aSidebarCollapsed = require(script.Parent.Parent.layouts.SidebarCollapsed)
 
-local a2 = 64
+local topbarHeight = 64
 
-local a3 = a2 - 1
-local a4 = 38
+local chromeHeight = topbarHeight - 1
+local tabStripHeight = 38
 local a5 = 3
 
 export type Mode = "top" | "sidebar"
@@ -27304,14 +27304,14 @@ export type Layout = {
     forceCollapsed: boolean?,
 }
 
-a1.top = {
+layouts.top = {
     mode = "top" :: Mode,
 
-    topbarHeight = a2,
-    chromeHeight = a3 + a4 + a5,
+    topbarHeight = topbarHeight,
+    chromeHeight = chromeHeight + tabStripHeight + a5,
 
-    tabStripTop = a3,
-    tabStripHeight = a4,
+    tabStripTop = chromeHeight,
+    tabStripHeight = tabStripHeight,
 
     profileHeight = 48,
     avatarSize = 34,
@@ -27327,11 +27327,11 @@ a1.top = {
     }),
 } :: Layout
 
-a1.sidebar = {
+layouts.sidebar = {
     mode = "sidebar" :: Mode,
 
-    topbarHeight = a2,
-    chromeHeight = a2,
+    topbarHeight = topbarHeight,
+    chromeHeight = topbarHeight,
 
             railWidth = 219,
             railCollapsedWidth = 64,
@@ -27370,7 +27370,7 @@ a1.sidebar = {
         fadeCorners = { "BottomLeftRadius", "BottomRightRadius" },
 } :: Layout
 
-local a6 = table.clone(a1.sidebar)
+local a6 = table.clone(layouts.sidebar)
 a6.forceCollapsed = true
 
 local aImplementations = {
@@ -27379,124 +27379,124 @@ local aImplementations = {
     collapsedSidebar = aSidebarCollapsed,
 }
 
-function a1.get(a7: unknown): Layout?
-    if a7 == "sidebar" then
-        return a1.sidebar
-    elseif a7 == "collapsedSidebar" then
+function layouts.get(layouts: unknown): Layout?
+    if layouts == "sidebar" then
+        return layouts.sidebar
+    elseif layouts == "collapsedSidebar" then
         return a6
-    elseif a7 == "top" then
-        return a1.top
+    elseif layouts == "top" then
+        return layouts.top
     end
     return nil
 end
 
-function a1.implementation(a7: unknown)
-    return aImplementations[a7]
+function layouts.implementation(layouts: unknown)
+    return aImplementations[layouts]
 end
 
-function a1.railWidthFor(a8: Layout, a9: number): number
-    if a8.mode ~= "sidebar" then
+function layouts.railWidthFor(layouts: Layout, railWidthFor: number): number
+    if layouts.mode ~= "sidebar" then
         return 0
     end
-    local a10 = a8.railWidth :: number
-    if a8.forceCollapsed or a9 < (a8.railCollapseBelow :: number) then
-        return a8.railCollapsedWidth :: number
+    local a10 = layouts.railWidth :: number
+    if layouts.forceCollapsed or railWidthFor < (layouts.railCollapseBelow :: number) then
+        return layouts.railCollapsedWidth :: number
     end
     return a10
 end
 
-return a1
+return layouts
 
 end)() end,
     [85] = function()local wax,script,require=ImportGlobals(85)local ImportGlobals return (function(...)
 local a1 = require(script.Parent.Parent.core.state)
-local a2 = require(script.Parent.log)
+local translator = require(script.Parent.log)
 
-local a3 = {}
+local translations = {}
 
 export type LocaleToken = { [any]: string }
 export type Translator = (source: string, localeId: string) -> string?
 export type TranslationTables = { [string]: { [string]: string } }
 
-a3.strings = {} :: TranslationTables
-a3.current = "en"
-a3.translator = nil :: Translator?
+translations.strings = {} :: TranslationTables
+translations.current = "en"
+translations.translator = nil :: Translator?
 
 local a4 = {}
 
-local function a5(id: string): string
+local function translations(id: string): string
     return string.match(id, "^(%a+)") or id
 end
 
-function a3.t(a6: unknown): unknown
-    if type(a6) ~= "string" or a6 == "" then
-        return a6
+function translations.t(translations: unknown): unknown
+    if type(translations) ~= "string" or translations == "" then
+        return translations
     end
-    return { [a4] = a6 }
+    return { [a4] = translations }
 end
 
-function a3.isToken(a7: unknown): boolean
-    return type(a7) == "table" and type((a7 :: { [any]: unknown })[a4]) == "string"
+function translations.isToken(translations: unknown): boolean
+    return type(translations) == "table" and type((translations :: { [any]: unknown })[a4]) == "string"
 end
 
-function a3.sourceOf(a8: LocaleToken): string
-    return a8[a4]
+function translations.sourceOf(translations: LocaleToken): string
+    return translations[a4]
 end
 
-function a3.resolve(a9: unknown): any
-    if type(a9) ~= "string" then
-        return a9
+function translations.resolve(translations: unknown): any
+    if type(translations) ~= "string" then
+        return translations
     end
 
-    if a3.translator then
-        local ok, a10 = pcall(a3.translator, a9, a3.current)
+    if translations.translator then
+        local ok, a10 = pcall(translations.translator, translations, translations.current)
         if ok and type(a10) == "string" and a10 ~= "" then
             return a10
         end
     end
 
-    local a11 = a3.strings[a3.current]
-    if a11 and a11[a9] then
-        return a11[a9]
+    local a11 = translations.strings[translations.current]
+    if a11 and a11[translations] then
+        return a11[translations]
     end
 
-    local a12 = a3.strings[a5(a3.current)]
-    if a12 and a12[a9] then
-        return a12[a9]
+    local a12 = translations.strings[translations(translations.current)]
+    if a12 and a12[translations] then
+        return a12[translations]
     end
 
-    return a9
+    return translations
 end
 
-function a3.register(a13: TranslationTables?)
-    if type(a13) ~= "table" then
+function translations.register(translations: TranslationTables?)
+    if type(translations) ~= "table" then
         return
     end
-    for id, a14 in a13 do
+    for id, a14 in translations do
         if type(id) == "string" and type(a14) == "table" then
             id = string.lower(id)
-            local a15 = a3.strings[id]
-            if not a15 then
-                a15 = {}
-                a3.strings[id] = a15
+            local strings = translations.strings[id]
+            if not strings then
+                strings = {}
+                translations.strings[id] = strings
             end
             for a16, a17 in a14 do
                 if type(a16) == "string" and type(a17) == "string" then
-                    a15[a16] = a17
+                    strings[a16] = a17
                 else
-                    a2.warn(`Astra: skipping a '{id}' translation, entries must be string to string.`)
+                    translator.warn(`Astra: skipping a '{id}' translation, entries must be string to string.`)
                 end
             end
         end
     end
 end
 
-function a3.setActive(a18: string?): string
-    a3.current = if type(a18) == "string" and a18 ~= "" then string.lower(a18) else "en"
-    return a3.current
+function translations.setActive(translations: string?): string
+    translations.current = if type(translations) == "string" and translations ~= "" then string.lower(translations) else "en"
+    return translations.current
 end
 
-function a3.detect(): string
+function translations.detect(): string
     local id = a1.localizationService.RobloxLocaleId
     if type(id) == "string" and id ~= "" then
         return string.lower(id)
@@ -27504,7 +27504,7 @@ function a3.detect(): string
     return "en"
 end
 
-return a3
+return translations
 
 end)() end,
     [86] = function()local wax,script,require=ImportGlobals(86)local ImportGlobals return (function(...)
@@ -27637,19 +27637,19 @@ end)() end,
 local a1 = require(script.Parent.Parent.core.state)
 local a2 = a1.textService
 
-local a3 = {}
-a3.__index = a3
+local slots = {}
+slots.__index = slots
 
 local a4 = 20
 
-local function a5(a6, a7, a8)
+local function a5(Font, Size, Text)
     local a9 = Instance.new("GetTextBoundsParams")
-    a9.Text = a8
-    a9.Font = a6
-    a9.Size = a7
+    a9.Text = Text
+    a9.Font = Font
+    a9.Size = Size
     a9.Width = math.huge
     local ok, a10 = pcall(a2.GetTextBoundsAsync, a2, a9)
-    return if ok then a10 else Vector2.new(a7 * 0.6, a7)
+    return if ok then a10 else Vector2.new(Size * 0.6, Size)
 end
 
 local a11 = {}
@@ -27668,15 +27668,15 @@ local function a14(a15, a16)
         return a18
     end
 
-    local a19, a20 = {}, 0
+    local advance, a20 = {}, 0
     for d = 0, 9 do
         local w = math.ceil(a5(a15, a16, tostring(d)).X)
-        a19[d] = w
+        advance[d] = w
         if w > a20 then
             a20 = w
         end
     end
-    a18 = { advance = a19, maxWidth = a20 }
+    a18 = { advance = advance, maxWidth = a20 }
     if a12 >= a13 then
         a11 = {}
         a12 = 0
@@ -27686,18 +27686,18 @@ local function a14(a15, a16)
     return a18
 end
 
-function a3.new(window, a21, a22)
-    a22 = a22 or {}
+function slots.new(window, container, new)
+    new = new or {}
     local self = setmetatable({
         window = window,
-        container = a21,
-        textSize = a22.textSize or 16,
-        transparency = a22.transparency or 1,         duration = a22.duration or 0.55,
-        slots = {},         length = 0,     }, a3)
+        container = container,
+        textSize = new.textSize or 16,
+        transparency = new.transparency or 1,         duration = new.duration or 0.55,
+        slots = {},         length = 0,     }, slots)
 
     self.roll = TweenInfo.new(self.duration, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-            self.zIndex = math.max(a21.ZIndex + 1, 6)
+            self.zIndex = math.max(container.ZIndex + 1, 6)
 
             self.height = math.ceil(self.textSize)
 
@@ -27708,23 +27708,23 @@ function a3.new(window, a21, a22)
     window:Create("UIListLayout", {
         FillDirection = Enum.FillDirection.Horizontal,
         VerticalAlignment = Enum.VerticalAlignment.Center,
-        HorizontalAlignment = a22.alignment or Enum.HorizontalAlignment.Left,
+        HorizontalAlignment = new.alignment or Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
         Padding = UDim.new(0, 0),
 
-        Parent = a21,
+        Parent = container,
     })
 
     return self
 end
 
-function a3:_reel(a24)
+function slots:_reel(a24)
     local a25 = self.slots[a24]
     if a25.reel then
         return a25.reel
     end
 
-    local a26 = self.window:Create("Frame", {
+    local Parent = self.window:Create("Frame", {
         Name = "Reel",
         Size = UDim2.fromOffset(self.maxWidth, self.height),
         BackgroundTransparency = 1,
@@ -27735,14 +27735,14 @@ function a3:_reel(a24)
         Parent = self.container,
     })
 
-    local a27 = self.window:Create("Frame", {
+    local Parent = self.window:Create("Frame", {
         Size = UDim2.fromOffset(self.maxWidth, self.height),
         AnchorPoint = Vector2.new(0.5, 0),         Position = UDim2.new(0.5, 0, 0, 0),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ZIndex = self.zIndex,
 
-        Parent = a26,
+        Parent = Parent,
     })
 
     for i = 0, a4 - 1 do
@@ -27758,22 +27758,22 @@ function a3:_reel(a24)
             TextTransparency = self.transparency,
             ZIndex = self.zIndex,
 
-            Parent = a27,
+            Parent = Parent,
         }, { TextColor3 = "ContentColor", FontFace = "Font" })
     end
 
-    local a28 = { cell = a26, strip = a27, digit = 0, target = 0, stripTween = nil, sizeTween = nil }
-    a25.reel = a28
-    return a28
+    local reel = { cell = Parent, strip = Parent, digit = 0, target = 0, stripTween = nil, sizeTween = nil }
+    a25.reel = reel
+    return reel
 end
 
-function a3:_static(a29)
+function slots:_static(a29)
     local a30 = self.slots[a29]
     if a30.static then
         return a30.static
     end
 
-    local a31 = self.window:Create("TextLabel", {
+    local static = self.window:Create("TextLabel", {
         Name = "Static",
         Size = UDim2.fromOffset(0, self.height),
         AutomaticSize = Enum.AutomaticSize.X,
@@ -27788,8 +27788,8 @@ function a3:_static(a29)
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-    a30.static = a31
-    return a31
+    a30.static = static
+    return static
 end
 
 local function a32(a33)
@@ -27803,59 +27803,59 @@ local function a32(a33)
     end
 end
 
-function a3:_reelSnap(a34, a35)
+function slots:_reelSnap(a34, cell)
     a32(a34)
-    a34.cell.Size = UDim2.fromOffset(self.advance[a35], self.height)
-    a34.strip.Position = UDim2.new(0.5, 0, 0, -a35 * self.height)
-    a34.digit = a35
-    a34.target = a35
+    a34.cell.Size = UDim2.fromOffset(self.advance[cell], self.height)
+    a34.strip.Position = UDim2.new(0.5, 0, 0, -cell * self.height)
+    a34.digit = cell
+    a34.target = cell
 end
 
-function a3:_reelRoll(a36, a37, up)
-        if a36.stripTween or a36.sizeTween then
-        self:_reelSnap(a36, a36.target)
+function slots:_reelRoll(odometer, target, up)
+        if odometer.stripTween or odometer.sizeTween then
+        self:_reelSnap(odometer, odometer.target)
     end
 
-    local a = a36.digit
-    if a == a37 then
+    local a = odometer.digit
+    if a == target then
         return
     end
 
-    local a38, a39
+    local strip, Position
     if up then
-        a38 = a
-        a39 = a + (a37 - a) % 10     else
-        a38 = a + 10         a39 = a38 - (a - a37) % 10
+        strip = a
+        Position = a + (target - a) % 10     else
+        strip = a + 10         Position = strip - (a - target) % 10
     end
 
-    a36.strip.Position = UDim2.new(0.5, 0, 0, -a38 * self.height)
-    a36.target = a37
+    odometer.strip.Position = UDim2.new(0.5, 0, 0, -strip * self.height)
+    odometer.target = target
 
-        local a40 = a1.tweenService:Create(a36.strip, self.roll, {
-        Position = UDim2.new(0.5, 0, 0, -a39 * self.height),
+        local stripTween = a1.tweenService:Create(odometer.strip, self.roll, {
+        Position = UDim2.new(0.5, 0, 0, -Position * self.height),
     })
-    local a41 = a1.tweenService:Create(a36.cell, self.roll, {
-        Size = UDim2.fromOffset(self.advance[a37], self.height),
+    local sizeTween = a1.tweenService:Create(odometer.cell, self.roll, {
+        Size = UDim2.fromOffset(self.advance[target], self.height),
     })
-    a36.stripTween = a40
-    a36.sizeTween = a41
-    a40.Completed:Connect(function(a42)
-        if a42 == Enum.PlaybackState.Completed and a36.stripTween == a40 then
-            self:_reelSnap(a36, a37)
+    odometer.stripTween = stripTween
+    odometer.sizeTween = sizeTween
+    stripTween.Completed:Connect(function(Completed)
+        if Completed == Enum.PlaybackState.Completed and odometer.stripTween == stripTween then
+            self:_reelSnap(odometer, target)
         end
     end)
-    a40:Play()
-    a41:Play()
-    a36.digit = a37
+    stripTween:Play()
+    sizeTween:Play()
+    odometer.digit = target
 end
 
-function a3:_putDigit(a43, a44, up, a45)
-    local a46 = self:_reel(a43)
+function slots:_putDigit(cell, a44, up, a45)
+    local a46 = self:_reel(cell)
     local a47 = not a46.cell.Visible
     a46.cell.Visible = true
-    a46.cell.LayoutOrder = -a43
-    if self.slots[a43].static then
-        self.slots[a43].static.Visible = false
+    a46.cell.LayoutOrder = -cell
+    if self.slots[cell].static then
+        self.slots[cell].static.Visible = false
     end
     if a45 and not a47 then
         self:_reelRoll(a46, a44, up)
@@ -27864,20 +27864,20 @@ function a3:_putDigit(a43, a44, up, a45)
     end
 end
 
-function a3:_putStatic(a48, a49)
-    local a50 = self:_static(a48)
+function slots:_putStatic(LayoutOrder, Text)
+    local a50 = self:_static(LayoutOrder)
     if not a50.Visible then
                 a50.TextTransparency = self.transparency
     end
-    a50.Text = a49
+    a50.Text = Text
     a50.Visible = true
-    a50.LayoutOrder = -a48
-    if self.slots[a48].reel then
-        self.slots[a48].reel.cell.Visible = false
+    a50.LayoutOrder = -LayoutOrder
+    if self.slots[LayoutOrder].reel then
+        self.slots[LayoutOrder].reel.cell.Visible = false
     end
 end
 
-function a3:_hide(a51)
+function slots:_hide(a51)
     local a52 = self.slots[a51]
     if not a52 then
         return
@@ -27890,7 +27890,7 @@ function a3:_hide(a51)
     end
 end
 
-function a3:_render(a53, a54, up)
+function slots:_render(a53, a54, up)
     a53 = tostring(a53)
 
         if a53 == self._lastText then
@@ -27899,8 +27899,8 @@ function a3:_render(a53, a54, up)
     self._lastText = a53
 
             local a55 = {}
-    for _, a56 in utf8.codes(a53) do
-        table.insert(a55, utf8.char(a56))
+    for _, insert in utf8.codes(a53) do
+        table.insert(a55, utf8.char(insert))
     end
 
     local n = #a55
@@ -27919,31 +27919,31 @@ function a3:_render(a53, a54, up)
     self.length = n
 end
 
-function a3:to(a58, up)
+function slots:to(a58, up)
     self:_render(a58, true, up)
 end
 
-function a3:snap(a59)
+function slots:snap(a59)
     self:_render(a59, false, true)
 end
 
-function a3:reveal(a60, a61, a62)
-    self.transparency = a60
+function slots:reveal(window, reveal, a62)
+    self.transparency = window
     for _, a63 in self.slots do
         if a63.static and a63.static.Visible then
-            self.window:_reveal(a63.static, { TextTransparency = a60 }, a61, a62)
+            self.window:_reveal(a63.static, { TextTransparency = window }, reveal, a62)
         end
         if a63.reel then
             for _, a64 in a63.reel.strip:GetChildren() do
                 if a64:IsA("TextLabel") then
-                    self.window:_reveal(a64, { TextTransparency = a60 }, a61, a62)
+                    self.window:_reveal(a64, { TextTransparency = window }, reveal, a62)
                 end
             end
         end
     end
 end
 
-return a3
+return slots
 
 end)() end,
     [91] = function()local wax,script,require=ImportGlobals(91)local ImportGlobals return (function(...)
@@ -27965,12 +27965,12 @@ end)() end,
     [92] = function()local wax,script,require=ImportGlobals(92)local ImportGlobals return (function(...)
 local a1 = {}
 
-function a1.join(a2: string, a3: string?): string
-    if not a3 or a3 == "" then
-        return a2
+function a1.join(path: string, join: string?): string
+    if not join or join == "" then
+        return path
     end
 
-    return a2 .. "/" .. a3
+    return path .. "/" .. join
 end
 
 local function a4(a5: string): string
@@ -27982,32 +27982,32 @@ local function a4(a5: string): string
     return a5
 end
 
-function a1.sanitizeFolder(a7: unknown): string
-    local a8 = tostring(a7):gsub("\\", "/"):gsub('[:<>"|?*%c]', "")
+function a1.sanitizeFolder(path: unknown): string
+    local a8 = tostring(path):gsub("\\", "/"):gsub('[:<>"|?*%c]', "")
     a8 = a4(a8):gsub("/+", "/")
     return (a8:gsub("^/+", ""))
 end
 
-function a1.sanitizeFile(a9: unknown): string
-    local a10 = tostring(a9):gsub("[/\\]", ""):gsub('[:<>"|?*%c]', "")
+function a1.sanitizeFile(path: unknown): string
+    local a10 = tostring(path):gsub("[/\\]", ""):gsub('[:<>"|?*%c]', "")
     return a4(a10)
 end
 
-function a1.basename(a11: unknown): string
-    return tostring(a11):match("[^/\\]+$") or tostring(a11)
+function a1.basename(path: unknown): string
+    return tostring(path):match("[^/\\]+$") or tostring(path)
 end
 
-function a1.stripExtension(a12: unknown, a13: string?): string
-    if a13 and a13 ~= "" then
-        local a14 = tostring(a12)
-        if a14:sub(-#a13) == a13 then
-            return a14:sub(1, -#a13 - 1)
+function a1.stripExtension(path: unknown, stripExtension: string?): string
+    if stripExtension and stripExtension ~= "" then
+        local a14 = tostring(path)
+        if a14:sub(-#stripExtension) == stripExtension then
+            return a14:sub(1, -#stripExtension - 1)
         end
         return a14
     end
 
-    local a15 = tostring(a12):match("^(.+)%.%w+$")
-    return a15 or tostring(a12)
+    local a15 = tostring(path):match("^(.+)%.%w+$")
+    return a15 or tostring(path)
 end
 
 return a1
@@ -28068,8 +28068,8 @@ function a7.getPath(window: ConfigWindow, a8: unknown?): (string?, string?)
 end
 
 function a7.save(window: ConfigWindow, a9: unknown?): boolean
-    local a10, a11 = a7.getPath(window, a9)
-    if not a10 or not a11 then
+    local write, window = a7.getPath(window, a9)
+    if not write or not window then
         a3.warn("Astra: configuration name '" .. tostring(a9) .. "' has no usable characters")
         return false
     end
@@ -28078,9 +28078,9 @@ function a7.save(window: ConfigWindow, a9: unknown?): boolean
         return false
     end
 
-    local a12: { [string]: unknown } = {}
+    local persistenceConfig: { [string]: unknown } = {}
     for a13, a14 in window.controls do
-        local ok, a15 = pcall(function()
+        local ok, Astra = pcall(function()
             local a16 = a14._serialize
             if a16 then
                 return a16(a14)
@@ -28088,29 +28088,29 @@ function a7.save(window: ConfigWindow, a9: unknown?): boolean
             return a14.value
         end)
         if ok then
-            a12[a13] = a15
+            persistenceConfig[a13] = Astra
         else
-            a3.warn("Astra: Failed to serialize flag '" .. tostring(a13) .. "' - " .. tostring(a15))
+            a3.warn("Astra: Failed to serialize flag '" .. tostring(a13) .. "' - " .. tostring(Astra))
         end
     end
 
                 local a17 = window._loadedConfig
-    if a17 and window._loadedConfigPath == a11 then
+    if a17 and window._loadedConfigPath == window then
         for a18, a19 in a17 do
             if window.controls[a18] == nil then
-                a12[a18] = a19
+                persistenceConfig[a18] = a19
             end
         end
     end
 
-    local a20, a21 = pcall(a1.httpService.JSONEncode, a1.httpService, a12)
+    local a20, a21 = pcall(a1.httpService.JSONEncode, a1.httpService, persistenceConfig)
     if not a20 then
         a3.warn("Astra: Failed to encode configuration - " .. tostring(a21))
         return false
     end
 
     local ok, a22 = pcall(function()
-        a6.write(a10, a11, a21)
+        a6.write(write, window, a21)
     end)
 
     if not ok then
@@ -28118,9 +28118,9 @@ function a7.save(window: ConfigWindow, a9: unknown?): boolean
         return false
     end
 
-                if window._loadedConfigPath == nil or window._loadedConfigPath == a11 then
-        window._loadedConfig = a12
-        window._loadedConfigPath = a11
+                if window._loadedConfigPath == nil or window._loadedConfigPath == window then
+        window._loadedConfig = persistenceConfig
+        window._loadedConfigPath = window
     end
 
     return true
@@ -28131,35 +28131,35 @@ local function a23(a24: string): ({ [string]: unknown }?, string?)
         return nil, nil
     end
 
-    local a25, a26 = pcall(a2.readfile, a24)
-    if not a25 or type(a26) ~= "string" then
+    local a25, persistenceConfig = pcall(a2.readfile, a24)
+    if not a25 or type(persistenceConfig) ~= "string" then
         a3.warn("Astra: Failed to read configuration file")
         return nil, nil
     end
 
-    local a27, a28 = pcall(a1.httpService.JSONDecode, a1.httpService, a26)
+    local a27, a28 = pcall(a1.httpService.JSONDecode, a1.httpService, persistenceConfig)
 
         if not a27 or type(a28) ~= "table" then
-        return nil, a26
+        return nil, persistenceConfig
     end
 
-    return a28 :: { [string]: unknown }, a26
+    return a28 :: { [string]: unknown }, persistenceConfig
 end
 
 local function a29(a30: string): string
         local a31 = a4.stripExtension(a30, ".rfld")
     local a32 = a31 .. " (Incorrect Format).rfld"
-    local a33 = 2
-    while a33 <= 100 and a2.isfile(a32) do
-        a32 = a31 .. " (Incorrect Format " .. a33 .. ").rfld"
-        a33 += 1
+    local Incorrect = 2
+    while Incorrect <= 100 and a2.isfile(a32) do
+        a32 = a31 .. " (Incorrect Format " .. Incorrect .. ").rfld"
+        Incorrect += 1
     end
     return a32
 end
 
 function a7.load(window: ConfigWindow, a34: unknown?): boolean
-    local a35, a36 = a7.getPath(window, a34)
-    if not a35 or not a36 then
+    local ensureDir, write = a7.getPath(window, a34)
+    if not ensureDir or not write then
         a3.warn("Astra: configuration name '" .. tostring(a34) .. "' has no usable characters")
         return false
     end
@@ -28168,62 +28168,62 @@ function a7.load(window: ConfigWindow, a34: unknown?): boolean
         return false
     end
 
-    local a37, a38 = a23(a36)
+    local a37, a38 = a23(write)
 
-            if not a37 and a2.isfile(a36) then
-        local a39, a40 = a23(a6.tempPathFor(a36))
+            if not a37 and a2.isfile(write) then
+        local a39, a40 = a23(a6.tempPathFor(write))
         if a39 and a40 then
             a37 = a39
-                        pcall(a6.write, a35, a36, a40)
+                        pcall(a6.write, ensureDir, write, a40)
         end
     end
 
     if not a37 then
         if a38 then
             a3.warn("Astra: Configuration file has an invalid format, backing up and resetting")
-            local a41 = a29(a36)
+            local writefile = a29(write)
             pcall(function()
-                a2.ensureDir(a35)
-                a2.writefile(a41, a38)
-                a2.delfile(a36)
+                a2.ensureDir(ensureDir)
+                a2.writefile(writefile, a38)
+                a2.delfile(write)
             end)
         end
         return false
     end
 
-    local a42 = a37 :: { [string]: unknown }
-    local a43 = window._loading
+    local window = a37 :: { [string]: unknown }
+    local window = window._loading
     window._loading = true
         local a44, a45 = pcall(function()
-        for a46, a47 in window.controls do
-            a7.applyTo(a47, a42[a46])
+        for a46, applyTo in window.controls do
+            a7.applyTo(applyTo, window[a46])
         end
     end)
-            window._loading = a43
+            window._loading = window
     if not a44 then
         a3.warn("Astra: Failed to apply configuration - " .. tostring(a45))
     end
 
-                window._loadedConfig = a42
-    window._loadedConfigPath = a36
+                window._loadedConfig = window
+    window._loadedConfigPath = write
 
     return true
 end
 
-function a7.applyTo(a48: PersistedControl, a49: unknown)
-    if a49 == nil and not a48._canBeNil then
+function a7.applyTo(a48: PersistedControl, applyTo: unknown)
+    if applyTo == nil and not a48._canBeNil then
         return
     end
-    local ok, a50 = pcall(function()
+    local ok, Astra = pcall(function()
         local a51 = a48._deserialize
         if a51 then
-            a51(a48, a49)
+            a51(a48, applyTo)
         else
-            a48:Set(a49)
+            a48:Set(applyTo)
         end
     end)
     if not ok then
-        a3.warn("Astra: Failed to restore flag '" .. tostring(a48.flag) .. "' - " .. tostring(a50))
+        a3.warn("Astra: Failed to restore flag '" .. tostring(a48.flag) .. "' - " .. tostring(Astra))
     end
 end
 
@@ -28242,9 +28242,9 @@ function a7.list(window: ConfigWindow): { string }
     for _, a55 in a54 do
         local a56 = a4.basename(a55)
                         if a56:sub(-5) == ".rfld" then
-            local a57 = a4.stripExtension(a56, ".rfld")
-            if a57 and a57 ~= "" and not a57:find(" %(Incorrect Format[^%)]*%)$") then
-                table.insert(a53, a57)
+            local insert = a4.stripExtension(a56, ".rfld")
+            if insert and insert ~= "" and not insert:find(" %(Incorrect Format[^%)]*%)$") then
+                table.insert(a53, insert)
             end
         end
     end
@@ -28258,17 +28258,17 @@ function a7.delete(window: ConfigWindow, a58: unknown): boolean
         return false
     end
 
-    local _, a59 = a7.getPath(window, a58)
-    if not a59 then
+    local _, delfile = a7.getPath(window, a58)
+    if not delfile then
         return false
     end
-    if typeof(a2.isfile) ~= "function" or not a2.isfile(a59) then
+    if typeof(a2.isfile) ~= "function" or not a2.isfile(delfile) then
         return false
     end
 
-        pcall(a2.delfile, a6.tempPathFor(a59))
+        pcall(a2.delfile, a6.tempPathFor(delfile))
 
-    return (pcall(a2.delfile, a59))
+    return (pcall(a2.delfile, delfile))
 end
 
 return a7
@@ -28289,25 +28289,25 @@ type ConfigWindow = {
 }
 
 function a3.getConfigPath(window: ConfigWindow, a4: unknown?): (string?, string?)
-    local a5 = a1.fileSystemManager:getPath("Configurations")
+    local join = a1.fileSystemManager:getPath("Configurations")
     if window.configuration.customFolder then
-        a5 = a2.join(a5, a2.sanitizeFolder(window.configuration.customFolder))
+        join = a2.join(join, a2.sanitizeFolder(window.configuration.customFolder))
     end
     if a4 ~= nil then
-        local a6 = a2.sanitizeFile(a4)
-        if a6 == "" then
+        local join = a2.sanitizeFile(a4)
+        if join == "" then
             return nil, nil
         end
-        return a5, a2.join(a5, a6 .. ".rfld")
+        return join, a2.join(join, join .. ".rfld")
     end
-    local a7 = a2.sanitizeFile(window.configuration.fileName or window.name)
-    if a7 == "" then
-        a7 = a2.sanitizeFile(window.name)
+    local join = a2.sanitizeFile(window.configuration.fileName or window.name)
+    if join == "" then
+        join = a2.sanitizeFile(window.name)
     end
-    if a7 == "" then
-        a7 = "Configuration"
+    if join == "" then
+        join = "Configuration"
     end
-    return a5, a2.join(a5, a7 .. ".rfld")
+    return join, a2.join(join, join .. ".rfld")
 end
 
 function a3.getSettingsPath(): (string, string)
@@ -28377,12 +28377,12 @@ function a6.saveSettings(window: SettingsWindow): boolean
         activeSubTab = window.settings.activeSubTab,
     }
 
-    local ok, a10 = pcall(a1.httpService.JSONEncode, a1.httpService, a9)
+    local ok, write = pcall(a1.httpService.JSONEncode, a1.httpService, a9)
     if not ok then
         return false
     end
 
-    local a11 = pcall(a4.write, a7, a8, a10)
+    local a11 = pcall(a4.write, a7, a8, write)
 
     if not a11 then
         return false
@@ -28391,38 +28391,38 @@ function a6.saveSettings(window: SettingsWindow): boolean
     return true
 end
 
-local function a12(a13: string): (DecodedSettings?, string?)
+local function a12(isfile: string): (DecodedSettings?, string?)
     local a14 = false
     pcall(function()
-        a14 = a2.isfile(a13)
+        a14 = a2.isfile(isfile)
     end)
     if not a14 then
         return nil, nil
     end
 
-    local a15, a16 = pcall(a2.readfile, a13)
-    if not a15 or type(a16) ~= "string" then
+    local a15, persistenceSettings = pcall(a2.readfile, isfile)
+    if not a15 or type(persistenceSettings) ~= "string" then
         return nil, nil
     end
 
-    local a17, a18 = pcall(a1.httpService.JSONDecode, a1.httpService, a16)
+    local a17, a18 = pcall(a1.httpService.JSONDecode, a1.httpService, persistenceSettings)
         if not a17 or type(a18) ~= "table" then
-        return nil, a16
+        return nil, persistenceSettings
     end
 
-        return a18 :: DecodedSettings, a16
+        return a18 :: DecodedSettings, persistenceSettings
 end
 
 local function a19(): DecodedSettings?
-    local a20, a21 = a6.getSettingsPath()
-    local a22 = a12(a21)
+    local a20, write = a6.getSettingsPath()
+    local a22 = a12(write)
     if a22 then
         return a22
     end
 
-    local a23, a24 = a12(a4.tempPathFor(a21))
+    local a23, a24 = a12(a4.tempPathFor(write))
     if a23 and a24 then
-        pcall(a4.write, a20, a21, a24)
+        pcall(a4.write, a20, write, a24)
         return a23
     end
 
@@ -28430,59 +28430,59 @@ local function a19(): DecodedSettings?
 end
 
 function a6.loadSettings(window: SettingsWindow): boolean
-    local a25 = a19()
+    local itemFromValue = a19()
 
-    if not a25 then
+    if not itemFromValue then
         return false
     end
 
-    if a25.toggleKeybind then
+    if itemFromValue.toggleKeybind then
         pcall(function()
-            local a26 = tostring(a25.toggleKeybind[1]):gsub("^Enum%.", "")
+            local a26 = tostring(itemFromValue.toggleKeybind[1]):gsub("^Enum%.", "")
             local a27 = (Enum :: any)[a26]
             if a27 then
-                local a28 = a5.itemFromValue(a27, a25.toggleKeybind[2])
-                if a28 then
-                    window.settings.toggleKeybind = a28
+                local window = a5.itemFromValue(a27, itemFromValue.toggleKeybind[2])
+                if window then
+                    window.settings.toggleKeybind = window
                 end
             end
         end)
     end
 
-    if type(a25.mouseOverride) == "boolean" then
-        window.settings.mouseOverride = a25.mouseOverride
+    if type(itemFromValue.mouseOverride) == "boolean" then
+        window.settings.mouseOverride = itemFromValue.mouseOverride
     end
 
-    if type(a25.keepOnScreen) == "boolean" then
-        window.settings.keepOnScreen = a25.keepOnScreen
+    if type(itemFromValue.keepOnScreen) == "boolean" then
+        window.settings.keepOnScreen = itemFromValue.keepOnScreen
     end
 
-    if type(a25.welcomeToast) == "boolean" then
-        window.settings.welcomeToast = a25.welcomeToast
+    if type(itemFromValue.welcomeToast) == "boolean" then
+        window.settings.welcomeToast = itemFromValue.welcomeToast
     end
 
-    if type(a25.haptics) == "boolean" then
-        window.settings.haptics = a25.haptics
+    if type(itemFromValue.haptics) == "boolean" then
+        window.settings.haptics = itemFromValue.haptics
     end
 
-    if type(a25.showProfile) == "boolean" then
-        window.settings.showProfile = a25.showProfile
+    if type(itemFromValue.showProfile) == "boolean" then
+        window.settings.showProfile = itemFromValue.showProfile
     end
-    if type(a25.showFullUsername) == "boolean" then
-        window.settings.showFullUsername = a25.showFullUsername
+    if type(itemFromValue.showFullUsername) == "boolean" then
+        window.settings.showFullUsername = itemFromValue.showFullUsername
     end
-    if type(a25.antiWindowDuplicate) == "boolean" then
-        window.settings.antiWindowDuplicate = a25.antiWindowDuplicate
+    if type(itemFromValue.antiWindowDuplicate) == "boolean" then
+        window.settings.antiWindowDuplicate = itemFromValue.antiWindowDuplicate
     end
-    if a25.layoutMode == "top"
-        or a25.layoutMode == "sidebar"
-        or a25.layoutMode == "collapsedSidebar"
+    if itemFromValue.layoutMode == "top"
+        or itemFromValue.layoutMode == "sidebar"
+        or itemFromValue.layoutMode == "collapsedSidebar"
     then
-        window.settings.layoutMode = a25.layoutMode
+        window.settings.layoutMode = itemFromValue.layoutMode
     end
 
-    if type(a25.activeSubTab) == "number" and a25.activeSubTab >= 1 then
-        window.settings.activeSubTab = math.floor(a25.activeSubTab)
+    if type(itemFromValue.activeSubTab) == "number" and itemFromValue.activeSubTab >= 1 then
+        window.settings.activeSubTab = math.floor(itemFromValue.activeSubTab)
     end
 
     return true
@@ -28492,7 +28492,7 @@ return a6
 
 end)() end,
     [97] = function()local wax,script,require=ImportGlobals(97)local ImportGlobals return (function(...)
-local a1 = require(script.Parent.filesystem)
+local persistenceWrite = require(script.Parent.filesystem)
 
 local a2 = {}
 
@@ -28502,18 +28502,18 @@ function a2.tempPathFor(a4: string): string
     return a4 .. a3
 end
 
-function a2.write(a5: string, a6: string, a7: string)
-    local a8 = a2.tempPathFor(a6)
+function a2.write(ensureDir: string, write: string, readfile: string)
+    local writefile = a2.tempPathFor(write)
 
-    a1.ensureDir(a5)
-    a1.writefile(a8, a7)
+    persistenceWrite.ensureDir(ensureDir)
+    persistenceWrite.writefile(writefile, readfile)
 
-    if a1.readfile(a8) ~= a7 then
+    if persistenceWrite.readfile(writefile) ~= readfile then
         error("parked copy did not write cleanly")
     end
 
-    a1.writefile(a6, a7)
-    pcall(a1.delfile, a8)
+    persistenceWrite.writefile(write, readfile)
+    pcall(persistenceWrite.delfile, writefile)
 end
 
 return a2
