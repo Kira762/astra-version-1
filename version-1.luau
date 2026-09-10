@@ -11042,14 +11042,14 @@ state.__type = "Section"
 local constants = require(script.Parent.Parent.utilities.moveable)
 local Section = require(script.Parent.Parent.utilities.locale)
 
-function state.new(tab, tab)
-    tab = if typeof(tab) == "table" then tab else {}
+function state.new(tab, element)
+    element = if typeof(element) == "table" then element else {}
 
     local self = setmetatable({
         tab = assert(tab, "Missing argument #1 (Tab expected)"),
         window = tab.window,
-        name = tab.name or tab.Name or "Section",
-        icon = tab.window:ResolveIcon(tab.icon or tab.Icon),
+        name = element.name or element.Name or "Section",
+        icon = tab.window:ResolveIcon(element.icon or element.Icon),
     }, state)
 
             local props = if #self.tab.elements == 0 then 0 else 13
