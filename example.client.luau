@@ -1,3 +1,4 @@
+-- Version: 0.0.2
 -- Astra multi-tab supported-usage example.
 -- This example loads the current bundle with remote icon asset resolution.
 
