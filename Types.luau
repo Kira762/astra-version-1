@@ -21,7 +21,6 @@ export type WindowProps = {
     IconPack: IconPack?,
     showName: string?,
     showIcon: (string | number)?,
-    showHeader: boolean?,
     showIconOnly: boolean?,     profile: string?,     configuration: WindowConfiguration?,
     fallbackFont: (Font | Enum.Font)?,     locale: string?,     translations: Translations?,     translator: Translator?, }
 

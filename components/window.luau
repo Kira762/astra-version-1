@@ -134,7 +134,6 @@ function Window.new(props)
         icon = icons.resolve(providedIcon or "Sirius", iconPack),
         showName = props.showName or props.ShowName or "Astra",
         showIcon = icons.resolve(providedIcon or "Astra", iconPack),
-        showHeader = props.showHeader ~= false and props.ShowHeader ~= false,
                 showIconOnly = props.showIconOnly or props.ShowIconOnly or false,
                 profileText = nil,
 
@@ -329,7 +328,7 @@ function Window.new(props)
         Parent = self.titleContainer,
     })
 
-    if self.name and self.showHeader then
+    if self.name then
         self.title = self:Create("TextLabel", {
                         Text = locale.t(self.name),
             FontFace = state.brandFont(Enum.FontWeight.Medium),
@@ -347,7 +346,7 @@ function Window.new(props)
         }, { FontFace = "Font", TextColor3 = "TitlingColor" })
     end
 
-    if self.icon and self.showHeader then
+    if self.icon then
         self.topbarIcon = self:Create("ImageLabel", {
             Image = self.icon,
 
@@ -359,7 +358,7 @@ function Window.new(props)
         }, { ImageColor3 = "TitlingColor" })
     end
 
-    if self.subheading and self.showHeader then
+    if self.subheading then
         self.subtitle = self:Create("TextLabel", {
                         Text = locale.t(self.subheading),
             Size = UDim2.fromOffset(50, 12),

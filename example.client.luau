@@ -13,13 +13,12 @@ assert(
 local window = Astra:CreateWindow({
     name = "Astra",
     subtitle = "Multi-tab supported API example",
-    showHeader = false,
 })
 
 -- Window tags are rendered beside the window title and remain available in the chrome.
 window:CreateTag({
     icon = "tag",
-    text = "0.0.24",
+    text = "0.0.25",
 })
 
 -- Home: use a tab for overview content and simple state controls.
