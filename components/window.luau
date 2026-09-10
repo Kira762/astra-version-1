@@ -1424,10 +1424,39 @@ function Window:_buildSettingsUI()
     local behavior = self:CreateTab({ name = "Behavior", icon = "shield-check", customOrder = 1002, forgetState = true, isSettingsTab = true })
     local performance = self:CreateTab({ name = "Performance", icon = "gauge", customOrder = 1003, forgetState = true, isSettingsTab = true })
     local persistence = self:CreateTab({ name = "Persistence", icon = "save", customOrder = 1004, forgetState = true, isSettingsTab = true })
-    for _, tab in { appearance, behavior, performance, persistence } do
+    local about = self:CreateTab({ name = "About", icon = "info", customOrder = 1005, forgetState = true, isSettingsTab = true })
+    for _, tab in { appearance, behavior, performance, persistence, about } do
         tab._isSettingsTab = true
         table.insert(self._settingsTabs, tab)
     end
+
+    about:CreateSection({ name = "Rayfield Gen2" })
+    about:CreateText({
+        name = "About Rayfield Gen2",
+        text = "A ground-up rebuild of the Rayfield Interface Suite, built entirely in code for a faster, more stable, and more consistent experience.",
+    })
+    about:CreateText({
+        name = "Highlights",
+        text = "State can persist between sessions, themes can change at runtime, labels can be translated, and the interface is designed for both desktop and mobile.",
+    })
+    about:CreateSection({ name = "Astra" })
+    about:CreateText({
+        name = "Our Story",
+        text = "Astra is an original customization and continuation of Rayfield Gen2, reshaped into a distinct interface library with its own visual language, behavior, and features.",
+    })
+    about:CreateText({
+        name = "Customized by Haijo",
+        text = "Originally from Rayfield, Astra is customized, refined, and maintained by Haijo.",
+    })
+    about:CreateSection({ name = "Links" })
+    about:CreateText({
+        name = "GitHub Repository",
+        text = "https://github.com/Kira762/astra-version-1",
+    })
+    about:CreateText({
+        name = "Documentation",
+        text = "https://docs.sirius.menu/rayfield-gen2",
+    })
 
     self.rfSettings:CreateSection({ name = "General" })
     self.rfSettings:CreateKeybind({
