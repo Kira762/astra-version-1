@@ -213,7 +213,8 @@ function Window.new(props)
 
         Parent = state.guiContainer,
     })
-        -- [[Responsive: UIScale keeps desktop/mobile same perceived size (tiered occupancy + scale)]]
+        -- [[UIScale keeps desktop/mobile at the same perceived size: desktop is]]
+        -- [[responsive (tiered occupancy), mobile uses its fixed windowSizing profile.]]
         self.uiScale = self:Create("UIScale", {
                 Scale = windowSizing.scaleForViewport(state.workspace.CurrentCamera and state.workspace.CurrentCamera.ViewportSize),
                 Parent = self.screenGui,
@@ -1178,6 +1179,9 @@ function Window:_applyWindowSize()
         return
     end
     local vp = state.workspace.CurrentCamera and state.workspace.CurrentCamera.ViewportSize or nil
+    -- [[Desktop/PC: newSize tracks the viewport (responsive, min/max protected).]]
+    -- [[Mobile: windowSizing.fit returns the fixed mobile profile on every call, so]]
+    -- [[viewport changes (rotation, keyboard, inset) never resize the window here.]]
     local newSize = computeSize(self.layout.mode)
     local newScale = windowSizing.scaleForViewport(vp)
     local sizeChanged = newSize ~= self.size

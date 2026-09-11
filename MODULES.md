@@ -287,7 +287,9 @@ Per-element specifics:
 - `locale.luau` — translation table + `SetTranslator` support.
 - `filesystem.luau`, `filesystemManager.luau` — RobloxFS abstraction (isFolder/WriteFile wrappers, secure-mode aware).
 - `assetResolver.luau`, `network.luau`, `services.luau` — platform layer (HTTP fetch with retries, service singletons).
-- `windowSizing.luau` — responsive size computation.
+- `windowSizing.luau` — responsive size computation (desktop tiers around the
+  600x420 default, min/max protected) plus the fixed mobile profile returned
+  for touch-only phone-sized viewports (`isMobileViewport`).
 - `enums.luau`, `ordering.luau`, `odometer.luau`, `fontManager.luau`, `functions.luau` (legacy shim), `path.luau` — small helpers.
 
 ---

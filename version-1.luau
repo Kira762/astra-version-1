@@ -4011,7 +4011,8 @@ function Window.new(props)
 
         Parent = state.guiContainer,
     })
-        -- [[Responsive: UIScale keeps desktop/mobile same perceived size (tiered occupancy + scale)]]
+        -- [[UIScale keeps desktop/mobile at the same perceived size: desktop is]]
+        -- [[responsive (tiered occupancy), mobile uses its fixed windowSizing profile.]]
         self.uiScale = self:Create("UIScale", {
                 Scale = windowSizing.scaleForViewport(state.workspace.CurrentCamera and state.workspace.CurrentCamera.ViewportSize),
                 Parent = self.screenGui,
@@ -4976,6 +4977,9 @@ function Window:_applyWindowSize()
         return
     end
     local vp = state.workspace.CurrentCamera and state.workspace.CurrentCamera.ViewportSize or nil
+    -- [[Desktop/PC: newSize tracks the viewport (responsive, min/max protected).]]
+    -- [[Mobile: windowSizing.fit returns the fixed mobile profile on every call, so]]
+    -- [[viewport changes (rotation, keyboard, inset) never resize the window here.]]
     local newSize = computeSize(self.layout.mode)
     local newScale = windowSizing.scaleForViewport(vp)
     local sizeChanged = newSize ~= self.size
@@ -29533,6 +29537,7 @@ return services
 end)() end,
     [104] = function()local wax,script,require=ImportGlobals(104)local ImportGlobals return (function(...)
 local layoutMetrics = require(script.Parent.layouts)
+local coreState = require(script.Parent.Parent.core.state)
 
 local breakpoints = {}
 
@@ -29540,6 +29545,7 @@ export type Profile = {
 	defaultSize: Vector2,
 	minSize: Vector2,
 	maxSize: Vector2?,
+	mobileSize: Vector2,
 	maxOccupancyX: number,
 	maxOccupancyY: number?,
 	marginFloorX: number,
@@ -29553,26 +29559,43 @@ export type Profile = {
 
 local minTrackedViewport = 200
 
--- [[Responsive profiles: larger defaults so desktop doesn't look tiny.]]
--- [[Mobile still uses occupancy-based shrink, so phone keeps full-width feel]]
--- [[while desktop gets a premium large window (same perceived weight).]]
+-- [[Astra's phone tier: viewports below this width are phone-sized. The same]]
+-- [[breakpoint gates the fixed mobile profile in `isMobileViewport`.]]
+local mobileBreakpoint = 700
+
+-- [[Fixed mobile footprint (per layout mode). Mobile no longer recomputes its]]
+-- [[window from live viewport occupancy: it opens at one stable size, so]]
+-- [[rotation / on-screen keyboard / inset changes never resize the window.]]
+-- [[The values are the existing phone-tier result (maxOccupancyX width,]]
+-- [[availableHeight / aspect-limited height) evaluated once at a 360x390]]
+-- [[reference: 360 is the narrowest mainstream phone width, 390 the short side]]
+-- [[of the reference phone scaleForViewport documents. Measuring against the]]
+-- [[short side keeps the fixed window inside a phone held in portrait AND in]]
+-- [[landscape (no clipping, no recalculation):]]
+-- [[   top     -> 360 * 0.88 = 316 wide, 390 - 36 * 2 = 318 tall]]
+-- [[   sidebar -> 360 * 0.92 = 331 wide, min(390 * 0.84, 331 / 1.18) = 280 tall]]
+-- [[Desktop/PC keeps the responsive profiles below: 600x420 default target,]]
+-- [[responsive shrink on smaller screens, maxSize caps so large screens stay]]
+-- [[responsive without growing into an oversized window.]]
 local profiles = {
 	top = {
-		defaultSize = Vector2.new(720, 600),
+		defaultSize = Vector2.new(600, 420),
 		minSize = Vector2.new(500, 330),
-		maxSize = Vector2.new(860, 580),
+		maxSize = Vector2.new(720, 480),
+		mobileSize = Vector2.new(316, 318),
 		maxOccupancyX = 0.88,
 		topbarClearance = 36,
 		marginFloorX = 20,
 		marginFloorY = 20,
 		maxAspectRatio = 2.3,
-		widthCompensation = 100,
+		widthCompensation = 80,
 		chromeHeight = layoutMetrics.top.chromeHeight,
 	} :: Profile,
 	sidebar = {
-		defaultSize = Vector2.new(720, 600),
+		defaultSize = Vector2.new(600, 420),
 		minSize = Vector2.new(540, 360),
-		maxSize = Vector2.new(880, 600),
+		maxSize = Vector2.new(760, 500),
+		mobileSize = Vector2.new(331, 280),
 		maxOccupancyX = 0.92,
 		maxOccupancyY = 0.84,
 		marginFloorX = 20,
@@ -29620,8 +29643,9 @@ end
 
 local function fitSidebar(sidebarProfile: Profile, requestedWidth: number, requestedSidebarHeight: number): UDim2
     -- [[The Sidebar keeps its historical 540px minimum for user resizing, while]]
-    -- [[its requested base width is 520px. Keep clamp bounds ordered for the]]
-    -- [[responsive fit calculation without changing the declared minimum.]]
+    -- [[its default width is the shared 600px window default. Keep clamp bounds]]
+    -- [[ordered for the responsive fit calculation without changing the]]
+    -- [[declared minimum.]]
     local minWidthBound = math.min(sidebarProfile.minSize.X, sidebarProfile.defaultSize.X)
     local sidebarWidth = math.min(math.clamp(requestedWidth, minWidthBound, sidebarProfile.defaultSize.X), requestedWidth)
 	local sidebarHeight = math.min(math.clamp(requestedSidebarHeight, sidebarProfile.minSize.Y, sidebarProfile.defaultSize.Y), requestedSidebarHeight)
@@ -29630,32 +29654,50 @@ local function fitSidebar(sidebarProfile: Profile, requestedWidth: number, reque
 	return UDim2.fromOffset(sidebarWidth, sidebarHeight)
 end
 
--- [[Tiered occupancy: phone/tablet/desktop share same perceived scale.]]
--- [[Desktop uses lower occupancy so 1920px doesn't give 1766px window (too huge),]]
--- [[but still larger than old 685 cap.]]
+-- [[Tiered occupancy for desktop/PC: tablet and desktop share the same]]
+-- [[perceived scale. Desktop uses lower occupancy so 1920px doesn't give a]]
+-- [[huge window, while smaller screens still shrink responsively.]]
+-- [[Phones (touch-only, sub-breakpoint) are diverted to the fixed mobile size]]
+-- [[in fit(); this phone branch remains for narrow desktop/Studio viewports.]]
 local function getTieredOccupancy(viewport: Vector2, modeOrProfile: Profile): (number, number)
 	local w = viewport.X
-	if w < 700 then
-		-- [[phone: near full width, like before]]
+	if w < mobileBreakpoint then
+		-- [[narrow viewport: near full width]]
 		return modeOrProfile.maxOccupancyX, availableHeight(modeOrProfile, viewport.Y)
 	elseif w < 1200 then
 		-- [[tablet / small laptop]]
 		return math.min(modeOrProfile.maxOccupancyX, 0.72), math.min(availableHeight(modeOrProfile, viewport.Y), viewport.Y * 0.82)
 	else
-		-- [[desktop: keep premium large but not full-screen]]
+		-- [[desktop: default target, capped by maxSize, never full-screen]]
 		return 0.52, math.min(availableHeight(modeOrProfile, viewport.Y), viewport.Y * 0.72)
 	end
 end
 
-function breakpoints.fit(viewport: Vector2?, modeOrProfile: layouts.Mode?): UDim2
-	-- [[Fix: respect mode (old code always used sidebar)]]
-	local fitProfile = if modeOrProfile == "top" then profiles.top else profiles.sidebar
-	if not viewport or viewport.X < minTrackedViewport or viewport.Y < minTrackedViewport then
-		return UDim2.fromOffset(fitProfile.defaultSize.X, fitProfile.defaultSize.Y)
+-- [[Mobile detection: touch-only devices (phones, no hardware keyboard) whose]]
+-- [[short side is phone-sized. Uses the min of both axes so a phone stays on]]
+-- [[the fixed mobile size in portrait and landscape. Tablets and desktops -]]
+-- [[including narrow desktop/Studio viewports - keep the responsive fit.]]
+function breakpoints.isMobileViewport(mobileViewport: Vector2?): boolean
+	if not mobileViewport then
+		return false
 	end
+	if mobileViewport.X < minTrackedViewport or mobileViewport.Y < minTrackedViewport then
+		return false
+	end
+	if math.min(mobileViewport.X, mobileViewport.Y) >= mobileBreakpoint then
+		return false
+	end
+	local inputService = coreState.userInputService
+	if not inputService then
+		return false
+	end
+	return inputService.TouchEnabled == true and inputService.KeyboardEnabled == false
+end
+
+local function fitViewport(fitProfile: Profile, fitTarget: Vector2): UDim2
 	-- [[tiered target based on screen size]]
-	local occX, availY = getTieredOccupancy(viewport, fitProfile)
-	local targetWidth = math.min(viewport.X * occX, viewport.X - fitProfile.marginFloorX)
+	local occX, availY = getTieredOccupancy(fitTarget, fitProfile)
+	local targetWidth = math.min(fitTarget.X * occX, fitTarget.X - fitProfile.marginFloorX)
 	-- [[clamp to maxSize so desktop doesn't explode on ultrawide]]
 	if fitProfile.maxSize then
 		targetWidth = math.min(targetWidth, fitProfile.maxSize.X)
@@ -29668,7 +29710,23 @@ function breakpoints.fit(viewport: Vector2?, modeOrProfile: layouts.Mode?): UDim
 	return fitTop(fitProfile, targetWidth, targetHeight)
 end
 
--- [[UIScale helper: same physical perception mobile vs desktop.]]
+function breakpoints.fit(viewport: Vector2?, modeOrProfile: layouts.Mode?): UDim2
+	-- [[Fix: respect mode (old code always used sidebar)]]
+	local fitProfile = if modeOrProfile == "top" then profiles.top else profiles.sidebar
+	if not viewport or viewport.X < minTrackedViewport or viewport.Y < minTrackedViewport then
+		return UDim2.fromOffset(fitProfile.defaultSize.X, fitProfile.defaultSize.Y)
+	end
+	-- [[Mobile: fixed size/profile - no occupancy math, so viewport changes]]
+	-- [[never resize the window once it is on the mobile path.]]
+	if breakpoints.isMobileViewport(viewport) then
+		return UDim2.fromOffset(fitProfile.mobileSize.X, fitProfile.mobileSize.Y)
+	end
+	-- [[Desktop/PC: responsive viewport-based sizing (min/max protected).]]
+	return fitViewport(fitProfile, viewport)
+end
+
+-- [[UIScale helper: same physical perception mobile vs desktop. Kept for both]]
+-- [[paths - the fixed mobile window still scales with the device viewport.]]
 function breakpoints.scaleForViewport(scaleViewport: Vector2?): number
 	if not scaleViewport or scaleViewport.X < minTrackedViewport then return 1 end
 	-- [[390 -> 0.92, 768 -> 0.98, 1280 -> 1.04, 1920 -> 1.12, 2560 -> 1.18 (clamped)]]
@@ -29701,89 +29759,89 @@ local LineOffsets = {
     [16] = 3144,
     [17] = 3422,
     [18] = 3799,
-    [20] = 6586,
-    [21] = 6853,
-    [22] = 7297,
-    [23] = 8428,
-    [24] = 8762,
-    [25] = 8823,
-    [26] = 8968,
-    [27] = 10288,
-    [28] = 10490,
-    [29] = 10751,
-    [30] = 11213,
-    [31] = 11663,
-    [32] = 11750,
-    [33] = 12315,
-    [34] = 12933,
-    [35] = 13307,
-    [36] = 13437,
-    [37] = 13601,
-    [38] = 13755,
-    [40] = 14266,
-    [41] = 14289,
-    [42] = 14306,
-    [43] = 14336,
-    [44] = 14452,
-    [45] = 14466,
-    [46] = 14515,
-    [47] = 14241,
-    [48] = 14616,
-    [49] = 14919,
-    [50] = 14950,
-    [51] = 14605,
-    [52] = 14993,
-    [53] = 15013,
-    [54] = 15045,
-    [55] = 14975,
-    [56] = 15152,
-    [57] = 15214,
-    [58] = 15277,
-    [60] = 15340,
-    [61] = 15505,
-    [62] = 15325,
-    [63] = 15765,
-    [64] = 16060,
-    [65] = 16716,
-    [66] = 18500,
-    [67] = 19641,
-    [68] = 21161,
-    [69] = 15569,
-    [70] = 26405,
-    [71] = 26467,
-    [72] = 26529,
-    [73] = 26604,
-    [74] = 26686,
-    [75] = 26748,
-    [76] = 26823,
-    [77] = 26898,
-    [78] = 26973,
-    [79] = 27048,
-    [80] = 26299,
-    [81] = 27110,
-    [82] = 27208,
-    [83] = 27386,
-    [84] = 27437,
-    [85] = 27467,
-    [86] = 27718,
-    [87] = 27767,
-    [88] = 28220,
-    [89] = 28238,
-    [90] = 28392,
-    [91] = 28491,
-    [92] = 28513,
-    [93] = 28563,
-    [94] = 28599,
-    [95] = 28617,
-    [96] = 28930,
-    [97] = 28946,
-    [98] = 28997,
-    [99] = 29016,
-    [100] = 29258,
-    [101] = 29302,
-    [102] = 29496,
-    [103] = 29524,
-    [104] = 29535,
+    [20] = 6590,
+    [21] = 6857,
+    [22] = 7301,
+    [23] = 8432,
+    [24] = 8766,
+    [25] = 8827,
+    [26] = 8972,
+    [27] = 10292,
+    [28] = 10494,
+    [29] = 10755,
+    [30] = 11217,
+    [31] = 11667,
+    [32] = 11754,
+    [33] = 12319,
+    [34] = 12937,
+    [35] = 13311,
+    [36] = 13441,
+    [37] = 13605,
+    [38] = 13759,
+    [40] = 14270,
+    [41] = 14293,
+    [42] = 14310,
+    [43] = 14340,
+    [44] = 14456,
+    [45] = 14470,
+    [46] = 14519,
+    [47] = 14245,
+    [48] = 14620,
+    [49] = 14923,
+    [50] = 14954,
+    [51] = 14609,
+    [52] = 14997,
+    [53] = 15017,
+    [54] = 15049,
+    [55] = 14979,
+    [56] = 15156,
+    [57] = 15218,
+    [58] = 15281,
+    [60] = 15344,
+    [61] = 15509,
+    [62] = 15329,
+    [63] = 15769,
+    [64] = 16064,
+    [65] = 16720,
+    [66] = 18504,
+    [67] = 19645,
+    [68] = 21165,
+    [69] = 15573,
+    [70] = 26409,
+    [71] = 26471,
+    [72] = 26533,
+    [73] = 26608,
+    [74] = 26690,
+    [75] = 26752,
+    [76] = 26827,
+    [77] = 26902,
+    [78] = 26977,
+    [79] = 27052,
+    [80] = 26303,
+    [81] = 27114,
+    [82] = 27212,
+    [83] = 27390,
+    [84] = 27441,
+    [85] = 27471,
+    [86] = 27722,
+    [87] = 27771,
+    [88] = 28224,
+    [89] = 28242,
+    [90] = 28396,
+    [91] = 28495,
+    [92] = 28517,
+    [93] = 28567,
+    [94] = 28603,
+    [95] = 28621,
+    [96] = 28934,
+    [97] = 28950,
+    [98] = 29001,
+    [99] = 29020,
+    [100] = 29262,
+    [101] = 29306,
+    [102] = 29500,
+    [103] = 29528,
+    [104] = 29539,
 }
 
 -- [[Misc AOT variable imports]]
