@@ -1,7 +1,7 @@
 local frost = require(script.Parent.Parent.core.state)
 
 return {
-    -- Semantic palette
+    -- [[Semantic palette]]
     Background = Color3.fromRGB(237, 242, 246),
     WindowSurface = Color3.fromRGB(250, 252, 253),
     TopbarSurface = Color3.fromRGB(255, 255, 255),
@@ -23,7 +23,7 @@ return {
     AccentPressed = Color3.fromRGB(0, 126, 153),
     AccentStrokeSemantic = Color3.fromRGB(84, 199, 218),
 
-    -- Legacy consumer keys
+    -- [[Legacy consumer keys]]
     WindowColor = ColorSequence.new(Color3.fromRGB(249, 252, 253), Color3.fromRGB(239, 245, 248)),
     ShadowColor = Color3.fromRGB(150, 164, 173),
     LiveAnimation = false,

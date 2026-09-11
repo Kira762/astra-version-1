@@ -110,7 +110,7 @@ function Window.new(props)
         state.setFallbackFont(fallbackFont)
     end
 
-        local layout = layouts.top -- layout is controlled via Settings (Astra Settings → Bar Layout); CreateWindow no longer takes sidebarLayout
+        local layout = layouts.top -- [[layout is controlled via Settings (Astra Settings → Bar Layout); CreateWindow no longer takes sidebarLayout]]
     local iconPackLower = props.iconPack
     local iconPackUpper = props.IconPack
     if iconPackLower ~= nil and iconPackUpper ~= nil then
@@ -213,7 +213,7 @@ function Window.new(props)
 
         Parent = state.guiContainer,
     })
-        -- Responsive: UIScale keeps desktop/mobile same perceived size (tiered occupancy + scale)
+        -- [[Responsive: UIScale keeps desktop/mobile same perceived size (tiered occupancy + scale)]]
         self.uiScale = self:Create("UIScale", {
                 Scale = windowSizing.scaleForViewport(state.workspace.CurrentCamera and state.workspace.CurrentCamera.ViewportSize),
                 Parent = self.screenGui,
@@ -1336,8 +1336,8 @@ function Window:_bindTopbarDrag()
             return
         end
 
-        -- Do not reposition the window for a simple click/tap. Wait until
-        -- the pointer has actually moved before treating the gesture as drag.
+        -- [[Do not reposition the window for a simple click/tap. Wait until]]
+        -- [[the pointer has actually moved before treating the gesture as drag.]]
         local pointer = inputService:GetMouseLocation()
         if (pointer - startMousePos).Magnitude < 4 then
             return

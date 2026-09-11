@@ -96,9 +96,9 @@ function SettingsManager:load(): boolean
         return ok
     end
 
-    -- Notify listeners only for values that actually changed, matching the
-    -- (key, newValue, oldValue) contract of :set(). Persisted values are
-    -- written into self.values first; callbacks fire afterwards.
+    -- [[Notify listeners only for values that actually changed, matching the]]
+    -- [[(key, newValue, oldValue) contract of :set(). Persisted values are]]
+    -- [[written into self.values first; callbacks fire afterwards.]]
     for _, key in manager.keys() do
         local newValue = self.values[key]
         if snapshot[key] ~= newValue then

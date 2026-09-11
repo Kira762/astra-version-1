@@ -59,8 +59,8 @@ end
 
 function state.new(window, a17)
     a17 = if typeof(a17) == "table" then a17 else {}
-    -- Validate the dependency before resolving the tab icon so malformed tab
-    -- construction reports the actual missing Window argument.
+    -- [[Validate the dependency before resolving the tab icon so malformed tab]]
+    -- [[construction reports the actual missing Window argument.]]
     window = assert(window, "Missing argument #1 (Window expected)")
 
     local self = setmetatable({

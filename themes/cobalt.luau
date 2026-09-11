@@ -1,5 +1,5 @@
 return {
-    -- Semantic palette
+    -- [[Semantic palette]]
     Background = Color3.fromRGB(11, 16, 25),
     WindowSurface = Color3.fromRGB(18, 25, 37),
     TopbarSurface = Color3.fromRGB(22, 30, 44),
@@ -21,7 +21,7 @@ return {
     AccentPressed = Color3.fromRGB(48, 119, 195),
     AccentStrokeSemantic = Color3.fromRGB(137, 203, 255),
 
-    -- Legacy consumer keys
+    -- [[Legacy consumer keys]]
     WindowColor = ColorSequence.new(Color3.fromRGB(15, 21, 32), Color3.fromRGB(24, 33, 48)),
     ShadowColor = Color3.fromRGB(4, 8, 15),
     ElementStroke = Color3.fromRGB(44, 59, 79),

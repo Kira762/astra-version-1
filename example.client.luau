@@ -1,5 +1,5 @@
--- Astra multi-tab supported-usage example.
--- This example loads the current bundle with remote icon asset resolution.
+-- [[Astra multi-tab supported-usage example.]]
+-- [[This example loads the current bundle with remote icon asset resolution.]]
 
 local bundleSource = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
 local compile = loadstring or load
@@ -18,14 +18,14 @@ local window = Astra:CreateWindow({
     subtitle = "Multi-tab supported API example",
 })
 
--- Window tags are rendered beside the window title and remain available in the chrome.
+-- [[Window tags are rendered beside the window title and remain available in the chrome.]]
 window:CreateTag({
     icon = "tag",
     text = "0.0.35",
     color = Color3.fromRGB(96, 205, 255),
 })
 
--- Home: use a tab for overview content and simple state controls.
+-- [[Home: use a tab for overview content and simple state controls.]]
 local home = window:CreateTab({ name = "Home", icon = "house" })
 home:CreateSection({ name = "Overview" })
 home:CreateText({
@@ -49,7 +49,7 @@ home:CreateToggle({
     end,
 })
 
--- Controls: use input elements for values, choices, and user text.
+-- [[Controls: use input elements for values, choices, and user text.]]
 local controls = window:CreateTab({ name = "Controls", icon = "sliders-horizontal" })
 controls:CreateSection({ name = "Input elements" })
 controls:CreateSlider({
@@ -77,7 +77,7 @@ controls:CreateInput({
     end,
 })
 
--- Appearance: use visual elements for colors, dividers, and explanatory text.
+-- [[Appearance: use visual elements for colors, dividers, and explanatory text.]]
 local appearance = window:CreateTab({ name = "Appearance", icon = "palette" })
 appearance:CreateSection({ name = "Visual elements" })
 appearance:CreateColorPicker({
@@ -93,7 +93,7 @@ appearance:CreateText({
     text = "Use this tab for visual and theme-related controls.",
 })
 
--- Information: document the Window, Tab, and element creation pattern.
+-- [[Information: document the Window, Tab, and element creation pattern.]]
 local information = window:CreateTab({ name = "Information", icon = "info" })
 information:CreateSection({ name = "Usage" })
 information:CreateText({
@@ -155,7 +155,7 @@ elementGroup:CreateToggle({
     end,
 })
 
--- Changelog: a dedicated tab so release news is always visible in the main window.
+-- [[Changelog: a dedicated tab so release news is always visible in the main window.]]
 local changelogTab = window:CreateTab({ name = "Changelog", icon = "history" })
 local changelog = changelogTab:CreateChangelog({
     name = "Recent changes",
@@ -226,7 +226,7 @@ changelogTab:CreateButton({
     end,
 })
 
--- Additional test tabs: twenty main-window tabs with varied elements.
+-- [[Additional test tabs: twenty main-window tabs with varied elements.]]
 local testTabs = {
     { name = "Dashboard", icon = "layout-dashboard" },
     { name = "Analytics", icon = "chart-no-axes-combined" },
@@ -247,8 +247,8 @@ local testTabs = {
 
 for index, details in ipairs(testTabs) do
     local tab = window:CreateTab({ name = details.name, icon = details.icon })
-    -- Keep the tab selector registered even if an optional element has an
-    -- environment-specific constructor issue; this lets the remaining tabs load.
+    -- [[Keep the tab selector registered even if an optional element has an]]
+    -- [[environment-specific constructor issue; this lets the remaining tabs load.]]
     local ok = pcall(function()
         tab:CreateSection({ name = "Test elements" })
         tab:CreateText({
@@ -317,5 +317,5 @@ for index, details in ipairs(testTabs) do
     end
 end
 
--- Select the first tab explicitly so the example is deterministic on startup.
+-- [[Select the first tab explicitly so the example is deterministic on startup.]]
 home:Select()

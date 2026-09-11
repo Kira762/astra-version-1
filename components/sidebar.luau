@@ -39,9 +39,9 @@ local avatarReady = setmetatable({}, { __mode = "k" })
 local fallbackUri = "rbxassetid://0"
 
 local function shouldShowProfile(window)
-    -- Profile.Visible = Window.Visible AND settings.showProfile: the profile
-    -- also hides while the window is minimised to the pill, where the topbar
-    -- remains technically visible but the window content is not shown.
+    -- [[Profile.Visible = Window.Visible AND settings.showProfile: the profile]]
+    -- [[also hides while the window is minimised to the pill, where the topbar]]
+    -- [[remains technically visible but the window content is not shown.]]
     return window.profile ~= nil
         and window.settings.showProfile
         and not window.hidden
@@ -55,8 +55,8 @@ function sidebar.buildProfile(window, layout)
         return
     end
 
-    -- Re-layout safety: drop any previous profile before building a new one
-    -- so switching layout modes can never orphan the old instance.
+    -- [[Re-layout safety: drop any previous profile before building a new one]]
+    -- [[so switching layout modes can never orphan the old instance.]]
     if window.profile then
         window:DestroySubtree(window.profile)
         window.profile = nil
@@ -351,8 +351,8 @@ function sidebar.setProfileShown(window, shown, tweenInfo)
         return
     end
 
-    -- Window visibility wins over the requested state: never fade the
-    -- profile in while the window is hidden or minimised.
+    -- [[Window visibility wins over the requested state: never fade the]]
+    -- [[profile in while the window is hidden or minimised.]]
     if shown and not shouldShowProfile(window) then
         shown = false
     end

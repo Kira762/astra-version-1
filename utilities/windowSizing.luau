@@ -19,9 +19,9 @@ export type Profile = {
 
 local a3 = 200
 
--- Responsive profiles: larger defaults so desktop doesn't look tiny.
--- Mobile still uses occupancy-based shrink, so phone keeps full-width feel
--- while desktop gets a premium large window (same perceived weight).
+-- [[Responsive profiles: larger defaults so desktop doesn't look tiny.]]
+-- [[Mobile still uses occupancy-based shrink, so phone keeps full-width feel]]
+-- [[while desktop gets a premium large window (same perceived weight).]]
 local a4 = {
 	top = {
 		defaultSize = Vector2.new(720, 600),
@@ -85,9 +85,9 @@ local function a18(a19: Profile, a20: number, a21: number): UDim2
 end
 
 local function a25(a26: Profile, a27: number, a28: number): UDim2
-    -- The Sidebar keeps its historical 540px minimum for user resizing, while
-    -- its requested base width is 520px. Keep clamp bounds ordered for the
-    -- responsive fit calculation without changing the declared minimum.
+    -- [[The Sidebar keeps its historical 540px minimum for user resizing, while]]
+    -- [[its requested base width is 520px. Keep clamp bounds ordered for the]]
+    -- [[responsive fit calculation without changing the declared minimum.]]
     local a29Min = math.min(a26.minSize.X, a26.defaultSize.X)
     local a29 = math.min(math.clamp(a27, a29Min, a26.defaultSize.X), a27)
 	local a30 = math.min(math.clamp(a28, a26.minSize.Y, a26.defaultSize.Y), a28)
@@ -96,33 +96,33 @@ local function a25(a26: Profile, a27: number, a28: number): UDim2
 	return UDim2.fromOffset(a29, a30)
 end
 
--- Tiered occupancy: phone/tablet/desktop share same perceived scale.
--- Desktop uses lower occupancy so 1920px doesn't give 1766px window (too huge),
--- but still larger than old 685 cap.
+-- [[Tiered occupancy: phone/tablet/desktop share same perceived scale.]]
+-- [[Desktop uses lower occupancy so 1920px doesn't give 1766px window (too huge),]]
+-- [[but still larger than old 685 cap.]]
 local function getTieredOccupancy(a31: Vector2, a32: Profile): (number, number)
 	local w = a31.X
 	if w < 700 then
-		-- phone: near full width, like before
+		-- [[phone: near full width, like before]]
 		return a32.maxOccupancyX, a10(a32, a31.Y)
 	elseif w < 1200 then
-		-- tablet / small laptop
+		-- [[tablet / small laptop]]
 		return math.min(a32.maxOccupancyX, 0.72), math.min(a10(a32, a31.Y), a31.Y * 0.82)
 	else
-		-- desktop: keep premium large but not full-screen
+		-- [[desktop: keep premium large but not full-screen]]
 		return 0.52, math.min(a10(a32, a31.Y), a31.Y * 0.72)
 	end
 end
 
 function breakpoints.fit(a31: Vector2?, a32: layouts.Mode?): UDim2
-	-- Fix: respect mode (old code always used sidebar)
+	-- [[Fix: respect mode (old code always used sidebar)]]
 	local a33 = if a32 == "top" then a4.top else a4.sidebar
 	if not a31 or a31.X < a3 or a31.Y < a3 then
 		return UDim2.fromOffset(a33.defaultSize.X, a33.defaultSize.Y)
 	end
-	-- tiered target based on screen size
+	-- [[tiered target based on screen size]]
 	local occX, availY = getTieredOccupancy(a31, a33)
 	local a34 = math.min(a31.X * occX, a31.X - a33.marginFloorX)
-	-- clamp to maxSize so desktop doesn't explode on ultrawide
+	-- [[clamp to maxSize so desktop doesn't explode on ultrawide]]
 	if a33.maxSize then
 		a34 = math.min(a34, a33.maxSize.X)
 		availY = math.min(availY, a33.maxSize.Y)
@@ -134,12 +134,12 @@ function breakpoints.fit(a31: Vector2?, a32: layouts.Mode?): UDim2
 	return a18(a33, a34, a35)
 end
 
--- UIScale helper: same physical perception mobile vs desktop.
+-- [[UIScale helper: same physical perception mobile vs desktop.]]
 function breakpoints.scaleForViewport(a36: Vector2?): number
 	if not a36 or a36.X < a3 then return 1 end
-	-- 390 -> 0.92, 768 -> 0.98, 1280 -> 1.04, 1920 -> 1.12, 2560 -> 1.18 (clamped)
+	-- [[390 -> 0.92, 768 -> 0.98, 1280 -> 1.04, 1920 -> 1.12, 2560 -> 1.18 (clamped)]]
 	local s = 0.88 + (a36.X / 2200) * 0.32
-	-- y also matters on portrait phones: don't let tall narrow screens over-scale
+	-- [[y also matters on portrait phones: don't let tall narrow screens over-scale]]
 	if a36.Y < 500 then s = math.min(s, 0.95) end
 	return math.clamp(s, 0.88, 1.18)
 end
