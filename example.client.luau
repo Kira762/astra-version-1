@@ -1,6 +1,3 @@
--- Astra multi-tab supported-usage example.
--- This example loads the current bundle with remote icon asset resolution.
-
 local bundleUrl = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"
 local function fetchBundle(url)
     if not game then
