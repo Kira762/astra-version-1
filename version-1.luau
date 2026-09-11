@@ -29574,28 +29574,28 @@ local mobileBreakpoint = 700
 -- [[landscape (no clipping, no recalculation):]]
 -- [[   top     -> 360 * 0.88 = 316 wide, 390 - 36 * 2 = 318 tall]]
 -- [[   sidebar -> 360 * 0.92 = 331 wide, min(390 * 0.84, 331 / 1.18) = 280 tall]]
--- [[Desktop/PC keeps the responsive profiles below: 720x600 default target,]]
+-- [[Desktop/PC keeps the responsive profiles below: 600x420 default target,]]
 -- [[responsive shrink on smaller screens, maxSize caps so large screens stay]]
 -- [[responsive without growing into an oversized window.]]
 local profiles = {
 	top = {
-		defaultSize = Vector2.new(720, 600),
+		defaultSize = Vector2.new(600, 420),
 		minSize = Vector2.new(500, 330),
-		maxSize = Vector2.new(860, 580),
-		mobileSize = Vector2.new(316, 318),
+		maxSize = Vector2.new(720, 480),
+		mobileSize = Vector2.new(600, 420),
 		maxOccupancyX = 0.88,
 		topbarClearance = 36,
 		marginFloorX = 20,
 		marginFloorY = 20,
 		maxAspectRatio = 2.3,
-		widthCompensation = 100,
+		widthCompensation = 80,
 		chromeHeight = layoutMetrics.top.chromeHeight,
 	} :: Profile,
 	sidebar = {
-		defaultSize = Vector2.new(720, 600),
+		defaultSize = Vector2.new(600, 420),
 		minSize = Vector2.new(540, 360),
-		maxSize = Vector2.new(880, 600),
-		mobileSize = Vector2.new(331, 280),
+		maxSize = Vector2.new(760, 500),
+		mobileSize = Vector2.new(600, 420),
 		maxOccupancyX = 0.92,
 		maxOccupancyY = 0.84,
 		marginFloorX = 20,
@@ -29725,10 +29725,11 @@ function breakpoints.fit(viewport: Vector2?, modeOrProfile: layouts.Mode?): UDim
 	return fitViewport(fitProfile, viewport)
 end
 
--- [[UIScale helper: same physical perception mobile vs desktop. Kept for both]]
--- [[paths - the fixed mobile window still scales with the device viewport.]]
+-- [[UIScale helper: desktop remains responsive, while the fixed mobile window]]
+-- [[keeps its requested dimensions instead of being reduced by device scale.]]
 function breakpoints.scaleForViewport(scaleViewport: Vector2?): number
 	if not scaleViewport or scaleViewport.X < minTrackedViewport then return 1 end
+	if math.min(scaleViewport.X, scaleViewport.Y) < mobileBreakpoint then return 1 end
 	-- [[390 -> 0.92, 768 -> 0.98, 1280 -> 1.04, 1920 -> 1.12, 2560 -> 1.18 (clamped)]]
 	local s = 0.88 + (scaleViewport.X / 2200) * 0.32
 	-- [[y also matters on portrait phones: don't let tall narrow screens over-scale]]
