@@ -213,14 +213,6 @@ function Window.new(props)
 
         Parent = state.guiContainer,
     })
-        -- [[UIScale keeps desktop/mobile at the same perceived size: desktop is]]
-        -- [[responsive (tiered occupancy), mobile uses its fixed windowSizing profile.]]
-        self.uiScale = self:Create("UIScale", {
-                Scale = windowSizing.scaleForViewport(state.workspace.CurrentCamera and state.workspace.CurrentCamera.ViewportSize),
-                Parent = self.screenGui,
-        })
-
-
         self.main = self:Create("Frame", {
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         Name = self.name,
@@ -1178,24 +1170,18 @@ function Window:_applyWindowSize()
     if self.unloaded then
         return
     end
-    local vp = state.workspace.CurrentCamera and state.workspace.CurrentCamera.ViewportSize or nil
     -- [[Desktop/PC: newSize tracks the viewport (responsive, min/max protected).]]
     -- [[Mobile: windowSizing.fit returns the fixed mobile profile on every call, so]]
     -- [[viewport changes (rotation, keyboard, inset) never resize the window here.]]
     local newSize = computeSize(self.layout.mode)
-    local newScale = windowSizing.scaleForViewport(vp)
     local sizeChanged = newSize ~= self.size
-    local scaleChanged = self.uiScale and self.uiScale.Scale ~= newScale
     self.size = newSize
-    if self.uiScale and scaleChanged then
-        self.uiScale.Scale = newScale
-    end
     self:_applyRailWidth()
     if self.hidden or self.minimised or self.animating or self._revealing then
-        self._pendingResize = self._pendingResize or sizeChanged or (scaleChanged or false)
+        self._pendingResize = self._pendingResize or sizeChanged
         return
     end
-    if not sizeChanged and not self._pendingResize and not scaleChanged then
+    if not sizeChanged and not self._pendingResize then
         return
     end
     self._pendingResize = false
