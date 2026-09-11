@@ -22,7 +22,12 @@ local window = Astra:CreateWindow({
 window:CreateTag({
     icon = "tag",
     text = "0.0.35",
-    color = Color3.fromRGB(96, 205, 255),
+    color = Color3.fromRGB(88, 70, 170),
+})
+window:CreateTag({
+    icon = "sparkles",
+    text = "Beta",
+    color = Color3.fromRGB(190, 55, 125),
 })
 
 -- [[Home: use a tab for overview content and simple state controls.]]
@@ -155,74 +160,25 @@ elementGroup:CreateToggle({
     end,
 })
 
--- [[Changelog: a dedicated tab so release news is always visible in the main window.]]
-local changelogTab = window:CreateTab({ name = "Changelog", icon = "history" })
-local changelog = changelogTab:CreateChangelog({
-    name = "Recent changes",
-    description = "Structured release notes with categorized changes.",
-    entries = {
-        {
-            version = "0.0.35",
-            date = "2026-09-11",
-            title = "Bundle loader diagnostics",
-            description = "Improved startup errors so executor and bundle-loading failures are reported clearly.",
-            changes = {
-                { symbol = "~", category = "Fixed", text = "Replaced the opaque nil-call startup path with explicit loader validation." },
-            },
-        },
-        {
-            version = "0.0.34",
-            date = "2026-09-11",
-            title = "Tab visibility safeguard",
-            description = "All twenty example tab selectors now remain available even when an optional test element cannot be constructed.",
-            changes = {
-                { symbol = "~", category = "Fixed", text = "Prevented one failed optional element from stopping later tabs from loading." },
-            },
-        },
-        {
-            version = "0.0.33",
-            date = "2026-09-11",
-            title = "Grouped toggle fix",
-            description = "Fixed grouped toggles failing during construction and standardized release symbols.",
-            changes = {
-                { symbol = "~", category = "Fixed", text = "Grouped toggles now inherit the parent tab flag helper correctly." },
-                { symbol = "~", category = "Changelog", text = "Release entries now use + for additions, - for removals, and ~ for fixes." },
-            },
-        },
-        {
-            version = "0.0.31",
-            date = "2026-09-11",
-            title = "Expanded element examples",
-            description = "Added more supported elements to the example client for API and layout testing.",
-            changes = {
-                { symbol = "+", category = "Added", text = "Added progress, stat, keybind, console, and grouped element examples." },
-                { symbol = "~", category = "Example", text = "The example now documents more element combinations without console output calls." },
-            },
-        },
-        {
-            version = "0.0.30",
-            date = "2026-09-11",
-            title = "Changelog element",
-            description = "Added the Changelog element to Astra.",
-            changes = {
-                { symbol = "+", category = "Added", text = "CreateChangelog is now available on tabs." },
-                { symbol = "~", category = "Compatibility", text = "Supports lowercase and PascalCase properties." },
-            },
-        },
-    },
+-- [[Updates: use standard elements so release information is always visible.]]
+local updatesTab = window:CreateTab({ name = "Updates", icon = "megaphone" })
+updatesTab:CreateSection({ name = "Recent changes" })
+updatesTab:CreateText({
+    name = "0.0.35",
+    text = "Improved bundle-loader diagnostics and settings navigation feedback.",
 })
-changelogTab:CreateButton({
-    name = "Add test news",
+updatesTab:CreateText({
+    name = "0.0.34",
+    text = "Added a safeguard that keeps example tabs available when optional test elements fail.",
+})
+updatesTab:CreateText({
+    name = "Beta preview",
+    text = "This example is a Beta preview of the multi-tab Astra API.",
+})
+updatesTab:CreateButton({
+    name = "Show update notice",
     callback = function()
-        changelog:Add({
-            version = "Test",
-            date = "Live",
-            title = "Runtime update",
-            changes = {
-                { symbol = "+", text = "This release note was added at runtime." },
-            },
-        })
-        window:Toast({ title = "Changelog", subtitle = "New entry added" })
+        window:Toast({ title = "Updates", subtitle = "The replacement Updates tab is working." })
     end,
 })
 
