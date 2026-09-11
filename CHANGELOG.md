@@ -2,6 +2,25 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-11 — New themes (emerald, gold, crimson, onyx) + frost redesign
+
+- **Four new built-in themes:** `emerald` (dark forest, green accent),
+  `gold` (dark bronze, gold accent), `crimson` (dark maroon, red accent),
+  `onyx` (near-black, monochrome silver accent). Each defines the full
+  65-key surface (surfaces, strokes, text, gradients, slider/toggle/field
+  styling); omitted keys inherit from the `default` clone in
+  `themes/init.luau`.
+- **`frost` redesigned (kept, not removed):** was a near-white light theme
+  (WindowSurface 250,252,253) — too bright. Rebuilt as a dark "arctic night"
+  palette: deep navy surfaces (16,21,28), bright ice-blue accent
+  (86,197,235), ice tab-stroke gradient. Same key set, same theme name, so
+  persisted `theme = "frost"` picks up the new look automatically.
+- Theme registration updated in both places: the settings-UI theme table +
+  dropdown options in `components/window.luau` (now 10 entries) and the
+  persisted-theme whitelist in `utilities/persistenceSettings.luau`.
+- All other themes (`default`, `amethyst`, `cobalt`, `ember`, `rose`)
+  unchanged. Bundle regenerated (99 modules).
+
 ## 2026-09-11 — Changelog element, settings rebuild, multi-tab example (`d1339ec`)
 
 - **New element — `Tab:CreateChangelog`:** scrollable release history with

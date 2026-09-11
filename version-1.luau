@@ -5286,8 +5286,12 @@ function Window:_buildSettingsUI()
         default = "Default",
         amethyst = "Amethyst",
         cobalt = "Cobalt",
+        crimson = "Crimson",
         ember = "Ember",
+        emerald = "Emerald",
         frost = "Frost",
+        gold = "Gold",
+        onyx = "Onyx",
         rose = "Rose",
     }
     local selectedTheme = self.settings.theme
@@ -5300,7 +5304,7 @@ function Window:_buildSettingsUI()
     appearance:CreateDropdown({
         name = "Theme",
         description = "Choose a built-in theme to preview and apply.",
-        options = { "Default", "Amethyst", "Cobalt", "Ember", "Frost", "Rose" },
+        options = { "Default", "Amethyst", "Cobalt", "Crimson", "Ember", "Emerald", "Frost", "Gold", "Onyx", "Rose" },
         value = themeLabel(selectedTheme),
         callback = function(value)
             for key, label in themes do
@@ -26291,7 +26295,7 @@ local tabler = {
 return tabler
 
 end)() end,
-    [76] = function()local wax,script,require=ImportGlobals(76)local ImportGlobals return (function(...)
+    [80] = function()local wax,script,require=ImportGlobals(80)local ImportGlobals return (function(...)
 -- [[Theme resolution engine (themes/init.luau).]]
 -- [[]]
 -- [[Extracted verbatim from components/window.luau so the window no longer owns]]
@@ -26522,6 +26526,81 @@ return {
 
 end)() end,
     [72] = function()local wax,script,require=ImportGlobals(72)local ImportGlobals return (function(...)
+local crimson = require(script.Parent.Parent.core.state)
+
+return {
+    -- [[Semantic palette]]
+    Background = Color3.fromRGB(19, 12, 13),
+    WindowSurface = Color3.fromRGB(25, 17, 18),
+    TopbarSurface = Color3.fromRGB(30, 21, 22),
+    SidebarSurface = Color3.fromRGB(22, 15, 16),
+    TabSurface = Color3.fromRGB(40, 27, 29),
+    TabSelected = Color3.fromRGB(84, 38, 42),
+    ElementSurface = Color3.fromRGB(31, 22, 23),
+    ElementHover = Color3.fromRGB(39, 28, 29),
+    ElementPressed = Color3.fromRGB(26, 19, 20),
+    SecondaryElement = Color3.fromRGB(28, 20, 21),
+    Stroke = Color3.fromRGB(64, 47, 50),
+    SecondaryStroke = Color3.fromRGB(49, 37, 39),
+    PrimaryText = Color3.fromRGB(240, 233, 233),
+    SecondaryText = Color3.fromRGB(198, 183, 184),
+    MutedText = Color3.fromRGB(150, 132, 134),
+    DisabledText = Color3.fromRGB(108, 94, 96),
+    Accent = Color3.fromRGB(224, 78, 84),
+    AccentHover = Color3.fromRGB(236, 100, 105),
+    AccentPressed = Color3.fromRGB(181, 50, 56),
+    AccentStrokeSemantic = Color3.fromRGB(238, 112, 117),
+
+    -- [[Legacy consumer keys]]
+    WindowColor = ColorSequence.new(Color3.fromRGB(23, 15, 16), Color3.fromRGB(33, 22, 24)),
+    ShadowColor = Color3.fromRGB(7, 4, 4),
+    LiveAnimation = false,
+    ElementTransparency = 0,
+    ElementStroke = Color3.fromRGB(59, 44, 47),
+    CardSurface = Color3.fromRGB(31, 22, 23),
+    ElementGradient = ColorSequence.new(Color3.fromRGB(31, 22, 23), Color3.fromRGB(35, 26, 27)),
+    ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(52, 39, 42), Color3.fromRGB(68, 51, 55)),
+    ElementStrokeTransparency = 0,
+    ElementStrokeHoverTransparency = 0,
+    ElementStrokeHover = Color3.fromRGB(224, 78, 84),
+    DarkToggleOverlay = true,
+    TabColor = Color3.fromRGB(226, 214, 215),
+    TabBackground = ColorSequence.new(Color3.fromRGB(38, 25, 27), Color3.fromRGB(29, 19, 21)),
+    TabStroke = ColorSequence.new(Color3.fromRGB(96, 44, 49), Color3.fromRGB(68, 30, 35)),
+    SliderBackground = Color3.fromRGB(49, 34, 36),
+    SliderBackgroundHover = Color3.fromRGB(62, 44, 46),
+    SliderProgress = ColorSequence.new(Color3.fromRGB(228, 86, 92), Color3.fromRGB(186, 52, 58)),
+    SliderStroke = Color3.fromRGB(114, 88, 91),
+    AccentColor = Color3.fromRGB(224, 78, 84),
+    AccentStroke = Color3.fromRGB(238, 112, 117),
+    AccentGlow = 0.3,
+    StatBackground = Color3.fromRGB(26, 19, 20),
+    SliderHandle = Color3.fromRGB(238, 222, 223),
+    ToggleTrack = Color3.fromRGB(10, 6, 7),
+    ToggleTrackTransparency = 0.82,
+    ToggleKnobOff = Color3.fromRGB(196, 184, 185),
+    ToggleKnobOffTransparency = 0.08,
+    FieldBackground = Color3.fromRGB(19, 13, 14),
+    FieldTransparency = 0,
+    FieldGlow = Color3.fromRGB(201, 62, 68),
+    PlaceholderColor = Color3.fromRGB(150, 132, 134),
+    SurfaceStroke = Color3.fromRGB(55, 42, 45),
+    NeutralButton = Color3.fromRGB(35, 25, 27),
+    NeutralButtonHover = Color3.fromRGB(46, 33, 35),
+    NeutralButtonStroke = Color3.fromRGB(84, 62, 66),
+    ActionColor = Color3.fromRGB(234, 227, 228),
+    TitlingColor = Color3.fromRGB(243, 238, 238),
+    TitleFont = crimson.brandFont(Enum.FontWeight.SemiBold),
+    Font = crimson.brandFont(Enum.FontWeight.Medium),
+    ContentColor = Color3.fromRGB(222, 212, 213),
+    ElementTextHoverColor = Color3.fromRGB(247, 242, 243),
+    DropdownHighlight = Color3.fromRGB(236, 100, 105),
+    ErrorColor = Color3.fromRGB(211, 86, 88),
+    ErrorStrokeColor = Color3.fromRGB(239, 118, 119),
+}
+
+end)() end,
+    [73] = function()local wax,script,require=ImportGlobals(73)local ImportGlobals return (function(...)
 local default = require(script.Parent.Parent.core.state)
 
 return {
@@ -26603,7 +26682,7 @@ return {
 }
 
 end)() end,
-    [73] = function()local wax,script,require=ImportGlobals(73)local ImportGlobals return (function(...)
+    [74] = function()local wax,script,require=ImportGlobals(74)local ImportGlobals return (function(...)
 return {
     -- [[Semantic palette]]
     Background = Color3.fromRGB(22, 18, 16),
@@ -26665,82 +26744,307 @@ return {
 }
 
 end)() end,
-    [74] = function()local wax,script,require=ImportGlobals(74)local ImportGlobals return (function(...)
+    [75] = function()local wax,script,require=ImportGlobals(75)local ImportGlobals return (function(...)
+local emerald = require(script.Parent.Parent.core.state)
+
+return {
+    -- [[Semantic palette]]
+    Background = Color3.fromRGB(12, 17, 13),
+    WindowSurface = Color3.fromRGB(17, 23, 19),
+    TopbarSurface = Color3.fromRGB(21, 28, 23),
+    SidebarSurface = Color3.fromRGB(15, 20, 16),
+    TabSurface = Color3.fromRGB(28, 38, 31),
+    TabSelected = Color3.fromRGB(34, 71, 48),
+    ElementSurface = Color3.fromRGB(23, 31, 26),
+    ElementHover = Color3.fromRGB(30, 40, 33),
+    ElementPressed = Color3.fromRGB(19, 25, 21),
+    SecondaryElement = Color3.fromRGB(20, 27, 22),
+    Stroke = Color3.fromRGB(51, 66, 56),
+    SecondaryStroke = Color3.fromRGB(39, 52, 43),
+    PrimaryText = Color3.fromRGB(230, 240, 233),
+    SecondaryText = Color3.fromRGB(172, 190, 178),
+    MutedText = Color3.fromRGB(118, 136, 124),
+    DisabledText = Color3.fromRGB(85, 99, 89),
+    Accent = Color3.fromRGB(72, 199, 116),
+    AccentHover = Color3.fromRGB(96, 218, 138),
+    AccentPressed = Color3.fromRGB(45, 155, 88),
+    AccentStrokeSemantic = Color3.fromRGB(112, 220, 146),
+
+    -- [[Legacy consumer keys]]
+    WindowColor = ColorSequence.new(Color3.fromRGB(15, 20, 17), Color3.fromRGB(22, 30, 25)),
+    ShadowColor = Color3.fromRGB(4, 7, 5),
+    LiveAnimation = false,
+    ElementTransparency = 0,
+    ElementStroke = Color3.fromRGB(48, 62, 53),
+    CardSurface = Color3.fromRGB(23, 31, 26),
+    ElementGradient = ColorSequence.new(Color3.fromRGB(23, 31, 26), Color3.fromRGB(27, 36, 30)),
+    ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(42, 56, 47), Color3.fromRGB(56, 74, 62)),
+    ElementStrokeTransparency = 0,
+    ElementStrokeHoverTransparency = 0,
+    ElementStrokeHover = Color3.fromRGB(72, 199, 116),
+    DarkToggleOverlay = true,
+    TabColor = Color3.fromRGB(206, 222, 212),
+    TabBackground = ColorSequence.new(Color3.fromRGB(26, 36, 29), Color3.fromRGB(20, 27, 22)),
+    TabStroke = ColorSequence.new(Color3.fromRGB(50, 102, 72), Color3.fromRGB(34, 74, 52)),
+    SliderBackground = Color3.fromRGB(33, 45, 38),
+    SliderBackgroundHover = Color3.fromRGB(44, 58, 49),
+    SliderProgress = ColorSequence.new(Color3.fromRGB(82, 210, 128), Color3.fromRGB(49, 163, 96)),
+    SliderStroke = Color3.fromRGB(90, 110, 97),
+    AccentColor = Color3.fromRGB(72, 199, 116),
+    AccentStroke = Color3.fromRGB(112, 220, 146),
+    AccentGlow = 0.3,
+    StatBackground = Color3.fromRGB(19, 25, 21),
+    SliderHandle = Color3.fromRGB(216, 236, 222),
+    ToggleTrack = Color3.fromRGB(7, 11, 8),
+    ToggleTrackTransparency = 0.82,
+    ToggleKnobOff = Color3.fromRGB(183, 196, 186),
+    ToggleKnobOffTransparency = 0.08,
+    FieldBackground = Color3.fromRGB(13, 18, 15),
+    FieldTransparency = 0,
+    FieldGlow = Color3.fromRGB(64, 185, 105),
+    PlaceholderColor = Color3.fromRGB(118, 136, 124),
+    SurfaceStroke = Color3.fromRGB(45, 58, 49),
+    NeutralButton = Color3.fromRGB(27, 36, 30),
+    NeutralButtonHover = Color3.fromRGB(37, 49, 41),
+    NeutralButtonStroke = Color3.fromRGB(62, 80, 67),
+    ActionColor = Color3.fromRGB(222, 233, 226),
+    TitlingColor = Color3.fromRGB(234, 242, 237),
+    TitleFont = emerald.brandFont(Enum.FontWeight.SemiBold),
+    Font = emerald.brandFont(Enum.FontWeight.Medium),
+    ContentColor = Color3.fromRGB(209, 222, 213),
+    ElementTextHoverColor = Color3.fromRGB(238, 248, 241),
+    DropdownHighlight = Color3.fromRGB(96, 218, 138),
+    ErrorColor = Color3.fromRGB(211, 86, 88),
+    ErrorStrokeColor = Color3.fromRGB(239, 118, 119),
+}
+
+end)() end,
+    [76] = function()local wax,script,require=ImportGlobals(76)local ImportGlobals return (function(...)
 local frost = require(script.Parent.Parent.core.state)
 
 return {
     -- [[Semantic palette]]
-    Background = Color3.fromRGB(237, 242, 246),
-    WindowSurface = Color3.fromRGB(250, 252, 253),
-    TopbarSurface = Color3.fromRGB(255, 255, 255),
-    SidebarSurface = Color3.fromRGB(243, 247, 249),
-    TabSurface = Color3.fromRGB(232, 239, 243),
-    TabSelected = Color3.fromRGB(211, 242, 246),
-    ElementSurface = Color3.fromRGB(255, 255, 255),
-    ElementHover = Color3.fromRGB(246, 250, 252),
-    ElementPressed = Color3.fromRGB(229, 237, 241),
-    SecondaryElement = Color3.fromRGB(241, 246, 248),
-    Stroke = Color3.fromRGB(202, 213, 220),
-    SecondaryStroke = Color3.fromRGB(220, 228, 233),
-    PrimaryText = Color3.fromRGB(31, 39, 46),
-    SecondaryText = Color3.fromRGB(79, 93, 103),
-    MutedText = Color3.fromRGB(115, 130, 140),
-    DisabledText = Color3.fromRGB(157, 169, 176),
-    Accent = Color3.fromRGB(0, 157, 187),
-    AccentHover = Color3.fromRGB(0, 178, 205),
-    AccentPressed = Color3.fromRGB(0, 126, 153),
-    AccentStrokeSemantic = Color3.fromRGB(84, 199, 218),
+    Background = Color3.fromRGB(10, 14, 19),
+    WindowSurface = Color3.fromRGB(16, 21, 28),
+    TopbarSurface = Color3.fromRGB(20, 27, 35),
+    SidebarSurface = Color3.fromRGB(14, 19, 25),
+    TabSurface = Color3.fromRGB(27, 35, 45),
+    TabSelected = Color3.fromRGB(26, 56, 68),
+    ElementSurface = Color3.fromRGB(22, 29, 37),
+    ElementHover = Color3.fromRGB(29, 38, 48),
+    ElementPressed = Color3.fromRGB(18, 24, 31),
+    SecondaryElement = Color3.fromRGB(19, 26, 34),
+    Stroke = Color3.fromRGB(52, 66, 79),
+    SecondaryStroke = Color3.fromRGB(40, 52, 63),
+    PrimaryText = Color3.fromRGB(232, 240, 245),
+    SecondaryText = Color3.fromRGB(172, 188, 199),
+    MutedText = Color3.fromRGB(118, 134, 146),
+    DisabledText = Color3.fromRGB(86, 98, 108),
+    Accent = Color3.fromRGB(86, 197, 235),
+    AccentHover = Color3.fromRGB(116, 214, 245),
+    AccentPressed = Color3.fromRGB(52, 158, 196),
+    AccentStrokeSemantic = Color3.fromRGB(133, 216, 242),
 
     -- [[Legacy consumer keys]]
-    WindowColor = ColorSequence.new(Color3.fromRGB(249, 252, 253), Color3.fromRGB(239, 245, 248)),
-    ShadowColor = Color3.fromRGB(150, 164, 173),
+    WindowColor = ColorSequence.new(Color3.fromRGB(14, 19, 26), Color3.fromRGB(22, 30, 39)),
+    ShadowColor = Color3.fromRGB(4, 7, 10),
     LiveAnimation = false,
     ElementTransparency = 0,
-    ElementStroke = Color3.fromRGB(205, 216, 222),
-    CardSurface = Color3.fromRGB(255, 255, 255),
-    ElementGradient = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(249, 251, 252)),
-    ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(219, 228, 233), Color3.fromRGB(202, 214, 221)),
+    ElementStroke = Color3.fromRGB(49, 63, 76),
+    CardSurface = Color3.fromRGB(22, 29, 37),
+    ElementGradient = ColorSequence.new(Color3.fromRGB(22, 29, 37), Color3.fromRGB(26, 34, 43)),
+    ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(44, 57, 69), Color3.fromRGB(58, 74, 87)),
     ElementStrokeTransparency = 0,
     ElementStrokeHoverTransparency = 0,
-    ElementStrokeHover = Color3.fromRGB(0, 157, 187),
-    DarkToggleOverlay = false,
-    TabColor = Color3.fromRGB(36, 48, 56),
-    TabBackground = ColorSequence.new(Color3.fromRGB(232, 246, 248), Color3.fromRGB(219, 239, 243)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(122, 210, 222), Color3.fromRGB(180, 225, 232)),
-    SliderBackground = Color3.fromRGB(221, 230, 235),
-    SliderBackgroundHover = Color3.fromRGB(207, 220, 226),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(0, 173, 201), Color3.fromRGB(0, 139, 172)),
-    SliderStroke = Color3.fromRGB(183, 198, 206),
-    AccentColor = Color3.fromRGB(0, 157, 187),
-    AccentStroke = Color3.fromRGB(84, 199, 218),
-    AccentGlow = 0.45,
-    StatBackground = Color3.fromRGB(247, 250, 251),
-    SliderHandle = Color3.fromRGB(55, 72, 80),
-    ToggleTrack = Color3.fromRGB(188, 202, 209),
-    ToggleTrackTransparency = 0,
-    ToggleKnobOff = Color3.fromRGB(255, 255, 255),
-    ToggleKnobOffTransparency = 0,
-    FieldBackground = Color3.fromRGB(245, 249, 251),
+    ElementStrokeHover = Color3.fromRGB(86, 197, 235),
+    DarkToggleOverlay = true,
+    TabColor = Color3.fromRGB(208, 224, 232),
+    TabBackground = ColorSequence.new(Color3.fromRGB(25, 34, 44), Color3.fromRGB(19, 26, 34)),
+    TabStroke = ColorSequence.new(Color3.fromRGB(56, 118, 138), Color3.fromRGB(38, 84, 100)),
+    SliderBackground = Color3.fromRGB(34, 44, 55),
+    SliderBackgroundHover = Color3.fromRGB(45, 58, 71),
+    SliderProgress = ColorSequence.new(Color3.fromRGB(96, 204, 238), Color3.fromRGB(56, 160, 200)),
+    SliderStroke = Color3.fromRGB(94, 112, 126),
+    AccentColor = Color3.fromRGB(86, 197, 235),
+    AccentStroke = Color3.fromRGB(133, 216, 242),
+    AccentGlow = 0.35,
+    StatBackground = Color3.fromRGB(18, 24, 31),
+    SliderHandle = Color3.fromRGB(224, 240, 247),
+    ToggleTrack = Color3.fromRGB(8, 12, 16),
+    ToggleTrackTransparency = 0.82,
+    ToggleKnobOff = Color3.fromRGB(184, 196, 204),
+    ToggleKnobOffTransparency = 0.08,
+    FieldBackground = Color3.fromRGB(13, 18, 24),
     FieldTransparency = 0,
-    FieldGlow = Color3.fromRGB(0, 157, 187),
-    PlaceholderColor = Color3.fromRGB(115, 130, 140),
-    SurfaceStroke = Color3.fromRGB(201, 213, 220),
-    NeutralButton = Color3.fromRGB(231, 239, 243),
-    NeutralButtonHover = Color3.fromRGB(216, 228, 234),
-    NeutralButtonStroke = Color3.fromRGB(190, 205, 213),
-    ActionColor = Color3.fromRGB(44, 58, 66),
-    TitlingColor = Color3.fromRGB(24, 33, 40),
+    FieldGlow = Color3.fromRGB(74, 180, 216),
+    PlaceholderColor = Color3.fromRGB(118, 134, 146),
+    SurfaceStroke = Color3.fromRGB(46, 59, 71),
+    NeutralButton = Color3.fromRGB(28, 36, 45),
+    NeutralButtonHover = Color3.fromRGB(38, 49, 60),
+    NeutralButtonStroke = Color3.fromRGB(66, 82, 96),
+    ActionColor = Color3.fromRGB(224, 233, 239),
+    TitlingColor = Color3.fromRGB(236, 243, 247),
     TitleFont = frost.brandFont(Enum.FontWeight.SemiBold),
     Font = frost.brandFont(Enum.FontWeight.Medium),
-    ContentColor = Color3.fromRGB(48, 61, 70),
-    ElementTextHoverColor = Color3.fromRGB(13, 25, 31),
-    DropdownHighlight = Color3.fromRGB(0, 157, 187),
-    ErrorColor = Color3.fromRGB(195, 62, 60),
-    ErrorStrokeColor = Color3.fromRGB(226, 98, 92),
+    ContentColor = Color3.fromRGB(212, 223, 231),
+    ElementTextHoverColor = Color3.fromRGB(240, 248, 251),
+    DropdownHighlight = Color3.fromRGB(116, 214, 245),
+    ErrorColor = Color3.fromRGB(211, 86, 88),
+    ErrorStrokeColor = Color3.fromRGB(239, 118, 119),
 }
 
 end)() end,
-    [75] = function()local wax,script,require=ImportGlobals(75)local ImportGlobals return (function(...)
+    [77] = function()local wax,script,require=ImportGlobals(77)local ImportGlobals return (function(...)
+local gold = require(script.Parent.Parent.core.state)
+
+return {
+    -- [[Semantic palette]]
+    Background = Color3.fromRGB(19, 16, 10),
+    WindowSurface = Color3.fromRGB(25, 21, 14),
+    TopbarSurface = Color3.fromRGB(30, 25, 17),
+    SidebarSurface = Color3.fromRGB(22, 19, 12),
+    TabSurface = Color3.fromRGB(38, 32, 22),
+    TabSelected = Color3.fromRGB(74, 61, 30),
+    ElementSurface = Color3.fromRGB(31, 26, 18),
+    ElementHover = Color3.fromRGB(39, 33, 23),
+    ElementPressed = Color3.fromRGB(26, 22, 15),
+    SecondaryElement = Color3.fromRGB(28, 24, 16),
+    Stroke = Color3.fromRGB(66, 57, 38),
+    SecondaryStroke = Color3.fromRGB(50, 44, 30),
+    PrimaryText = Color3.fromRGB(240, 236, 226),
+    SecondaryText = Color3.fromRGB(196, 188, 170),
+    MutedText = Color3.fromRGB(148, 139, 118),
+    DisabledText = Color3.fromRGB(106, 99, 84),
+    Accent = Color3.fromRGB(233, 196, 74),
+    AccentHover = Color3.fromRGB(244, 210, 96),
+    AccentPressed = Color3.fromRGB(193, 158, 45),
+    AccentStrokeSemantic = Color3.fromRGB(240, 214, 110),
+
+    -- [[Legacy consumer keys]]
+    WindowColor = ColorSequence.new(Color3.fromRGB(23, 19, 13), Color3.fromRGB(32, 27, 18)),
+    ShadowColor = Color3.fromRGB(8, 7, 4),
+    LiveAnimation = false,
+    ElementTransparency = 0,
+    ElementStroke = Color3.fromRGB(61, 53, 35),
+    CardSurface = Color3.fromRGB(31, 26, 18),
+    ElementGradient = ColorSequence.new(Color3.fromRGB(31, 26, 18), Color3.fromRGB(35, 30, 21)),
+    ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(53, 46, 31), Color3.fromRGB(70, 60, 40)),
+    ElementStrokeTransparency = 0,
+    ElementStrokeHoverTransparency = 0,
+    ElementStrokeHover = Color3.fromRGB(233, 196, 74),
+    DarkToggleOverlay = true,
+    TabColor = Color3.fromRGB(226, 218, 198),
+    TabBackground = ColorSequence.new(Color3.fromRGB(36, 30, 20), Color3.fromRGB(28, 23, 15)),
+    TabStroke = ColorSequence.new(Color3.fromRGB(94, 79, 42), Color3.fromRGB(66, 56, 30)),
+    SliderBackground = Color3.fromRGB(48, 41, 28),
+    SliderBackgroundHover = Color3.fromRGB(61, 52, 35),
+    SliderProgress = ColorSequence.new(Color3.fromRGB(238, 202, 84), Color3.fromRGB(198, 158, 47)),
+    SliderStroke = Color3.fromRGB(116, 103, 72),
+    AccentColor = Color3.fromRGB(233, 196, 74),
+    AccentStroke = Color3.fromRGB(240, 214, 110),
+    AccentGlow = 0.32,
+    StatBackground = Color3.fromRGB(26, 22, 15),
+    SliderHandle = Color3.fromRGB(238, 230, 206),
+    ToggleTrack = Color3.fromRGB(10, 9, 5),
+    ToggleTrackTransparency = 0.82,
+    ToggleKnobOff = Color3.fromRGB(194, 188, 170),
+    ToggleKnobOffTransparency = 0.08,
+    FieldBackground = Color3.fromRGB(18, 15, 10),
+    FieldTransparency = 0,
+    FieldGlow = Color3.fromRGB(201, 168, 60),
+    PlaceholderColor = Color3.fromRGB(148, 139, 118),
+    SurfaceStroke = Color3.fromRGB(58, 51, 34),
+    NeutralButton = Color3.fromRGB(35, 30, 21),
+    NeutralButtonHover = Color3.fromRGB(46, 39, 27),
+    NeutralButtonStroke = Color3.fromRGB(82, 71, 47),
+    ActionColor = Color3.fromRGB(234, 229, 214),
+    TitlingColor = Color3.fromRGB(243, 239, 229),
+    TitleFont = gold.brandFont(Enum.FontWeight.SemiBold),
+    Font = gold.brandFont(Enum.FontWeight.Medium),
+    ContentColor = Color3.fromRGB(222, 215, 197),
+    ElementTextHoverColor = Color3.fromRGB(247, 244, 235),
+    DropdownHighlight = Color3.fromRGB(244, 210, 96),
+    ErrorColor = Color3.fromRGB(211, 86, 88),
+    ErrorStrokeColor = Color3.fromRGB(239, 118, 119),
+}
+
+end)() end,
+    [78] = function()local wax,script,require=ImportGlobals(78)local ImportGlobals return (function(...)
+local onyx = require(script.Parent.Parent.core.state)
+
+return {
+    -- [[Semantic palette]]
+    Background = Color3.fromRGB(8, 8, 9),
+    WindowSurface = Color3.fromRGB(13, 13, 15),
+    TopbarSurface = Color3.fromRGB(17, 17, 20),
+    SidebarSurface = Color3.fromRGB(11, 11, 13),
+    TabSurface = Color3.fromRGB(24, 24, 27),
+    TabSelected = Color3.fromRGB(48, 48, 53),
+    ElementSurface = Color3.fromRGB(19, 19, 22),
+    ElementHover = Color3.fromRGB(25, 25, 29),
+    ElementPressed = Color3.fromRGB(15, 15, 18),
+    SecondaryElement = Color3.fromRGB(17, 17, 20),
+    Stroke = Color3.fromRGB(48, 48, 54),
+    SecondaryStroke = Color3.fromRGB(37, 37, 42),
+    PrimaryText = Color3.fromRGB(238, 238, 240),
+    SecondaryText = Color3.fromRGB(176, 178, 184),
+    MutedText = Color3.fromRGB(122, 124, 131),
+    DisabledText = Color3.fromRGB(87, 89, 96),
+    Accent = Color3.fromRGB(205, 210, 220),
+    AccentHover = Color3.fromRGB(222, 226, 233),
+    AccentPressed = Color3.fromRGB(165, 170, 181),
+    AccentStrokeSemantic = Color3.fromRGB(216, 220, 229),
+
+    -- [[Legacy consumer keys]]
+    WindowColor = ColorSequence.new(Color3.fromRGB(12, 12, 14), Color3.fromRGB(18, 18, 21)),
+    ShadowColor = Color3.fromRGB(0, 0, 0),
+    LiveAnimation = false,
+    ElementTransparency = 0,
+    ElementStroke = Color3.fromRGB(45, 45, 51),
+    CardSurface = Color3.fromRGB(19, 19, 22),
+    ElementGradient = ColorSequence.new(Color3.fromRGB(19, 19, 22), Color3.fromRGB(23, 23, 27)),
+    ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(40, 40, 46), Color3.fromRGB(54, 54, 61)),
+    ElementStrokeTransparency = 0,
+    ElementStrokeHoverTransparency = 0,
+    ElementStrokeHover = Color3.fromRGB(205, 210, 220),
+    DarkToggleOverlay = true,
+    TabColor = Color3.fromRGB(214, 216, 221),
+    TabBackground = ColorSequence.new(Color3.fromRGB(22, 22, 25), Color3.fromRGB(16, 16, 19)),
+    TabStroke = ColorSequence.new(Color3.fromRGB(64, 64, 72), Color3.fromRGB(46, 46, 53)),
+    SliderBackground = Color3.fromRGB(32, 32, 37),
+    SliderBackgroundHover = Color3.fromRGB(42, 42, 48),
+    SliderProgress = ColorSequence.new(Color3.fromRGB(212, 216, 225), Color3.fromRGB(168, 173, 184)),
+    SliderStroke = Color3.fromRGB(92, 94, 102),
+    AccentColor = Color3.fromRGB(205, 210, 220),
+    AccentStroke = Color3.fromRGB(216, 220, 229),
+    AccentGlow = 0.22,
+    StatBackground = Color3.fromRGB(15, 15, 18),
+    SliderHandle = Color3.fromRGB(230, 232, 237),
+    ToggleTrack = Color3.fromRGB(5, 5, 6),
+    ToggleTrackTransparency = 0.82,
+    ToggleKnobOff = Color3.fromRGB(178, 181, 189),
+    ToggleKnobOffTransparency = 0.08,
+    FieldBackground = Color3.fromRGB(10, 10, 12),
+    FieldTransparency = 0,
+    FieldGlow = Color3.fromRGB(188, 193, 203),
+    PlaceholderColor = Color3.fromRGB(122, 124, 131),
+    SurfaceStroke = Color3.fromRGB(42, 42, 48),
+    NeutralButton = Color3.fromRGB(23, 23, 27),
+    NeutralButtonHover = Color3.fromRGB(31, 31, 36),
+    NeutralButtonStroke = Color3.fromRGB(66, 66, 74),
+    ActionColor = Color3.fromRGB(228, 230, 234),
+    TitlingColor = Color3.fromRGB(240, 240, 243),
+    TitleFont = onyx.brandFont(Enum.FontWeight.SemiBold),
+    Font = onyx.brandFont(Enum.FontWeight.Medium),
+    ContentColor = Color3.fromRGB(212, 214, 219),
+    ElementTextHoverColor = Color3.fromRGB(246, 246, 248),
+    DropdownHighlight = Color3.fromRGB(222, 226, 233),
+    ErrorColor = Color3.fromRGB(211, 86, 88),
+    ErrorStrokeColor = Color3.fromRGB(239, 118, 119),
+}
+
+end)() end,
+    [79] = function()local wax,script,require=ImportGlobals(79)local ImportGlobals return (function(...)
 return {
     -- [[Semantic palette]]
     Background = Color3.fromRGB(23, 15, 19),
@@ -26802,7 +27106,7 @@ return {
 }
 
 end)() end,
-    [77] = function()local wax,script,require=ImportGlobals(77)local ImportGlobals return (function(...)
+    [81] = function()local wax,script,require=ImportGlobals(81)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 
 local hapticService = {}
@@ -26900,7 +27204,7 @@ end
 return hapticService
 
 end)() end,
-    [78] = function()local wax,script,require=ImportGlobals(78)local ImportGlobals return (function(...)
+    [82] = function()local wax,script,require=ImportGlobals(82)local ImportGlobals return (function(...)
 local networkUtil = require(script.Parent.network)
 local logger = require(script.Parent.log)
 
@@ -27078,7 +27382,7 @@ end
 return assetResolver
 
 end)() end,
-    [79] = function()local wax,script,require=ImportGlobals(79)local ImportGlobals return (function(...)
+    [83] = function()local wax,script,require=ImportGlobals(83)local ImportGlobals return (function(...)
 local iconRegistry = require(script.Parent.Parent.images.windowIcons)
 local constants = {}
 
@@ -27129,7 +27433,7 @@ constants.displayOrder = {
 return constants
 
 end)() end,
-    [80] = function()local wax,script,require=ImportGlobals(80)local ImportGlobals return (function(...)
+    [84] = function()local wax,script,require=ImportGlobals(84)local ImportGlobals return (function(...)
 local enums = {}
 
 function enums.itemFromValue(enumType, value)
@@ -27159,7 +27463,7 @@ end
 return enums
 
 end)() end,
-    [81] = function()local wax,script,require=ImportGlobals(81)local ImportGlobals return (function(...)
+    [85] = function()local wax,script,require=ImportGlobals(85)local ImportGlobals return (function(...)
 local serviceProvider = require(script.Parent.services)
 local filesystem = {}
 
@@ -27410,7 +27714,7 @@ end
 return filesystem
 
 end)() end,
-    [82] = function()local wax,script,require=ImportGlobals(82)local ImportGlobals return (function(...)
+    [86] = function()local wax,script,require=ImportGlobals(86)local ImportGlobals return (function(...)
 local fs = require(script.Parent.filesystem)
 local pathUtil = require(script.Parent.path)
 
@@ -27459,7 +27763,7 @@ end
 return filesystemManager
 
 end)() end,
-    [83] = function()local wax,script,require=ImportGlobals(83)local ImportGlobals return (function(...)
+    [87] = function()local wax,script,require=ImportGlobals(87)local ImportGlobals return (function(...)
 local fontManager = require(script.Parent.services)
 local a2 = fontManager.getService("HttpService")
 local a3 = fontManager.getService("RunService")
@@ -27912,7 +28216,7 @@ end
 return a16
 
 end)() end,
-    [84] = function()local wax,script,require=ImportGlobals(84)local ImportGlobals return (function(...)
+    [88] = function()local wax,script,require=ImportGlobals(88)local ImportGlobals return (function(...)
 
 local functions = {}
 
@@ -27930,7 +28234,7 @@ functions.contrastText = textMetrics.contrastText
 return functions
 
 end)() end,
-    [85] = function()local wax,script,require=ImportGlobals(85)local ImportGlobals return (function(...)
+    [89] = function()local wax,script,require=ImportGlobals(89)local ImportGlobals return (function(...)
 local layouts = {}
 
 local topbarLayout = require(script.Parent.Parent.layouts.Topbar)
@@ -28084,7 +28388,7 @@ end
 return layouts
 
 end)() end,
-    [86] = function()local wax,script,require=ImportGlobals(86)local ImportGlobals return (function(...)
+    [90] = function()local wax,script,require=ImportGlobals(90)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local logger = require(script.Parent.log)
 
@@ -28183,7 +28487,7 @@ end
 return locale
 
 end)() end,
-    [87] = function()local wax,script,require=ImportGlobals(87)local ImportGlobals return (function(...)
+    [91] = function()local wax,script,require=ImportGlobals(91)local ImportGlobals return (function(...)
 local function lockable<T>(element: T): T
     local target = element :: any
 
@@ -28205,7 +28509,7 @@ end
 return lockable
 
 end)() end,
-    [88] = function()local wax,script,require=ImportGlobals(88)local ImportGlobals return (function(...)
+    [92] = function()local wax,script,require=ImportGlobals(92)local ImportGlobals return (function(...)
 local log = {}
 
 type SuppressPredicate = () -> boolean
@@ -28255,7 +28559,7 @@ end
 return log
 
 end)() end,
-    [89] = function()local wax,script,require=ImportGlobals(89)local ImportGlobals return (function(...)
+    [93] = function()local wax,script,require=ImportGlobals(93)local ImportGlobals return (function(...)
 local function moveable<T>(dragState: T): T
     local target = dragState :: any
 
@@ -28291,7 +28595,7 @@ end
 return moveable
 
 end)() end,
-    [90] = function()local wax,script,require=ImportGlobals(90)local ImportGlobals return (function(...)
+    [94] = function()local wax,script,require=ImportGlobals(94)local ImportGlobals return (function(...)
 local network = {}
 network.__index = network
 
@@ -28309,7 +28613,7 @@ end
 return network
 
 end)() end,
-    [91] = function()local wax,script,require=ImportGlobals(91)local ImportGlobals return (function(...)
+    [95] = function()local wax,script,require=ImportGlobals(95)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local textService = coreState.textService
 
@@ -28622,7 +28926,7 @@ end
 return odometer
 
 end)() end,
-    [92] = function()local wax,script,require=ImportGlobals(92)local ImportGlobals return (function(...)
+    [96] = function()local wax,script,require=ImportGlobals(96)local ImportGlobals return (function(...)
 type OrderedElement = {
     main: GuiObject,
     descriptor: { main: GuiObject }?,
@@ -28638,7 +28942,7 @@ end
 return ordering
 
 end)() end,
-    [93] = function()local wax,script,require=ImportGlobals(93)local ImportGlobals return (function(...)
+    [97] = function()local wax,script,require=ImportGlobals(97)local ImportGlobals return (function(...)
 local path = {}
 
 function path.join(base: string, suffix: string?): string
@@ -28689,7 +28993,7 @@ end
 return path
 
 end)() end,
-    [94] = function()local wax,script,require=ImportGlobals(94)local ImportGlobals return (function(...)
+    [98] = function()local wax,script,require=ImportGlobals(98)local ImportGlobals return (function(...)
 local persistence = {}
 
 local configPersistence = require(script.Parent.persistenceConfig)
@@ -28708,7 +29012,7 @@ persistence.loadSettings = settingsPersistence.loadSettings
 return persistence
 
 end)() end,
-    [95] = function()local wax,script,require=ImportGlobals(95)local ImportGlobals return (function(...)
+    [99] = function()local wax,script,require=ImportGlobals(99)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local fs = require(script.Parent.filesystem)
 local logger = require(script.Parent.log)
@@ -28950,7 +29254,7 @@ end
 return persistenceConfig
 
 end)() end,
-    [96] = function()local wax,script,require=ImportGlobals(96)local ImportGlobals return (function(...)
+    [100] = function()local wax,script,require=ImportGlobals(100)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local pathUtil = require(script.Parent.path)
 
@@ -28994,7 +29298,7 @@ end
 return persistencePaths
 
 end)() end,
-    [97] = function()local wax,script,require=ImportGlobals(97)local ImportGlobals return (function(...)
+    [101] = function()local wax,script,require=ImportGlobals(101)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local fs = require(script.Parent.filesystem)
 local paths = require(script.Parent.persistencePaths)
@@ -29134,7 +29438,9 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
     if type(decodedSettings.theme) == "string" then
         local theme = string.lower(decodedSettings.theme)
         if theme == "default" or theme == "amethyst" or theme == "cobalt"
-            or theme == "ember" or theme == "frost" or theme == "rose"
+            or theme == "crimson" or theme == "ember" or theme == "emerald"
+            or theme == "frost" or theme == "gold" or theme == "onyx"
+            or theme == "rose"
         then
             window.settings.theme = theme
         end
@@ -29186,7 +29492,7 @@ end
 return persistenceSettings
 
 end)() end,
-    [98] = function()local wax,script,require=ImportGlobals(98)local ImportGlobals return (function(...)
+    [102] = function()local wax,script,require=ImportGlobals(102)local ImportGlobals return (function(...)
 local fs = require(script.Parent.filesystem)
 
 local persistenceWrite = {}
@@ -29214,7 +29520,7 @@ end
 return persistenceWrite
 
 end)() end,
-    [99] = function()local wax,script,require=ImportGlobals(99)local ImportGlobals return (function(...)
+    [103] = function()local wax,script,require=ImportGlobals(103)local ImportGlobals return (function(...)
 local services = {}
 
 function services.getService(serviceName)
@@ -29225,7 +29531,7 @@ end
 return services
 
 end)() end,
-    [100] = function()local wax,script,require=ImportGlobals(100)local ImportGlobals return (function(...)
+    [104] = function()local wax,script,require=ImportGlobals(104)local ImportGlobals return (function(...)
 local layoutMetrics = require(script.Parent.layouts)
 
 local breakpoints = {}
@@ -29395,85 +29701,89 @@ local LineOffsets = {
     [16] = 3144,
     [17] = 3422,
     [18] = 3799,
-    [20] = 6582,
-    [21] = 6849,
-    [22] = 7293,
-    [23] = 8424,
-    [24] = 8758,
-    [25] = 8819,
-    [26] = 8964,
-    [27] = 10284,
-    [28] = 10486,
-    [29] = 10747,
-    [30] = 11209,
-    [31] = 11659,
-    [32] = 11746,
-    [33] = 12311,
-    [34] = 12929,
-    [35] = 13303,
-    [36] = 13433,
-    [37] = 13597,
-    [38] = 13751,
-    [40] = 14262,
-    [41] = 14285,
-    [42] = 14302,
-    [43] = 14332,
-    [44] = 14448,
-    [45] = 14462,
-    [46] = 14511,
-    [47] = 14237,
-    [48] = 14612,
-    [49] = 14915,
-    [50] = 14946,
-    [51] = 14601,
-    [52] = 14989,
-    [53] = 15009,
-    [54] = 15041,
-    [55] = 14971,
-    [56] = 15148,
-    [57] = 15210,
-    [58] = 15273,
-    [60] = 15336,
-    [61] = 15501,
-    [62] = 15321,
-    [63] = 15761,
-    [64] = 16056,
-    [65] = 16712,
-    [66] = 18496,
-    [67] = 19637,
-    [68] = 21157,
-    [69] = 15565,
-    [70] = 26401,
-    [71] = 26463,
-    [72] = 26525,
-    [73] = 26607,
-    [74] = 26669,
-    [75] = 26744,
-    [76] = 26295,
-    [77] = 26806,
-    [78] = 26904,
-    [79] = 27082,
-    [80] = 27133,
-    [81] = 27163,
-    [82] = 27414,
-    [83] = 27463,
-    [84] = 27916,
-    [85] = 27934,
-    [86] = 28088,
-    [87] = 28187,
-    [88] = 28209,
-    [89] = 28259,
-    [90] = 28295,
-    [91] = 28313,
-    [92] = 28626,
-    [93] = 28642,
-    [94] = 28693,
-    [95] = 28712,
-    [96] = 28954,
-    [97] = 28998,
-    [98] = 29190,
-    [99] = 29218,
-    [100] = 29229,
+    [20] = 6586,
+    [21] = 6853,
+    [22] = 7297,
+    [23] = 8428,
+    [24] = 8762,
+    [25] = 8823,
+    [26] = 8968,
+    [27] = 10288,
+    [28] = 10490,
+    [29] = 10751,
+    [30] = 11213,
+    [31] = 11663,
+    [32] = 11750,
+    [33] = 12315,
+    [34] = 12933,
+    [35] = 13307,
+    [36] = 13437,
+    [37] = 13601,
+    [38] = 13755,
+    [40] = 14266,
+    [41] = 14289,
+    [42] = 14306,
+    [43] = 14336,
+    [44] = 14452,
+    [45] = 14466,
+    [46] = 14515,
+    [47] = 14241,
+    [48] = 14616,
+    [49] = 14919,
+    [50] = 14950,
+    [51] = 14605,
+    [52] = 14993,
+    [53] = 15013,
+    [54] = 15045,
+    [55] = 14975,
+    [56] = 15152,
+    [57] = 15214,
+    [58] = 15277,
+    [60] = 15340,
+    [61] = 15505,
+    [62] = 15325,
+    [63] = 15765,
+    [64] = 16060,
+    [65] = 16716,
+    [66] = 18500,
+    [67] = 19641,
+    [68] = 21161,
+    [69] = 15569,
+    [70] = 26405,
+    [71] = 26467,
+    [72] = 26529,
+    [73] = 26604,
+    [74] = 26686,
+    [75] = 26748,
+    [76] = 26823,
+    [77] = 26898,
+    [78] = 26973,
+    [79] = 27048,
+    [80] = 26299,
+    [81] = 27110,
+    [82] = 27208,
+    [83] = 27386,
+    [84] = 27437,
+    [85] = 27467,
+    [86] = 27718,
+    [87] = 27767,
+    [88] = 28220,
+    [89] = 28238,
+    [90] = 28392,
+    [91] = 28491,
+    [92] = 28513,
+    [93] = 28563,
+    [94] = 28599,
+    [95] = 28617,
+    [96] = 28930,
+    [97] = 28946,
+    [98] = 28997,
+    [99] = 29016,
+    [100] = 29258,
+    [101] = 29302,
+    [102] = 29496,
+    [103] = 29524,
+    [104] = 29535,
 }
 
 -- [[Misc AOT variable imports]]
@@ -29984,7 +30294,7 @@ local ObjectTree = {
                 },
             },
             {
-                76,
+                80,
                 2,
                 {
                     "themes",
@@ -30008,25 +30318,53 @@ local ObjectTree = {
                         72,
                         2,
                         {
-                            "default",
+                            "crimson",
                         },
                     },
                     {
                         73,
                         2,
                         {
-                            "ember",
+                            "default",
                         },
                     },
                     {
                         74,
                         2,
                         {
-                            "frost",
+                            "ember",
                         },
                     },
                     {
                         75,
+                        2,
+                        {
+                            "emerald",
+                        },
+                    },
+                    {
+                        76,
+                        2,
+                        {
+                            "frost",
+                        },
+                    },
+                    {
+                        77,
+                        2,
+                        {
+                            "gold",
+                        },
+                    },
+                    {
+                        78,
+                        2,
+                        {
+                            "onyx",
+                        },
+                    },
+                    {
+                        79,
                         2,
                         {
                             "rose",
@@ -30035,175 +30373,175 @@ local ObjectTree = {
                 },
             },
             {
-                101,
+                105,
                 1,
                 {
                     "utilities",
                 },
                 {
                     {
-                        77,
+                        81,
                         2,
                         {
                             "HapticEngine",
                         },
                     },
                     {
-                        78,
+                        82,
                         2,
                         {
                             "assetResolver",
                         },
                     },
                     {
-                        79,
+                        83,
                         2,
                         {
                             "constants",
                         },
                     },
                     {
-                        80,
+                        84,
                         2,
                         {
                             "enums",
                         },
                     },
                     {
-                        81,
+                        85,
                         2,
                         {
                             "filesystem",
                         },
                     },
                     {
-                        82,
+                        86,
                         2,
                         {
                             "filesystemManager",
                         },
                     },
                     {
-                        83,
+                        87,
                         2,
                         {
                             "fontManager",
                         },
                     },
                     {
-                        84,
+                        88,
                         2,
                         {
                             "functions",
                         },
                     },
                     {
-                        85,
+                        89,
                         2,
                         {
                             "layouts",
                         },
                     },
                     {
-                        86,
+                        90,
                         2,
                         {
                             "locale",
                         },
                     },
                     {
-                        87,
+                        91,
                         2,
                         {
                             "lockable",
                         },
                     },
                     {
-                        88,
+                        92,
                         2,
                         {
                             "log",
                         },
                     },
                     {
-                        89,
+                        93,
                         2,
                         {
                             "moveable",
                         },
                     },
                     {
-                        90,
+                        94,
                         2,
                         {
                             "network",
                         },
                     },
                     {
-                        91,
+                        95,
                         2,
                         {
                             "odometer",
                         },
                     },
                     {
-                        92,
+                        96,
                         2,
                         {
                             "ordering",
                         },
                     },
                     {
-                        93,
+                        97,
                         2,
                         {
                             "path",
                         },
                     },
                     {
-                        94,
+                        98,
                         2,
                         {
                             "persistence",
                         },
                     },
                     {
-                        95,
+                        99,
                         2,
                         {
                             "persistenceConfig",
                         },
                     },
                     {
-                        96,
+                        100,
                         2,
                         {
                             "persistencePaths",
                         },
                     },
                     {
-                        97,
+                        101,
                         2,
                         {
                             "persistenceSettings",
                         },
                     },
                     {
-                        98,
+                        102,
                         2,
                         {
                             "persistenceWrite",
                         },
                     },
                     {
-                        99,
+                        103,
                         2,
                         {
                             "services",
                         },
                     },
                     {
-                        100,
+                        104,
                         2,
                         {
                             "windowSizing",

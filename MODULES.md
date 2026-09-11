@@ -255,9 +255,13 @@ Per-element specifics:
   whitelist, `coerceValue`, `firstColor`, `deriveStrokes`
   (luminance-based stroke deriver), `resolve` (clones `default`, overlays
   chosen theme, so custom tables inherit missing keys).
-- `default.luau` + 5 themes (`amethyst`, `cobalt`, `ember`, `frost`,
-  `rose`) — theme tables of ~65 keys (surfaces, strokes, text colors,
-  gradients, fonts, corner radii, slider/toggle/picker styling).
+- `default.luau` + 9 themes (`amethyst`, `cobalt`, `crimson`, `ember`,
+  `emerald`, `frost`, `gold`, `onyx`, `rose`) — theme tables of ~65 keys
+  (surfaces, strokes, text colors, gradients, fonts, corner radii,
+  slider/toggle/picker styling). Keys a theme omits are inherited from the
+  `default` clone. Registered in two places: the settings-UI theme table in
+  `components/window.luau` and the persisted-theme whitelist in
+  `utilities/persistenceSettings.luau`.
   `CardSurface` (Color3, from the `2ecd628` settings-card fix) is still
   defined in every theme but no longer referenced by the rebuilt settings
   UI — kept for compatibility.
