@@ -11,8 +11,8 @@ local settings = {
     persistence = persistence,
 }
 
-function settings.newManager(newManager: { [string]: any }?)
-    return managerModule.new(newManager)
+function settings.newManager(overrides: { [string]: any }?)
+    return managerModule.new(overrides)
 end
 
 function settings.readPersisted(key: string, default: any): any

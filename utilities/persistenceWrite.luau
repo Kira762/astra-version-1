@@ -1,25 +1,25 @@
-local persistenceWrite = require(script.Parent.filesystem)
+local fs = require(script.Parent.filesystem)
 
-local a2 = {}
+local persistenceWrite = {}
 
-local a3 = ".saving"
+local tempSuffix = ".saving"
 
-function a2.tempPathFor(a4: string): string
-    return a4 .. a3
+function persistenceWrite.tempPathFor(path: string): string
+    return path .. tempSuffix
 end
 
-function a2.write(a5: string, a6: string, a7: string)
-    local a8 = a2.tempPathFor(a6)
+function persistenceWrite.write(folder: string, filePath: string, contents: string)
+    local tempPath = persistenceWrite.tempPathFor(filePath)
 
-    persistenceWrite.ensureDir(a5)
-    persistenceWrite.writefile(a8, a7)
+    fs.ensureDir(folder)
+    fs.writefile(tempPath, contents)
 
-    if persistenceWrite.readfile(a8) ~= a7 then
+    if fs.readfile(tempPath) ~= contents then
         error("parked copy did not write cleanly")
     end
 
-    persistenceWrite.writefile(a6, a7)
-    pcall(persistenceWrite.delfile, a8)
+    fs.writefile(filePath, contents)
+    pcall(fs.delfile, tempPath)
 end
 
-return a2
+return persistenceWrite

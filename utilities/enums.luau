@@ -1,23 +1,23 @@
 local enums = {}
 
-function enums.itemFromValue(a2, a3)
-    local ok, a4 = pcall(function()
-        return a2:FromValue(a3)
+function enums.itemFromValue(enumType, value)
+    local ok, directItem = pcall(function()
+        return enumType:FromValue(value)
     end)
-    if ok and a4 then
-        return a4
+    if ok and directItem then
+        return directItem
     end
 
-    local a5, a6 = pcall(function()
-        return a2:GetEnumItems()
+    local listedOk, items = pcall(function()
+        return enumType:GetEnumItems()
     end)
-    if not a5 then
+    if not listedOk then
         return nil
     end
 
-    for _, a7 in a6 do
-        if a7.Value == a3 then
-            return a7
+    for _, candidate in items do
+        if candidate.Value == value then
+            return candidate
         end
     end
 

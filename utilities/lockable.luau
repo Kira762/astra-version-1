@@ -1,19 +1,19 @@
-local function lockable<T>(a2: T): T
-    local a3 = a2 :: any
+local function lockable<T>(element: T): T
+    local target = element :: any
 
-        function a3:Lock(a4: string?)
-        self.window:_setElementLocked(self, true, a4)
+    function target:Lock(reason: string?)
+        self.window:_setElementLocked(self, true, reason)
     end
 
-    function a3:Unlock()
+    function target:Unlock()
         self.window:_setElementLocked(self, false)
     end
 
-    function a3:IsLocked(): boolean
+    function target:IsLocked(): boolean
         return self.locked == true
     end
 
-    return a2
+    return element
 end
 
 return lockable

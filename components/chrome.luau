@@ -189,7 +189,7 @@ function chrome.isNewUser()
         return true
     end
 
-    local path = state.fileSystemManager:getPath("lastuser.txt")
+    local path = state.fileSystemManager:getPath("profile.txt")
     local userId = tostring(player.UserId)
     local isNew = true
 

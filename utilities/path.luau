@@ -1,48 +1,48 @@
 local path = {}
 
-function path.join(a2: string, a3: string?): string
-    if not a3 or a3 == "" then
-        return a2
+function path.join(base: string, suffix: string?): string
+    if not suffix or suffix == "" then
+        return base
     end
 
-    return a2 .. "/" .. a3
+    return base .. "/" .. suffix
 end
 
-local function a4(a5: string): string
-    local a6
+local function stripDotDot(input: string): string
+    local previous
     repeat
-        a6 = a5
-        a5 = a5:gsub("%.%.", "")
-    until a5 == a6
-    return a5
+        previous = input
+        input = input:gsub("%.%.", "")
+    until input == previous
+    return input
 end
 
-function path.sanitizeFolder(a7: unknown): string
-    local a8 = tostring(a7):gsub("\\", "/"):gsub('[:<>"|?*%c]', "")
-    a8 = a4(a8):gsub("/+", "/")
-    return (a8:gsub("^/+", ""))
+function path.sanitizeFolder(folderValue: unknown): string
+    local cleanedFolder = tostring(folderValue):gsub("\\", "/"):gsub('[:<>"|?*%c]', "")
+    cleanedFolder = stripDotDot(cleanedFolder):gsub("/+", "/")
+    return (cleanedFolder:gsub("^/+", ""))
 end
 
-function path.sanitizeFile(a9: unknown): string
-    local a10 = tostring(a9):gsub("[/\\]", ""):gsub('[:<>"|?*%c]', "")
-    return a4(a10)
+function path.sanitizeFile(fileValue: unknown): string
+    local cleanedFile = tostring(fileValue):gsub("[/\\]", ""):gsub('[:<>"|?*%c]', "")
+    return stripDotDot(cleanedFile)
 end
 
-function path.basename(a11: unknown): string
-    return tostring(a11):match("[^/\\]+$") or tostring(a11)
+function path.basename(pathValue: unknown): string
+    return tostring(pathValue):match("[^/\\]+$") or tostring(pathValue)
 end
 
-function path.stripExtension(a12: unknown, a13: string?): string
-    if a13 and a13 ~= "" then
-        local a14 = tostring(a12)
-        if a14:sub(-#a13) == a13 then
-            return a14:sub(1, -#a13 - 1)
+function path.stripExtension(nameValue: unknown, extension: string?): string
+    if extension and extension ~= "" then
+        local nameText = tostring(nameValue)
+        if nameText:sub(-#extension) == extension then
+            return nameText:sub(1, -#extension - 1)
         end
-        return a14
+        return nameText
     end
 
-    local a15 = tostring(a12):match("^(.+)%.%w+$")
-    return a15 or tostring(a12)
+    local matchedName = tostring(nameValue):match("^(.+)%.%w+$")
+    return matchedName or tostring(nameValue)
 end
 
 return path

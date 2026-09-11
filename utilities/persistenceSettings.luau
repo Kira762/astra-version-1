@@ -1,10 +1,10 @@
-local persistenceSettings = require(script.Parent.Parent.core.state)
-local a2 = require(script.Parent.filesystem)
-local a3 = require(script.Parent.persistencePaths)
-local a4 = require(script.Parent.persistenceWrite)
-local a5 = require(script.Parent.enums)
+local coreState = require(script.Parent.Parent.core.state)
+local fs = require(script.Parent.filesystem)
+local paths = require(script.Parent.persistencePaths)
+local writer = require(script.Parent.persistenceWrite)
+local enumHelper = require(script.Parent.enums)
 
-local a6 = {}
+local persistenceSettings = {}
 
 type SettingsWindow = {
     settings: {
@@ -37,14 +37,14 @@ type DecodedSettings = {
     activeSubTab: unknown?,
 }
 
-function a6.getSettingsPath(): (string, string)
-    return a3.getSettingsPath()
+function persistenceSettings.getSettingsPath(): (string, string)
+    return paths.getSettingsPath()
 end
 
-function a6.saveSettings(window: SettingsWindow): boolean
-    local a7, a8 = a6.getSettingsPath()
+function persistenceSettings.saveSettings(window: SettingsWindow): boolean
+    local folder, filePath = persistenceSettings.getSettingsPath()
 
-    local a9: { [string]: unknown } = {
+    local payload: { [string]: unknown } = {
         toggleKeybind = {
             tostring(window.settings.toggleKeybind.EnumType),
             window.settings.toggleKeybind.Value,
@@ -62,80 +62,80 @@ function a6.saveSettings(window: SettingsWindow): boolean
         activeSubTab = window.settings.activeSubTab,
     }
 
-    local ok, a10 = pcall(persistenceSettings.httpService.JSONEncode, persistenceSettings.httpService, a9)
+    local ok, encoded = pcall(coreState.httpService.JSONEncode, coreState.httpService, payload)
     if not ok then
         return false
     end
 
-    local a11 = pcall(a4.write, a7, a8, a10)
+    local writeOk = pcall(writer.write, folder, filePath, encoded)
 
-    if not a11 then
+    if not writeOk then
         return false
     end
 
     return true
 end
 
-local function a12(a13: string): (DecodedSettings?, string?)
-    local a14 = false
+local function readDecoded(path: string): (DecodedSettings?, string?)
+    local exists = false
     pcall(function()
-        a14 = a2.isfile(a13)
+        exists = fs.isfile(path)
     end)
-    if not a14 then
+    if not exists then
         return nil, nil
     end
 
-    local a15, a16 = pcall(a2.readfile, a13)
-    if not a15 or type(a16) ~= "string" then
+    local readOk, raw = pcall(fs.readfile, path)
+    if not readOk or type(raw) ~= "string" then
         return nil, nil
     end
 
-    local a17, a18 = pcall(persistenceSettings.httpService.JSONDecode, persistenceSettings.httpService, a16)
-        if not a17 or type(a18) ~= "table" then
-        return nil, a16
+    local decodeOk, decoded = pcall(coreState.httpService.JSONDecode, coreState.httpService, raw)
+        if not decodeOk or type(decoded) ~= "table" then
+        return nil, raw
     end
 
-        return a18 :: DecodedSettings, a16
+        return decoded :: DecodedSettings, raw
 end
 
-local function a19(): DecodedSettings?
-    local a20, a21 = a6.getSettingsPath()
-    local a22 = a12(a21)
-    if a22 then
-        return a22
+local function readWithFallback(): DecodedSettings?
+    local settingsFolder, settingsPath = persistenceSettings.getSettingsPath()
+    local tempFolder = readDecoded(settingsPath)
+    if tempFolder then
+        return tempFolder
     end
 
-    local a23, a24 = a12(a4.tempPathFor(a21))
-    if a23 and a24 then
-        pcall(a4.write, a20, a21, a24)
-        return a23
+    local tempPath, tempRaw = readDecoded(writer.tempPathFor(settingsPath))
+    if tempPath and tempRaw then
+        pcall(writer.write, settingsFolder, settingsPath, tempRaw)
+        return tempPath
     end
 
     return nil
 end
 
-function a6.loadSettings(window: SettingsWindow): boolean
-    local a25 = a19()
+function persistenceSettings.loadSettings(window: SettingsWindow): boolean
+    local decodedSettings = readWithFallback()
 
-    if not a25 then
+    if not decodedSettings then
         return false
     end
 
-    if a25.toggleKeybind then
+    if decodedSettings.toggleKeybind then
         pcall(function()
-            local a26 = tostring(a25.toggleKeybind[1]):gsub("^Enum%.", "")
-            local a27 = (Enum :: any)[a26]
-            if a27 then
-                local a28 = a5.itemFromValue(a27, a25.toggleKeybind[2])
-                if a28 then
-                    window.settings.toggleKeybind = a28
+            local enumTypeName = tostring(decodedSettings.toggleKeybind[1]):gsub("^Enum%.", "")
+            local enumType = (Enum :: any)[enumTypeName]
+            if enumType then
+                local keybindItem = enumHelper.itemFromValue(enumType, decodedSettings.toggleKeybind[2])
+                if keybindItem then
+                    window.settings.toggleKeybind = keybindItem
                 end
             end
         end)
     end
 
-    if type(a25.theme) == "string" then
-        local theme = string.lower(a25.theme)
+    if type(decodedSettings.theme) == "string" then
+        local theme = string.lower(decodedSettings.theme)
         if theme == "default" or theme == "amethyst" or theme == "cobalt"
             or theme == "ember" or theme == "frost" or theme == "rose"
         then
@@ -143,47 +143,47 @@ function a6.loadSettings(window: SettingsWindow): boolean
         end
     end
 
-    if type(a25.mouseOverride) == "boolean" then
-        window.settings.mouseOverride = a25.mouseOverride
+    if type(decodedSettings.mouseOverride) == "boolean" then
+        window.settings.mouseOverride = decodedSettings.mouseOverride
     end
 
-    if type(a25.keepOnScreen) == "boolean" then
-        window.settings.keepOnScreen = a25.keepOnScreen
+    if type(decodedSettings.keepOnScreen) == "boolean" then
+        window.settings.keepOnScreen = decodedSettings.keepOnScreen
     end
 
-    if type(a25.dragMinimisedBar) == "boolean" then
-        window.settings.dragMinimisedBar = a25.dragMinimisedBar
+    if type(decodedSettings.dragMinimisedBar) == "boolean" then
+        window.settings.dragMinimisedBar = decodedSettings.dragMinimisedBar
     end
 
-    if type(a25.welcomeToast) == "boolean" then
-        window.settings.welcomeToast = a25.welcomeToast
+    if type(decodedSettings.welcomeToast) == "boolean" then
+        window.settings.welcomeToast = decodedSettings.welcomeToast
     end
 
-    if type(a25.haptics) == "boolean" then
-        window.settings.haptics = a25.haptics
+    if type(decodedSettings.haptics) == "boolean" then
+        window.settings.haptics = decodedSettings.haptics
     end
 
-    if type(a25.showProfile) == "boolean" then
-        window.settings.showProfile = a25.showProfile
+    if type(decodedSettings.showProfile) == "boolean" then
+        window.settings.showProfile = decodedSettings.showProfile
     end
-    if type(a25.showFullUsername) == "boolean" then
-        window.settings.showFullUsername = a25.showFullUsername
+    if type(decodedSettings.showFullUsername) == "boolean" then
+        window.settings.showFullUsername = decodedSettings.showFullUsername
     end
-    if type(a25.antiWindowDuplicate) == "boolean" then
-        window.settings.antiWindowDuplicate = a25.antiWindowDuplicate
+    if type(decodedSettings.antiWindowDuplicate) == "boolean" then
+        window.settings.antiWindowDuplicate = decodedSettings.antiWindowDuplicate
     end
-    if a25.layoutMode == "top"
-        or a25.layoutMode == "sidebar"
-        or a25.layoutMode == "collapsedSidebar"
+    if decodedSettings.layoutMode == "top"
+        or decodedSettings.layoutMode == "sidebar"
+        or decodedSettings.layoutMode == "collapsedSidebar"
     then
-        window.settings.layoutMode = a25.layoutMode
+        window.settings.layoutMode = decodedSettings.layoutMode
     end
 
-    if type(a25.activeSubTab) == "number" and a25.activeSubTab >= 1 then
-        window.settings.activeSubTab = math.floor(a25.activeSubTab)
+    if type(decodedSettings.activeSubTab) == "number" and decodedSettings.activeSubTab >= 1 then
+        window.settings.activeSubTab = math.floor(decodedSettings.activeSubTab)
     end
 
     return true
 end
 
-return a6
+return persistenceSettings

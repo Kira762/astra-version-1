@@ -1,18 +1,18 @@
 
-local manager = require(script.Parent.registry)
-local values = require(script.Parent.defaults)
-local listeners = require(script.Parent.persistence)
-local validate = require(script.Parent.appearance)
-local dirty = require(script.Parent.behavior)
-local performanceDomain = require(script.Parent.performance)
+local registry = require(script.Parent.registry)
+local defaults = require(script.Parent.defaults)
+local persistence = require(script.Parent.persistence)
+local appearance = require(script.Parent.appearance)
+local behavior = require(script.Parent.behavior)
+local performance = require(script.Parent.performance)
 
 local SettingsManager = {}
 
 SettingsManager.__index = SettingsManager
 
 export type SettingsManager = {
-    values: { [string]: any },
-    listeners: { [any]: (string, any, any) -> () },
+    defaults: { [string]: any },
+    persistence: { [any]: (string, any, any) -> () },
     get: (self: SettingsManager, key: string) -> any,
     set: (self: SettingsManager, key: string, value: any) -> boolean,
     reset: (self: SettingsManager, key: string?) -> boolean,
@@ -22,15 +22,15 @@ export type SettingsManager = {
 }
 
 local domains = {
-    appearance = validate,
-    behavior = dirty,
-    performance = performanceDomain,
+    appearance = appearance,
+    behavior = behavior,
+    performance = performance,
 }
 
 function SettingsManager.new(overrides: { [string]: any }?): SettingsManager
     local self = setmetatable({
-        values = values.clone(overrides),
-        listeners = {},
+        defaults = defaults.clone(overrides),
+        persistence = {},
     }, SettingsManager)
     return self
 end
@@ -40,7 +40,7 @@ function SettingsManager:get(key: string): any
 end
 
 function SettingsManager:set(key: string, value: any): boolean
-    local definition = manager.definition(key)
+    local definition = registry.definition(key)
     if not definition then
         return false
     end
@@ -70,12 +70,12 @@ end
 
 function SettingsManager:reset(key: string?): boolean
     if key then
-        if not manager.definition(key) then
+        if not registry.definition(key) then
             return false
         end
-        return self:set(key, values.values[key])
+        return self:set(key, defaults.values[key])
     end
-    for _, key in manager.keys() do
+    for _, key in registry.keys() do
         self:reset(key)
     end
     return true
@@ -86,12 +86,12 @@ function SettingsManager:onChange(listener: (string, any, any) -> ())
 end
 
 function SettingsManager:save(): boolean
-    return listeners.save(self.values)
+    return persistence.save(self.values)
 end
 
 function SettingsManager:load(): boolean
     local snapshot = table.clone(self.values)
-    local ok = listeners.load(self.values)
+    local ok = persistence.load(self.values)
     if not ok then
         return ok
     end
@@ -99,7 +99,7 @@ function SettingsManager:load(): boolean
     -- [[Notify listeners only for values that actually changed, matching the]]
     -- [[(key, newValue, oldValue) contract of :set(). Persisted values are]]
     -- [[written into self.values first; callbacks fire afterwards.]]
-    for _, key in manager.keys() do
+    for _, key in registry.keys() do
         local newValue = self.values[key]
         if snapshot[key] ~= newValue then
             for _, listener in self.listeners do
