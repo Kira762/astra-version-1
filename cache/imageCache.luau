@@ -21,7 +21,7 @@ local imageCache = {}
 type RemoteCallback = (uri: string?) -> ()
 
 local cacheRoot = variables.fileSystemManager:getRootFolder()
-local cacheFolder = variables.fileSystemManager:getAssetsFolder()
+local cacheFolder = variables.fileSystemManager:getAssetsFolder("images-icon")
 local assetResolver = variables.assetResolver
 
 local assetBase = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/assets/"

@@ -12,7 +12,7 @@ type ConfigWindow = {
 }
 
 function a3.getConfigPath(window: ConfigWindow, a4: unknown?): (string?, string?)
-    local a5 = persistencePaths.fileSystemManager:getPath("Configurations")
+    local a5 = persistencePaths.fileSystemManager:getPath("config")
     if window.configuration.customFolder then
         a5 = a2.join(a5, a2.sanitizeFolder(window.configuration.customFolder))
     end
@@ -34,7 +34,7 @@ function a3.getConfigPath(window: ConfigWindow, a4: unknown?): (string?, string?
 end
 
 function a3.getSettingsPath(): (string, string)
-    local a8 = persistencePaths.fileSystemManager:getPath("Settings")
+    local a8 = persistencePaths.fileSystemManager:getPath("settings")
     return a8, a2.join(a8, "astra.rfld")
 end
 

@@ -1074,7 +1074,7 @@ function chrome.isNewUser()
         return true
     end
 
-    local path = state.fileSystemManager:getPath("lastuser.txt")
+    local path = state.fileSystemManager:getPath("profile.txt")
     local userId = tostring(player.UserId)
     local isNew = true
 
@@ -14631,7 +14631,7 @@ local imageCache = {}
 type RemoteCallback = (uri: string?) -> ()
 
 local cacheRoot = variables.fileSystemManager:getRootFolder()
-local cacheFolder = variables.fileSystemManager:getAssetsFolder()
+local cacheFolder = variables.fileSystemManager:getAssetsFolder("images-icon")
 local assetResolver = variables.assetResolver
 
 local assetBase = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/assets/"
@@ -27430,7 +27430,7 @@ function a4.new(a5: string?): FileSystemManager
         local a6 = a5 or a3
     local self = setmetatable({
         root = a6,
-        assets = a6 .. "/Assets",
+        assets = a6 .. "/assets",
     }, a4) :: any
     pcall(filesystemManager.ensureFolder, self.root)
     pcall(filesystemManager.ensureFolder, self.assets)
@@ -28964,7 +28964,7 @@ type ConfigWindow = {
 }
 
 function a3.getConfigPath(window: ConfigWindow, a4: unknown?): (string?, string?)
-    local a5 = persistencePaths.fileSystemManager:getPath("Configurations")
+    local a5 = persistencePaths.fileSystemManager:getPath("config")
     if window.configuration.customFolder then
         a5 = a2.join(a5, a2.sanitizeFolder(window.configuration.customFolder))
     end
@@ -28986,7 +28986,7 @@ function a3.getConfigPath(window: ConfigWindow, a4: unknown?): (string?, string?
 end
 
 function a3.getSettingsPath(): (string, string)
-    local a8 = persistencePaths.fileSystemManager:getPath("Settings")
+    local a8 = persistencePaths.fileSystemManager:getPath("settings")
     return a8, a2.join(a8, "astra.rfld")
 end
 

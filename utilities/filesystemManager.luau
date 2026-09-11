@@ -18,7 +18,7 @@ function a4.new(a5: string?): FileSystemManager
         local a6 = a5 or a3
     local self = setmetatable({
         root = a6,
-        assets = a6 .. "/Assets",
+        assets = a6 .. "/assets",
     }, a4) :: any
     pcall(filesystemManager.ensureFolder, self.root)
     pcall(filesystemManager.ensureFolder, self.assets)
