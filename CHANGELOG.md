@@ -2,6 +2,35 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-11 — Window sizing: 600x420 default, fixed mobile profile
+
+- **Default window size is now `600x420`** (was `720x600`) in both bar-layout
+  profiles (`top`, `sidebar`) in `utilities/windowSizing.luau`. The responsive
+  caps were rebalanced around the new default (`maxSize` 720x480 top /
+  760x500 sidebar, `widthCompensation` 100 → 80); the minimum protections are
+  unchanged (500x330 top, 540x360 sidebar). No other 720x600 default remains.
+- **Desktop/PC stays responsive:** `windowSizing.fit` keeps the existing
+  tiered viewport-occupancy fit, so a normal desktop targets exactly 600x420,
+  smaller/shorter screens shrink responsively (width compensation kicks in on
+  short viewports), and large/ultrawide screens stay capped instead of growing
+  into an oversized window. The viewport watcher, `_applyWindowSize`,
+  dragging/collapsing and the public API in `components/window.luau` are
+  unchanged (comments only).
+- **Mobile now uses a fixed size/profile:** touch-only devices (phones —
+  `TouchEnabled` with no hardware keyboard) whose short side is below Astra's
+  existing 700px phone breakpoint get a per-mode fixed profile instead of live
+  occupancy math: `316x318` (top) / `331x280` (sidebar), derived from the
+  existing phone-tier fit evaluated once at a 360x390 reference (narrowest
+  mainstream phone width × the reference short side `scaleForViewport`
+  documents), so the fixed window fits a phone in portrait and landscape
+  without clipping. Rotation, the on-screen keyboard and inset changes no
+  longer resize the window; tablets, desktops and narrow desktop viewports
+  keep the responsive fit.
+- **New helper:** `windowSizing.isMobileViewport(viewport)`. `UIScale`
+  (`scaleForViewport`) is unchanged and still applied on both paths, so the
+  fixed mobile window keeps its per-device perceived scale. Bundle
+  regenerated (99 modules).
+
 ## 2026-09-11 — New themes (emerald, gold, crimson, onyx) + frost redesign
 
 - **Four new built-in themes:** `emerald` (dark forest, green accent),
