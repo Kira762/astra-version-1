@@ -1,12 +1,18 @@
 -- Astra multi-tab supported-usage example.
 -- This example loads the current bundle with remote icon asset resolution.
 
-local bundleSource = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
+local bundleUrl = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"
+local httpGet = game and (game.HttpGet or game.HttpGetAsync)
+assert(type(httpGet) == "function", "[Astra] This executor does not provide game:HttpGet or game:HttpGetAsync.")
+local requestOk, bundleSource = pcall(httpGet, game, bundleUrl)
+assert(requestOk and type(bundleSource) == "string", "[Astra] Failed to download the Astra bundle: " .. tostring(bundleSource))
 local compile = loadstring or load
 assert(type(compile) == "function", "[Astra] This executor does not provide loadstring/load.")
-local bundleLoader, compileError = compile(bundleSource)
+local compileOk, bundleLoader, compileError = pcall(compile, bundleSource)
+assert(compileOk, "[Astra] Bundle compilation raised an error: " .. tostring(bundleLoader))
 assert(type(bundleLoader) == "function", "[Astra] Bundle compilation failed: " .. tostring(compileError))
-local Astra = bundleLoader()
+local runOk, Astra = pcall(bundleLoader)
+assert(runOk, "[Astra] Bundle startup raised an error: " .. tostring(Astra))
 
 assert(
     type(Astra) == "table" and type(Astra.CreateWindow) == "function",
@@ -21,7 +27,7 @@ local window = Astra:CreateWindow({
 -- Window tags are rendered beside the window title and remain available in the chrome.
 window:CreateTag({
     icon = "tag",
-    text = "0.0.35",
+    text = "0.0.36",
     color = Color3.fromRGB(96, 205, 255),
 })
 
@@ -161,6 +167,15 @@ local changelog = changelogTab:CreateChangelog({
     name = "Recent changes",
     description = "Structured release notes with categorized changes.",
     entries = {
+        {
+            version = "0.0.36",
+            date = "2026-09-11",
+            title = "Executor compatibility diagnostics",
+            description = "Guarded HTTP retrieval and bundle execution so missing executor APIs no longer produce an opaque nil-call.",
+            changes = {
+                { symbol = "~", category = "Fixed", text = "Added explicit checks for HttpGet, compilation, and bundle startup." },
+            },
+        },
         {
             version = "0.0.35",
             date = "2026-09-11",
