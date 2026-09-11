@@ -2,9 +2,28 @@
 -- This example loads the current bundle with remote icon asset resolution.
 
 local bundleUrl = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"
-local httpGet = game and (game.HttpGet or game.HttpGetAsync)
-assert(type(httpGet) == "function", "[Astra] This executor does not provide game:HttpGet or game:HttpGetAsync.")
-local requestOk, bundleSource = pcall(httpGet, game, bundleUrl)
+local function fetchBundle(url)
+    if not game then
+        return false, "game is unavailable"
+    end
+
+    -- Keep the method bound to `game`. Some executors expose HttpGet through
+    -- userdata/metamethods and calling a detached `game.HttpGet` can become a
+    -- nil-call even though `game:HttpGet(...)` works normally.
+    if type(game.HttpGet) == "function" then
+        return pcall(function()
+            return game:HttpGet(url)
+        end)
+    end
+    if type(game.HttpGetAsync) == "function" then
+        return pcall(function()
+            return game:HttpGetAsync(url)
+        end)
+    end
+    return false, "this executor does not provide game:HttpGet or game:HttpGetAsync"
+end
+
+local requestOk, bundleSource = fetchBundle(bundleUrl)
 assert(requestOk and type(bundleSource) == "string", "[Astra] Failed to download the Astra bundle: " .. tostring(bundleSource))
 local compile = loadstring or load
 assert(type(compile) == "function", "[Astra] This executor does not provide loadstring/load.")

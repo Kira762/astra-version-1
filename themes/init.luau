@@ -25,6 +25,21 @@ local gradientKeys = {
     SliderProgress = true,
 }
 
+-- Semantic aliases let custom themes adopt the stronger palette vocabulary
+-- without breaking legacy consumers. Explicit legacy overrides still win.
+local semanticAliases = {
+    WindowSurface = { "WindowColor" },
+    ElementSurface = { "CardSurface" },
+    Stroke = { "ElementStroke", "SurfaceStroke" },
+    Accent = { "AccentColor", "DropdownHighlight" },
+    AccentStrokeSemantic = { "AccentStroke" },
+    PrimaryText = { "ContentColor", "TitlingColor" },
+    MutedText = { "PlaceholderColor" },
+    ElementHover = { "NeutralButtonHover", "SliderBackgroundHover", "ElementStrokeHover" },
+    SecondaryElement = { "NeutralButton", "SliderBackground" },
+    InputSurface = { "FieldBackground" },
+}
+
 function themes.coerceValue(key, value)
     if gradientKeys[key] and typeof(value) == "Color3" then
         return ColorSequence.new(value)
@@ -62,6 +77,19 @@ function themes.deriveStrokes(resolved, overrides)
     end
 end
 
+local function applySemanticAliases(resolved, overrides)
+    for semantic, legacyKeys in semanticAliases do
+        if overrides[semantic] ~= nil then
+            local value = themes.coerceValue(legacyKeys[1], overrides[semantic])
+            for _, legacyKey in legacyKeys do
+                if overrides[legacyKey] == nil then
+                    resolved[legacyKey] = value
+                end
+            end
+        end
+    end
+end
+
 local function themeOverrides(value)
     if typeof(value) == "table" then
         return value
@@ -85,6 +113,7 @@ function themes.resolve(value)
 	for key, override in overrides do
 		resolved[key] = themes.coerceValue(key, override)
 	end
+	applySemanticAliases(resolved, overrides)
 	if typeof(value) == "table" then
 		themes.deriveStrokes(resolved, overrides)
 	end
