@@ -18,7 +18,7 @@ local window = Astra:CreateWindow({
 -- Window tags are rendered beside the window title and remain available in the chrome.
 window:CreateTag({
     icon = "tag",
-    text = "0.0.33",
+    text = "0.0.34",
     color = Color3.fromRGB(96, 205, 255),
 })
 
@@ -159,6 +159,15 @@ local changelog = changelogTab:CreateChangelog({
     description = "Structured release notes with categorized changes.",
     entries = {
         {
+            version = "0.0.34",
+            date = "2026-09-11",
+            title = "Tab visibility safeguard",
+            description = "All twenty example tab selectors now remain available even when an optional test element cannot be constructed.",
+            changes = {
+                { symbol = "~", category = "Fixed", text = "Prevented one failed optional element from stopping later tabs from loading." },
+            },
+        },
+        {
             version = "0.0.33",
             date = "2026-09-11",
             title = "Grouped toggle fix",
@@ -198,7 +207,7 @@ changelogTab:CreateButton({
             date = "Live",
             title = "Runtime update",
             changes = {
-                { symbol = "added", text = "This release note was added at runtime." },
+                { symbol = "+", text = "This release note was added at runtime." },
             },
         })
         window:Toast({ title = "Changelog", subtitle = "New entry added" })
@@ -226,27 +235,30 @@ local testTabs = {
 
 for index, details in ipairs(testTabs) do
     local tab = window:CreateTab({ name = details.name, icon = details.icon })
-    tab:CreateSection({ name = "Test elements" })
-    tab:CreateText({
-        name = "Test tab " .. tostring(index),
-        text = "This tab is part of the twenty-tab loading and layout test.",
-    })
-    tab:CreateButton({
-        name = "Run test action",
-        callback = function()
-            window:Toast({ title = details.name, subtitle = "Action completed" })
-        end,
-    })
+    -- Keep the tab selector registered even if an optional element has an
+    -- environment-specific constructor issue; this lets the remaining tabs load.
+    local ok = pcall(function()
+        tab:CreateSection({ name = "Test elements" })
+        tab:CreateText({
+            name = "Test tab " .. tostring(index),
+            text = "This tab is part of the twenty-tab loading and layout test.",
+        })
+        tab:CreateButton({
+            name = "Run test action",
+            callback = function()
+                window:Toast({ title = details.name, subtitle = "Action completed" })
+            end,
+        })
 
-    if index % 4 == 1 then
-        tab:CreateToggle({
+        if index % 4 == 1 then
+            tab:CreateToggle({
             name = "Enabled",
             value = index % 3 == 0,
             callback = function(value)
                 window:Toast({ title = details.name, subtitle = if value then "Enabled" else "Disabled" })
             end,
-        })
-        tab:CreateSlider({
+            })
+            tab:CreateSlider({
             name = "Intensity",
             range = { 0, 100 },
             value = index * 5,
@@ -254,41 +266,42 @@ for index, details in ipairs(testTabs) do
             callback = function(value)
                 window:Toast({ title = details.name, subtitle = "Intensity: " .. tostring(value) })
             end,
-        })
-    elseif index % 4 == 2 then
-        tab:CreateDropdown({
+            })
+        elseif index % 4 == 2 then
+            tab:CreateDropdown({
             name = "Preset",
             options = { "Low", "Medium", "High" },
             value = "Medium",
             callback = function(value)
                 window:Toast({ title = details.name, subtitle = "Preset: " .. tostring(value) })
             end,
-        })
-        tab:CreateInput({
+            })
+            tab:CreateInput({
             name = "Label",
             placeholder = "Test input",
             callback = function(value)
                 window:Toast({ title = details.name, subtitle = "Label: " .. tostring(value) })
             end,
-        })
-    elseif index % 4 == 3 then
-        tab:CreateColorPicker({
+            })
+        elseif index % 4 == 3 then
+            tab:CreateColorPicker({
             name = "Color",
             color = Color3.fromHSV(index / #testTabs, 0.7, 1),
             callback = function(value)
                 window:Toast({ title = details.name, subtitle = "Color updated: " .. tostring(value) })
             end,
-        })
-        tab:CreateDivider()
-    else
-        tab:CreateText({ name = "Status", text = "Ready for testing." })
-        tab:CreateToggle({
+            })
+            tab:CreateDivider()
+        else
+            tab:CreateText({ name = "Status", text = "Ready for testing." })
+            tab:CreateToggle({
             name = "Experimental mode",
             value = false,
             callback = function(value)
                 window:Toast({ title = details.name, subtitle = if value then "Experimental mode on" else "Experimental mode off" })
             end,
-        })
+            })
+        end
     end
 end
 
