@@ -1881,14 +1881,6 @@ end
 function Window:_updateWindowTitle()
     if not self.title then return end
     local text = self.name
-    if self._settingsMode then
-        text ..= " • Settings"
-        if self.selectedTab and self.selectedTab._isSettingsTab and self.selectedTab ~= self.rfSettings then
-            text ..= " • " .. self.selectedTab.name
-        elseif self.selectedTab == self.rfSettings then
-            text ..= " • General"
-        end
-    end
     self.title.Text = locale.resolve(text)
 end
 
