@@ -1,29 +1,29 @@
 local function moveable<T>(dragState: T): T
-    local a3 = dragState :: any
+    local target = dragState :: any
 
-    function a3:MoveTo(a4: number)
-        self.tab:_moveElement(self, a4)
+    function target:MoveTo(index: number)
+        self.tab:_moveElement(self, index)
     end
 
-    function a3:MoveToTop()
+    function target:MoveToTop()
         self.tab:_moveElement(self, 1)
     end
 
-    function a3:MoveToBottom()
+    function target:MoveToBottom()
         self.tab:_moveElement(self, #self.tab.elements)
     end
 
-    function a3:MoveUp()
-        local a5 = table.find(self.tab.elements, self)
-        if a5 then
-            self.tab:_moveElement(self, a5 - 1)
+    function target:MoveUp()
+        local upPosition = table.find(self.tab.elements, self)
+        if upPosition then
+            self.tab:_moveElement(self, upPosition - 1)
         end
     end
 
-    function a3:MoveDown()
-        local a6 = table.find(self.tab.elements, self)
-        if a6 then
-            self.tab:_moveElement(self, a6 + 1)
+    function target:MoveDown()
+        local downPosition = table.find(self.tab.elements, self)
+        if downPosition then
+            self.tab:_moveElement(self, downPosition + 1)
         end
     end
 

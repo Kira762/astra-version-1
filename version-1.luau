@@ -14247,8 +14247,8 @@ local settings = {
     persistence = persistence,
 }
 
-function settings.newManager(newManager: { [string]: any }?)
-    return managerModule.new(newManager)
+function settings.newManager(overrides: { [string]: any }?)
+    return managerModule.new(overrides)
 end
 
 function settings.readPersisted(key: string, default: any): any
@@ -14311,7 +14311,8 @@ defaults.values = {
     showProfile = true,
     showFullUsername = false,
     antiWindowDuplicate = true,
-    layoutMode = "top",    activeSubTab = 1,
+    layoutMode = "top",
+    activeSubTab = 1,
 }
 
 function defaults.clone(overrides: { [string]: any }?): { [string]: any }
@@ -14329,20 +14330,20 @@ return defaults
 end)() end,
     [43] = function()local wax,script,require=ImportGlobals(43)local ImportGlobals return (function(...)
 
-local manager = require(script.Parent.registry)
-local values = require(script.Parent.defaults)
-local listeners = require(script.Parent.persistence)
-local validate = require(script.Parent.appearance)
-local dirty = require(script.Parent.behavior)
-local performanceDomain = require(script.Parent.performance)
+local registry = require(script.Parent.registry)
+local defaults = require(script.Parent.defaults)
+local persistence = require(script.Parent.persistence)
+local appearance = require(script.Parent.appearance)
+local behavior = require(script.Parent.behavior)
+local performance = require(script.Parent.performance)
 
 local SettingsManager = {}
 
 SettingsManager.__index = SettingsManager
 
 export type SettingsManager = {
-    values: { [string]: any },
-    listeners: { [any]: (string, any, any) -> () },
+    defaults: { [string]: any },
+    persistence: { [any]: (string, any, any) -> () },
     get: (self: SettingsManager, key: string) -> any,
     set: (self: SettingsManager, key: string, value: any) -> boolean,
     reset: (self: SettingsManager, key: string?) -> boolean,
@@ -14352,15 +14353,15 @@ export type SettingsManager = {
 }
 
 local domains = {
-    appearance = validate,
-    behavior = dirty,
-    performance = performanceDomain,
+    appearance = appearance,
+    behavior = behavior,
+    performance = performance,
 }
 
 function SettingsManager.new(overrides: { [string]: any }?): SettingsManager
     local self = setmetatable({
-        values = values.clone(overrides),
-        listeners = {},
+        defaults = defaults.clone(overrides),
+        persistence = {},
     }, SettingsManager)
     return self
 end
@@ -14370,7 +14371,7 @@ function SettingsManager:get(key: string): any
 end
 
 function SettingsManager:set(key: string, value: any): boolean
-    local definition = manager.definition(key)
+    local definition = registry.definition(key)
     if not definition then
         return false
     end
@@ -14400,12 +14401,12 @@ end
 
 function SettingsManager:reset(key: string?): boolean
     if key then
-        if not manager.definition(key) then
+        if not registry.definition(key) then
             return false
         end
-        return self:set(key, values.values[key])
+        return self:set(key, defaults.values[key])
     end
-    for _, key in manager.keys() do
+    for _, key in registry.keys() do
         self:reset(key)
     end
     return true
@@ -14416,12 +14417,12 @@ function SettingsManager:onChange(listener: (string, any, any) -> ())
 end
 
 function SettingsManager:save(): boolean
-    return listeners.save(self.values)
+    return persistence.save(self.values)
 end
 
 function SettingsManager:load(): boolean
     local snapshot = table.clone(self.values)
-    local ok = listeners.load(self.values)
+    local ok = persistence.load(self.values)
     if not ok then
         return ok
     end
@@ -14429,7 +14430,7 @@ function SettingsManager:load(): boolean
     -- [[Notify listeners only for values that actually changed, matching the]]
     -- [[(key, newValue, oldValue) contract of :set(). Persisted values are]]
     -- [[written into self.values first; callbacks fire afterwards.]]
-    for _, key in manager.keys() do
+    for _, key in registry.keys() do
         local newValue = self.values[key]
         if snapshot[key] ~= newValue then
             for _, listener in self.listeners do
@@ -14459,28 +14460,28 @@ return performance
 end)() end,
     [45] = function()local wax,script,require=ImportGlobals(45)local ImportGlobals return (function(...)
 
-local state = require(script.Parent.Parent.utilities.persistenceSettings)
-local persistenceSettings = require(script.Parent.Parent.cache.persistenceCache)
+local settingsPersistence = require(script.Parent.Parent.utilities.persistenceSettings)
+local settingsCache = require(script.Parent.Parent.cache.persistenceCache)
 
 local persistenceWrite = {}
 
 function persistenceWrite.path(): (string, string)
-    return state.getSettingsPath()
+    return settingsPersistence.getSettingsPath()
 end
 
 function persistenceWrite.save(persistence: { [string]: any }): boolean
-    local ok = state.saveSettings({ settings = persistence })
-    persistenceSettings.invalidateSettings()
+    local ok = settingsPersistence.saveSettings({ settings = persistence })
+    settingsCache.invalidateSettings()
     return ok
 end
 
 function persistenceWrite.load(values: { [string]: any }): boolean
-    return state.loadSettings({ settings = values })
+    return settingsPersistence.loadSettings({ settings = values })
 end
 
 function persistenceWrite.read(key: string, default: any): any
-    local _, path = state.getSettingsPath()
-    local cached = persistenceSettings.getSettings(path)
+    local _, path = settingsPersistence.getSettingsPath()
+    local cached = settingsCache.getSettings(path)
     if cached == nil then
         local data = nil :: any?
         local fs = require(script.Parent.Parent.utilities.filesystem)
@@ -14494,8 +14495,8 @@ function persistenceWrite.read(key: string, default: any): any
                 end
             end
         end)
-        persistenceSettings.putSettings(path, data or false)
-        cached = persistenceSettings.getSettings(path)
+        settingsCache.putSettings(path, data or false)
+        cached = settingsCache.getSettings(path)
     end
     if type(cached) == "table" and (cached :: any)[key] ~= nil then
         return (cached :: any)[key]
@@ -26802,7 +26803,7 @@ return {
 
 end)() end,
     [77] = function()local wax,script,require=ImportGlobals(77)local ImportGlobals return (function(...)
-local haptic = require(script.Parent.Parent.core.state)
+local coreState = require(script.Parent.Parent.core.state)
 
 local hapticService = {}
 
@@ -26812,87 +26813,87 @@ type HapticTypes = {
     notify: Enum.HapticEffectType?,
 }
 
-local enabled: HapticTypes = {}
-local container, a5 = pcall(function()
+local effectTypes: HapticTypes = {}
+local probeOk, probeResult = pcall(function()
     Instance.new("HapticEffect"):Destroy()     return {
         click = Enum.HapticEffectType.UIHover,         notify = Enum.HapticEffectType.UIClick,     }
 end)
-if container then
-    enabled = a5
+if probeOk then
+    effectTypes = probeResult
 end
 
-local a6: { [Enum.HapticEffectType]: Instance } = {}
-local a7: Instance? = nil
+local effectInstances: { [Enum.HapticEffectType]: Instance } = {}
+local containerInstance: Instance? = nil
 
-function hapticService.setContainer(a8: Instance?)
-    a7 = a8
+function hapticService.setContainer(newContainer: Instance?)
+    containerInstance = newContainer
 end
 
-function hapticService.releaseContainer(a9: Instance?)
-    if a9 == nil or a7 == a9 then
-        a7 = nil
+function hapticService.releaseContainer(releasedContainer: Instance?)
+    if releasedContainer == nil or containerInstance == releasedContainer then
+        containerInstance = nil
     end
 end
 
-local function a10(): Instance
-    if a7 and a7.Parent then
-        return a7
+local function resolveContainer(): Instance
+    if containerInstance and containerInstance.Parent then
+        return containerInstance
     end
-    return haptic.guiContainer
+    return coreState.guiContainer
 end
 
-local function a11(a12: Enum.HapticEffectType): Instance?
-    local a13 = a6[a12]
-        if a13 and a13.Parent then
-        return a13
+local function getEffect(effectType: Enum.HapticEffectType): Instance?
+    local cached = effectInstances[effectType]
+        if cached and cached.Parent then
+        return cached
     end
-    local ok, a14 = pcall(Instance.new, "HapticEffect")
+    local ok, instance = pcall(Instance.new, "HapticEffect")
     if not ok then
         return nil
     end
-    local a15 = a14 :: any
-    a15.Type = a12
-    local a16 = pcall(function()
-        a14.Parent = a10()
+    local typed = instance :: any
+    typed.Type = effectType
+    local parentOk = pcall(function()
+        instance.Parent = resolveContainer()
     end)
-    if not a16 then
-        a14:Destroy()
+    if not parentOk then
+        instance:Destroy()
         return nil
     end
-    a6[a12] = a14
-    return a14
+    effectInstances[effectType] = instance
+    return instance
 end
 
-local function a17(a18: Enum.HapticEffectType?)
-    if not a18 or not hapticService.enabled then
+local function play(requestedType: Enum.HapticEffectType?)
+    if not requestedType or not hapticService.enabled then
         return
     end
-    local a19 = a11(a18)
-    if a19 then
-        local a20 = a19 :: any
-        pcall(a20.Play, a19)
+    local effect = getEffect(requestedType)
+    if effect then
+        local playable = effect :: any
+        pcall(playable.Play, effect)
     end
 end
 
 function hapticService.click()
-    a17(enabled.click)
+    play(effectTypes.click)
 end
 
 function hapticService.notify()
-    a17(enabled.notify)
+    play(effectTypes.notify)
 end
 
-function hapticService.setEnabled(a21: boolean?)
-    hapticService.enabled = a21 and true or false
+function hapticService.setEnabled(isEnabled: boolean?)
+    hapticService.enabled = isEnabled and true or false
     if not hapticService.enabled then
         hapticService.teardown()
     end
 end
 
 function hapticService.teardown()
-    for a22, a23 in a6 do
-        pcall(a23.Destroy, a23)
-        a6[a22] = nil
+    for cachedType, cachedInstance in effectInstances do
+        pcall(cachedInstance.Destroy, cachedInstance)
+        effectInstances[cachedType] = nil
     end
 end
 
@@ -26900,8 +26901,8 @@ return hapticService
 
 end)() end,
     [78] = function()local wax,script,require=ImportGlobals(78)local ImportGlobals return (function(...)
-local assetResolver = require(script.Parent.network)
-local a2 = require(script.Parent.log)
+local networkUtil = require(script.Parent.network)
+local logger = require(script.Parent.log)
 
 export type AssetId = number | string
 export type AssetDownloadUrl = string
@@ -26911,7 +26912,7 @@ export type AssetRequestPayload = {
     Url: string,
     Method: string,
 }
-local a3 = {
+local assetResolver = {
     Enum = {
         AssetDownloadUrl = {
             RobloxDownloadUrl = "https://assetdelivery.roblox.com/v1/asset/?id=%d" :: AssetDownloadUrl,
@@ -26919,8 +26920,8 @@ local a3 = {
         },
     },
 }
-a3.__index = a3
-a3.__type = "assetResolver"
+assetResolver.__index = assetResolver
+assetResolver.__type = "assetResolver"
 type AssetResolverState = {
     contentCache: { [CacheKey]: string }?,
     contentCacheOrder: { CacheKey }?,
@@ -26933,36 +26934,36 @@ export type AssetResolver = AssetResolverState & {
     getAssetContentFromId: (self: AssetResolver, id: AssetId, forced: boolean?) -> string?,
 }
 
-local a4 = 8
+local maxCacheEntries = 8
 
-function a3.new(a5: boolean?, a6: AssetDownloadUrl?): AssetResolver
-    local a7: { [CacheKey]: string }? = if a5 then {} else nil
+function assetResolver.new(cacheEnabled: boolean?, downloadUrl: AssetDownloadUrl?): AssetResolver
+    local cacheTable: { [CacheKey]: string }? = if cacheEnabled then {} else nil
     local self = setmetatable(
         {
-            contentCache = a7,
-            contentCacheOrder = if a5 then {} :: { CacheKey } else nil,
-            contentDownloadUrl = a6 or a3.Enum.AssetDownloadUrl.RobloxDownloadUrl,
+            contentCache = cacheTable,
+            contentCacheOrder = if cacheEnabled then {} :: { CacheKey } else nil,
+            contentDownloadUrl = downloadUrl or assetResolver.Enum.AssetDownloadUrl.RobloxDownloadUrl,
             pendingRequests = {},
         } :: AssetResolverState,
-        a3
+        assetResolver
     ) :: any
     return self
 end
 
-function a3.resolve(a8: AssetResolver, a9: unknown): ResolvedAsset?
-    if type(a9) == "number" then
-        return a9
+function assetResolver.resolve(resolver: AssetResolver, value: unknown): ResolvedAsset?
+    if type(value) == "number" then
+        return value
     end
 
-    if type(a9) ~= "string" then
+    if type(value) ~= "string" then
         return nil
     end
 
-    if string.sub(a9, 1, 11) == "rbxasset://" or string.sub(a9, 1, 11) == "rbxthumb://" then
-        return a9
+    if string.sub(value, 1, 11) == "rbxasset://" or string.sub(value, 1, 11) == "rbxthumb://" then
+        return value
     end
 
-    local id = tonumber(string.match(a9, "^rbxassetid://(%d+)$"))
+    local id = tonumber(string.match(value, "^rbxassetid://(%d+)$"))
     if id then
         return id
     end
@@ -26970,129 +26971,129 @@ function a3.resolve(a8: AssetResolver, a9: unknown): ResolvedAsset?
     return nil
 end
 
-local function a10(a11: unknown): boolean
-    if type(a11) ~= "table" then
+local function isSuccessResponse(response: unknown): boolean
+    if type(response) ~= "table" then
         return false
     end
-    local a12 = a11 :: { Body: unknown, StatusCode: unknown, Success: unknown }
-    local a13 = a12.Body
-    if type(a13) ~= "string" or #a13 == 0 then
+    local responsePayload = response :: { Body: unknown, StatusCode: unknown, Success: unknown }
+    local body = responsePayload.Body
+    if type(body) ~= "string" or #body == 0 then
         return false
     end
-    if type(a12.StatusCode) == "number" then
-        local a14 = a12.StatusCode :: number
-        return a14 >= 200 and a14 < 300
+    if type(responsePayload.StatusCode) == "number" then
+        local statusCode = responsePayload.StatusCode :: number
+        return statusCode >= 200 and statusCode < 300
     end
-    if type(a12.Success) == "boolean" then
-        return a12.Success :: boolean
+    if type(responsePayload.Success) == "boolean" then
+        return responsePayload.Success :: boolean
     end
         return false
 end
 
-function a3.getAssetContentFromUrl(
+function assetResolver.getAssetContentFromUrl(
     self: AssetResolver,
-    a15: string,
-    a16: CacheKey?,
-    a17: boolean?
+    url: string,
+    cacheKey: CacheKey?,
+    forced: boolean?
 ): string?
-        local a18 = self.contentCache
-    if a16 ~= nil and a18 and not a17 then
-        local a19 = a18[a16]
-        if a19 then
-            return a19
+        local cache = self.contentCache
+    if cacheKey ~= nil and cache and not forced then
+        local cachedContent = cache[cacheKey]
+        if cachedContent then
+            return cachedContent
         end
     end
 
-            local a20 = self.pendingRequests
-    if a16 ~= nil then
-        local a21 = a20[a16]
-        if a21 then
+            local pending = self.pendingRequests
+    if cacheKey ~= nil then
+        local waiters = pending[cacheKey]
+        if waiters then
             if not coroutine.isyieldable() then
                 return nil
             end
-            local a22 = coroutine.running()
-            if not a22 then
+            local caller = coroutine.running()
+            if not caller then
                 return nil
             end
-            table.insert(a21, a22)
+            table.insert(waiters, caller)
             return coroutine.yield()
         end
-        a20[a16] = {}
+        pending[cacheKey] = {}
     end
 
-    local a23: string? = nil
-    local a24 = assetResolver.getRequestFn()
-    if not a24 then
-        a2.warn("No request function available to download asset content.")
+    local content: string? = nil
+    local requestFn = networkUtil.getRequestFn()
+    if not requestFn then
+        logger.warn("No request function available to download asset content.")
     else
-        local a25, a26 = pcall(
-            a24,
+        local requestOk, requestResult = pcall(
+            requestFn,
             {
-                Url = a15,
+                Url = url,
                 Method = "GET",
             } :: AssetRequestPayload
         )
-        if a25 and a10(a26) then
-            local a27 = (a26 :: { Body: string }).Body
-            a23 = a27
-            if a16 ~= nil and a18 then
-                local a28 = self.contentCacheOrder
-                if a28 and a18[a16] == nil then
-                    table.insert(a28, a16)
-                    local a29 = if #a28 > a4 then table.remove(a28, 1) else nil
-                    if a29 ~= nil then
-                        a18[a29] = nil
+        if requestOk and isSuccessResponse(requestResult) then
+            local responseBody = (requestResult :: { Body: string }).Body
+            content = responseBody
+            if cacheKey ~= nil and cache then
+                local order = self.contentCacheOrder
+                if order and cache[cacheKey] == nil then
+                    table.insert(order, cacheKey)
+                    local evictedKey = if #order > maxCacheEntries then table.remove(order, 1) else nil
+                    if evictedKey ~= nil then
+                        cache[evictedKey] = nil
                     end
                 end
-                a18[a16] = a27
+                cache[cacheKey] = responseBody
             end
-        elseif not a17 then
-            a2.warn("Failed to download asset content for url: " .. tostring(a15))
+        elseif not forced then
+            logger.warn("Failed to download asset content for url: " .. tostring(url))
         end
     end
 
-            if a16 ~= nil then
-        local a30 = a20[a16]
-        a20[a16] = nil
-        if a30 then
-            for _, a31 in a30 do
-                pcall(coroutine.resume, a31, a23)
+            if cacheKey ~= nil then
+        local queued = pending[cacheKey]
+        pending[cacheKey] = nil
+        if queued then
+            for _, waiter in queued do
+                pcall(coroutine.resume, waiter, content)
             end
         end
     end
-    return a23
+    return content
 end
 
-function a3.getAssetContentFromId(self: AssetResolver, id: AssetId, a32: boolean?): string?
-    local a33 = self:resolve(id)
-        if not a33 or type(a33) ~= "number" then
-        a2.warn("Invalid asset id: " .. tostring(a33))
+function assetResolver.getAssetContentFromId(self: AssetResolver, id: AssetId, forcedRefresh: boolean?): string?
+    local resolvedId = self:resolve(id)
+        if not resolvedId or type(resolvedId) ~= "number" then
+        logger.warn("Invalid asset id: " .. tostring(resolvedId))
         return nil
     end
 
-    local a34 = string.format(self.contentDownloadUrl, a33)
-    return self:getAssetContentFromUrl(a34, a33, a32)
+    local assetUrl = string.format(self.contentDownloadUrl, resolvedId)
+    return self:getAssetContentFromUrl(assetUrl, resolvedId, forcedRefresh)
 end
 
-return a3
+return assetResolver
 
 end)() end,
     [79] = function()local wax,script,require=ImportGlobals(79)local ImportGlobals return (function(...)
-local constants = require(script.Parent.Parent.images.windowIcons)
-local a2 = {}
+local iconRegistry = require(script.Parent.Parent.images.windowIcons)
+local constants = {}
 
-a2.fontAsset = "rbxassetid://12187375716"
+constants.fontAsset = "rbxassetid://12187375716"
 
-a2.pillResizeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+constants.pillResizeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-a2.icons = constants.ids
+constants.icons = iconRegistry.ids
 
-a2.accent = {
+constants.accent = {
     on = Color3.fromRGB(23, 153, 110),
     onStroke = Color3.fromRGB(32, 201, 144),
 }
 
-a2.statAccents = {
+constants.statAccents = {
     positive = {
         fill = ColorSequence.new(Color3.fromRGB(0, 170, 127), Color3.fromRGB(0, 134, 98)),
         stroke = ColorSequence.new(Color3.fromRGB(0, 213, 156), Color3.fromRGB(0, 189, 135)),
@@ -27101,54 +27102,54 @@ a2.statAccents = {
         fill = ColorSequence.new(Color3.fromRGB(172, 47, 47), Color3.fromRGB(135, 37, 37)),
         stroke = ColorSequence.new(Color3.fromRGB(255, 75, 75), Color3.fromRGB(244, 67, 67)),
     },
-        neutral = {
+    neutral = {
         fill = ColorSequence.new(Color3.fromRGB(0, 170, 127), Color3.fromRGB(0, 134, 98)),
         stroke = ColorSequence.new(Color3.fromRGB(0, 213, 156), Color3.fromRGB(0, 189, 135)),
     },
 }
 
-a2.zIndex = {
-        elementLock = 60,
+constants.zIndex = {
+    elementLock = 60,
     elementLockContent = 65,
     bottomFade = 100,
-            notification = 1500,
+    notification = 1500,
     drag = 100003,
-        toast = 2000,
+    toast = 2000,
     toastContent = 2001,
     restoreContent = 100001,
     restoreInteract = 100002,
 }
 
-a2.displayOrder = {
+constants.displayOrder = {
     window = 99999,
 
-        popup = 100001,
+    popup = 100001,
 }
 
-return a2
+return constants
 
 end)() end,
     [80] = function()local wax,script,require=ImportGlobals(80)local ImportGlobals return (function(...)
 local enums = {}
 
-function enums.itemFromValue(a2, a3)
-    local ok, a4 = pcall(function()
-        return a2:FromValue(a3)
+function enums.itemFromValue(enumType, value)
+    local ok, directItem = pcall(function()
+        return enumType:FromValue(value)
     end)
-    if ok and a4 then
-        return a4
+    if ok and directItem then
+        return directItem
     end
 
-    local a5, a6 = pcall(function()
-        return a2:GetEnumItems()
+    local listedOk, items = pcall(function()
+        return enumType:GetEnumItems()
     end)
-    if not a5 then
+    if not listedOk then
         return nil
     end
 
-    for _, a7 in a6 do
-        if a7.Value == a3 then
-            return a7
+    for _, candidate in items do
+        if candidate.Value == value then
+            return candidate
         end
     end
 
@@ -27159,11 +27160,11 @@ return enums
 
 end)() end,
     [81] = function()local wax,script,require=ImportGlobals(81)local ImportGlobals return (function(...)
-local filesystem = require(script.Parent.services)
-local a2 = {}
+local serviceProvider = require(script.Parent.services)
+local filesystem = {}
 
-local a3 = filesystem.getService("RunService"):IsStudio()
-local a4 = not a3
+local isStudio = serviceProvider.getService("RunService"):IsStudio()
+local hasExecutorFilesystem = not isStudio
     and typeof(writefile) == "function"
     and typeof(readfile) == "function"
     and typeof(isfile) == "function"
@@ -27173,250 +27174,250 @@ local a4 = not a3
     and typeof(delfile) == "function"
     and typeof(delfolder) == "function"
 
-if a4 then
-        function a2.writefile(a5: string, a6: string)
-        writefile(a5, a6)
+if hasExecutorFilesystem then
+        function filesystem.writefile(writePath: string, writeContents: string)
+        writefile(writePath, writeContents)
     end
 
-    function a2.readfile(a7: string): string
-        return readfile(a7)
+    function filesystem.readfile(readPath: string): string
+        return readfile(readPath)
     end
 
             if typeof(appendfile) == "function" then
-        function a2.appendfile(a8: string, a9: string)
-            appendfile(a8, a9)
+        function filesystem.appendfile(appendPath: string, appendContents: string)
+            appendfile(appendPath, appendContents)
         end
     end
 
-    function a2.isfile(a10: string): boolean
-        return isfile(a10)
+    function filesystem.isfile(isFilePath: string): boolean
+        return isfile(isFilePath)
     end
 
-    function a2.delfile(a11: string)
-        delfile(a11)
+    function filesystem.delfile(deleteFilePath: string)
+        delfile(deleteFilePath)
     end
 
-    function a2.listfiles(a12: string): { string }
-        return listfiles(a12)
+    function filesystem.listfiles(listDir: string): { string }
+        return listfiles(listDir)
     end
 
-    function a2.makefolder(a13: string)
-        makefolder(a13)
+    function filesystem.makefolder(makeFolderPath: string)
+        makefolder(makeFolderPath)
     end
 
-    function a2.isfolder(a14: string): boolean
-        return isfolder(a14)
+    function filesystem.isfolder(isFolderPath: string): boolean
+        return isfolder(isFolderPath)
     end
 
-    function a2.delfolder(a15: string)
-        delfolder(a15)
+    function filesystem.delfolder(deleteFolderPath: string)
+        delfolder(deleteFolderPath)
     end
-elseif a3 then
-            local a16 = Instance.new("Folder")
-    a16.Name = "Filesystem"
-    a16.Parent = filesystem.getService("ReplicatedStorage")
+elseif isStudio then
+            local rootFolder = Instance.new("Folder")
+    rootFolder.Name = "Filesystem"
+    rootFolder.Parent = serviceProvider.getService("ReplicatedStorage")
 
-    local function a17(a18: string): { string }
-        local a19 = {}
-        for a20 in string.gmatch(a18, "[^/]+") do
-            table.insert(a19, a20)
+    local function splitPath(splitInput: string): { string }
+        local segments = {}
+        for segment in string.gmatch(splitInput, "[^/]+") do
+            table.insert(segments, segment)
         end
-        return a19
+        return segments
     end
 
-    local function a21(a22: { string }, a23: boolean): Instance?
-        local a24: Instance = a16
-        for i = 1, #a22 - 1 do
-            local a25 = a24:FindFirstChild(a22[i])
-            if not a25 then
-                if not a23 then
+    local function resolveParent(parentSegments: { string }, createMissing: boolean): Instance?
+        local current: Instance = rootFolder
+        for i = 1, #parentSegments - 1 do
+            local child = current:FindFirstChild(parentSegments[i])
+            if not child then
+                if not createMissing then
                     return nil
                 end
-                local a26 = Instance.new("Folder")
-                a26.Name = a22[i]
-                a26.Parent = a24
-                a25 = a26
+                local newFolder = Instance.new("Folder")
+                newFolder.Name = parentSegments[i]
+                newFolder.Parent = current
+                child = newFolder
             end
-            a24 = a25 :: Instance
+            current = child :: Instance
         end
-        return a24
+        return current
     end
 
-    local function a27(a28: Instance?): StringValue?
-        if a28 and a28:IsA("StringValue") then
-            return a28
+    local function asStringValue(candidate: Instance?): StringValue?
+        if candidate and candidate:IsA("StringValue") then
+            return candidate
         end
         return nil
     end
 
-    function a2.writefile(a29: string, a30: string)
-        local a31 = a17(a29)
-        assert(#a31 > 0, "Invalid path")
+    function filesystem.writefile(studioWritePath: string, studioWriteContents: string)
+        local writeSegments = splitPath(studioWritePath)
+        assert(#writeSegments > 0, "Invalid path")
 
-        local a32 = a21(a31, true)
-        assert(a32, "Invalid path")
-        local a33 = a31[#a31]
+        local writeParent = resolveParent(writeSegments, true)
+        assert(writeParent, "Invalid path")
+        local writeName = writeSegments[#writeSegments]
 
-        local a34 = a32:FindFirstChild(a33)
-        local a35 = a27(a34)
-        if a35 then
-            a35.Value = a30
+        local existingWrite = writeParent:FindFirstChild(writeName)
+        local existingValue = asStringValue(existingWrite)
+        if existingValue then
+            existingValue.Value = studioWriteContents
         else
-            if a34 then
-                a34:Destroy()
+            if existingWrite then
+                existingWrite:Destroy()
             end
-            local a36 = Instance.new("StringValue")
-            a36.Name = a33
-            a36.Value = a30
-            a36.Parent = a32
+            local newValue = Instance.new("StringValue")
+            newValue.Name = writeName
+            newValue.Value = studioWriteContents
+            newValue.Parent = writeParent
         end
     end
 
-    function a2.readfile(a37: string): string
-        local a38 = a17(a37)
-        assert(#a38 > 0, "Invalid path")
+    function filesystem.readfile(studioReadPath: string): string
+        local readSegments = splitPath(studioReadPath)
+        assert(#readSegments > 0, "Invalid path")
 
-        local a39 = a21(a38, false)
-        assert(a39, "File not found: " .. a37)
+        local readParent = resolveParent(readSegments, false)
+        assert(readParent, "File not found: " .. studioReadPath)
 
-        local a40 = a39:FindFirstChild(a38[#a38])
-        local a41 = a27(a40)
-        assert(a41, "File not found: " .. a37)
+        local readChild = readParent:FindFirstChild(readSegments[#readSegments])
+        local readValue = asStringValue(readChild)
+        assert(readValue, "File not found: " .. studioReadPath)
 
-        return a41.Value
+        return readValue.Value
     end
 
-    function a2.isfile(a42: string): boolean
-        local a43 = a17(a42)
-        if #a43 == 0 then
+    function filesystem.isfile(studioIsFilePath: string): boolean
+        local isFileSegments = splitPath(studioIsFilePath)
+        if #isFileSegments == 0 then
             return false
         end
 
-        local a44 = a21(a43, false)
-        if not a44 then
+        local isFileParent = resolveParent(isFileSegments, false)
+        if not isFileParent then
             return false
         end
 
-        return a27(a44:FindFirstChild(a43[#a43])) ~= nil
+        return asStringValue(isFileParent:FindFirstChild(isFileSegments[#isFileSegments])) ~= nil
     end
 
-    function a2.listfiles(a45: string): { string }
-        local a46 = a17(a45)
-        local a47: Instance = a16
+    function filesystem.listfiles(studioListDir: string): { string }
+        local listSegments = splitPath(studioListDir)
+        local listFolder: Instance = rootFolder
 
-        for _, a48 in a46 do
-            local a49 = a47:FindFirstChild(a48)
-            if not a49 or not a49:IsA("Folder") then
-                error("Folder not found: " .. a45)
+        for _, listSegment in listSegments do
+            local listChild = listFolder:FindFirstChild(listSegment)
+            if not listChild or not listChild:IsA("Folder") then
+                error("Folder not found: " .. studioListDir)
             end
-            a47 = a49
+            listFolder = listChild
         end
 
-        local a50: { string } = {}
-        for _, a51 in a47:GetChildren() do
-            table.insert(a50, a45 .. "/" .. a51.Name)
+        local listed: { string } = {}
+        for _, listEntry in listFolder:GetChildren() do
+            table.insert(listed, studioListDir .. "/" .. listEntry.Name)
         end
-        return a50
+        return listed
     end
 
-    function a2.delfile(a52: string)
-        local a53 = a17(a52)
-        assert(#a53 > 0, "Invalid path")
+    function filesystem.delfile(studioDeleteFilePath: string)
+        local deleteFileSegments = splitPath(studioDeleteFilePath)
+        assert(#deleteFileSegments > 0, "Invalid path")
 
-        local a54 = a21(a53, false)
-        assert(a54, "File not found: " .. a52)
+        local deleteFileParent = resolveParent(deleteFileSegments, false)
+        assert(deleteFileParent, "File not found: " .. studioDeleteFilePath)
 
-        local a55 = a54:FindFirstChild(a53[#a53])
-        local a56 = a27(a55)
-        assert(a56, "File not found: " .. a52)
+        local deleteFileChild = deleteFileParent:FindFirstChild(deleteFileSegments[#deleteFileSegments])
+        local deleteFileValue = asStringValue(deleteFileChild)
+        assert(deleteFileValue, "File not found: " .. studioDeleteFilePath)
 
-        a56:Destroy()
+        deleteFileValue:Destroy()
     end
 
-    function a2.makefolder(a57: string)
-        local a58 = a17(a57)
-        if #a58 == 0 then
+    function filesystem.makefolder(studioMakeFolderPath: string)
+        local makeFolderSegments = splitPath(studioMakeFolderPath)
+        if #makeFolderSegments == 0 then
             return
         end
 
-        local a59: Instance = a16
-        for _, a60 in a58 do
-            local a61 = a59:FindFirstChild(a60)
-            if not a61 then
-                local a62 = Instance.new("Folder")
-                a62.Name = a60
-                a62.Parent = a59
-                a61 = a62
+        local makeFolderCurrent: Instance = rootFolder
+        for _, makeFolderSegment in makeFolderSegments do
+            local makeFolderChild = makeFolderCurrent:FindFirstChild(makeFolderSegment)
+            if not makeFolderChild then
+                local makeFolderNew = Instance.new("Folder")
+                makeFolderNew.Name = makeFolderSegment
+                makeFolderNew.Parent = makeFolderCurrent
+                makeFolderChild = makeFolderNew
             end
-            a59 = a61 :: Instance
+            makeFolderCurrent = makeFolderChild :: Instance
         end
     end
 
-    function a2.isfolder(a63: string): boolean
-        local a64 = a17(a63)
-        if #a64 == 0 then
+    function filesystem.isfolder(studioIsFolderPath: string): boolean
+        local isFolderSegments = splitPath(studioIsFolderPath)
+        if #isFolderSegments == 0 then
             return false
         end
 
-        local a65: Instance = a16
-        for _, a66 in a64 do
-            local a67 = a65:FindFirstChild(a66)
-            if not a67 or not a67:IsA("Folder") then
+        local isFolderCurrent: Instance = rootFolder
+        for _, isFolderSegment in isFolderSegments do
+            local isFolderChild = isFolderCurrent:FindFirstChild(isFolderSegment)
+            if not isFolderChild or not isFolderChild:IsA("Folder") then
                 return false
             end
-            a65 = a67
+            isFolderCurrent = isFolderChild
         end
         return true
     end
 
-    function a2.delfolder(a68: string)
-        local a69 = a17(a68)
-        assert(#a69 > 0, "Invalid path")
+    function filesystem.delfolder(studioDeleteFolderPath: string)
+        local deleteFolderSegments = splitPath(studioDeleteFolderPath)
+        assert(#deleteFolderSegments > 0, "Invalid path")
 
-        local a70 = a21(a69, false)
-        assert(a70, "Folder not found: " .. a68)
+        local deleteFolderParent = resolveParent(deleteFolderSegments, false)
+        assert(deleteFolderParent, "Folder not found: " .. studioDeleteFolderPath)
 
-        local a71 = a70:FindFirstChild(a69[#a69])
-        assert(a71 and a71:IsA("Folder"), "Folder not found: " .. a68)
+        local deleteFolderChild = deleteFolderParent:FindFirstChild(deleteFolderSegments[#deleteFolderSegments])
+        assert(deleteFolderChild and deleteFolderChild:IsA("Folder"), "Folder not found: " .. studioDeleteFolderPath)
 
-        a71:Destroy()
+        deleteFolderChild:Destroy()
     end
 end
 
-if a2.writefile and not a2.appendfile then
-    function a2.appendfile(a72: string, a73: string)
-        local a74 = if a2.isfile(a72) then a2.readfile(a72) else nil
-        a2.writefile(a72, if a74 then a74 .. a73 else a73)
+if filesystem.writefile and not filesystem.appendfile then
+    function filesystem.appendfile(fallbackAppendPath: string, fallbackAppendContents: string)
+        local fallbackExisting = if filesystem.isfile(fallbackAppendPath) then filesystem.readfile(fallbackAppendPath) else nil
+        filesystem.writefile(fallbackAppendPath, if fallbackExisting then fallbackExisting .. fallbackAppendContents else fallbackAppendContents)
     end
 end
 
-function a2.ensureFolder(a75: string)
-    if not a2.isfolder(a75) then
-        a2.makefolder(a75)
+function filesystem.ensureFolder(ensureFolderPath: string)
+    if not filesystem.isfolder(ensureFolderPath) then
+        filesystem.makefolder(ensureFolderPath)
     end
 end
 
-function a2.ensureDir(a76: string)
-    local a77 = ""
-    for a78 in string.gmatch(a76, "[^/]+") do
-        a77 = if a77 == "" then a78 else a77 .. "/" .. a78
-        if not a2.isfolder(a77) then
-            a2.makefolder(a77)
+function filesystem.ensureDir(ensureDirPath: string)
+    local partial = ""
+    for ensureSegment in string.gmatch(ensureDirPath, "[^/]+") do
+        partial = if partial == "" then ensureSegment else partial .. "/" .. ensureSegment
+        if not filesystem.isfolder(partial) then
+            filesystem.makefolder(partial)
         end
     end
 end
 
-return a2
+return filesystem
 
 end)() end,
     [82] = function()local wax,script,require=ImportGlobals(82)local ImportGlobals return (function(...)
-local filesystemManager = require(script.Parent.filesystem)
-local a2 = require(script.Parent.path)
+local fs = require(script.Parent.filesystem)
+local pathUtil = require(script.Parent.path)
 
-local a3 = "Astra"
+local defaultRoot = "Astra"
 
-local a4 = {}
-a4.__index = a4
+local filesystemManager = {}
+filesystemManager.__index = filesystemManager
 
 export type FileSystemManager = {
     root: string,
@@ -27426,36 +27427,36 @@ export type FileSystemManager = {
     getRootFolder: (self: FileSystemManager) -> string,
 }
 
-function a4.new(a5: string?): FileSystemManager
-        local a6 = a5 or a3
+function filesystemManager.new(rootOverride: string?): FileSystemManager
+    local root = rootOverride or defaultRoot
     local self = setmetatable({
-        root = a6,
-        assets = a6 .. "/assets",
-    }, a4) :: any
-    pcall(filesystemManager.ensureFolder, self.root)
-    pcall(filesystemManager.ensureFolder, self.assets)
+        root = root,
+        assets = root .. "/assets",
+    }, filesystemManager) :: any
+    pcall(fs.ensureFolder, self.root)
+    pcall(fs.ensureFolder, self.assets)
 
     return self
 end
 
-function a4:getPath(a7: string?): string
-    return a2.join(self.root, a7)
+function filesystemManager:getPath(subpath: string?): string
+    return pathUtil.join(self.root, subpath)
 end
 
-function a4:getAssetsFolder(a8: string?): string
-    if a8 then
-        local a9 = a2.join(self.assets, a8)
-        pcall(filesystemManager.ensureFolder, a9)
-        return a9
+function filesystemManager:getAssetsFolder(subfolder: string?): string
+    if subfolder then
+        local folderPath = pathUtil.join(self.assets, subfolder)
+        pcall(fs.ensureFolder, folderPath)
+        return folderPath
     end
     return self.assets
 end
 
-function a4:getRootFolder(): string
+function filesystemManager:getRootFolder(): string
     return self.root
 end
 
-return a4
+return filesystemManager
 
 end)() end,
     [83] = function()local wax,script,require=ImportGlobals(83)local ImportGlobals return (function(...)
@@ -27932,15 +27933,15 @@ end)() end,
     [85] = function()local wax,script,require=ImportGlobals(85)local ImportGlobals return (function(...)
 local layouts = {}
 
-local aTopbar = require(script.Parent.Parent.layouts.Topbar)
-local aSidebar = require(script.Parent.Parent.layouts.Sidebar)
-local aSidebarCollapsed = require(script.Parent.Parent.layouts.SidebarCollapsed)
+local topbarLayout = require(script.Parent.Parent.layouts.Topbar)
+local sidebarLayout = require(script.Parent.Parent.layouts.Sidebar)
+local sidebarCollapsedLayout = require(script.Parent.Parent.layouts.SidebarCollapsed)
 
-local implementations = 64
+local topbarHeightConstant = 64
 
-local a3 = implementations - 1
-local a4 = 38
-local a5 = 3
+local tabStripTopOffset = topbarHeightConstant - 1
+local tabStripRowHeight = 38
+local chromeGap = 3
 
 export type Mode = "top" | "sidebar"
 
@@ -27982,11 +27983,11 @@ export type Layout = {
 layouts.top = {
     mode = "top" :: Mode,
 
-    topbarHeight = implementations,
-    chromeHeight = a3 + a4 + a5,
+    topbarHeight = topbarHeightConstant,
+    chromeHeight = tabStripTopOffset + tabStripRowHeight + chromeGap,
 
-    tabStripTop = a3,
-    tabStripHeight = a4,
+    tabStripTop = tabStripTopOffset,
+    tabStripHeight = tabStripRowHeight,
 
     profileHeight = 48,
     avatarSize = 34,
@@ -28005,8 +28006,8 @@ layouts.top = {
 layouts.sidebar = {
     mode = "sidebar" :: Mode,
 
-    topbarHeight = implementations,
-    chromeHeight = implementations,
+    topbarHeight = topbarHeightConstant,
+    chromeHeight = topbarHeightConstant,
 
             railWidth = 219,
             railCollapsedWidth = 64,
@@ -28045,160 +28046,160 @@ layouts.sidebar = {
         fadeCorners = { "BottomLeftRadius", "BottomRightRadius" },
 } :: Layout
 
-local a6 = table.clone(layouts.sidebar)
-a6.forceCollapsed = true
+local collapsedSidebarLayout = table.clone(layouts.sidebar)
+collapsedSidebarLayout.forceCollapsed = true
 
-local aImplementations = {
-    top = aTopbar,
-    sidebar = aSidebar,
-    collapsedSidebar = aSidebarCollapsed,
+local implementments = {
+    top = topbarLayout,
+    sidebar = sidebarLayout,
+    collapsedSidebar = sidebarCollapsedLayout,
 }
 
-function layouts.get(a7: unknown): Layout?
-    if a7 == "sidebar" then
+function layouts.get(requestedMode: unknown): Layout?
+    if requestedMode == "sidebar" then
         return layouts.sidebar
-    elseif a7 == "collapsedSidebar" then
-        return a6
-    elseif a7 == "top" then
+    elseif requestedMode == "collapsedSidebar" then
+        return collapsedSidebarLayout
+    elseif requestedMode == "top" then
         return layouts.top
     end
     return nil
 end
 
-function layouts.implementation(a7: unknown)
-    return aImplementations[a7]
+function layouts.implementation(requestedMode: unknown)
+    return implementments[requestedMode]
 end
 
-function layouts.railWidthFor(a8: Layout, a9: number): number
-    if a8.mode ~= "sidebar" then
+function layouts.railWidthFor(layout: Layout, viewportWidth: number): number
+    if layout.mode ~= "sidebar" then
         return 0
     end
-    local a10 = a8.railWidth :: number
-    if a8.forceCollapsed or a9 < (a8.railCollapseBelow :: number) then
-        return a8.railCollapsedWidth :: number
+    local expandedWidth = layout.railWidth :: number
+    if layout.forceCollapsed or viewportWidth < (layout.railCollapseBelow :: number) then
+        return layout.railCollapsedWidth :: number
     end
-    return a10
+    return expandedWidth
 end
 
 return layouts
 
 end)() end,
     [86] = function()local wax,script,require=ImportGlobals(86)local ImportGlobals return (function(...)
-local locale = require(script.Parent.Parent.core.state)
-local translator = require(script.Parent.log)
+local coreState = require(script.Parent.Parent.core.state)
+local logger = require(script.Parent.log)
 
-local translations = {}
+local locale = {}
 
 export type LocaleToken = { [any]: string }
 export type Translator = (source: string, localeId: string) -> string?
 export type TranslationTables = { [string]: { [string]: string } }
 
-translations.strings = {} :: TranslationTables
-translations.current = "en"
-translations.translator = nil :: Translator?
+locale.strings = {} :: TranslationTables
+locale.current = "en"
+locale.translator = nil :: Translator?
 
-local currentLocale = {}
+local tokenKey = {}
 
-local function a5(id: string): string
+local function languagePrefix(id: string): string
     return string.match(id, "^(%a+)") or id
 end
 
-function translations.t(a6: unknown): unknown
-    if type(a6) ~= "string" or a6 == "" then
-        return a6
+function locale.t(value: unknown): unknown
+    if type(value) ~= "string" or value == "" then
+        return value
     end
-    return { [currentLocale] = a6 }
+    return { [tokenKey] = value }
 end
 
-function translations.isToken(a7: unknown): boolean
-    return type(a7) == "table" and type((a7 :: { [any]: unknown })[currentLocale]) == "string"
+function locale.isToken(candidate: unknown): boolean
+    return type(candidate) == "table" and type((candidate :: { [any]: unknown })[tokenKey]) == "string"
 end
 
-function translations.sourceOf(a8: LocaleToken): string
-    return a8[currentLocale]
+function locale.sourceOf(token: LocaleToken): string
+    return token[tokenKey]
 end
 
-function translations.resolve(a9: unknown): any
-    if type(a9) ~= "string" then
-        return a9
+function locale.resolve(text: unknown): any
+    if type(text) ~= "string" then
+        return text
     end
 
-    if translations.translator then
-        local ok, a10 = pcall(translations.translator, a9, translations.current)
-        if ok and type(a10) == "string" and a10 ~= "" then
-            return a10
+    if locale.translator then
+        local ok, translated = pcall(locale.translator, text, locale.current)
+        if ok and type(translated) == "string" and translated ~= "" then
+            return translated
         end
     end
 
-    local a11 = translations.strings[translations.current]
-    if a11 and a11[a9] then
-        return a11[a9]
+    local exactTable = locale.strings[locale.current]
+    if exactTable and exactTable[text] then
+        return exactTable[text]
     end
 
-    local a12 = translations.strings[a5(translations.current)]
-    if a12 and a12[a9] then
-        return a12[a9]
+    local prefixTable = locale.strings[languagePrefix(locale.current)]
+    if prefixTable and prefixTable[text] then
+        return prefixTable[text]
     end
 
-    return a9
+    return text
 end
 
-function translations.register(a13: TranslationTables?)
-    if type(a13) ~= "table" then
+function locale.register(tables: TranslationTables?)
+    if type(tables) ~= "table" then
         return
     end
-    for id, a14 in a13 do
-        if type(id) == "string" and type(a14) == "table" then
+    for id, entryTable in tables do
+        if type(id) == "string" and type(entryTable) == "table" then
             id = string.lower(id)
-            local a15 = translations.strings[id]
-            if not a15 then
-                a15 = {}
-                translations.strings[id] = a15
+            local target = locale.strings[id]
+            if not target then
+                target = {}
+                locale.strings[id] = target
             end
-            for a16, a17 in a14 do
-                if type(a16) == "string" and type(a17) == "string" then
-                    a15[a16] = a17
+            for sourceKey, sourceText in entryTable do
+                if type(sourceKey) == "string" and type(sourceText) == "string" then
+                    target[sourceKey] = sourceText
                 else
-                    translator.warn(`Astra: skipping a '{id}' translation, entries must be string to string.`)
+                    logger.warn(`Astra: skipping a '{id}' translation, entries must be string to string.`)
                 end
             end
         end
     end
 end
 
-function translations.setActive(a18: string?): string
-    translations.current = if type(a18) == "string" and a18 ~= "" then string.lower(a18) else "en"
-    return translations.current
+function locale.setActive(requestedLocale: string?): string
+    locale.current = if type(requestedLocale) == "string" and requestedLocale ~= "" then string.lower(requestedLocale) else "en"
+    return locale.current
 end
 
-function translations.detect(): string
-    local id = locale.localizationService.RobloxLocaleId
+function locale.detect(): string
+    local id = coreState.localizationService.RobloxLocaleId
     if type(id) == "string" and id ~= "" then
         return string.lower(id)
     end
     return "en"
 end
 
-return translations
+return locale
 
 end)() end,
     [87] = function()local wax,script,require=ImportGlobals(87)local ImportGlobals return (function(...)
-local function lockable<T>(a2: T): T
-    local a3 = a2 :: any
+local function lockable<T>(element: T): T
+    local target = element :: any
 
-        function a3:Lock(a4: string?)
-        self.window:_setElementLocked(self, true, a4)
+    function target:Lock(reason: string?)
+        self.window:_setElementLocked(self, true, reason)
     end
 
-    function a3:Unlock()
+    function target:Unlock()
         self.window:_setElementLocked(self, false)
     end
 
-    function a3:IsLocked(): boolean
+    function target:IsLocked(): boolean
         return self.locked == true
     end
 
-    return a2
+    return element
 end
 
 return lockable
@@ -28209,7 +28210,7 @@ local log = {}
 
 type SuppressPredicate = () -> boolean
 
-local function prefix(): boolean
+local function defaultSecureModePredicate(): boolean
     if typeof(getgenv) ~= "function" then
         return false
     end
@@ -28219,33 +28220,33 @@ local function prefix(): boolean
     return ok and secureModeSource == true
 end
 
-local a4: SuppressPredicate = prefix
-local a5: SuppressPredicate? = nil
+local secureModePredicate: SuppressPredicate = defaultSecureModePredicate
+local suppressPredicate: SuppressPredicate? = nil
 
-function log.setSecureModeSource(a6: SuppressPredicate?)
-    a4 = if type(a6) == "function" then a6 else prefix
+function log.setSecureModeSource(source: SuppressPredicate?)
+    secureModePredicate = if type(source) == "function" then source else defaultSecureModePredicate
 end
 
-function log.setSuppressPredicate(a7: SuppressPredicate?)
-    a5 = if type(a7) == "function" then a7 else nil
+function log.setSuppressPredicate(predicate: SuppressPredicate?)
+    suppressPredicate = if type(predicate) == "function" then predicate else nil
 end
 
-local function a8(): boolean
-    if a5 and a5() then
+local function shouldSuppress(): boolean
+    if suppressPredicate and suppressPredicate() then
         return true
     end
-    return a4()
+    return secureModePredicate()
 end
 
 function log.warn(...)
-    if a8() then
+    if shouldSuppress() then
         return
     end
     warn(...)
 end
 
 function log.print(...)
-    if a8() then
+    if shouldSuppress() then
         return
     end
     print(...)
@@ -28256,31 +28257,31 @@ return log
 end)() end,
     [89] = function()local wax,script,require=ImportGlobals(89)local ImportGlobals return (function(...)
 local function moveable<T>(dragState: T): T
-    local a3 = dragState :: any
+    local target = dragState :: any
 
-    function a3:MoveTo(a4: number)
-        self.tab:_moveElement(self, a4)
+    function target:MoveTo(index: number)
+        self.tab:_moveElement(self, index)
     end
 
-    function a3:MoveToTop()
+    function target:MoveToTop()
         self.tab:_moveElement(self, 1)
     end
 
-    function a3:MoveToBottom()
+    function target:MoveToBottom()
         self.tab:_moveElement(self, #self.tab.elements)
     end
 
-    function a3:MoveUp()
-        local a5 = table.find(self.tab.elements, self)
-        if a5 then
-            self.tab:_moveElement(self, a5 - 1)
+    function target:MoveUp()
+        local upPosition = table.find(self.tab.elements, self)
+        if upPosition then
+            self.tab:_moveElement(self, upPosition - 1)
         end
     end
 
-    function a3:MoveDown()
-        local a6 = table.find(self.tab.elements, self)
-        if a6 then
-            self.tab:_moveElement(self, a6 + 1)
+    function target:MoveDown()
+        local downPosition = table.find(self.tab.elements, self)
+        if downPosition then
+            self.tab:_moveElement(self, downPosition + 1)
         end
     end
 
@@ -28296,110 +28297,110 @@ network.__index = network
 
 export type RequestFn = (...any) -> any
 
-function network.getRequestFn(a2: any?): RequestFn?
-    a2 = a2 or getfenv()
-    return a2.request
-        or a2.http_request
-        or (a2.http and a2.http.request)
-        or (a2.syn and a2.syn.request)
-        or (a2.fluxus and a2.fluxus.request)
+function network.getRequestFn(env: any?): RequestFn?
+    env = env or getfenv()
+    return env.request
+        or env.http_request
+        or (env.http and env.http.request)
+        or (env.syn and env.syn.request)
+        or (env.fluxus and env.fluxus.request)
 end
 
 return network
 
 end)() end,
     [91] = function()local wax,script,require=ImportGlobals(91)local ImportGlobals return (function(...)
-local odometer = require(script.Parent.Parent.core.state)
-local a2 = odometer.textService
+local coreState = require(script.Parent.Parent.core.state)
+local textService = coreState.textService
 
-local a3 = {}
-a3.__index = a3
+local odometer = {}
+odometer.__index = odometer
 
-local a4 = 20
+local reelCells = 20
 
-local function a5(a6, a7, a8)
-    local a9 = Instance.new("GetTextBoundsParams")
-    a9.Text = a8
-    a9.Font = a6
-    a9.Size = a7
-    a9.Width = math.huge
-    local ok, a10 = pcall(a2.GetTextBoundsAsync, a2, a9)
-    return if ok then a10 else Vector2.new(a7 * 0.6, a7)
+local function measureText(font, size, text)
+    local params = Instance.new("GetTextBoundsParams")
+    params.Text = text
+    params.Font = font
+    params.Size = size
+    params.Width = math.huge
+    local ok, bounds = pcall(textService.GetTextBoundsAsync, textService, params)
+    return if ok then bounds else Vector2.new(size * 0.6, size)
 end
 
-local a11 = {}
-local a12 = 0
-local a13 = 64
-local function a14(a15, a16)
-        local a17 = tostring(a15.Family)
+local metricsCache = {}
+local cacheCount = 0
+local cacheLimit = 64
+local function fontMetrics(metricFont, metricSize)
+        local cacheKey = tostring(metricFont.Family)
         .. "|"
-        .. tostring(a15.Weight)
+        .. tostring(metricFont.Weight)
         .. "|"
-        .. tostring(a15.Style)
+        .. tostring(metricFont.Style)
         .. "|"
-        .. tostring(a16)
-    local a18 = a11[a17]
-    if a18 then
-        return a18
+        .. tostring(metricSize)
+    local entry = metricsCache[cacheKey]
+    if entry then
+        return entry
     end
 
-    local a19, a20 = {}, 0
-    for d = 0, 9 do
-        local w = math.ceil(a5(a15, a16, tostring(d)).X)
-        a19[d] = w
-        if w > a20 then
-            a20 = w
+    local advances, widest = {}, 0
+    for measuredDigit = 0, 9 do
+        local glyphWidth = math.ceil(measureText(metricFont, metricSize, tostring(measuredDigit)).X)
+        advances[measuredDigit] = glyphWidth
+        if glyphWidth > widest then
+            widest = glyphWidth
         end
     end
-    a18 = { advance = a19, maxWidth = a20 }
-    if a12 >= a13 then
-        a11 = {}
-        a12 = 0
+    entry = { advance = advances, maxWidth = widest }
+    if cacheCount >= cacheLimit then
+        metricsCache = {}
+        cacheCount = 0
     end
-    a11[a17] = a18
-    a12 += 1
-    return a18
+    metricsCache[cacheKey] = entry
+    cacheCount += 1
+    return entry
 end
 
-function a3.new(window, a21, a22)
-    a22 = a22 or {}
+function odometer.new(window, container, options)
+    options = options or {}
     local self = setmetatable({
         window = window,
-        container = a21,
-        textSize = a22.textSize or 16,
-        transparency = a22.transparency or 1,         duration = a22.duration or 0.55,
-        slots = {},         length = 0,     }, a3)
+        container = container,
+        textSize = options.textSize or 16,
+        transparency = options.transparency or 1,         duration = options.duration or 0.55,
+        slots = {},         length = 0,     }, odometer)
 
     self.roll = TweenInfo.new(self.duration, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-            self.zIndex = math.max(a21.ZIndex + 1, 6)
+            self.zIndex = math.max(container.ZIndex + 1, 6)
 
             self.height = math.ceil(self.textSize)
 
-                local a23 = a14(window.theme.Font, self.textSize)
-    self.advance = a23.advance
-    self.maxWidth = a23.maxWidth
+                local metrics = fontMetrics(window.theme.Font, self.textSize)
+    self.advance = metrics.advance
+    self.maxWidth = metrics.maxWidth
 
     window:Create("UIListLayout", {
         FillDirection = Enum.FillDirection.Horizontal,
         VerticalAlignment = Enum.VerticalAlignment.Center,
-        HorizontalAlignment = a22.alignment or Enum.HorizontalAlignment.Left,
+        HorizontalAlignment = options.alignment or Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
         Padding = UDim.new(0, 0),
 
-        Parent = a21,
+        Parent = container,
     })
 
     return self
 end
 
-function a3:_reel(a24)
-    local a25 = self.slots[a24]
-    if a25.reel then
-        return a25.reel
+function odometer:_reel(reelIndex)
+    local slot = self.slots[reelIndex]
+    if slot.reel then
+        return slot.reel
     end
 
-    local a26 = self.window:Create("Frame", {
+    local cell = self.window:Create("Frame", {
         Name = "Reel",
         Size = UDim2.fromOffset(self.maxWidth, self.height),
         BackgroundTransparency = 1,
@@ -28410,17 +28411,17 @@ function a3:_reel(a24)
         Parent = self.container,
     })
 
-    local a27 = self.window:Create("Frame", {
+    local strip = self.window:Create("Frame", {
         Size = UDim2.fromOffset(self.maxWidth, self.height),
         AnchorPoint = Vector2.new(0.5, 0),         Position = UDim2.new(0.5, 0, 0, 0),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ZIndex = self.zIndex,
 
-        Parent = a26,
+        Parent = cell,
     })
 
-    for i = 0, a4 - 1 do
+    for i = 0, reelCells - 1 do
         self.window:Create("TextLabel", {
             Text = tostring(i % 10),
             Position = UDim2.fromOffset(0, i * self.height),
@@ -28433,22 +28434,22 @@ function a3:_reel(a24)
             TextTransparency = self.transparency,
             ZIndex = self.zIndex,
 
-            Parent = a27,
+            Parent = strip,
         }, { TextColor3 = "ContentColor", FontFace = "Font" })
     end
 
-    local a28 = { cell = a26, strip = a27, digit = 0, target = 0, stripTween = nil, sizeTween = nil }
-    a25.reel = a28
-    return a28
+    local reel = { cell = cell, strip = strip, digit = 0, target = 0, stripTween = nil, sizeTween = nil }
+    slot.reel = reel
+    return reel
 end
 
-function a3:_static(a29)
-    local a30 = self.slots[a29]
-    if a30.static then
-        return a30.static
+function odometer:_static(staticIndex)
+    local staticSlot = self.slots[staticIndex]
+    if staticSlot.static then
+        return staticSlot.static
     end
 
-    local a31 = self.window:Create("TextLabel", {
+    local staticLabel = self.window:Create("TextLabel", {
         Name = "Static",
         Size = UDim2.fromOffset(0, self.height),
         AutomaticSize = Enum.AutomaticSize.X,
@@ -28463,162 +28464,162 @@ function a3:_static(a29)
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-    a30.static = a31
-    return a31
+    staticSlot.static = staticLabel
+    return staticLabel
 end
 
-local function a32(a33)
-    if a33.stripTween then
-        a33.stripTween:Cancel()
-        a33.stripTween = nil
+local function cancelTweens(reelState)
+    if reelState.stripTween then
+        reelState.stripTween:Cancel()
+        reelState.stripTween = nil
     end
-    if a33.sizeTween then
-        a33.sizeTween:Cancel()
-        a33.sizeTween = nil
+    if reelState.sizeTween then
+        reelState.sizeTween:Cancel()
+        reelState.sizeTween = nil
     end
 end
 
-function a3:_reelSnap(a34, a35)
-    a32(a34)
-    a34.cell.Size = UDim2.fromOffset(self.advance[a35], self.height)
-    a34.strip.Position = UDim2.new(0.5, 0, 0, -a35 * self.height)
-    a34.digit = a35
-    a34.target = a35
+function odometer:_reelSnap(snapReel, snapDigit)
+    cancelTweens(snapReel)
+    snapReel.cell.Size = UDim2.fromOffset(self.advance[snapDigit], self.height)
+    snapReel.strip.Position = UDim2.new(0.5, 0, 0, -snapDigit * self.height)
+    snapReel.digit = snapDigit
+    snapReel.target = snapDigit
 end
 
-function a3:_reelRoll(a36, a37, up)
-        if a36.stripTween or a36.sizeTween then
-        self:_reelSnap(a36, a36.target)
+function odometer:_reelRoll(rollReel, rollDigit, up)
+        if rollReel.stripTween or rollReel.sizeTween then
+        self:_reelSnap(rollReel, rollReel.target)
     end
 
-    local a = a36.digit
-    if a == a37 then
+    local currentDigit = rollReel.digit
+    if currentDigit == rollDigit then
         return
     end
 
-    local a38, a39
+    local fromRow, toRow
     if up then
-        a38 = a
-        a39 = a + (a37 - a) % 10     else
-        a38 = a + 10         a39 = a38 - (a - a37) % 10
+        fromRow = currentDigit
+        toRow = currentDigit + (rollDigit - currentDigit) % 10     else
+        fromRow = currentDigit + 10         toRow = fromRow - (currentDigit - rollDigit) % 10
     end
 
-    a36.strip.Position = UDim2.new(0.5, 0, 0, -a38 * self.height)
-    a36.target = a37
+    rollReel.strip.Position = UDim2.new(0.5, 0, 0, -fromRow * self.height)
+    rollReel.target = rollDigit
 
-        local a40 = odometer.tweenService:Create(a36.strip, self.roll, {
-        Position = UDim2.new(0.5, 0, 0, -a39 * self.height),
+        local stripTween = coreState.tweenService:Create(rollReel.strip, self.roll, {
+        Position = UDim2.new(0.5, 0, 0, -toRow * self.height),
     })
-    local a41 = odometer.tweenService:Create(a36.cell, self.roll, {
-        Size = UDim2.fromOffset(self.advance[a37], self.height),
+    local sizeTween = coreState.tweenService:Create(rollReel.cell, self.roll, {
+        Size = UDim2.fromOffset(self.advance[rollDigit], self.height),
     })
-    a36.stripTween = a40
-    a36.sizeTween = a41
-    a40.Completed:Connect(function(a42)
-        if a42 == Enum.PlaybackState.Completed and a36.stripTween == a40 then
-            self:_reelSnap(a36, a37)
+    rollReel.stripTween = stripTween
+    rollReel.sizeTween = sizeTween
+    stripTween.Completed:Connect(function(playbackState)
+        if playbackState == Enum.PlaybackState.Completed and rollReel.stripTween == stripTween then
+            self:_reelSnap(rollReel, rollDigit)
         end
     end)
-    a40:Play()
-    a41:Play()
-    a36.digit = a37
+    stripTween:Play()
+    sizeTween:Play()
+    rollReel.digit = rollDigit
 end
 
-function a3:_putDigit(a43, a44, up, a45)
-    local a46 = self:_reel(a43)
-    local a47 = not a46.cell.Visible
-    a46.cell.Visible = true
-    a46.cell.LayoutOrder = -a43
-    if self.slots[a43].static then
-        self.slots[a43].static.Visible = false
+function odometer:_putDigit(digitIndex, digitValue, up, animate)
+    local digitReel = self:_reel(digitIndex)
+    local wasHidden = not digitReel.cell.Visible
+    digitReel.cell.Visible = true
+    digitReel.cell.LayoutOrder = -digitIndex
+    if self.slots[digitIndex].static then
+        self.slots[digitIndex].static.Visible = false
     end
-    if a45 and not a47 then
-        self:_reelRoll(a46, a44, up)
+    if animate and not wasHidden then
+        self:_reelRoll(digitReel, digitValue, up)
     else
-        self:_reelSnap(a46, a44)
+        self:_reelSnap(digitReel, digitValue)
     end
 end
 
-function a3:_putStatic(a48, a49)
-    local a50 = self:_static(a48)
-    if not a50.Visible then
-                a50.TextTransparency = self.transparency
+function odometer:_putStatic(staticPutIndex, staticChar)
+    local staticTarget = self:_static(staticPutIndex)
+    if not staticTarget.Visible then
+                staticTarget.TextTransparency = self.transparency
     end
-    a50.Text = a49
-    a50.Visible = true
-    a50.LayoutOrder = -a48
-    if self.slots[a48].reel then
-        self.slots[a48].reel.cell.Visible = false
+    staticTarget.Text = staticChar
+    staticTarget.Visible = true
+    staticTarget.LayoutOrder = -staticPutIndex
+    if self.slots[staticPutIndex].reel then
+        self.slots[staticPutIndex].reel.cell.Visible = false
     end
 end
 
-function a3:_hide(a51)
-    local a52 = self.slots[a51]
-    if not a52 then
+function odometer:_hide(hideIndex)
+    local hideSlot = self.slots[hideIndex]
+    if not hideSlot then
         return
     end
-    if a52.reel then
-        a52.reel.cell.Visible = false
+    if hideSlot.reel then
+        hideSlot.reel.cell.Visible = false
     end
-    if a52.static then
-        a52.static.Visible = false
+    if hideSlot.static then
+        hideSlot.static.Visible = false
     end
 end
 
-function a3:_render(a53, a54, up)
-    a53 = tostring(a53)
+function odometer:_render(renderValue, renderAnimate, up)
+    renderValue = tostring(renderValue)
 
-        if a53 == self._lastText then
+        if renderValue == self._lastText then
         return
     end
-    self._lastText = a53
+    self._lastText = renderValue
 
-            local a55 = {}
-    for _, a56 in utf8.codes(a53) do
-        table.insert(a55, utf8.char(a56))
+            local chars = {}
+    for _, codepoint in utf8.codes(renderValue) do
+        table.insert(chars, utf8.char(codepoint))
     end
 
-    local n = #a55
-    for i = 0, math.max(n, self.length) - 1 do
+    local charCount = #chars
+    for i = 0, math.max(charCount, self.length) - 1 do
         self.slots[i] = self.slots[i] or {}
-        if i < n then
-            local a57 = a55[n - i]             if a57:match("%d") then
-                self:_putDigit(i, tonumber(a57), up, a54)
+        if i < charCount then
+            local glyphChar = chars[charCount - i]             if glyphChar:match("%d") then
+                self:_putDigit(i, tonumber(glyphChar), up, renderAnimate)
             else
-                self:_putStatic(i, a57)
+                self:_putStatic(i, glyphChar)
             end
         else
             self:_hide(i)
         end
     end
-    self.length = n
+    self.length = charCount
 end
 
-function a3:to(a58, up)
-    self:_render(a58, true, up)
+function odometer:to(targetValue, up)
+    self:_render(targetValue, true, up)
 end
 
-function a3:snap(a59)
-    self:_render(a59, false, true)
+function odometer:snap(snapValue)
+    self:_render(snapValue, false, true)
 end
 
-function a3:reveal(a60, a61, a62)
-    self.transparency = a60
-    for _, a63 in self.slots do
-        if a63.static and a63.static.Visible then
-            self.window:_reveal(a63.static, { TextTransparency = a60 }, a61, a62)
+function odometer:reveal(targetTransparency, revealTweenInfo, revealOverride)
+    self.transparency = targetTransparency
+    for _, revealSlot in self.slots do
+        if revealSlot.static and revealSlot.static.Visible then
+            self.window:_reveal(revealSlot.static, { TextTransparency = targetTransparency }, revealTweenInfo, revealOverride)
         end
-        if a63.reel then
-            for _, a64 in a63.reel.strip:GetChildren() do
-                if a64:IsA("TextLabel") then
-                    self.window:_reveal(a64, { TextTransparency = a60 }, a61, a62)
+        if revealSlot.reel then
+            for _, revealLabel in revealSlot.reel.strip:GetChildren() do
+                if revealLabel:IsA("TextLabel") then
+                    self.window:_reveal(revealLabel, { TextTransparency = targetTransparency }, revealTweenInfo, revealOverride)
                 end
             end
         end
     end
 end
 
-return a3
+return odometer
 
 end)() end,
     [92] = function()local wax,script,require=ImportGlobals(92)local ImportGlobals return (function(...)
@@ -28627,10 +28628,10 @@ type OrderedElement = {
     descriptor: { main: GuiObject }?,
 }
 
-local function ordering(element: OrderedElement, a2: number)
-    element.main.LayoutOrder = a2
+local function ordering(element: OrderedElement, order: number)
+    element.main.LayoutOrder = order
     if element.descriptor then
-        element.descriptor.main.LayoutOrder = a2 + 1
+        element.descriptor.main.LayoutOrder = order + 1
     end
 end
 
@@ -28640,49 +28641,49 @@ end)() end,
     [93] = function()local wax,script,require=ImportGlobals(93)local ImportGlobals return (function(...)
 local path = {}
 
-function path.join(a2: string, a3: string?): string
-    if not a3 or a3 == "" then
-        return a2
+function path.join(base: string, suffix: string?): string
+    if not suffix or suffix == "" then
+        return base
     end
 
-    return a2 .. "/" .. a3
+    return base .. "/" .. suffix
 end
 
-local function a4(a5: string): string
-    local a6
+local function stripDotDot(input: string): string
+    local previous
     repeat
-        a6 = a5
-        a5 = a5:gsub("%.%.", "")
-    until a5 == a6
-    return a5
+        previous = input
+        input = input:gsub("%.%.", "")
+    until input == previous
+    return input
 end
 
-function path.sanitizeFolder(a7: unknown): string
-    local a8 = tostring(a7):gsub("\\", "/"):gsub('[:<>"|?*%c]', "")
-    a8 = a4(a8):gsub("/+", "/")
-    return (a8:gsub("^/+", ""))
+function path.sanitizeFolder(folderValue: unknown): string
+    local cleanedFolder = tostring(folderValue):gsub("\\", "/"):gsub('[:<>"|?*%c]', "")
+    cleanedFolder = stripDotDot(cleanedFolder):gsub("/+", "/")
+    return (cleanedFolder:gsub("^/+", ""))
 end
 
-function path.sanitizeFile(a9: unknown): string
-    local a10 = tostring(a9):gsub("[/\\]", ""):gsub('[:<>"|?*%c]', "")
-    return a4(a10)
+function path.sanitizeFile(fileValue: unknown): string
+    local cleanedFile = tostring(fileValue):gsub("[/\\]", ""):gsub('[:<>"|?*%c]', "")
+    return stripDotDot(cleanedFile)
 end
 
-function path.basename(a11: unknown): string
-    return tostring(a11):match("[^/\\]+$") or tostring(a11)
+function path.basename(pathValue: unknown): string
+    return tostring(pathValue):match("[^/\\]+$") or tostring(pathValue)
 end
 
-function path.stripExtension(a12: unknown, a13: string?): string
-    if a13 and a13 ~= "" then
-        local a14 = tostring(a12)
-        if a14:sub(-#a13) == a13 then
-            return a14:sub(1, -#a13 - 1)
+function path.stripExtension(nameValue: unknown, extension: string?): string
+    if extension and extension ~= "" then
+        local nameText = tostring(nameValue)
+        if nameText:sub(-#extension) == extension then
+            return nameText:sub(1, -#extension - 1)
         end
-        return a14
+        return nameText
     end
 
-    local a15 = tostring(a12):match("^(.+)%.%w+$")
-    return a15 or tostring(a12)
+    local matchedName = tostring(nameValue):match("^(.+)%.%w+$")
+    return matchedName or tostring(nameValue)
 end
 
 return path
@@ -28691,31 +28692,31 @@ end)() end,
     [94] = function()local wax,script,require=ImportGlobals(94)local ImportGlobals return (function(...)
 local persistence = {}
 
-local a2 = require(script.Parent.persistenceConfig)
-local a3 = require(script.Parent.persistenceSettings)
+local configPersistence = require(script.Parent.persistenceConfig)
+local settingsPersistence = require(script.Parent.persistenceSettings)
 
-persistence.getPath = a2.getPath
-persistence.save = a2.save
-persistence.load = a2.load
-persistence.applyTo = a2.applyTo
-persistence.list = a2.list
-persistence.delete = a2.delete
-persistence.getSettingsPath = a3.getSettingsPath
-persistence.saveSettings = a3.saveSettings
-persistence.loadSettings = a3.loadSettings
+persistence.getPath = configPersistence.getPath
+persistence.save = configPersistence.save
+persistence.load = configPersistence.load
+persistence.applyTo = configPersistence.applyTo
+persistence.list = configPersistence.list
+persistence.delete = configPersistence.delete
+persistence.getSettingsPath = settingsPersistence.getSettingsPath
+persistence.saveSettings = settingsPersistence.saveSettings
+persistence.loadSettings = settingsPersistence.loadSettings
 
 return persistence
 
 end)() end,
     [95] = function()local wax,script,require=ImportGlobals(95)local ImportGlobals return (function(...)
-local persistenceConfig = require(script.Parent.Parent.core.state)
-local a2 = require(script.Parent.filesystem)
-local a3 = require(script.Parent.log)
-local a4 = require(script.Parent.path)
-local a5 = require(script.Parent.persistencePaths)
-local a6 = require(script.Parent.persistenceWrite)
+local coreState = require(script.Parent.Parent.core.state)
+local fs = require(script.Parent.filesystem)
+local logger = require(script.Parent.log)
+local pathUtil = require(script.Parent.path)
+local paths = require(script.Parent.persistencePaths)
+local writer = require(script.Parent.persistenceWrite)
 
-local a7 = {}
+local persistenceConfig = {}
 
 type PersistedControl = {
     value: unknown,
@@ -28738,222 +28739,222 @@ type ConfigWindow = {
     _loadedConfigPath: string?,
 }
 
-function a7.getPath(window: ConfigWindow, a8: unknown?): (string?, string?)
-    return a5.getConfigPath(window, a8)
+function persistenceConfig.getPath(window: ConfigWindow, requestedName: unknown?): (string?, string?)
+    return paths.getConfigPath(window, requestedName)
 end
 
-function a7.save(window: ConfigWindow, a9: unknown?): boolean
-    local a10, a11 = a7.getPath(window, a9)
-    if not a10 or not a11 then
-        a3.warn("Astra: configuration name '" .. tostring(a9) .. "' has no usable characters")
+function persistenceConfig.save(window: ConfigWindow, saveName: unknown?): boolean
+    local saveFolder, savePath = persistenceConfig.getPath(window, saveName)
+    if not saveFolder or not savePath then
+        logger.warn("Astra: configuration name '" .. tostring(saveName) .. "' has no usable characters")
         return false
     end
 
-        if typeof(a2.writefile) ~= "function" then
+        if typeof(fs.writefile) ~= "function" then
         return false
     end
 
-    local a12: { [string]: unknown } = {}
-    for a13, a14 in window.controls do
-        local ok, a15 = pcall(function()
-            local a16 = a14._serialize
-            if a16 then
-                return a16(a14)
+    local payload: { [string]: unknown } = {}
+    for controlFlag, control in window.controls do
+        local ok, serialized = pcall(function()
+            local serializer = control._serialize
+            if serializer then
+                return serializer(control)
             end
-            return a14.value
+            return control.value
         end)
         if ok then
-            a12[a13] = a15
+            payload[controlFlag] = serialized
         else
-            a3.warn("Astra: Failed to serialize flag '" .. tostring(a13) .. "' - " .. tostring(a15))
+            logger.warn("Astra: Failed to serialize flag '" .. tostring(controlFlag) .. "' - " .. tostring(serialized))
         end
     end
 
-                local a17 = window._loadedConfig
-    if a17 and window._loadedConfigPath == a11 then
-        for a18, a19 in a17 do
-            if window.controls[a18] == nil then
-                a12[a18] = a19
+                local loadedConfig = window._loadedConfig
+    if loadedConfig and window._loadedConfigPath == savePath then
+        for preservedKey, preservedValue in loadedConfig do
+            if window.controls[preservedKey] == nil then
+                payload[preservedKey] = preservedValue
             end
         end
     end
 
-    local a20, a21 = pcall(persistenceConfig.httpService.JSONEncode, persistenceConfig.httpService, a12)
-    if not a20 then
-        a3.warn("Astra: Failed to encode configuration - " .. tostring(a21))
+    local encodeOk, encoded = pcall(coreState.httpService.JSONEncode, coreState.httpService, payload)
+    if not encodeOk then
+        logger.warn("Astra: Failed to encode configuration - " .. tostring(encoded))
         return false
     end
 
-    local ok, a22 = pcall(function()
-        a6.write(a10, a11, a21)
+    local ok, writeErr = pcall(function()
+        writer.write(saveFolder, savePath, encoded)
     end)
 
     if not ok then
-        a3.warn("Astra: Failed to save configuration - " .. tostring(a22))
+        logger.warn("Astra: Failed to save configuration - " .. tostring(writeErr))
         return false
     end
 
-                if window._loadedConfigPath == nil or window._loadedConfigPath == a11 then
-        window._loadedConfig = a12
-        window._loadedConfigPath = a11
+                if window._loadedConfigPath == nil or window._loadedConfigPath == savePath then
+        window._loadedConfig = payload
+        window._loadedConfigPath = savePath
     end
 
     return true
 end
 
-local function a23(a24: string): ({ [string]: unknown }?, string?)
-    if not a2.isfile(a24) then
+local function readFile(sourcePath: string): ({ [string]: unknown }?, string?)
+    if not fs.isfile(sourcePath) then
         return nil, nil
     end
 
-    local a25, a26 = pcall(a2.readfile, a24)
-    if not a25 or type(a26) ~= "string" then
-        a3.warn("Astra: Failed to read configuration file")
+    local readOk, raw = pcall(fs.readfile, sourcePath)
+    if not readOk or type(raw) ~= "string" then
+        logger.warn("Astra: Failed to read configuration file")
         return nil, nil
     end
 
-    local a27, a28 = pcall(persistenceConfig.httpService.JSONDecode, persistenceConfig.httpService, a26)
+    local decodeOk, decoded = pcall(coreState.httpService.JSONDecode, coreState.httpService, raw)
 
-        if not a27 or type(a28) ~= "table" then
-        return nil, a26
+        if not decodeOk or type(decoded) ~= "table" then
+        return nil, raw
     end
 
-    return a28 :: { [string]: unknown }, a26
+    return decoded :: { [string]: unknown }, raw
 end
 
-local function a29(a30: string): string
-        local a31 = a4.stripExtension(a30, ".rfld")
-    local a32 = a31 .. " (Incorrect Format).rfld"
-    local a33 = 2
-    while a33 <= 100 and a2.isfile(a32) do
-        a32 = a31 .. " (Incorrect Format " .. a33 .. ").rfld"
-        a33 += 1
+local function backupPathFor(targetPath: string): string
+        local stem = pathUtil.stripExtension(targetPath, ".rfld")
+    local candidatePath = stem .. " (Incorrect Format).rfld"
+    local counter = 2
+    while counter <= 100 and fs.isfile(candidatePath) do
+        candidatePath = stem .. " (Incorrect Format " .. counter .. ").rfld"
+        counter += 1
     end
-    return a32
+    return candidatePath
 end
 
-function a7.load(window: ConfigWindow, a34: unknown?): boolean
-    local a35, a36 = a7.getPath(window, a34)
-    if not a35 or not a36 then
-        a3.warn("Astra: configuration name '" .. tostring(a34) .. "' has no usable characters")
+function persistenceConfig.load(window: ConfigWindow, loadName: unknown?): boolean
+    local loadFolder, loadPath = persistenceConfig.getPath(window, loadName)
+    if not loadFolder or not loadPath then
+        logger.warn("Astra: configuration name '" .. tostring(loadName) .. "' has no usable characters")
         return false
     end
 
-        if typeof(a2.isfile) ~= "function" then
+        if typeof(fs.isfile) ~= "function" then
         return false
     end
 
-    local a37, a38 = a23(a36)
+    local restored, rawFallback = readFile(loadPath)
 
-            if not a37 and a2.isfile(a36) then
-        local a39, a40 = a23(a6.tempPathFor(a36))
-        if a39 and a40 then
-            a37 = a39
-                        pcall(a6.write, a35, a36, a40)
+            if not restored and fs.isfile(loadPath) then
+        local tempDecoded, tempRaw = readFile(writer.tempPathFor(loadPath))
+        if tempDecoded and tempRaw then
+            restored = tempDecoded
+                        pcall(writer.write, loadFolder, loadPath, tempRaw)
         end
     end
 
-    if not a37 then
-        if a38 then
-            a3.warn("Astra: Configuration file has an invalid format, backing up and resetting")
-            local a41 = a29(a36)
+    if not restored then
+        if rawFallback then
+            logger.warn("Astra: Configuration file has an invalid format, backing up and resetting")
+            local backupPath = backupPathFor(loadPath)
             pcall(function()
-                a2.ensureDir(a35)
-                a2.writefile(a41, a38)
-                a2.delfile(a36)
+                fs.ensureDir(loadFolder)
+                fs.writefile(backupPath, rawFallback)
+                fs.delfile(loadPath)
             end)
         end
         return false
     end
 
-    local a42 = a37 :: { [string]: unknown }
-    local a43 = window._loading
+    local values = restored :: { [string]: unknown }
+    local wasLoading = window._loading
     window._loading = true
-        local a44, a45 = pcall(function()
-        for a46, a47 in window.controls do
-            a7.applyTo(a47, a42[a46])
+        local applyOk, applyErr = pcall(function()
+        for loadedFlag, loadedControl in window.controls do
+            persistenceConfig.applyTo(loadedControl, values[loadedFlag])
         end
     end)
-            window._loading = a43
-    if not a44 then
-        a3.warn("Astra: Failed to apply configuration - " .. tostring(a45))
+            window._loading = wasLoading
+    if not applyOk then
+        logger.warn("Astra: Failed to apply configuration - " .. tostring(applyErr))
     end
 
-                window._loadedConfig = a42
-    window._loadedConfigPath = a36
+                window._loadedConfig = values
+    window._loadedConfigPath = loadPath
 
     return true
 end
 
-function a7.applyTo(a48: PersistedControl, a49: unknown)
-    if a49 == nil and not a48._canBeNil then
+function persistenceConfig.applyTo(target: PersistedControl, controlValue: unknown)
+    if controlValue == nil and not target._canBeNil then
         return
     end
-    local ok, a50 = pcall(function()
-        local a51 = a48._deserialize
-        if a51 then
-            a51(a48, a49)
+    local ok, setErr = pcall(function()
+        local deserializer = target._deserialize
+        if deserializer then
+            deserializer(target, controlValue)
         else
-            a48:Set(a49)
+            target:Set(controlValue)
         end
     end)
     if not ok then
-        a3.warn("Astra: Failed to restore flag '" .. tostring(a48.flag) .. "' - " .. tostring(a50))
+        logger.warn("Astra: Failed to restore flag '" .. tostring(target.flag) .. "' - " .. tostring(setErr))
     end
 end
 
-function a7.list(window: ConfigWindow): { string }
-    local a52 = a7.getPath(window)
+function persistenceConfig.list(window: ConfigWindow): { string }
+    local listFolder = persistenceConfig.getPath(window)
 
-    local a53: { string } = {}
-        if not a52 then
-        return a53
+    local names: { string } = {}
+        if not listFolder then
+        return names
     end
-    local ok, a54 = pcall(a2.listfiles, a52)
-    if not ok or type(a54) ~= "table" then
-        return a53
+    local ok, files = pcall(fs.listfiles, listFolder)
+    if not ok or type(files) ~= "table" then
+        return names
     end
 
-    for _, a55 in a54 do
-        local a56 = a4.basename(a55)
-                        if a56:sub(-5) == ".rfld" then
-            local a57 = a4.stripExtension(a56, ".rfld")
-            if a57 and a57 ~= "" and not a57:find(" %(Incorrect Format[^%)]*%)$") then
-                table.insert(a53, a57)
+    for _, file in files do
+        local baseName = pathUtil.basename(file)
+                        if baseName:sub(-5) == ".rfld" then
+            local configName = pathUtil.stripExtension(baseName, ".rfld")
+            if configName and configName ~= "" and not configName:find(" %(Incorrect Format[^%)]*%)$") then
+                table.insert(names, configName)
             end
         end
     end
 
-    table.sort(a53)
-    return a53
+    table.sort(names)
+    return names
 end
 
-function a7.delete(window: ConfigWindow, a58: unknown): boolean
-    if type(a58) ~= "string" or a58 == "" then
+function persistenceConfig.delete(window: ConfigWindow, deleteName: unknown): boolean
+    if type(deleteName) ~= "string" or deleteName == "" then
         return false
     end
 
-    local _, a59 = a7.getPath(window, a58)
-    if not a59 then
+    local _, deletePath = persistenceConfig.getPath(window, deleteName)
+    if not deletePath then
         return false
     end
-    if typeof(a2.isfile) ~= "function" or not a2.isfile(a59) then
+    if typeof(fs.isfile) ~= "function" or not fs.isfile(deletePath) then
         return false
     end
 
-        pcall(a2.delfile, a6.tempPathFor(a59))
+        pcall(fs.delfile, writer.tempPathFor(deletePath))
 
-    return (pcall(a2.delfile, a59))
+    return (pcall(fs.delfile, deletePath))
 end
 
-return a7
+return persistenceConfig
 
 end)() end,
     [96] = function()local wax,script,require=ImportGlobals(96)local ImportGlobals return (function(...)
-local persistencePaths = require(script.Parent.Parent.core.state)
-local a2 = require(script.Parent.path)
+local coreState = require(script.Parent.Parent.core.state)
+local pathUtil = require(script.Parent.path)
 
-local a3 = {}
+local persistencePaths = {}
 
 type ConfigWindow = {
     configuration: {
@@ -28963,44 +28964,44 @@ type ConfigWindow = {
     name: string,
 }
 
-function a3.getConfigPath(window: ConfigWindow, a4: unknown?): (string?, string?)
-    local a5 = persistencePaths.fileSystemManager:getPath("config")
+function persistencePaths.getConfigPath(window: ConfigWindow, configName: unknown?): (string?, string?)
+    local folder = coreState.fileSystemManager:getPath("config")
     if window.configuration.customFolder then
-        a5 = a2.join(a5, a2.sanitizeFolder(window.configuration.customFolder))
+        folder = pathUtil.join(folder, pathUtil.sanitizeFolder(window.configuration.customFolder))
     end
-    if a4 ~= nil then
-        local a6 = a2.sanitizeFile(a4)
-        if a6 == "" then
+    if configName ~= nil then
+        local sanitizedName = pathUtil.sanitizeFile(configName)
+        if sanitizedName == "" then
             return nil, nil
         end
-        return a5, a2.join(a5, a6 .. ".rfld")
+        return folder, pathUtil.join(folder, sanitizedName .. ".rfld")
     end
-    local a7 = a2.sanitizeFile(window.configuration.fileName or window.name)
-    if a7 == "" then
-        a7 = a2.sanitizeFile(window.name)
+    local baseName = pathUtil.sanitizeFile(window.configuration.fileName or window.name)
+    if baseName == "" then
+        baseName = pathUtil.sanitizeFile(window.name)
     end
-    if a7 == "" then
-        a7 = "Configuration"
+    if baseName == "" then
+        baseName = "Configuration"
     end
-    return a5, a2.join(a5, a7 .. ".rfld")
+    return folder, pathUtil.join(folder, baseName .. ".rfld")
 end
 
-function a3.getSettingsPath(): (string, string)
-    local a8 = persistencePaths.fileSystemManager:getPath("settings")
-    return a8, a2.join(a8, "astra.rfld")
+function persistencePaths.getSettingsPath(): (string, string)
+    local settingsFolder = coreState.fileSystemManager:getPath("settings")
+    return settingsFolder, pathUtil.join(settingsFolder, "astra.rfld")
 end
 
-return a3
+return persistencePaths
 
 end)() end,
     [97] = function()local wax,script,require=ImportGlobals(97)local ImportGlobals return (function(...)
-local persistenceSettings = require(script.Parent.Parent.core.state)
-local a2 = require(script.Parent.filesystem)
-local a3 = require(script.Parent.persistencePaths)
-local a4 = require(script.Parent.persistenceWrite)
-local a5 = require(script.Parent.enums)
+local coreState = require(script.Parent.Parent.core.state)
+local fs = require(script.Parent.filesystem)
+local paths = require(script.Parent.persistencePaths)
+local writer = require(script.Parent.persistenceWrite)
+local enumHelper = require(script.Parent.enums)
 
-local a6 = {}
+local persistenceSettings = {}
 
 type SettingsWindow = {
     settings: {
@@ -29033,14 +29034,14 @@ type DecodedSettings = {
     activeSubTab: unknown?,
 }
 
-function a6.getSettingsPath(): (string, string)
-    return a3.getSettingsPath()
+function persistenceSettings.getSettingsPath(): (string, string)
+    return paths.getSettingsPath()
 end
 
-function a6.saveSettings(window: SettingsWindow): boolean
-    local a7, a8 = a6.getSettingsPath()
+function persistenceSettings.saveSettings(window: SettingsWindow): boolean
+    local folder, filePath = persistenceSettings.getSettingsPath()
 
-    local a9: { [string]: unknown } = {
+    local payload: { [string]: unknown } = {
         toggleKeybind = {
             tostring(window.settings.toggleKeybind.EnumType),
             window.settings.toggleKeybind.Value,
@@ -29058,80 +29059,80 @@ function a6.saveSettings(window: SettingsWindow): boolean
         activeSubTab = window.settings.activeSubTab,
     }
 
-    local ok, a10 = pcall(persistenceSettings.httpService.JSONEncode, persistenceSettings.httpService, a9)
+    local ok, encoded = pcall(coreState.httpService.JSONEncode, coreState.httpService, payload)
     if not ok then
         return false
     end
 
-    local a11 = pcall(a4.write, a7, a8, a10)
+    local writeOk = pcall(writer.write, folder, filePath, encoded)
 
-    if not a11 then
+    if not writeOk then
         return false
     end
 
     return true
 end
 
-local function a12(a13: string): (DecodedSettings?, string?)
-    local a14 = false
+local function readDecoded(path: string): (DecodedSettings?, string?)
+    local exists = false
     pcall(function()
-        a14 = a2.isfile(a13)
+        exists = fs.isfile(path)
     end)
-    if not a14 then
+    if not exists then
         return nil, nil
     end
 
-    local a15, a16 = pcall(a2.readfile, a13)
-    if not a15 or type(a16) ~= "string" then
+    local readOk, raw = pcall(fs.readfile, path)
+    if not readOk or type(raw) ~= "string" then
         return nil, nil
     end
 
-    local a17, a18 = pcall(persistenceSettings.httpService.JSONDecode, persistenceSettings.httpService, a16)
-        if not a17 or type(a18) ~= "table" then
-        return nil, a16
+    local decodeOk, decoded = pcall(coreState.httpService.JSONDecode, coreState.httpService, raw)
+        if not decodeOk or type(decoded) ~= "table" then
+        return nil, raw
     end
 
-        return a18 :: DecodedSettings, a16
+        return decoded :: DecodedSettings, raw
 end
 
-local function a19(): DecodedSettings?
-    local a20, a21 = a6.getSettingsPath()
-    local a22 = a12(a21)
-    if a22 then
-        return a22
+local function readWithFallback(): DecodedSettings?
+    local settingsFolder, settingsPath = persistenceSettings.getSettingsPath()
+    local tempFolder = readDecoded(settingsPath)
+    if tempFolder then
+        return tempFolder
     end
 
-    local a23, a24 = a12(a4.tempPathFor(a21))
-    if a23 and a24 then
-        pcall(a4.write, a20, a21, a24)
-        return a23
+    local tempPath, tempRaw = readDecoded(writer.tempPathFor(settingsPath))
+    if tempPath and tempRaw then
+        pcall(writer.write, settingsFolder, settingsPath, tempRaw)
+        return tempPath
     end
 
     return nil
 end
 
-function a6.loadSettings(window: SettingsWindow): boolean
-    local a25 = a19()
+function persistenceSettings.loadSettings(window: SettingsWindow): boolean
+    local decodedSettings = readWithFallback()
 
-    if not a25 then
+    if not decodedSettings then
         return false
     end
 
-    if a25.toggleKeybind then
+    if decodedSettings.toggleKeybind then
         pcall(function()
-            local a26 = tostring(a25.toggleKeybind[1]):gsub("^Enum%.", "")
-            local a27 = (Enum :: any)[a26]
-            if a27 then
-                local a28 = a5.itemFromValue(a27, a25.toggleKeybind[2])
-                if a28 then
-                    window.settings.toggleKeybind = a28
+            local enumTypeName = tostring(decodedSettings.toggleKeybind[1]):gsub("^Enum%.", "")
+            local enumType = (Enum :: any)[enumTypeName]
+            if enumType then
+                local keybindItem = enumHelper.itemFromValue(enumType, decodedSettings.toggleKeybind[2])
+                if keybindItem then
+                    window.settings.toggleKeybind = keybindItem
                 end
             end
         end)
     end
 
-    if type(a25.theme) == "string" then
-        local theme = string.lower(a25.theme)
+    if type(decodedSettings.theme) == "string" then
+        local theme = string.lower(decodedSettings.theme)
         if theme == "default" or theme == "amethyst" or theme == "cobalt"
             or theme == "ember" or theme == "frost" or theme == "rose"
         then
@@ -29139,93 +29140,93 @@ function a6.loadSettings(window: SettingsWindow): boolean
         end
     end
 
-    if type(a25.mouseOverride) == "boolean" then
-        window.settings.mouseOverride = a25.mouseOverride
+    if type(decodedSettings.mouseOverride) == "boolean" then
+        window.settings.mouseOverride = decodedSettings.mouseOverride
     end
 
-    if type(a25.keepOnScreen) == "boolean" then
-        window.settings.keepOnScreen = a25.keepOnScreen
+    if type(decodedSettings.keepOnScreen) == "boolean" then
+        window.settings.keepOnScreen = decodedSettings.keepOnScreen
     end
 
-    if type(a25.dragMinimisedBar) == "boolean" then
-        window.settings.dragMinimisedBar = a25.dragMinimisedBar
+    if type(decodedSettings.dragMinimisedBar) == "boolean" then
+        window.settings.dragMinimisedBar = decodedSettings.dragMinimisedBar
     end
 
-    if type(a25.welcomeToast) == "boolean" then
-        window.settings.welcomeToast = a25.welcomeToast
+    if type(decodedSettings.welcomeToast) == "boolean" then
+        window.settings.welcomeToast = decodedSettings.welcomeToast
     end
 
-    if type(a25.haptics) == "boolean" then
-        window.settings.haptics = a25.haptics
+    if type(decodedSettings.haptics) == "boolean" then
+        window.settings.haptics = decodedSettings.haptics
     end
 
-    if type(a25.showProfile) == "boolean" then
-        window.settings.showProfile = a25.showProfile
+    if type(decodedSettings.showProfile) == "boolean" then
+        window.settings.showProfile = decodedSettings.showProfile
     end
-    if type(a25.showFullUsername) == "boolean" then
-        window.settings.showFullUsername = a25.showFullUsername
+    if type(decodedSettings.showFullUsername) == "boolean" then
+        window.settings.showFullUsername = decodedSettings.showFullUsername
     end
-    if type(a25.antiWindowDuplicate) == "boolean" then
-        window.settings.antiWindowDuplicate = a25.antiWindowDuplicate
+    if type(decodedSettings.antiWindowDuplicate) == "boolean" then
+        window.settings.antiWindowDuplicate = decodedSettings.antiWindowDuplicate
     end
-    if a25.layoutMode == "top"
-        or a25.layoutMode == "sidebar"
-        or a25.layoutMode == "collapsedSidebar"
+    if decodedSettings.layoutMode == "top"
+        or decodedSettings.layoutMode == "sidebar"
+        or decodedSettings.layoutMode == "collapsedSidebar"
     then
-        window.settings.layoutMode = a25.layoutMode
+        window.settings.layoutMode = decodedSettings.layoutMode
     end
 
-    if type(a25.activeSubTab) == "number" and a25.activeSubTab >= 1 then
-        window.settings.activeSubTab = math.floor(a25.activeSubTab)
+    if type(decodedSettings.activeSubTab) == "number" and decodedSettings.activeSubTab >= 1 then
+        window.settings.activeSubTab = math.floor(decodedSettings.activeSubTab)
     end
 
     return true
 end
 
-return a6
+return persistenceSettings
 
 end)() end,
     [98] = function()local wax,script,require=ImportGlobals(98)local ImportGlobals return (function(...)
-local persistenceWrite = require(script.Parent.filesystem)
+local fs = require(script.Parent.filesystem)
 
-local a2 = {}
+local persistenceWrite = {}
 
-local a3 = ".saving"
+local tempSuffix = ".saving"
 
-function a2.tempPathFor(a4: string): string
-    return a4 .. a3
+function persistenceWrite.tempPathFor(path: string): string
+    return path .. tempSuffix
 end
 
-function a2.write(a5: string, a6: string, a7: string)
-    local a8 = a2.tempPathFor(a6)
+function persistenceWrite.write(folder: string, filePath: string, contents: string)
+    local tempPath = persistenceWrite.tempPathFor(filePath)
 
-    persistenceWrite.ensureDir(a5)
-    persistenceWrite.writefile(a8, a7)
+    fs.ensureDir(folder)
+    fs.writefile(tempPath, contents)
 
-    if persistenceWrite.readfile(a8) ~= a7 then
+    if fs.readfile(tempPath) ~= contents then
         error("parked copy did not write cleanly")
     end
 
-    persistenceWrite.writefile(a6, a7)
-    pcall(persistenceWrite.delfile, a8)
+    fs.writefile(filePath, contents)
+    pcall(fs.delfile, tempPath)
 end
 
-return a2
+return persistenceWrite
 
 end)() end,
     [99] = function()local wax,script,require=ImportGlobals(99)local ImportGlobals return (function(...)
 local services = {}
 
-function services.getService(cache)
-    local a3 = game:GetService(cache)
-    return if cloneref then cloneref(a3) else a3
+function services.getService(serviceName)
+    local service = game:GetService(serviceName)
+    return if cloneref then cloneref(service) else service
 end
 
 return services
 
 end)() end,
     [100] = function()local wax,script,require=ImportGlobals(100)local ImportGlobals return (function(...)
-local windowSizing = require(script.Parent.layouts)
+local layoutMetrics = require(script.Parent.layouts)
 
 local breakpoints = {}
 
@@ -29244,12 +29245,12 @@ export type Profile = {
 	chromeHeight: number,
 }
 
-local a3 = 200
+local minTrackedViewport = 200
 
 -- [[Responsive profiles: larger defaults so desktop doesn't look tiny.]]
 -- [[Mobile still uses occupancy-based shrink, so phone keeps full-width feel]]
 -- [[while desktop gets a premium large window (same perceived weight).]]
-local a4 = {
+local profiles = {
 	top = {
 		defaultSize = Vector2.new(720, 600),
 		minSize = Vector2.new(500, 330),
@@ -29260,7 +29261,7 @@ local a4 = {
 		marginFloorY = 20,
 		maxAspectRatio = 2.3,
 		widthCompensation = 100,
-		chromeHeight = windowSizing.top.chromeHeight,
+		chromeHeight = layoutMetrics.top.chromeHeight,
 	} :: Profile,
 	sidebar = {
 		defaultSize = Vector2.new(720, 600),
@@ -29272,102 +29273,102 @@ local a4 = {
 		marginFloorY = 20,
 		maxAspectRatio = 2.6,
 		minAspectRatio = 1.18,
-		chromeHeight = windowSizing.sidebar.chromeHeight,
+		chromeHeight = layoutMetrics.sidebar.chromeHeight,
 	} :: Profile,
 }
 
-function breakpoints.profile(a5: layouts.Mode?): Profile
-	if a5 == "sidebar" then
-		return a4.sidebar
+function breakpoints.profile(mode: layouts.Mode?): Profile
+	if mode == "sidebar" then
+		return profiles.sidebar
 	end
-	return a4.top
+	return profiles.top
 end
 
-function breakpoints.pageHeight(a6: number?, a7: layouts.Mode?): number
-	local a8 = breakpoints.profile(a7)
-	local a9 = if a6 and a6 > 0 then a6 else a8.minSize.Y
-	return math.max(a9 - a8.chromeHeight, 0)
+function breakpoints.pageHeight(totalHeight: number?, modeForHeight: layouts.Mode?): number
+	local sizingProfile = breakpoints.profile(modeForHeight)
+	local height = if totalHeight and totalHeight > 0 then totalHeight else sizingProfile.minSize.Y
+	return math.max(height - sizingProfile.chromeHeight, 0)
 end
 
-local function a10(a11: Profile, a12: number): number
-	local a13 = a12 - a11.marginFloorY
-	if a11.topbarClearance then
-		a13 = math.min(a13, a12 - a11.topbarClearance * 2)
+local function availableHeight(heightProfile: Profile, viewportHeight: number): number
+	local available = viewportHeight - heightProfile.marginFloorY
+	if heightProfile.topbarClearance then
+		available = math.min(available, viewportHeight - heightProfile.topbarClearance * 2)
 	end
-	if a11.maxOccupancyY then
-		a13 = math.min(a13, a12 * a11.maxOccupancyY)
+	if heightProfile.maxOccupancyY then
+		available = math.min(available, viewportHeight * heightProfile.maxOccupancyY)
 	end
-	return a13
+	return available
 end
 
-local function a14(a15: number, a16: number, a17: number): number
-	return math.clamp((a16 - a15) / (a16 - a17), 0, 1)
+local function shrinkFactor(current: number, upper: number, lower: number): number
+	return math.clamp((upper - current) / (upper - lower), 0, 1)
 end
 
-local function a18(a19: Profile, a20: number, a21: number): UDim2
-	local a22 = math.floor(math.min(math.clamp(a21, a19.minSize.Y, a19.defaultSize.Y), a21))
-	local a23 = a14(a22, a19.defaultSize.Y, a19.minSize.Y)
-	local a24 = math.max(a19.defaultSize.X + (a19.widthCompensation :: number) * a23, a19.minSize.X)
-	return UDim2.fromOffset(math.floor(math.min(a24, a20, a22 * a19.maxAspectRatio)), a22)
+local function fitTop(topProfile: Profile, maxWidth: number, requestedHeight: number): UDim2
+	local clampedHeight = math.floor(math.min(math.clamp(requestedHeight, topProfile.minSize.Y, topProfile.defaultSize.Y), requestedHeight))
+	local blend = shrinkFactor(clampedHeight, topProfile.defaultSize.Y, topProfile.minSize.Y)
+	local width = math.max(topProfile.defaultSize.X + (topProfile.widthCompensation :: number) * blend, topProfile.minSize.X)
+	return UDim2.fromOffset(math.floor(math.min(width, maxWidth, clampedHeight * topProfile.maxAspectRatio)), clampedHeight)
 end
 
-local function a25(a26: Profile, a27: number, a28: number): UDim2
+local function fitSidebar(sidebarProfile: Profile, requestedWidth: number, requestedSidebarHeight: number): UDim2
     -- [[The Sidebar keeps its historical 540px minimum for user resizing, while]]
     -- [[its requested base width is 520px. Keep clamp bounds ordered for the]]
     -- [[responsive fit calculation without changing the declared minimum.]]
-    local a29Min = math.min(a26.minSize.X, a26.defaultSize.X)
-    local a29 = math.min(math.clamp(a27, a29Min, a26.defaultSize.X), a27)
-	local a30 = math.min(math.clamp(a28, a26.minSize.Y, a26.defaultSize.Y), a28)
-	a30 = math.floor(math.min(a30, a29 / (a26.minAspectRatio :: number)))
-	a29 = math.floor(math.min(a29, a30 * a26.maxAspectRatio))
-	return UDim2.fromOffset(a29, a30)
+    local minWidthBound = math.min(sidebarProfile.minSize.X, sidebarProfile.defaultSize.X)
+    local sidebarWidth = math.min(math.clamp(requestedWidth, minWidthBound, sidebarProfile.defaultSize.X), requestedWidth)
+	local sidebarHeight = math.min(math.clamp(requestedSidebarHeight, sidebarProfile.minSize.Y, sidebarProfile.defaultSize.Y), requestedSidebarHeight)
+	sidebarHeight = math.floor(math.min(sidebarHeight, sidebarWidth / (sidebarProfile.minAspectRatio :: number)))
+	sidebarWidth = math.floor(math.min(sidebarWidth, sidebarHeight * sidebarProfile.maxAspectRatio))
+	return UDim2.fromOffset(sidebarWidth, sidebarHeight)
 end
 
 -- [[Tiered occupancy: phone/tablet/desktop share same perceived scale.]]
 -- [[Desktop uses lower occupancy so 1920px doesn't give 1766px window (too huge),]]
 -- [[but still larger than old 685 cap.]]
-local function getTieredOccupancy(a31: Vector2, a32: Profile): (number, number)
-	local w = a31.X
+local function getTieredOccupancy(viewport: Vector2, modeOrProfile: Profile): (number, number)
+	local w = viewport.X
 	if w < 700 then
 		-- [[phone: near full width, like before]]
-		return a32.maxOccupancyX, a10(a32, a31.Y)
+		return modeOrProfile.maxOccupancyX, availableHeight(modeOrProfile, viewport.Y)
 	elseif w < 1200 then
 		-- [[tablet / small laptop]]
-		return math.min(a32.maxOccupancyX, 0.72), math.min(a10(a32, a31.Y), a31.Y * 0.82)
+		return math.min(modeOrProfile.maxOccupancyX, 0.72), math.min(availableHeight(modeOrProfile, viewport.Y), viewport.Y * 0.82)
 	else
 		-- [[desktop: keep premium large but not full-screen]]
-		return 0.52, math.min(a10(a32, a31.Y), a31.Y * 0.72)
+		return 0.52, math.min(availableHeight(modeOrProfile, viewport.Y), viewport.Y * 0.72)
 	end
 end
 
-function breakpoints.fit(a31: Vector2?, a32: layouts.Mode?): UDim2
+function breakpoints.fit(viewport: Vector2?, modeOrProfile: layouts.Mode?): UDim2
 	-- [[Fix: respect mode (old code always used sidebar)]]
-	local a33 = if a32 == "top" then a4.top else a4.sidebar
-	if not a31 or a31.X < a3 or a31.Y < a3 then
-		return UDim2.fromOffset(a33.defaultSize.X, a33.defaultSize.Y)
+	local fitProfile = if modeOrProfile == "top" then profiles.top else profiles.sidebar
+	if not viewport or viewport.X < minTrackedViewport or viewport.Y < minTrackedViewport then
+		return UDim2.fromOffset(fitProfile.defaultSize.X, fitProfile.defaultSize.Y)
 	end
 	-- [[tiered target based on screen size]]
-	local occX, availY = getTieredOccupancy(a31, a33)
-	local a34 = math.min(a31.X * occX, a31.X - a33.marginFloorX)
+	local occX, availY = getTieredOccupancy(viewport, fitProfile)
+	local targetWidth = math.min(viewport.X * occX, viewport.X - fitProfile.marginFloorX)
 	-- [[clamp to maxSize so desktop doesn't explode on ultrawide]]
-	if a33.maxSize then
-		a34 = math.min(a34, a33.maxSize.X)
-		availY = math.min(availY, a33.maxSize.Y)
+	if fitProfile.maxSize then
+		targetWidth = math.min(targetWidth, fitProfile.maxSize.X)
+		availY = math.min(availY, fitProfile.maxSize.Y)
 	end
-	local a35 = availY
-	if a33.minAspectRatio then
-		return a25(a33, a34, a35)
+	local targetHeight = availY
+	if fitProfile.minAspectRatio then
+		return fitSidebar(fitProfile, targetWidth, targetHeight)
 	end
-	return a18(a33, a34, a35)
+	return fitTop(fitProfile, targetWidth, targetHeight)
 end
 
 -- [[UIScale helper: same physical perception mobile vs desktop.]]
-function breakpoints.scaleForViewport(a36: Vector2?): number
-	if not a36 or a36.X < a3 then return 1 end
+function breakpoints.scaleForViewport(scaleViewport: Vector2?): number
+	if not scaleViewport or scaleViewport.X < minTrackedViewport then return 1 end
 	-- [[390 -> 0.92, 768 -> 0.98, 1280 -> 1.04, 1920 -> 1.12, 2560 -> 1.18 (clamped)]]
-	local s = 0.88 + (a36.X / 2200) * 0.32
+	local s = 0.88 + (scaleViewport.X / 2200) * 0.32
 	-- [[y also matters on portrait phones: don't let tall narrow screens over-scale]]
-	if a36.Y < 500 then s = math.min(s, 0.95) end
+	if scaleViewport.Y < 500 then s = math.min(s, 0.95) end
 	return math.clamp(s, 0.88, 1.18)
 end
 
@@ -29416,63 +29417,63 @@ local LineOffsets = {
     [40] = 14262,
     [41] = 14285,
     [42] = 14302,
-    [43] = 14331,
-    [44] = 14447,
-    [45] = 14461,
-    [46] = 14510,
+    [43] = 14332,
+    [44] = 14448,
+    [45] = 14462,
+    [46] = 14511,
     [47] = 14237,
-    [48] = 14611,
-    [49] = 14914,
-    [50] = 14945,
-    [51] = 14600,
-    [52] = 14988,
-    [53] = 15008,
-    [54] = 15040,
-    [55] = 14970,
-    [56] = 15147,
-    [57] = 15209,
-    [58] = 15272,
-    [60] = 15335,
-    [61] = 15500,
-    [62] = 15320,
-    [63] = 15760,
-    [64] = 16055,
-    [65] = 16711,
-    [66] = 18495,
-    [67] = 19636,
-    [68] = 21156,
-    [69] = 15564,
-    [70] = 26400,
-    [71] = 26462,
-    [72] = 26524,
-    [73] = 26606,
-    [74] = 26668,
-    [75] = 26743,
-    [76] = 26294,
-    [77] = 26805,
-    [78] = 26903,
-    [79] = 27081,
-    [80] = 27132,
-    [81] = 27162,
-    [82] = 27413,
-    [83] = 27462,
-    [84] = 27915,
-    [85] = 27933,
-    [86] = 28087,
-    [87] = 28186,
-    [88] = 28208,
-    [89] = 28258,
-    [90] = 28294,
-    [91] = 28312,
-    [92] = 28625,
-    [93] = 28641,
-    [94] = 28692,
-    [95] = 28711,
-    [96] = 28953,
-    [97] = 28997,
-    [98] = 29189,
-    [99] = 29217,
-    [100] = 29228,
+    [48] = 14612,
+    [49] = 14915,
+    [50] = 14946,
+    [51] = 14601,
+    [52] = 14989,
+    [53] = 15009,
+    [54] = 15041,
+    [55] = 14971,
+    [56] = 15148,
+    [57] = 15210,
+    [58] = 15273,
+    [60] = 15336,
+    [61] = 15501,
+    [62] = 15321,
+    [63] = 15761,
+    [64] = 16056,
+    [65] = 16712,
+    [66] = 18496,
+    [67] = 19637,
+    [68] = 21157,
+    [69] = 15565,
+    [70] = 26401,
+    [71] = 26463,
+    [72] = 26525,
+    [73] = 26607,
+    [74] = 26669,
+    [75] = 26744,
+    [76] = 26295,
+    [77] = 26806,
+    [78] = 26904,
+    [79] = 27082,
+    [80] = 27133,
+    [81] = 27163,
+    [82] = 27414,
+    [83] = 27463,
+    [84] = 27916,
+    [85] = 27934,
+    [86] = 28088,
+    [87] = 28187,
+    [88] = 28209,
+    [89] = 28259,
+    [90] = 28295,
+    [91] = 28313,
+    [92] = 28626,
+    [93] = 28642,
+    [94] = 28693,
+    [95] = 28712,
+    [96] = 28954,
+    [97] = 28998,
+    [98] = 29190,
+    [99] = 29218,
+    [100] = 29229,
 }
 
 -- [[Misc AOT variable imports]]

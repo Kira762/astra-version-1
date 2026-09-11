@@ -1,26 +1,26 @@
 
-local state = require(script.Parent.Parent.utilities.persistenceSettings)
-local persistenceSettings = require(script.Parent.Parent.cache.persistenceCache)
+local settingsPersistence = require(script.Parent.Parent.utilities.persistenceSettings)
+local settingsCache = require(script.Parent.Parent.cache.persistenceCache)
 
 local persistenceWrite = {}
 
 function persistenceWrite.path(): (string, string)
-    return state.getSettingsPath()
+    return settingsPersistence.getSettingsPath()
 end
 
 function persistenceWrite.save(persistence: { [string]: any }): boolean
-    local ok = state.saveSettings({ settings = persistence })
-    persistenceSettings.invalidateSettings()
+    local ok = settingsPersistence.saveSettings({ settings = persistence })
+    settingsCache.invalidateSettings()
     return ok
 end
 
 function persistenceWrite.load(values: { [string]: any }): boolean
-    return state.loadSettings({ settings = values })
+    return settingsPersistence.loadSettings({ settings = values })
 end
 
 function persistenceWrite.read(key: string, default: any): any
-    local _, path = state.getSettingsPath()
-    local cached = persistenceSettings.getSettings(path)
+    local _, path = settingsPersistence.getSettingsPath()
+    local cached = settingsCache.getSettings(path)
     if cached == nil then
         local data = nil :: any?
         local fs = require(script.Parent.Parent.utilities.filesystem)
@@ -34,8 +34,8 @@ function persistenceWrite.read(key: string, default: any): any
                 end
             end
         end)
-        persistenceSettings.putSettings(path, data or false)
-        cached = persistenceSettings.getSettings(path)
+        settingsCache.putSettings(path, data or false)
+        cached = settingsCache.getSettings(path)
     end
     if type(cached) == "table" and (cached :: any)[key] ~= nil then
         return (cached :: any)[key]

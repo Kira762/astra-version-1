@@ -3,10 +3,10 @@ type OrderedElement = {
     descriptor: { main: GuiObject }?,
 }
 
-local function ordering(element: OrderedElement, a2: number)
-    element.main.LayoutOrder = a2
+local function ordering(element: OrderedElement, order: number)
+    element.main.LayoutOrder = order
     if element.descriptor then
-        element.descriptor.main.LayoutOrder = a2 + 1
+        element.descriptor.main.LayoutOrder = order + 1
     end
 end
 

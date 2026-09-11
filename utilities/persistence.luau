@@ -1,16 +1,16 @@
 local persistence = {}
 
-local a2 = require(script.Parent.persistenceConfig)
-local a3 = require(script.Parent.persistenceSettings)
+local configPersistence = require(script.Parent.persistenceConfig)
+local settingsPersistence = require(script.Parent.persistenceSettings)
 
-persistence.getPath = a2.getPath
-persistence.save = a2.save
-persistence.load = a2.load
-persistence.applyTo = a2.applyTo
-persistence.list = a2.list
-persistence.delete = a2.delete
-persistence.getSettingsPath = a3.getSettingsPath
-persistence.saveSettings = a3.saveSettings
-persistence.loadSettings = a3.loadSettings
+persistence.getPath = configPersistence.getPath
+persistence.save = configPersistence.save
+persistence.load = configPersistence.load
+persistence.applyTo = configPersistence.applyTo
+persistence.list = configPersistence.list
+persistence.delete = configPersistence.delete
+persistence.getSettingsPath = settingsPersistence.getSettingsPath
+persistence.saveSettings = settingsPersistence.saveSettings
+persistence.loadSettings = settingsPersistence.loadSettings
 
 return persistence

@@ -1,94 +1,94 @@
-local odometer = require(script.Parent.Parent.core.state)
-local a2 = odometer.textService
+local coreState = require(script.Parent.Parent.core.state)
+local textService = coreState.textService
 
-local a3 = {}
-a3.__index = a3
+local odometer = {}
+odometer.__index = odometer
 
-local a4 = 20
+local reelCells = 20
 
-local function a5(a6, a7, a8)
-    local a9 = Instance.new("GetTextBoundsParams")
-    a9.Text = a8
-    a9.Font = a6
-    a9.Size = a7
-    a9.Width = math.huge
-    local ok, a10 = pcall(a2.GetTextBoundsAsync, a2, a9)
-    return if ok then a10 else Vector2.new(a7 * 0.6, a7)
+local function measureText(font, size, text)
+    local params = Instance.new("GetTextBoundsParams")
+    params.Text = text
+    params.Font = font
+    params.Size = size
+    params.Width = math.huge
+    local ok, bounds = pcall(textService.GetTextBoundsAsync, textService, params)
+    return if ok then bounds else Vector2.new(size * 0.6, size)
 end
 
-local a11 = {}
-local a12 = 0
-local a13 = 64
-local function a14(a15, a16)
-        local a17 = tostring(a15.Family)
+local metricsCache = {}
+local cacheCount = 0
+local cacheLimit = 64
+local function fontMetrics(metricFont, metricSize)
+        local cacheKey = tostring(metricFont.Family)
         .. "|"
-        .. tostring(a15.Weight)
+        .. tostring(metricFont.Weight)
         .. "|"
-        .. tostring(a15.Style)
+        .. tostring(metricFont.Style)
         .. "|"
-        .. tostring(a16)
-    local a18 = a11[a17]
-    if a18 then
-        return a18
+        .. tostring(metricSize)
+    local entry = metricsCache[cacheKey]
+    if entry then
+        return entry
     end
 
-    local a19, a20 = {}, 0
-    for d = 0, 9 do
-        local w = math.ceil(a5(a15, a16, tostring(d)).X)
-        a19[d] = w
-        if w > a20 then
-            a20 = w
+    local advances, widest = {}, 0
+    for measuredDigit = 0, 9 do
+        local glyphWidth = math.ceil(measureText(metricFont, metricSize, tostring(measuredDigit)).X)
+        advances[measuredDigit] = glyphWidth
+        if glyphWidth > widest then
+            widest = glyphWidth
         end
     end
-    a18 = { advance = a19, maxWidth = a20 }
-    if a12 >= a13 then
-        a11 = {}
-        a12 = 0
+    entry = { advance = advances, maxWidth = widest }
+    if cacheCount >= cacheLimit then
+        metricsCache = {}
+        cacheCount = 0
     end
-    a11[a17] = a18
-    a12 += 1
-    return a18
+    metricsCache[cacheKey] = entry
+    cacheCount += 1
+    return entry
 end
 
-function a3.new(window, a21, a22)
-    a22 = a22 or {}
+function odometer.new(window, container, options)
+    options = options or {}
     local self = setmetatable({
         window = window,
-        container = a21,
-        textSize = a22.textSize or 16,
-        transparency = a22.transparency or 1,         duration = a22.duration or 0.55,
-        slots = {},         length = 0,     }, a3)
+        container = container,
+        textSize = options.textSize or 16,
+        transparency = options.transparency or 1,         duration = options.duration or 0.55,
+        slots = {},         length = 0,     }, odometer)
 
     self.roll = TweenInfo.new(self.duration, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-            self.zIndex = math.max(a21.ZIndex + 1, 6)
+            self.zIndex = math.max(container.ZIndex + 1, 6)
 
             self.height = math.ceil(self.textSize)
 
-                local a23 = a14(window.theme.Font, self.textSize)
-    self.advance = a23.advance
-    self.maxWidth = a23.maxWidth
+                local metrics = fontMetrics(window.theme.Font, self.textSize)
+    self.advance = metrics.advance
+    self.maxWidth = metrics.maxWidth
 
     window:Create("UIListLayout", {
         FillDirection = Enum.FillDirection.Horizontal,
         VerticalAlignment = Enum.VerticalAlignment.Center,
-        HorizontalAlignment = a22.alignment or Enum.HorizontalAlignment.Left,
+        HorizontalAlignment = options.alignment or Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
         Padding = UDim.new(0, 0),
 
-        Parent = a21,
+        Parent = container,
     })
 
     return self
 end
 
-function a3:_reel(a24)
-    local a25 = self.slots[a24]
-    if a25.reel then
-        return a25.reel
+function odometer:_reel(reelIndex)
+    local slot = self.slots[reelIndex]
+    if slot.reel then
+        return slot.reel
     end
 
-    local a26 = self.window:Create("Frame", {
+    local cell = self.window:Create("Frame", {
         Name = "Reel",
         Size = UDim2.fromOffset(self.maxWidth, self.height),
         BackgroundTransparency = 1,
@@ -99,17 +99,17 @@ function a3:_reel(a24)
         Parent = self.container,
     })
 
-    local a27 = self.window:Create("Frame", {
+    local strip = self.window:Create("Frame", {
         Size = UDim2.fromOffset(self.maxWidth, self.height),
         AnchorPoint = Vector2.new(0.5, 0),         Position = UDim2.new(0.5, 0, 0, 0),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ZIndex = self.zIndex,
 
-        Parent = a26,
+        Parent = cell,
     })
 
-    for i = 0, a4 - 1 do
+    for i = 0, reelCells - 1 do
         self.window:Create("TextLabel", {
             Text = tostring(i % 10),
             Position = UDim2.fromOffset(0, i * self.height),
@@ -122,22 +122,22 @@ function a3:_reel(a24)
             TextTransparency = self.transparency,
             ZIndex = self.zIndex,
 
-            Parent = a27,
+            Parent = strip,
         }, { TextColor3 = "ContentColor", FontFace = "Font" })
     end
 
-    local a28 = { cell = a26, strip = a27, digit = 0, target = 0, stripTween = nil, sizeTween = nil }
-    a25.reel = a28
-    return a28
+    local reel = { cell = cell, strip = strip, digit = 0, target = 0, stripTween = nil, sizeTween = nil }
+    slot.reel = reel
+    return reel
 end
 
-function a3:_static(a29)
-    local a30 = self.slots[a29]
-    if a30.static then
-        return a30.static
+function odometer:_static(staticIndex)
+    local staticSlot = self.slots[staticIndex]
+    if staticSlot.static then
+        return staticSlot.static
     end
 
-    local a31 = self.window:Create("TextLabel", {
+    local staticLabel = self.window:Create("TextLabel", {
         Name = "Static",
         Size = UDim2.fromOffset(0, self.height),
         AutomaticSize = Enum.AutomaticSize.X,
@@ -152,159 +152,159 @@ function a3:_static(a29)
         Parent = self.container,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-    a30.static = a31
-    return a31
+    staticSlot.static = staticLabel
+    return staticLabel
 end
 
-local function a32(a33)
-    if a33.stripTween then
-        a33.stripTween:Cancel()
-        a33.stripTween = nil
+local function cancelTweens(reelState)
+    if reelState.stripTween then
+        reelState.stripTween:Cancel()
+        reelState.stripTween = nil
     end
-    if a33.sizeTween then
-        a33.sizeTween:Cancel()
-        a33.sizeTween = nil
+    if reelState.sizeTween then
+        reelState.sizeTween:Cancel()
+        reelState.sizeTween = nil
     end
 end
 
-function a3:_reelSnap(a34, a35)
-    a32(a34)
-    a34.cell.Size = UDim2.fromOffset(self.advance[a35], self.height)
-    a34.strip.Position = UDim2.new(0.5, 0, 0, -a35 * self.height)
-    a34.digit = a35
-    a34.target = a35
+function odometer:_reelSnap(snapReel, snapDigit)
+    cancelTweens(snapReel)
+    snapReel.cell.Size = UDim2.fromOffset(self.advance[snapDigit], self.height)
+    snapReel.strip.Position = UDim2.new(0.5, 0, 0, -snapDigit * self.height)
+    snapReel.digit = snapDigit
+    snapReel.target = snapDigit
 end
 
-function a3:_reelRoll(a36, a37, up)
-        if a36.stripTween or a36.sizeTween then
-        self:_reelSnap(a36, a36.target)
+function odometer:_reelRoll(rollReel, rollDigit, up)
+        if rollReel.stripTween or rollReel.sizeTween then
+        self:_reelSnap(rollReel, rollReel.target)
     end
 
-    local a = a36.digit
-    if a == a37 then
+    local currentDigit = rollReel.digit
+    if currentDigit == rollDigit then
         return
     end
 
-    local a38, a39
+    local fromRow, toRow
     if up then
-        a38 = a
-        a39 = a + (a37 - a) % 10     else
-        a38 = a + 10         a39 = a38 - (a - a37) % 10
+        fromRow = currentDigit
+        toRow = currentDigit + (rollDigit - currentDigit) % 10     else
+        fromRow = currentDigit + 10         toRow = fromRow - (currentDigit - rollDigit) % 10
     end
 
-    a36.strip.Position = UDim2.new(0.5, 0, 0, -a38 * self.height)
-    a36.target = a37
+    rollReel.strip.Position = UDim2.new(0.5, 0, 0, -fromRow * self.height)
+    rollReel.target = rollDigit
 
-        local a40 = odometer.tweenService:Create(a36.strip, self.roll, {
-        Position = UDim2.new(0.5, 0, 0, -a39 * self.height),
+        local stripTween = coreState.tweenService:Create(rollReel.strip, self.roll, {
+        Position = UDim2.new(0.5, 0, 0, -toRow * self.height),
     })
-    local a41 = odometer.tweenService:Create(a36.cell, self.roll, {
-        Size = UDim2.fromOffset(self.advance[a37], self.height),
+    local sizeTween = coreState.tweenService:Create(rollReel.cell, self.roll, {
+        Size = UDim2.fromOffset(self.advance[rollDigit], self.height),
     })
-    a36.stripTween = a40
-    a36.sizeTween = a41
-    a40.Completed:Connect(function(a42)
-        if a42 == Enum.PlaybackState.Completed and a36.stripTween == a40 then
-            self:_reelSnap(a36, a37)
+    rollReel.stripTween = stripTween
+    rollReel.sizeTween = sizeTween
+    stripTween.Completed:Connect(function(playbackState)
+        if playbackState == Enum.PlaybackState.Completed and rollReel.stripTween == stripTween then
+            self:_reelSnap(rollReel, rollDigit)
         end
     end)
-    a40:Play()
-    a41:Play()
-    a36.digit = a37
+    stripTween:Play()
+    sizeTween:Play()
+    rollReel.digit = rollDigit
 end
 
-function a3:_putDigit(a43, a44, up, a45)
-    local a46 = self:_reel(a43)
-    local a47 = not a46.cell.Visible
-    a46.cell.Visible = true
-    a46.cell.LayoutOrder = -a43
-    if self.slots[a43].static then
-        self.slots[a43].static.Visible = false
+function odometer:_putDigit(digitIndex, digitValue, up, animate)
+    local digitReel = self:_reel(digitIndex)
+    local wasHidden = not digitReel.cell.Visible
+    digitReel.cell.Visible = true
+    digitReel.cell.LayoutOrder = -digitIndex
+    if self.slots[digitIndex].static then
+        self.slots[digitIndex].static.Visible = false
     end
-    if a45 and not a47 then
-        self:_reelRoll(a46, a44, up)
+    if animate and not wasHidden then
+        self:_reelRoll(digitReel, digitValue, up)
     else
-        self:_reelSnap(a46, a44)
+        self:_reelSnap(digitReel, digitValue)
     end
 end
 
-function a3:_putStatic(a48, a49)
-    local a50 = self:_static(a48)
-    if not a50.Visible then
-                a50.TextTransparency = self.transparency
+function odometer:_putStatic(staticPutIndex, staticChar)
+    local staticTarget = self:_static(staticPutIndex)
+    if not staticTarget.Visible then
+                staticTarget.TextTransparency = self.transparency
     end
-    a50.Text = a49
-    a50.Visible = true
-    a50.LayoutOrder = -a48
-    if self.slots[a48].reel then
-        self.slots[a48].reel.cell.Visible = false
+    staticTarget.Text = staticChar
+    staticTarget.Visible = true
+    staticTarget.LayoutOrder = -staticPutIndex
+    if self.slots[staticPutIndex].reel then
+        self.slots[staticPutIndex].reel.cell.Visible = false
     end
 end
 
-function a3:_hide(a51)
-    local a52 = self.slots[a51]
-    if not a52 then
+function odometer:_hide(hideIndex)
+    local hideSlot = self.slots[hideIndex]
+    if not hideSlot then
         return
     end
-    if a52.reel then
-        a52.reel.cell.Visible = false
+    if hideSlot.reel then
+        hideSlot.reel.cell.Visible = false
     end
-    if a52.static then
-        a52.static.Visible = false
+    if hideSlot.static then
+        hideSlot.static.Visible = false
     end
 end
 
-function a3:_render(a53, a54, up)
-    a53 = tostring(a53)
+function odometer:_render(renderValue, renderAnimate, up)
+    renderValue = tostring(renderValue)
 
-        if a53 == self._lastText then
+        if renderValue == self._lastText then
         return
     end
-    self._lastText = a53
+    self._lastText = renderValue
 
-            local a55 = {}
-    for _, a56 in utf8.codes(a53) do
-        table.insert(a55, utf8.char(a56))
+            local chars = {}
+    for _, codepoint in utf8.codes(renderValue) do
+        table.insert(chars, utf8.char(codepoint))
     end
 
-    local n = #a55
-    for i = 0, math.max(n, self.length) - 1 do
+    local charCount = #chars
+    for i = 0, math.max(charCount, self.length) - 1 do
         self.slots[i] = self.slots[i] or {}
-        if i < n then
-            local a57 = a55[n - i]             if a57:match("%d") then
-                self:_putDigit(i, tonumber(a57), up, a54)
+        if i < charCount then
+            local glyphChar = chars[charCount - i]             if glyphChar:match("%d") then
+                self:_putDigit(i, tonumber(glyphChar), up, renderAnimate)
             else
-                self:_putStatic(i, a57)
+                self:_putStatic(i, glyphChar)
             end
         else
             self:_hide(i)
         end
     end
-    self.length = n
+    self.length = charCount
 end
 
-function a3:to(a58, up)
-    self:_render(a58, true, up)
+function odometer:to(targetValue, up)
+    self:_render(targetValue, true, up)
 end
 
-function a3:snap(a59)
-    self:_render(a59, false, true)
+function odometer:snap(snapValue)
+    self:_render(snapValue, false, true)
 end
 
-function a3:reveal(a60, a61, a62)
-    self.transparency = a60
-    for _, a63 in self.slots do
-        if a63.static and a63.static.Visible then
-            self.window:_reveal(a63.static, { TextTransparency = a60 }, a61, a62)
+function odometer:reveal(targetTransparency, revealTweenInfo, revealOverride)
+    self.transparency = targetTransparency
+    for _, revealSlot in self.slots do
+        if revealSlot.static and revealSlot.static.Visible then
+            self.window:_reveal(revealSlot.static, { TextTransparency = targetTransparency }, revealTweenInfo, revealOverride)
         end
-        if a63.reel then
-            for _, a64 in a63.reel.strip:GetChildren() do
-                if a64:IsA("TextLabel") then
-                    self.window:_reveal(a64, { TextTransparency = a60 }, a61, a62)
+        if revealSlot.reel then
+            for _, revealLabel in revealSlot.reel.strip:GetChildren() do
+                if revealLabel:IsA("TextLabel") then
+                    self.window:_reveal(revealLabel, { TextTransparency = targetTransparency }, revealTweenInfo, revealOverride)
                 end
             end
         end
     end
 end
 
-return a3
+return odometer

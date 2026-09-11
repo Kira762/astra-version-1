@@ -2,7 +2,7 @@ local log = {}
 
 type SuppressPredicate = () -> boolean
 
-local function prefix(): boolean
+local function defaultSecureModePredicate(): boolean
     if typeof(getgenv) ~= "function" then
         return false
     end
@@ -12,33 +12,33 @@ local function prefix(): boolean
     return ok and secureModeSource == true
 end
 
-local a4: SuppressPredicate = prefix
-local a5: SuppressPredicate? = nil
+local secureModePredicate: SuppressPredicate = defaultSecureModePredicate
+local suppressPredicate: SuppressPredicate? = nil
 
-function log.setSecureModeSource(a6: SuppressPredicate?)
-    a4 = if type(a6) == "function" then a6 else prefix
+function log.setSecureModeSource(source: SuppressPredicate?)
+    secureModePredicate = if type(source) == "function" then source else defaultSecureModePredicate
 end
 
-function log.setSuppressPredicate(a7: SuppressPredicate?)
-    a5 = if type(a7) == "function" then a7 else nil
+function log.setSuppressPredicate(predicate: SuppressPredicate?)
+    suppressPredicate = if type(predicate) == "function" then predicate else nil
 end
 
-local function a8(): boolean
-    if a5 and a5() then
+local function shouldSuppress(): boolean
+    if suppressPredicate and suppressPredicate() then
         return true
     end
-    return a4()
+    return secureModePredicate()
 end
 
 function log.warn(...)
-    if a8() then
+    if shouldSuppress() then
         return
     end
     warn(...)
 end
 
 function log.print(...)
-    if a8() then
+    if shouldSuppress() then
         return
     end
     print(...)

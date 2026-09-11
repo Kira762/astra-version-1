@@ -1,8 +1,8 @@
 local services = {}
 
-function services.getService(cache)
-    local a3 = game:GetService(cache)
-    return if cloneref then cloneref(a3) else a3
+function services.getService(serviceName)
+    local service = game:GetService(serviceName)
+    return if cloneref then cloneref(service) else service
 end
 
 return services
