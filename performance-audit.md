@@ -1,10 +1,13 @@
 # Astra Runtime Performance Audit
 
-> Note (2026-09): this audit predates the v1.1 patch set and the Luau
-> minification pass. File counts and line numbers have shifted since it was
-> written (sources were minified, icons split into `icons/`, and settings
-> sub-tabs added). The bottleneck analysis below still applies conceptually;
-> re-run the measurements before acting on the numbers.
+> Note (2026-09, updated 2026-09-11): this audit predates the v1.1 patch set
+> and the Luau minification pass, and predates the post-v1.1 changes as well
+> (sources were minified, icons split into `icons/`, the settings UI was
+> rebuilt from sub-tabs into six built-in settings tabs, and the tree gained
+> `elements/changelog.luau` and the `layouts/` builders). File counts and
+> line numbers have shifted since it was written. The bottleneck analysis
+> below still applies conceptually; re-run the measurements before acting on
+> the numbers.
 
 ## Scope and baseline
 

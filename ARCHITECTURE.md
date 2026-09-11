@@ -9,6 +9,42 @@ the source of truth; `version-1.luau` is a generated distribution artifact
 > Luau minification, settings-card fix). The sections below describe the
 > original modular refactor as performed.
 
+## Current tree (post-settings-rebuild)
+
+Since the v1.1 patch set, the tree has changed in the following ways
+(see `CHANGELOG.md`, 2026-09-11):
+
+- `elements/changelog.luau` + `Tab:CreateChangelog` — new release-history
+  element (`+`/`-`/`~` symbols, `Set`/`Refresh`/`Add`/`Clear`).
+- `layouts/` folder — per-mode bar-layout builders (`Topbar`, `Sidebar`,
+  `SidebarCollapsed`) split out of the window; `utilities/layouts.luau`
+  dispatches to them (`get`/`implementation`/`railWidthFor`).
+- Settings UI rebuilt: the single settings card + `Window:AddSettingsTab`
+  sub-tab API is gone. The window now builds six built-in settings tabs
+  itself (`Window:_buildSettingsUI`: General, Appearance, Behavior,
+  Performance, Persistence, About), toggled by the topbar gear action into a
+  settings mode that shows only settings tabs. The `activeSubTab` registry
+  key is retained and still round-trips through the settings JSON for
+  compatibility.
+- `utilities/persistence.luau` — facade over `persistenceConfig` +
+  `persistenceSettings`, the single persistence entrypoint for the window
+  and `settings/`.
+- `icons/init.luau` — pack entries are repo-relative PNG paths
+  (`assets/icons/<pack>-pack/…`) mapped onto the repo's raw-GitHub base URL
+  at resolve time, with an executor `getcustomasset` override; no `rbxassetid`
+  lookups.
+- `library_entrypoint.luau` — the active-window / anti-duplicate guard is
+  backed by a `getgenv()`-backed global store in addition to the module
+  local; in secure mode `CreateWindow` preloads window images and swaps in
+  the brand fonts.
+- `example.client.luau` — rewritten as a 20-tab example (multi-tab, tags,
+  every element, `CreateChangelog`) loaded through `game:HttpGet` +
+  `loadstring`.
+
+Dependency direction and the rest of this document remain accurate;
+`version-1.luau` is regenerated from this tree (includes `layouts/` and
+`elements/changelog.luau`).
+
 ## v1.1 patch set (avatar/profile/settings fixes + settings sub-tabs)
 
 Post-refactor patch set applied on top of the modular tree. Intentionally

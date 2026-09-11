@@ -2,6 +2,57 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-11 — Changelog element, settings rebuild, multi-tab example (`d1339ec`)
+
+- **New element — `Tab:CreateChangelog`:** scrollable release history with
+  `+` (added) / `-` (removed) / `~` (changed) symbols in green/red/amber,
+  entry fade-in, and `Set` / `Refresh` / `Add(entry, prepend?)` / `Clear`.
+  Types added: `ChangelogEntry`, `ChangelogChange`, `ChangelogProps`,
+  `Changelog`.
+- **Built-in settings rebuilt:** the v1.1 settings card +
+  `Window:AddSettingsTab` sub-tab API is retired. The window now builds six
+  settings tabs (`Window:_buildSettingsUI`): **General** (keybind, cursor,
+  welcome toast), **Appearance** (theme + Bar Layout pickers with popup
+  confirm, profile, window position), **Behavior** (duplicate-window guard),
+  **Performance** (haptics), **Persistence** (saved-config Save/Load/Delete,
+  only when `configuration` is passed), **About**. The topbar gear action
+  toggles a settings mode that shows only settings tabs; the `activeSubTab`
+  registry key is retained and still persisted for compatibility.
+- **`layouts/` folder:** per-mode bar-layout builders (`Topbar`, `Sidebar`,
+  `SidebarCollapsed`) extracted from the window; `utilities/layouts.luau`
+  dispatches (`get` / `implementation` / `railWidthFor`).
+- **`CreateWindow` props extended:** `showName`, `showIcon`,
+  `showIconOnly` (minimised capsule), `fallbackFont`, `translator`
+  (PascalCase aliases accepted); element props gained `description` and
+  `icon` across the board; `Progress` gained `steps` / `text` / `format` /
+  `showValue` / `indeterminate` props and `Get` / `GetPercentage` /
+  `Remove`; `Toast` gained `subtitleAbove` / `avatar` / `minWidth`;
+  `Popup` gained `subtitle` / `icon` / `dismissable`; `Console` gained
+  `Copy`; `Tag` gained `Set` / `SetColor` / `SetText` / `SetIcon` /
+  `Remove`.
+- **New window runtime helpers:** `Close()` (animated close → `Unload`,
+  wired to the topbar Close action with a confirm popup), `Create`
+  (instance factory with theme/locale binding), `Connect` / `ConnectFor` /
+  `Disconnect` / `DisconnectMany`, `DestroySubtree` / `DestroySubtrees`,
+  `CreateGlow`, `CreateHoverOverlay`, `StyleElementBody` /
+  `StyleElementPanel`, `SaveSettings` / `LoadSettings`, `SetProfile`.
+- **Entrypoint:** active-window / anti-duplicate guard now also backed by a
+  `getgenv()`-backed global store (`__ASTRA_ACTIVE_WINDOW_V1`); in secure
+  mode `CreateWindow` preloads window images (failure notification) and
+  swaps in the brand fonts.
+- **Icon resolution:** pack entries are repo-relative PNG paths under
+  `assets/icons/<pack>-pack/`; `icons/init.luau` maps them onto the repo's
+  raw-GitHub base URL at resolve time, honours an executor
+  `getcustomasset` override, and passes numeric asset ids through.
+- **Persistence facade:** new `utilities/persistence.luau` consolidates the
+  config + settings persistence surface.
+- **Example rewritten:** `example.client.luau` loads the bundle via
+  `game:HttpGet` + `loadstring` and builds a 20-tab window (Home, Controls,
+  Appearance, Information, Changelog, Updates + 15 labelled test tabs)
+  exercising tags, every element, groups, and the new Changelog element.
+- Bundle regenerated from the modular tree (includes `layouts/` and
+  `elements/changelog.luau`).
+
 ## 2026-09-06 — Settings card ColorSequence crash fix (`2ecd628`)
 
 Opening the Settings tab crashed the window:
