@@ -18,7 +18,7 @@ local window = Astra:CreateWindow({
 -- Window tags are rendered beside the window title and remain available in the chrome.
 window:CreateTag({
     icon = "tag",
-    text = "0.0.30",
+    text = "0.0.31",
     color = Color3.fromRGB(96, 205, 255),
 })
 
@@ -116,6 +116,16 @@ information:CreateChangelog({
     description = "Structured release notes with categorized changes.",
     entries = {
         {
+            version = "0.0.31",
+            date = "2026-09-11",
+            title = "Expanded element examples",
+            description = "Added more supported elements to the example client for API and layout testing.",
+            changes = {
+                { symbol = "added", category = "Added", text = "Added progress, stat, keybind, console, and grouped element examples." },
+                { symbol = "changed", category = "Example", text = "The example now documents more element combinations without console output calls." },
+            },
+        },
+        {
             version = "0.0.30",
             date = "2026-09-11",
             title = "Changelog element",
@@ -127,6 +137,41 @@ information:CreateChangelog({
         },
     },
 })
+
+information:CreateSection({ name = "Additional elements" })
+information:CreateProgress({
+    name = "Progress",
+    range = { 0, 100 },
+    value = 68,
+    steps = 10,
+    suffix = "%",
+})
+information:CreateStat({
+    name = "Active tests",
+    value = 20,
+    suffix = " tabs",
+})
+information:CreateKeybind({
+    name = "Test shortcut",
+    value = Enum.KeyCode.RightShift,
+    callback = function()
+        window:Toast({ title = "Shortcut", subtitle = "Test shortcut activated" })
+    end,
+})
+local console = information:CreateConsole({
+    name = "Test console",
+    text = "A console element for displaying diagnostic lines.",
+    height = 90,
+})
+console:Append("Changelog and element tests are ready.")
+local elementGroup = information:CreateGroup({ direction = "column" })
+elementGroup:CreateButton({
+    name = "Group action",
+    callback = function()
+        window:Toast({ title = "Group", subtitle = "Grouped element action completed" })
+    end,
+})
+elementGroup:CreateToggle({ name = "Grouped toggle", value = true })
 
 -- Additional test tabs: twenty main-window tabs with varied elements.
 local testTabs = {
