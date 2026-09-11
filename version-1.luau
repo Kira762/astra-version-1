@@ -2557,7 +2557,7 @@ function search.close(window, opts)
 
     if opts.showTabs then
         if window.layout.mode == "sidebar" and window._applySettingsLayout then
-            window:_applySettingsLayout(window.selectedTab == window.rfSettings)
+            window:_applySettingsLayout(window._settingsMode)
         else
             window.tabList.Visible = true
         end
@@ -4496,6 +4496,9 @@ function Window:CreateTab(props)
                 TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
             )
         end
+        -- [[A runtime-created tab may belong to the other rail.]]
+        -- [[Re-apply the rail filter so it lands in the correct rail.]]
+        self:_applySettingsLayout(self._settingsMode)
     end
 
     return tab
@@ -4871,6 +4874,8 @@ function Window:ToggleMinimise()
                     tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected", surfaceTween)
                 end
             end
+            -- [[Restore the settings/normal rail split; the loop above shows all tabs.]]
+            self:_applySettingsLayout(self._settingsMode)
             self:_setTabSectionsVisible(true)
             self:_setTabSectionsShown(true, surfaceTween)
 
@@ -5846,6 +5851,8 @@ function Window:_quickRestore()
             element:_setShown(true, false)
         end
     end
+    -- [[Restore the settings/normal rail split; the loop above shows all tabs.]]
+    self:_applySettingsLayout(self._settingsMode)
     self:_fadeSurfaces(true)
 
     if self.topbarIcon then
@@ -5907,6 +5914,8 @@ function Window:_firstShow()
             element:_setShown(true, false)
         end
     end
+    -- [[Restore the settings/normal rail split; the loop above shows all tabs.]]
+    self:_applySettingsLayout(self._settingsMode)
     for _, tag in self.tags do
         tag:_setShown(false, false)
     end
@@ -13247,11 +13256,20 @@ function state:Remove()
 
         if window.selectedTab == self then
         window.selectedTab = nil
+        -- [[Prefer a fallback from the same rail so removing the selected tab]]
+        -- [[cannot yank the user out of settings mode (or into it).]]
+        local fallback
         for _, tab in ipairs(window.tabs) do
             if not tab.neglectSelector then
-                tab:Select()
-                break
+                fallback = fallback or tab
+                if (tab._isSettingsTab == true) == (self._isSettingsTab == true) then
+                    fallback = tab
+                    break
+                end
             end
+        end
+        if fallback then
+            fallback:Select()
         end
     end
 
@@ -29371,85 +29389,85 @@ local LineOffsets = {
     [16] = 3144,
     [17] = 3422,
     [18] = 3799,
-    [20] = 6573,
-    [21] = 6840,
-    [22] = 7284,
-    [23] = 8415,
-    [24] = 8749,
-    [25] = 8810,
-    [26] = 8955,
-    [27] = 10275,
-    [28] = 10477,
-    [29] = 10738,
-    [30] = 11200,
-    [31] = 11650,
-    [32] = 11737,
-    [33] = 12302,
-    [34] = 12920,
-    [35] = 13280,
-    [36] = 13410,
-    [37] = 13574,
-    [38] = 13728,
-    [40] = 14239,
-    [41] = 14262,
-    [42] = 14279,
-    [43] = 14308,
-    [44] = 14424,
-    [45] = 14438,
-    [46] = 14487,
-    [47] = 14214,
-    [48] = 14588,
-    [49] = 14891,
-    [50] = 14922,
-    [51] = 14577,
-    [52] = 14965,
-    [53] = 14985,
-    [54] = 15017,
-    [55] = 14947,
-    [56] = 15124,
-    [57] = 15186,
-    [58] = 15249,
-    [60] = 15312,
-    [61] = 15477,
-    [62] = 15297,
-    [63] = 15737,
-    [64] = 16032,
-    [65] = 16688,
-    [66] = 18472,
-    [67] = 19613,
-    [68] = 21133,
-    [69] = 15541,
-    [70] = 26377,
-    [71] = 26439,
-    [72] = 26501,
-    [73] = 26583,
-    [74] = 26645,
-    [75] = 26720,
-    [76] = 26271,
-    [77] = 26782,
-    [78] = 26880,
-    [79] = 27058,
-    [80] = 27109,
-    [81] = 27139,
-    [82] = 27390,
-    [83] = 27439,
-    [84] = 27892,
-    [85] = 27910,
-    [86] = 28064,
-    [87] = 28163,
-    [88] = 28185,
-    [89] = 28235,
-    [90] = 28271,
-    [91] = 28289,
-    [92] = 28602,
-    [93] = 28618,
-    [94] = 28669,
-    [95] = 28688,
-    [96] = 28930,
-    [97] = 28974,
-    [98] = 29166,
-    [99] = 29194,
-    [100] = 29205,
+    [20] = 6582,
+    [21] = 6849,
+    [22] = 7293,
+    [23] = 8424,
+    [24] = 8758,
+    [25] = 8819,
+    [26] = 8964,
+    [27] = 10284,
+    [28] = 10486,
+    [29] = 10747,
+    [30] = 11209,
+    [31] = 11659,
+    [32] = 11746,
+    [33] = 12311,
+    [34] = 12929,
+    [35] = 13298,
+    [36] = 13428,
+    [37] = 13592,
+    [38] = 13746,
+    [40] = 14257,
+    [41] = 14280,
+    [42] = 14297,
+    [43] = 14326,
+    [44] = 14442,
+    [45] = 14456,
+    [46] = 14505,
+    [47] = 14232,
+    [48] = 14606,
+    [49] = 14909,
+    [50] = 14940,
+    [51] = 14595,
+    [52] = 14983,
+    [53] = 15003,
+    [54] = 15035,
+    [55] = 14965,
+    [56] = 15142,
+    [57] = 15204,
+    [58] = 15267,
+    [60] = 15330,
+    [61] = 15495,
+    [62] = 15315,
+    [63] = 15755,
+    [64] = 16050,
+    [65] = 16706,
+    [66] = 18490,
+    [67] = 19631,
+    [68] = 21151,
+    [69] = 15559,
+    [70] = 26395,
+    [71] = 26457,
+    [72] = 26519,
+    [73] = 26601,
+    [74] = 26663,
+    [75] = 26738,
+    [76] = 26289,
+    [77] = 26800,
+    [78] = 26898,
+    [79] = 27076,
+    [80] = 27127,
+    [81] = 27157,
+    [82] = 27408,
+    [83] = 27457,
+    [84] = 27910,
+    [85] = 27928,
+    [86] = 28082,
+    [87] = 28181,
+    [88] = 28203,
+    [89] = 28253,
+    [90] = 28289,
+    [91] = 28307,
+    [92] = 28620,
+    [93] = 28636,
+    [94] = 28687,
+    [95] = 28706,
+    [96] = 28948,
+    [97] = 28992,
+    [98] = 29184,
+    [99] = 29212,
+    [100] = 29223,
 }
 
 -- [[Misc AOT variable imports]]

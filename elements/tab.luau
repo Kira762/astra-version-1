@@ -328,11 +328,20 @@ function state:Remove()
 
         if window.selectedTab == self then
         window.selectedTab = nil
+        -- [[Prefer a fallback from the same rail so removing the selected tab]]
+        -- [[cannot yank the user out of settings mode (or into it).]]
+        local fallback
         for _, tab in ipairs(window.tabs) do
             if not tab.neglectSelector then
-                tab:Select()
-                break
+                fallback = fallback or tab
+                if (tab._isSettingsTab == true) == (self._isSettingsTab == true) then
+                    fallback = tab
+                    break
+                end
             end
+        end
+        if fallback then
+            fallback:Select()
         end
     end
 
