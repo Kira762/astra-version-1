@@ -137,7 +137,9 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
     if type(decodedSettings.theme) == "string" then
         local theme = string.lower(decodedSettings.theme)
         if theme == "default" or theme == "amethyst" or theme == "cobalt"
-            or theme == "ember" or theme == "frost" or theme == "rose"
+            or theme == "crimson" or theme == "ember" or theme == "emerald"
+            or theme == "frost" or theme == "gold" or theme == "onyx"
+            or theme == "rose"
         then
             window.settings.theme = theme
         end

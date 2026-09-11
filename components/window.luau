@@ -1488,8 +1488,12 @@ function Window:_buildSettingsUI()
         default = "Default",
         amethyst = "Amethyst",
         cobalt = "Cobalt",
+        crimson = "Crimson",
         ember = "Ember",
+        emerald = "Emerald",
         frost = "Frost",
+        gold = "Gold",
+        onyx = "Onyx",
         rose = "Rose",
     }
     local selectedTheme = self.settings.theme
@@ -1502,7 +1506,7 @@ function Window:_buildSettingsUI()
     appearance:CreateDropdown({
         name = "Theme",
         description = "Choose a built-in theme to preview and apply.",
-        options = { "Default", "Amethyst", "Cobalt", "Ember", "Frost", "Rose" },
+        options = { "Default", "Amethyst", "Cobalt", "Crimson", "Ember", "Emerald", "Frost", "Gold", "Onyx", "Rose" },
         value = themeLabel(selectedTheme),
         callback = function(value)
             for key, label in themes do
