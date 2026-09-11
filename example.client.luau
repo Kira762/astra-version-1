@@ -98,7 +98,7 @@ local information = window:CreateTab({ name = "Information", icon = "info" })
 information:CreateSection({ name = "Usage" })
 information:CreateText({
     name = "Create a tab",
-    text = 'local tab = window:CreateTab({ icon = "settings" })',
+    text = 'local tab = window:CreateTab({ name = "Settings", icon = "settings" })',
 })
 information:CreateText({
     name = "Create an element",
@@ -246,6 +246,13 @@ local testTabs = {
 }
 
 for index, details in ipairs(testTabs) do
+    assert(
+        type(details.name) == "string"
+            and details.name ~= ""
+            and type(details.icon) == "string"
+            and details.icon ~= "",
+        "Each example tab must define both a name and an icon."
+    )
     local tab = window:CreateTab({ name = details.name, icon = details.icon })
     -- [[Keep the tab selector registered even if an optional element has an]]
     -- [[environment-specific constructor issue; this lets the remaining tabs load.]]
