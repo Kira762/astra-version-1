@@ -25,7 +25,7 @@ window:CreateTag({
     color = Color3.fromRGB(88, 70, 170),
 })
 window:CreateTag({
-    icon = "sparkles",
+    icon = "badge-check",
     text = "Beta",
     color = Color3.fromRGB(190, 55, 125),
 })
@@ -157,6 +157,46 @@ elementGroup:CreateToggle({
     value = true,
     callback = function(value)
         window:Toast({ title = "Grouped toggle", subtitle = if value then "Enabled" else "Disabled" })
+    end,
+})
+
+local changelogTab = window:CreateTab({ name = "Changelog", icon = "history" })
+local changelog = changelogTab:CreateChangelog({
+    name = "Release history",
+    description = "Recent Astra changes and fixes.",
+    entries = {
+        {
+            version = "0.0.35",
+            date = "2026-09-11",
+            title = "Settings highlight",
+            description = "Improved the built-in Settings active state.",
+            changes = {
+                { symbol = "~", category = "Fixed", text = "Settings now stays highlighted while its tab is active." },
+            },
+        },
+        {
+            version = "0.0.34",
+            date = "2026-09-11",
+            title = "Example tab coverage",
+            description = "Expanded the example with named and icon-backed tabs.",
+            changes = {
+                { symbol = "+", category = "Added", text = "Added more tabs for layout and element testing." },
+            },
+        },
+    },
+})
+changelogTab:CreateButton({
+    name = "Add test entry",
+    callback = function()
+        changelog:Add({
+            version = "Test",
+            date = "Live",
+            title = "Runtime update",
+            changes = {
+                { symbol = "+", text = "This changelog entry was added at runtime." },
+            },
+        })
+        window:Toast({ title = "Changelog", subtitle = "New entry added" })
     end,
 })
 
