@@ -26268,18 +26268,10 @@ return tabler
 
 end)() end,
     [76] = function()local wax,script,require=ImportGlobals(76)local ImportGlobals return (function(...)
--- Theme resolution engine (themes/init.luau).
---
--- Extracted verbatim from components/window.luau so the window no longer owns
--- theme logic. Responsibilities: named-theme lookup against the themes folder,
--- value coercion (Color3 -> ColorSequence for gradient keys), stroke
--- derivation for user-supplied theme tables, and brand-font fallbacks.
--- Only the default theme module is required eagerly; named themes load on
--- demand when selected.
-
--- This file IS the `themes` ModuleScript (init.luau semantics): the theme
--- modules (default, frost, ...) are children of `script`, and other folders
--- (core, utilities) are siblings reachable through script.Parent.
+-- Astra theme resolution engine.
+-- Built-in themes may provide semantic tokens and legacy consumer keys. Custom
+-- themes are merged onto the default palette so missing values never crash UI
+-- construction or leave a component with an invalid Color3/ColorSequence.
 local themesFolder = script
 local variables = require(script.Parent.core.state)
 local log = require(script.Parent.utilities.log)
@@ -26295,6 +26287,19 @@ local gradientKeys = {
     SliderProgress = true,
 }
 
+local semanticAliases = {
+    WindowSurface = { "WindowColor" },
+    ElementSurface = { "CardSurface" },
+    Stroke = { "ElementStroke", "SurfaceStroke" },
+    Accent = { "AccentColor", "DropdownHighlight" },
+    AccentStrokeSemantic = { "AccentStroke" },
+    PrimaryText = { "ContentColor", "TitlingColor" },
+    MutedText = { "PlaceholderColor" },
+    ElementHover = { "NeutralButtonHover", "SliderBackgroundHover", "ElementStrokeHover" },
+    SecondaryElement = { "NeutralButton", "SliderBackground" },
+    InputSurface = { "FieldBackground" },
+}
+
 function themes.coerceValue(key, value)
     if gradientKeys[key] and typeof(value) == "Color3" then
         return ColorSequence.new(value)
@@ -26303,32 +26308,68 @@ function themes.coerceValue(key, value)
 end
 
 function themes.firstColor(value)
-    return if typeof(value) == "ColorSequence" then value.Keypoints[1].Value else value
+    if typeof(value) == "ColorSequence" then
+        return value.Keypoints[1].Value
+    end
+    return value
 end
 
 local function edgeShade(color, amount)
+    if typeof(color) ~= "Color3" then
+        return nil
+    end
     local luminance = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B
     local target = if luminance > 0.5 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1)
     return color:Lerp(target, amount)
 end
 
--- Stroke derivation for user-supplied theme tables. Exposed so ChangeTheme
--- can re-derive derived stroke colors after merging user overrides.
+local function aliasValue(key, value)
+    if key == "WindowColor" or key == "ElementGradient" or key == "ElementStrokeGradient" then
+        return themes.coerceValue(key, value)
+    end
+    if typeof(value) == "Color3" then
+        return value
+    end
+    return nil
+end
+
+local function applySemanticAliases(resolved, overrides)
+    for semantic, legacyKeys in semanticAliases do
+        local override = overrides[semantic]
+        if override ~= nil then
+            local value = aliasValue(legacyKeys[1], override)
+            if value ~= nil then
+                for _, legacyKey in legacyKeys do
+                    if overrides[legacyKey] == nil then
+                        resolved[legacyKey] = value
+                    end
+                end
+            end
+        end
+    end
+end
+
 function themes.deriveStrokes(resolved, overrides)
     if overrides.ElementGradient then
         local fill = themes.firstColor(resolved.ElementGradient)
         if overrides.ElementStroke == nil then
-            resolved.ElementStroke = edgeShade(fill, 0.28)
+            resolved.ElementStroke = edgeShade(fill, 0.28) or resolved.ElementStroke
         end
         if overrides.ElementStrokeGradient == nil then
-            resolved.ElementStrokeGradient = ColorSequence.new(edgeShade(fill, 0.4))
+            local shade = edgeShade(fill, 0.4)
+            if shade then
+                resolved.ElementStrokeGradient = ColorSequence.new(shade)
+            end
         end
         if overrides.ElementStrokeHover == nil then
-            resolved.ElementStrokeHover = edgeShade(fill, 0.52)
+            resolved.ElementStrokeHover = edgeShade(fill, 0.52) or resolved.ElementStrokeHover
         end
     end
     if overrides.TabBackground and overrides.TabStroke == nil then
-        resolved.TabStroke = ColorSequence.new(edgeShade(themes.firstColor(resolved.TabBackground), 0.4))
+        local shade = edgeShade(themes.firstColor(resolved.TabBackground), 0.4)
+        if shade then
+            resolved.TabStroke = ColorSequence.new(shade)
+        end
     end
 end
 
@@ -26347,26 +26388,25 @@ local function themeOverrides(value)
     return require(themesFolder["default"])
 end
 
--- Resolve a theme value (nil, built-in name, or theme table) to a full theme
--- table. Public API: window code calls themes.resolve(value).
 function themes.resolve(value)
     local resolved = table.clone(require(themesFolder["default"]))
     local overrides = themeOverrides(value)
-	for key, override in overrides do
-		resolved[key] = themes.coerceValue(key, override)
-	end
-	if typeof(value) == "table" then
-		themes.deriveStrokes(resolved, overrides)
-	end
+    for key, override in overrides do
+        resolved[key] = themes.coerceValue(key, override)
+    end
+    applySemanticAliases(resolved, overrides)
+    if typeof(value) == "table" then
+        themes.deriveStrokes(resolved, overrides)
+    end
 
-	local userTable = if typeof(value) == "table" then value else nil
+    -- Keep font fallback behavior compatible with existing custom themes.
+    local userTable = if typeof(value) == "table" then value else nil
     if not (userTable and (userTable.Font or userTable.font)) then
         resolved.Font = variables.brandFont(Enum.FontWeight.Medium)
     end
     if not (userTable and (userTable.TitleFont or userTable.titleFont)) then
         resolved.TitleFont = variables.brandFont(Enum.FontWeight.SemiBold)
     end
-
     return resolved
 end
 
@@ -26375,205 +26415,104 @@ return themes
 end)() end,
     [70] = function()local wax,script,require=ImportGlobals(70)local ImportGlobals return (function(...)
 return {
-    WindowColor = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 16, 32)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(30, 22, 46)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(38, 28, 56)),
-    }),
-    ShadowColor = Color3.fromRGB(12, 6, 22),
-
-    ElementStroke = Color3.fromRGB(54, 42, 74),
-    CardSurface = Color3.fromRGB(32, 24, 48),
-    ElementGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 24, 48)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(36, 28, 54)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(36, 28, 54)),
-    }),
-    ElementStrokeGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(72, 58, 104)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(88, 72, 124)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(72, 58, 104)),
-    }),
-    ElementStrokeHover = Color3.fromRGB(84, 68, 118),
-
-    TabBackground = ColorSequence.new(Color3.fromRGB(54, 42, 80), Color3.fromRGB(34, 26, 52)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(88, 70, 128), Color3.fromRGB(54, 42, 80)),
-
-    SliderBackground = Color3.fromRGB(46, 36, 68),
-    SliderBackgroundHover = Color3.fromRGB(60, 48, 90),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(170, 112, 248), Color3.fromRGB(138, 80, 224)),
-
-        AccentColor = Color3.fromRGB(168, 110, 246),
-    AccentStroke = Color3.fromRGB(200, 154, 255),
-
-    ToggleKnobOff = Color3.fromRGB(224, 214, 236),
-    StatBackground = Color3.fromRGB(24, 18, 38),
-
-    DropdownHighlight = Color3.fromRGB(168, 110, 246),
-
-    NeutralButton = Color3.fromRGB(46, 36, 68),
-    NeutralButtonHover = Color3.fromRGB(60, 48, 90),
-    NeutralButtonStroke = Color3.fromRGB(140, 116, 190),
+    Background = Color3.fromRGB(16, 13, 24), WindowSurface = Color3.fromRGB(26, 21, 36), TopbarSurface = Color3.fromRGB(31, 25, 43), SidebarSurface = Color3.fromRGB(22, 18, 31), TabSurface = Color3.fromRGB(39, 31, 53), TabSelected = Color3.fromRGB(75, 54, 91), ElementSurface = Color3.fromRGB(34, 27, 46), ElementHover = Color3.fromRGB(44, 35, 58), ElementPressed = Color3.fromRGB(28, 22, 38), SecondaryElement = Color3.fromRGB(29, 23, 40), Stroke = Color3.fromRGB(70, 56, 87), SecondaryStroke = Color3.fromRGB(54, 43, 69), PrimaryText = Color3.fromRGB(237, 231, 242), SecondaryText = Color3.fromRGB(190, 181, 198), MutedText = Color3.fromRGB(139, 128, 151), DisabledText = Color3.fromRGB(100, 91, 111), Accent = Color3.fromRGB(177, 126, 230), AccentHover = Color3.fromRGB(197, 151, 244), AccentPressed = Color3.fromRGB(137, 89, 189), AccentStrokeSemantic = Color3.fromRGB(215, 177, 250),
+    WindowColor = ColorSequence.new(Color3.fromRGB(23, 18, 33), Color3.fromRGB(34, 27, 47)), ShadowColor = Color3.fromRGB(8, 5, 14), ElementStroke = Color3.fromRGB(63, 50, 79), CardSurface = Color3.fromRGB(34, 27, 46), ElementGradient = ColorSequence.new(Color3.fromRGB(34, 27, 46), Color3.fromRGB(39, 31, 52)), ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(58, 46, 74), Color3.fromRGB(76, 60, 95)), ElementStrokeHover = Color3.fromRGB(93, 70, 112), TabBackground = ColorSequence.new(Color3.fromRGB(47, 37, 62), Color3.fromRGB(35, 28, 47)), TabStroke = ColorSequence.new(Color3.fromRGB(82, 64, 101), Color3.fromRGB(58, 45, 74)), TabColor = Color3.fromRGB(224, 215, 231), SliderBackground = Color3.fromRGB(44, 35, 58), SliderBackgroundHover = Color3.fromRGB(57, 45, 74), SliderProgress = ColorSequence.new(Color3.fromRGB(184, 132, 235), Color3.fromRGB(143, 91, 197)), SliderStroke = Color3.fromRGB(118, 98, 135), AccentColor = Color3.fromRGB(177, 126, 230), AccentStroke = Color3.fromRGB(215, 177, 250), AccentGlow = 0.3, DropdownHighlight = Color3.fromRGB(197, 151, 244), ToggleKnobOff = Color3.fromRGB(216, 206, 225), StatBackground = Color3.fromRGB(27, 21, 36), NeutralButton = Color3.fromRGB(43, 34, 57), NeutralButtonHover = Color3.fromRGB(57, 45, 74), NeutralButtonStroke = Color3.fromRGB(105, 84, 124), FieldBackground = Color3.fromRGB(20, 16, 28), FieldTransparency = 0, FieldGlow = Color3.fromRGB(177, 126, 230), PlaceholderColor = Color3.fromRGB(139, 128, 151), SurfaceStroke = Color3.fromRGB(58, 46, 72), ContentColor = Color3.fromRGB(221, 214, 226), TitlingColor = Color3.fromRGB(242, 236, 246), ElementTextHoverColor = Color3.fromRGB(248, 242, 250), ActionColor = Color3.fromRGB(235, 228, 239), ErrorColor = Color3.fromRGB(205, 80, 100), ErrorStrokeColor = Color3.fromRGB(237, 125, 145),
 }
 
 end)() end,
     [71] = function()local wax,script,require=ImportGlobals(71)local ImportGlobals return (function(...)
 return {
-    WindowColor = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 16, 34)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(20, 26, 50)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(28, 36, 66)),
-    }),
-    ShadowColor = Color3.fromRGB(6, 8, 20),
-
-    ElementStroke = Color3.fromRGB(44, 52, 82),
-    CardSurface = Color3.fromRGB(26, 32, 58),
-    ElementGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 32, 58)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(30, 38, 66)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 38, 66)),
-    }),
-    ElementStrokeGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(56, 66, 104)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(70, 82, 124)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(56, 66, 104)),
-    }),
-    ElementStrokeHover = Color3.fromRGB(64, 76, 116),
-
-    TabBackground = ColorSequence.new(Color3.fromRGB(48, 58, 92), Color3.fromRGB(30, 38, 64)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(78, 92, 140), Color3.fromRGB(48, 58, 92)),
-
-    SliderBackground = Color3.fromRGB(40, 48, 78),
-    SliderBackgroundHover = Color3.fromRGB(54, 64, 100),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(64, 132, 248), Color3.fromRGB(42, 104, 224)),
-
-        AccentColor = Color3.fromRGB(48, 120, 240),
-    AccentStroke = Color3.fromRGB(96, 164, 255),
-
-    ToggleKnobOff = Color3.fromRGB(196, 206, 232),
-    StatBackground = Color3.fromRGB(20, 26, 48),
-
-    DropdownHighlight = Color3.fromRGB(48, 120, 240),
-
-    NeutralButton = Color3.fromRGB(40, 48, 78),
-    NeutralButtonHover = Color3.fromRGB(54, 64, 100),
-    NeutralButtonStroke = Color3.fromRGB(120, 138, 195), }
+    Background = Color3.fromRGB(11, 16, 25), WindowSurface = Color3.fromRGB(18, 25, 37), TopbarSurface = Color3.fromRGB(22, 30, 44), SidebarSurface = Color3.fromRGB(15, 21, 32), TabSurface = Color3.fromRGB(29, 40, 58), TabSelected = Color3.fromRGB(37, 66, 91), ElementSurface = Color3.fromRGB(25, 34, 49), ElementHover = Color3.fromRGB(33, 45, 63), ElementPressed = Color3.fromRGB(19, 27, 40), SecondaryElement = Color3.fromRGB(21, 29, 43), Stroke = Color3.fromRGB(52, 68, 90), SecondaryStroke = Color3.fromRGB(39, 53, 72), PrimaryText = Color3.fromRGB(230, 237, 245), SecondaryText = Color3.fromRGB(176, 190, 207), MutedText = Color3.fromRGB(121, 139, 160), DisabledText = Color3.fromRGB(84, 100, 119), Accent = Color3.fromRGB(78, 157, 235), AccentHover = Color3.fromRGB(105, 181, 248), AccentPressed = Color3.fromRGB(48, 119, 195), AccentStrokeSemantic = Color3.fromRGB(137, 203, 255),
+    WindowColor = ColorSequence.new(Color3.fromRGB(15, 21, 32), Color3.fromRGB(24, 33, 48)), ShadowColor = Color3.fromRGB(4, 8, 15), ElementStroke = Color3.fromRGB(44, 59, 79), CardSurface = Color3.fromRGB(25, 34, 49), ElementGradient = ColorSequence.new(Color3.fromRGB(25, 34, 49), Color3.fromRGB(30, 41, 57)), ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(43, 57, 77), Color3.fromRGB(60, 77, 101)), ElementStrokeHover = Color3.fromRGB(70, 91, 117), TabBackground = ColorSequence.new(Color3.fromRGB(37, 51, 72), Color3.fromRGB(26, 36, 52)), TabStroke = ColorSequence.new(Color3.fromRGB(64, 84, 111), Color3.fromRGB(45, 60, 82)), TabColor = Color3.fromRGB(211, 224, 238), SliderBackground = Color3.fromRGB(35, 48, 68), SliderBackgroundHover = Color3.fromRGB(47, 64, 88), SliderProgress = ColorSequence.new(Color3.fromRGB(82, 164, 239), Color3.fromRGB(49, 124, 202)), SliderStroke = Color3.fromRGB(91, 112, 139), AccentColor = Color3.fromRGB(78, 157, 235), AccentStroke = Color3.fromRGB(137, 203, 255), AccentGlow = 0.3, DropdownHighlight = Color3.fromRGB(105, 181, 248), ToggleKnobOff = Color3.fromRGB(196, 210, 226), StatBackground = Color3.fromRGB(19, 26, 39), NeutralButton = Color3.fromRGB(34, 46, 65), NeutralButtonHover = Color3.fromRGB(47, 63, 86), NeutralButtonStroke = Color3.fromRGB(91, 113, 143), FieldBackground = Color3.fromRGB(14, 20, 30), FieldTransparency = 0, FieldGlow = Color3.fromRGB(78, 157, 235), PlaceholderColor = Color3.fromRGB(121, 139, 160), SurfaceStroke = Color3.fromRGB(44, 59, 79), ContentColor = Color3.fromRGB(214, 225, 237), TitlingColor = Color3.fromRGB(237, 244, 250), ElementTextHoverColor = Color3.fromRGB(245, 250, 255), ActionColor = Color3.fromRGB(226, 237, 246), ErrorColor = Color3.fromRGB(201, 76, 82), ErrorStrokeColor = Color3.fromRGB(232, 116, 120),
+}
 
 end)() end,
     [72] = function()local wax,script,require=ImportGlobals(72)local ImportGlobals return (function(...)
 local default = require(script.Parent.Parent.core.state)
 
 return {
-    CornerRoundness = UDim.new(0, 20),
-    WindowColor = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 10)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(25, 25, 25)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 35)),
-    }),
-    ShadowColor = Color3.fromRGB(20, 20, 20),
+    Background = Color3.fromRGB(13, 15, 18),
+    WindowSurface = Color3.fromRGB(21, 24, 29),
+    TopbarSurface = Color3.fromRGB(25, 29, 35),
+    SidebarSurface = Color3.fromRGB(18, 21, 26),
+    TabSurface = Color3.fromRGB(30, 35, 42),
+    TabSelected = Color3.fromRGB(40, 73, 70),
+    ElementSurface = Color3.fromRGB(28, 32, 38),
+    ElementHover = Color3.fromRGB(35, 41, 48),
+    ElementPressed = Color3.fromRGB(23, 27, 33),
+    SecondaryElement = Color3.fromRGB(24, 28, 34),
+    Stroke = Color3.fromRGB(55, 62, 72),
+    SecondaryStroke = Color3.fromRGB(42, 49, 58),
+    PrimaryText = Color3.fromRGB(235, 239, 242),
+    SecondaryText = Color3.fromRGB(178, 187, 195),
+    MutedText = Color3.fromRGB(126, 137, 148),
+    DisabledText = Color3.fromRGB(91, 101, 111),
+    Accent = Color3.fromRGB(54, 190, 157),
+    AccentHover = Color3.fromRGB(72, 211, 177),
+    AccentPressed = Color3.fromRGB(35, 145, 119),
+    AccentStrokeSemantic = Color3.fromRGB(92, 220, 187),
+    Success = Color3.fromRGB(65, 190, 126),
+    Warning = Color3.fromRGB(224, 166, 74),
+    Error = Color3.fromRGB(211, 86, 88),
+    NotificationSurface = Color3.fromRGB(28, 34, 41),
+    PopupSurface = Color3.fromRGB(24, 29, 35),
+    InputSurface = Color3.fromRGB(17, 21, 26),
 
-    ElementStroke = Color3.fromRGB(35, 35, 35),
-    CardSurface = Color3.fromRGB(30, 30, 30),
-        ElementGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(35, 35, 35)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 35)),
-    }),
-            ElementStrokeGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(48, 48, 48)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(58, 58, 58)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(48, 48, 48)),
-    }),
-    TabColor = Color3.fromRGB(255, 255, 255),
-    TabBackground = ColorSequence.new(Color3.fromRGB(50, 50, 50), Color3.fromRGB(35, 35, 35)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(95, 95, 95), Color3.fromRGB(50, 50, 50)),
-    SliderBackground = Color3.fromRGB(47, 47, 47),
-    SliderBackgroundHover = Color3.fromRGB(60, 60, 60),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(0, 170, 127), Color3.fromRGB(0, 134, 98)),
-    SliderStroke = Color3.fromRGB(255, 255, 255),
-    ActionColor = Color3.fromRGB(255, 255, 255),
+    CornerRoundness = UDim.new(0, 16),
+    WindowColor = ColorSequence.new(Color3.fromRGB(19, 22, 27), Color3.fromRGB(27, 32, 38)),
+    ShadowColor = Color3.fromRGB(5, 7, 10),
+    ElementStroke = Color3.fromRGB(54, 62, 72),
+    CardSurface = Color3.fromRGB(28, 32, 38),
+    ElementGradient = ColorSequence.new(Color3.fromRGB(28, 32, 38), Color3.fromRGB(32, 37, 44)),
+    ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(48, 56, 66), Color3.fromRGB(62, 72, 82)),
+    TabColor = Color3.fromRGB(212, 220, 224),
+    TabBackground = ColorSequence.new(Color3.fromRGB(31, 37, 44), Color3.fromRGB(25, 30, 36)),
+    TabStroke = ColorSequence.new(Color3.fromRGB(58, 69, 79), Color3.fromRGB(43, 51, 60)),
+    SliderBackground = Color3.fromRGB(38, 45, 53),
+    SliderBackgroundHover = Color3.fromRGB(49, 58, 68),
+    SliderProgress = ColorSequence.new(Color3.fromRGB(65, 202, 167), Color3.fromRGB(38, 160, 130)),
+    SliderStroke = Color3.fromRGB(102, 116, 126),
+    ActionColor = Color3.fromRGB(228, 235, 238),
     TitleFont = default.brandFont(Enum.FontWeight.SemiBold),
     Font = default.brandFont(Enum.FontWeight.Medium),
-    ContentColor = Color3.fromRGB(255, 255, 255),
-
+    ContentColor = Color3.fromRGB(220, 226, 230),
     LiveAnimation = false,
     DarkToggleOverlay = true,
     ElementTransparency = 0,
     ElementStrokeTransparency = 0,
     ElementStrokeHoverTransparency = 0,
-    ElementStrokeHover = Color3.fromRGB(50, 50, 50),
-    ElementCornerRadius = UDim.new(0, 12),
-    ElementTextHoverColor = Color3.fromRGB(255, 255, 255),
-    TitlingColor = Color3.fromRGB(255, 255, 255),
-
-    DropdownHighlight = Color3.fromRGB(255, 255, 255),
-
-        AccentColor = Color3.fromRGB(23, 153, 110),
-    AccentStroke = Color3.fromRGB(32, 201, 144),
-    AccentGlow = 0.4,
-    StatBackground = Color3.fromRGB(25, 25, 25),
-    SliderHandle = Color3.fromRGB(255, 255, 255),
+    ElementStrokeHover = Color3.fromRGB(78, 91, 102),
+    ElementCornerRadius = UDim.new(0, 10),
+    ElementTextHoverColor = Color3.fromRGB(245, 249, 250),
+    TitlingColor = Color3.fromRGB(239, 244, 246),
+    DropdownHighlight = Color3.fromRGB(72, 211, 177),
+    AccentColor = Color3.fromRGB(54, 190, 157),
+    AccentStroke = Color3.fromRGB(92, 220, 187),
+    AccentGlow = 0.28,
+    StatBackground = Color3.fromRGB(23, 27, 33),
+    SliderHandle = Color3.fromRGB(222, 235, 233),
     PillCornerRadius = UDim.new(1, 0),
-        ToggleTrack = Color3.fromRGB(0, 0, 0),
-    ToggleTrackTransparency = 0.9,
-    ToggleKnobOff = Color3.fromRGB(255, 255, 255),
-    ToggleKnobOffTransparency = 0.8,
-
-        FieldBackground = Color3.fromRGB(255, 255, 255),
-    FieldTransparency = 0.9,
-    FieldGlow = Color3.fromRGB(255, 255, 255),
-
-    PlaceholderColor = Color3.fromRGB(178, 178, 178),     SurfaceStroke = Color3.fromRGB(255, 255, 255),
-        NeutralButton = Color3.fromRGB(38, 38, 38),
-    NeutralButtonHover = Color3.fromRGB(54, 54, 54),
-    NeutralButtonStroke = Color3.fromRGB(255, 255, 255),
-
-    ErrorColor = Color3.fromRGB(185, 50, 50),
-    ErrorStrokeColor = Color3.fromRGB(240, 75, 75),
+    ToggleTrack = Color3.fromRGB(8, 11, 14),
+    ToggleTrackTransparency = 0.82,
+    ToggleKnobOff = Color3.fromRGB(189, 198, 204),
+    ToggleKnobOffTransparency = 0.08,
+    FieldBackground = Color3.fromRGB(16, 20, 25),
+    FieldTransparency = 0,
+    FieldGlow = Color3.fromRGB(58, 185, 157),
+    PlaceholderColor = Color3.fromRGB(126, 137, 148),
+    SurfaceStroke = Color3.fromRGB(50, 58, 67),
+    NeutralButton = Color3.fromRGB(32, 38, 45),
+    NeutralButtonHover = Color3.fromRGB(43, 51, 60),
+    NeutralButtonStroke = Color3.fromRGB(72, 83, 94),
+    ErrorColor = Color3.fromRGB(211, 86, 88),
+    ErrorStrokeColor = Color3.fromRGB(239, 118, 119),
 }
 
 end)() end,
     [73] = function()local wax,script,require=ImportGlobals(73)local ImportGlobals return (function(...)
 return {
-    WindowColor = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 18, 16)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(32, 27, 23)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 33, 28)),
-    }),
-    ShadowColor = Color3.fromRGB(16, 12, 8),
-
-    ElementStroke = Color3.fromRGB(54, 46, 40),
-    CardSurface = Color3.fromRGB(32, 27, 23),
-    ElementGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 27, 23)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(38, 32, 27)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(38, 32, 27)),
-    }),
-    ElementStrokeGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(72, 62, 52)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(88, 76, 64)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(72, 62, 52)),
-    }),
-    ElementStrokeHover = Color3.fromRGB(84, 72, 60),
-
-    TabBackground = ColorSequence.new(Color3.fromRGB(56, 47, 40), Color3.fromRGB(36, 30, 26)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(92, 78, 66), Color3.fromRGB(56, 47, 40)),
-
-    SliderBackground = Color3.fromRGB(48, 40, 34),
-    SliderBackgroundHover = Color3.fromRGB(62, 52, 44),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(244, 152, 44), Color3.fromRGB(220, 110, 24)),
-
-        AccentColor = Color3.fromRGB(240, 142, 40),
-    AccentStroke = Color3.fromRGB(255, 182, 92),
-
-    ToggleKnobOff = Color3.fromRGB(232, 224, 214),
-    StatBackground = Color3.fromRGB(26, 21, 18),
-
-    DropdownHighlight = Color3.fromRGB(240, 142, 40),
-
-    NeutralButton = Color3.fromRGB(48, 40, 34),
-    NeutralButtonHover = Color3.fromRGB(64, 54, 46),
-    NeutralButtonStroke = Color3.fromRGB(150, 128, 104),
+    Background = Color3.fromRGB(22, 18, 16), WindowSurface = Color3.fromRGB(31, 26, 23), TopbarSurface = Color3.fromRGB(37, 31, 27), SidebarSurface = Color3.fromRGB(26, 22, 20), TabSurface = Color3.fromRGB(47, 39, 33), TabSelected = Color3.fromRGB(83, 59, 38), ElementSurface = Color3.fromRGB(38, 31, 27), ElementHover = Color3.fromRGB(49, 40, 34), ElementPressed = Color3.fromRGB(29, 24, 21), SecondaryElement = Color3.fromRGB(32, 27, 24), Stroke = Color3.fromRGB(74, 61, 51), SecondaryStroke = Color3.fromRGB(57, 47, 40), PrimaryText = Color3.fromRGB(243, 236, 229), SecondaryText = Color3.fromRGB(198, 186, 173), MutedText = Color3.fromRGB(145, 131, 117), DisabledText = Color3.fromRGB(104, 93, 82), Accent = Color3.fromRGB(226, 145, 58), AccentHover = Color3.fromRGB(243, 169, 78), AccentPressed = Color3.fromRGB(181, 105, 31), AccentStrokeSemantic = Color3.fromRGB(255, 193, 112),
+    WindowColor = ColorSequence.new(Color3.fromRGB(27, 22, 19), Color3.fromRGB(40, 33, 28)), ShadowColor = Color3.fromRGB(11, 7, 5), ElementStroke = Color3.fromRGB(65, 53, 44), CardSurface = Color3.fromRGB(38, 31, 27), ElementGradient = ColorSequence.new(Color3.fromRGB(38, 31, 27), Color3.fromRGB(44, 36, 31)), ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(61, 50, 42), Color3.fromRGB(80, 66, 54)), ElementStrokeHover = Color3.fromRGB(94, 76, 61), TabBackground = ColorSequence.new(Color3.fromRGB(52, 43, 36), Color3.fromRGB(39, 32, 27)), TabStroke = ColorSequence.new(Color3.fromRGB(86, 70, 57), Color3.fromRGB(60, 49, 41)), TabColor = Color3.fromRGB(233, 222, 209), SliderBackground = Color3.fromRGB(51, 42, 35), SliderBackgroundHover = Color3.fromRGB(65, 53, 44), SliderProgress = ColorSequence.new(Color3.fromRGB(232, 151, 60), Color3.fromRGB(190, 108, 29)), SliderStroke = Color3.fromRGB(122, 102, 83), AccentColor = Color3.fromRGB(226, 145, 58), AccentStroke = Color3.fromRGB(255, 193, 112), AccentGlow = 0.28, DropdownHighlight = Color3.fromRGB(243, 169, 78), ToggleKnobOff = Color3.fromRGB(226, 215, 202), StatBackground = Color3.fromRGB(30, 24, 21), NeutralButton = Color3.fromRGB(47, 38, 32), NeutralButtonHover = Color3.fromRGB(63, 51, 42), NeutralButtonStroke = Color3.fromRGB(123, 101, 80), FieldBackground = Color3.fromRGB(22, 18, 16), FieldTransparency = 0, FieldGlow = Color3.fromRGB(226, 145, 58), PlaceholderColor = Color3.fromRGB(145, 131, 117), SurfaceStroke = Color3.fromRGB(65, 53, 44), ContentColor = Color3.fromRGB(225, 215, 204), TitlingColor = Color3.fromRGB(245, 238, 230), ElementTextHoverColor = Color3.fromRGB(252, 245, 236), ActionColor = Color3.fromRGB(237, 227, 216), ErrorColor = Color3.fromRGB(202, 77, 69), ErrorStrokeColor = Color3.fromRGB(235, 117, 103),
 }
 
 end)() end,
@@ -26581,104 +26520,15 @@ end)() end,
 local frost = require(script.Parent.Parent.core.state)
 
 return {
-    WindowColor = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(246, 249, 251)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(236, 241, 245)),
-    }),
-        ShadowColor = Color3.fromRGB(116, 124, 132),
-
-    LiveAnimation = false,
-
-        ElementTransparency = 0,
-    ElementStroke = Color3.fromRGB(218, 224, 228),
-    CardSurface = Color3.fromRGB(255, 255, 255),
-    ElementGradient = ColorSequence.new(Color3.fromRGB(255, 255, 255)),
-    ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(224, 230, 234), Color3.fromRGB(232, 238, 242)),
-    ElementStrokeTransparency = 0.1,
-    ElementStrokeHoverTransparency = 0,
-    ElementStrokeHover = Color3.fromRGB(0, 176, 208),     DarkToggleOverlay = false,
-        TabColor = Color3.fromRGB(38, 42, 46),
-    TabBackground = ColorSequence.new(Color3.fromRGB(0, 176, 208), Color3.fromRGB(0, 150, 184)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(80, 206, 230), Color3.fromRGB(0, 160, 196)),
-
-    SliderBackground = Color3.fromRGB(224, 230, 234),
-    SliderBackgroundHover = Color3.fromRGB(212, 220, 224),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(0, 182, 214), Color3.fromRGB(0, 146, 182)),
-    SliderStroke = Color3.fromRGB(200, 206, 210),
-
-        AccentColor = Color3.fromRGB(0, 176, 208),
-    AccentStroke = Color3.fromRGB(96, 210, 232),
-    AccentGlow = 0.85,
-    StatBackground = Color3.fromRGB(255, 255, 255),
-    SliderHandle = Color3.fromRGB(60, 66, 72),
-        ToggleTrack = Color3.fromRGB(198, 204, 210),
-    ToggleTrackTransparency = 0,
-    ToggleKnobOffTransparency = 0.05,
-
-        FieldBackground = Color3.fromRGB(224, 230, 234),
-    FieldTransparency = 0,
-    FieldGlow = Color3.fromRGB(148, 154, 160),
-
-    PlaceholderColor = Color3.fromRGB(138, 144, 150),
-    SurfaceStroke = Color3.fromRGB(204, 210, 214),
-
-        NeutralButton = Color3.fromRGB(224, 230, 234),
-    NeutralButtonHover = Color3.fromRGB(212, 220, 224),
-    NeutralButtonStroke = Color3.fromRGB(242, 246, 248),
-    ActionColor = Color3.fromRGB(68, 74, 80),     TitlingColor = Color3.fromRGB(26, 30, 34),
-    TitleFont = frost.brandFont(Enum.FontWeight.SemiBold),
-    Font = frost.brandFont(Enum.FontWeight.Medium),
-    ContentColor = Color3.fromRGB(42, 46, 52),
-    ElementTextHoverColor = Color3.fromRGB(18, 22, 26),
-
-    DropdownHighlight = Color3.fromRGB(0, 176, 208),
-
-    ErrorColor = Color3.fromRGB(200, 60, 55),
-    ErrorStrokeColor = Color3.fromRGB(240, 80, 70),
+    Background = Color3.fromRGB(237, 242, 246), WindowSurface = Color3.fromRGB(250, 252, 253), TopbarSurface = Color3.fromRGB(255, 255, 255), SidebarSurface = Color3.fromRGB(243, 247, 249), TabSurface = Color3.fromRGB(232, 239, 243), TabSelected = Color3.fromRGB(211, 242, 246), ElementSurface = Color3.fromRGB(255, 255, 255), ElementHover = Color3.fromRGB(246, 250, 252), ElementPressed = Color3.fromRGB(229, 237, 241), SecondaryElement = Color3.fromRGB(241, 246, 248), Stroke = Color3.fromRGB(202, 213, 220), SecondaryStroke = Color3.fromRGB(220, 228, 233), PrimaryText = Color3.fromRGB(31, 39, 46), SecondaryText = Color3.fromRGB(79, 93, 103), MutedText = Color3.fromRGB(115, 130, 140), DisabledText = Color3.fromRGB(157, 169, 176), Accent = Color3.fromRGB(0, 157, 187), AccentHover = Color3.fromRGB(0, 178, 205), AccentPressed = Color3.fromRGB(0, 126, 153), AccentStrokeSemantic = Color3.fromRGB(84, 199, 218),
+    WindowColor = ColorSequence.new(Color3.fromRGB(249, 252, 253), Color3.fromRGB(239, 245, 248)), ShadowColor = Color3.fromRGB(150, 164, 173), LiveAnimation = false, ElementTransparency = 0, ElementStroke = Color3.fromRGB(205, 216, 222), CardSurface = Color3.fromRGB(255, 255, 255), ElementGradient = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(249, 251, 252)), ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(219, 228, 233), Color3.fromRGB(202, 214, 221)), ElementStrokeTransparency = 0, ElementStrokeHoverTransparency = 0, ElementStrokeHover = Color3.fromRGB(0, 157, 187), DarkToggleOverlay = false, TabColor = Color3.fromRGB(36, 48, 56), TabBackground = ColorSequence.new(Color3.fromRGB(232, 246, 248), Color3.fromRGB(219, 239, 243)), TabStroke = ColorSequence.new(Color3.fromRGB(122, 210, 222), Color3.fromRGB(180, 225, 232)), SliderBackground = Color3.fromRGB(221, 230, 235), SliderBackgroundHover = Color3.fromRGB(207, 220, 226), SliderProgress = ColorSequence.new(Color3.fromRGB(0, 173, 201), Color3.fromRGB(0, 139, 172)), SliderStroke = Color3.fromRGB(183, 198, 206), AccentColor = Color3.fromRGB(0, 157, 187), AccentStroke = Color3.fromRGB(84, 199, 218), AccentGlow = 0.45, StatBackground = Color3.fromRGB(247, 250, 251), SliderHandle = Color3.fromRGB(55, 72, 80), ToggleTrack = Color3.fromRGB(188, 202, 209), ToggleTrackTransparency = 0, ToggleKnobOff = Color3.fromRGB(255, 255, 255), ToggleKnobOffTransparency = 0, FieldBackground = Color3.fromRGB(245, 249, 251), FieldTransparency = 0, FieldGlow = Color3.fromRGB(0, 157, 187), PlaceholderColor = Color3.fromRGB(115, 130, 140), SurfaceStroke = Color3.fromRGB(201, 213, 220), NeutralButton = Color3.fromRGB(231, 239, 243), NeutralButtonHover = Color3.fromRGB(216, 228, 234), NeutralButtonStroke = Color3.fromRGB(190, 205, 213), ActionColor = Color3.fromRGB(44, 58, 66), TitlingColor = Color3.fromRGB(24, 33, 40), TitleFont = frost.brandFont(Enum.FontWeight.SemiBold), Font = frost.brandFont(Enum.FontWeight.Medium), ContentColor = Color3.fromRGB(48, 61, 70), ElementTextHoverColor = Color3.fromRGB(13, 25, 31), DropdownHighlight = Color3.fromRGB(0, 157, 187), ErrorColor = Color3.fromRGB(195, 62, 60), ErrorStrokeColor = Color3.fromRGB(226, 98, 92),
 }
 
 end)() end,
     [75] = function()local wax,script,require=ImportGlobals(75)local ImportGlobals return (function(...)
 return {
-    WindowColor = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 18, 22)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(36, 26, 31)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(44, 32, 38)),
-    }),
-    ShadowColor = Color3.fromRGB(18, 10, 14),
-
-    ElementStroke = Color3.fromRGB(58, 44, 50),
-    CardSurface = Color3.fromRGB(34, 25, 29),
-    ElementGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 25, 29)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(40, 30, 34)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 30, 34)),
-    }),
-    ElementStrokeGradient = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(76, 58, 66)),
-        ColorSequenceKeypoint.new(0.9999, Color3.fromRGB(92, 70, 80)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(76, 58, 66)),
-    }),
-    ElementStrokeHover = Color3.fromRGB(88, 66, 74),
-
-    TabBackground = ColorSequence.new(Color3.fromRGB(62, 46, 53), Color3.fromRGB(38, 29, 33)),
-    TabStroke = ColorSequence.new(Color3.fromRGB(102, 78, 88), Color3.fromRGB(62, 46, 53)),
-
-    SliderBackground = Color3.fromRGB(50, 38, 44),
-    SliderBackgroundHover = Color3.fromRGB(64, 50, 56),
-    SliderProgress = ColorSequence.new(Color3.fromRGB(244, 88, 140), Color3.fromRGB(220, 60, 116)),
-
-        AccentColor = Color3.fromRGB(240, 82, 138),
-    AccentStroke = Color3.fromRGB(255, 134, 178),
-
-    ToggleKnobOff = Color3.fromRGB(236, 220, 226),
-    StatBackground = Color3.fromRGB(28, 20, 24),
-
-    DropdownHighlight = Color3.fromRGB(240, 82, 138),
-
-    NeutralButton = Color3.fromRGB(50, 38, 44),
-    NeutralButtonHover = Color3.fromRGB(64, 50, 56),
-    NeutralButtonStroke = Color3.fromRGB(170, 122, 140),
+    Background = Color3.fromRGB(23, 15, 19), WindowSurface = Color3.fromRGB(32, 22, 27), TopbarSurface = Color3.fromRGB(38, 26, 32), SidebarSurface = Color3.fromRGB(27, 19, 23), TabSurface = Color3.fromRGB(47, 32, 39), TabSelected = Color3.fromRGB(88, 51, 65), ElementSurface = Color3.fromRGB(39, 27, 32), ElementHover = Color3.fromRGB(51, 35, 42), ElementPressed = Color3.fromRGB(30, 21, 26), SecondaryElement = Color3.fromRGB(33, 23, 28), Stroke = Color3.fromRGB(78, 54, 63), SecondaryStroke = Color3.fromRGB(60, 42, 49), PrimaryText = Color3.fromRGB(244, 234, 238), SecondaryText = Color3.fromRGB(201, 183, 190), MutedText = Color3.fromRGB(149, 128, 137), DisabledText = Color3.fromRGB(108, 91, 99), Accent = Color3.fromRGB(218, 105, 145), AccentHover = Color3.fromRGB(237, 132, 168), AccentPressed = Color3.fromRGB(174, 70, 109), AccentStrokeSemantic = Color3.fromRGB(250, 169, 197),
+    WindowColor = ColorSequence.new(Color3.fromRGB(29, 19, 24), Color3.fromRGB(43, 29, 36)), ShadowColor = Color3.fromRGB(12, 6, 9), ElementStroke = Color3.fromRGB(69, 47, 56), CardSurface = Color3.fromRGB(39, 27, 32), ElementGradient = ColorSequence.new(Color3.fromRGB(39, 27, 32), Color3.fromRGB(46, 32, 38)), ElementStrokeGradient = ColorSequence.new(Color3.fromRGB(65, 45, 53), Color3.fromRGB(84, 58, 68)), ElementStrokeHover = Color3.fromRGB(99, 68, 81), TabBackground = ColorSequence.new(Color3.fromRGB(55, 38, 46), Color3.fromRGB(41, 28, 34)), TabStroke = ColorSequence.new(Color3.fromRGB(91, 63, 74), Color3.fromRGB(65, 45, 54)), TabColor = Color3.fromRGB(237, 221, 227), SliderBackground = Color3.fromRGB(53, 36, 44), SliderBackgroundHover = Color3.fromRGB(68, 46, 56), SliderProgress = ColorSequence.new(Color3.fromRGB(224, 112, 151), Color3.fromRGB(185, 70, 112)), SliderStroke = Color3.fromRGB(125, 92, 105), AccentColor = Color3.fromRGB(218, 105, 145), AccentStroke = Color3.fromRGB(250, 169, 197), AccentGlow = 0.3, DropdownHighlight = Color3.fromRGB(237, 132, 168), ToggleKnobOff = Color3.fromRGB(228, 209, 217), StatBackground = Color3.fromRGB(31, 21, 26), NeutralButton = Color3.fromRGB(51, 35, 42), NeutralButtonHover = Color3.fromRGB(68, 46, 56), NeutralButtonStroke = Color3.fromRGB(131, 94, 108), FieldBackground = Color3.fromRGB(24, 16, 20), FieldTransparency = 0, FieldGlow = Color3.fromRGB(218, 105, 145), PlaceholderColor = Color3.fromRGB(149, 128, 137), SurfaceStroke = Color3.fromRGB(69, 47, 56), ContentColor = Color3.fromRGB(228, 213, 219), TitlingColor = Color3.fromRGB(247, 238, 242), ElementTextHoverColor = Color3.fromRGB(253, 245, 248), ActionColor = Color3.fromRGB(239, 226, 232), ErrorColor = Color3.fromRGB(205, 76, 91), ErrorStrokeColor = Color3.fromRGB(237, 121, 139),
 }
 
 end)() end,
@@ -29323,37 +29173,37 @@ local LineOffsets = {
     [67] = 19613,
     [68] = 21133,
     [69] = 15541,
-    [70] = 26377,
-    [71] = 26421,
-    [72] = 26464,
-    [73] = 26537,
-    [74] = 26581,
-    [75] = 26642,
+    [70] = 26417,
+    [71] = 26424,
+    [72] = 26431,
+    [73] = 26513,
+    [74] = 26520,
+    [75] = 26529,
     [76] = 26271,
-    [77] = 26686,
-    [78] = 26784,
-    [79] = 26962,
-    [80] = 27013,
-    [81] = 27043,
-    [82] = 27294,
-    [83] = 27343,
-    [84] = 27796,
-    [85] = 27814,
-    [86] = 27968,
-    [87] = 28067,
-    [88] = 28089,
-    [89] = 28139,
-    [90] = 28175,
-    [91] = 28193,
-    [92] = 28506,
-    [93] = 28522,
-    [94] = 28573,
-    [95] = 28592,
-    [96] = 28834,
-    [97] = 28878,
-    [98] = 29070,
-    [99] = 29098,
-    [100] = 29109,
+    [77] = 26536,
+    [78] = 26634,
+    [79] = 26812,
+    [80] = 26863,
+    [81] = 26893,
+    [82] = 27144,
+    [83] = 27193,
+    [84] = 27646,
+    [85] = 27664,
+    [86] = 27818,
+    [87] = 27917,
+    [88] = 27939,
+    [89] = 27989,
+    [90] = 28025,
+    [91] = 28043,
+    [92] = 28356,
+    [93] = 28372,
+    [94] = 28423,
+    [95] = 28442,
+    [96] = 28684,
+    [97] = 28728,
+    [98] = 28920,
+    [99] = 28948,
+    [100] = 28959,
 }
 
 -- Misc AOT variable imports
