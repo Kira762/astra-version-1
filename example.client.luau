@@ -18,7 +18,7 @@ local window = Astra:CreateWindow({
 -- Window tags are rendered beside the window title and remain available in the chrome.
 window:CreateTag({
     icon = "tag",
-    text = "0.0.29",
+    text = "0.0.30",
     color = Color3.fromRGB(96, 205, 255),
 })
 
@@ -110,6 +110,22 @@ information:CreateButton({
     callback = function()
         window:Toast({ title = "Astra", subtitle = "All example tabs are available." })
     end,
+})
+information:CreateChangelog({
+    name = "Recent changes",
+    description = "Structured release notes with categorized changes.",
+    entries = {
+        {
+            version = "0.0.30",
+            date = "2026-09-11",
+            title = "Changelog element",
+            description = "Added the Changelog element to Astra.",
+            changes = {
+                { symbol = "added", category = "Added", text = "CreateChangelog is now available on tabs." },
+                { symbol = "changed", category = "Compatibility", text = "Supports lowercase and PascalCase properties." },
+            },
+        },
+    },
 })
 
 -- Additional test tabs: twenty main-window tabs with varied elements.

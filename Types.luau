@@ -46,6 +46,29 @@ export type TextProps = {
     name: string?,     text: string?,     icon: (string | number)?,
 }
 
+export type ChangelogChange = {
+    symbol: string?,
+    text: string?,
+    category: string?,
+}
+
+export type ChangelogEntry = {
+    version: string?,
+    date: string?,
+    game: string?,
+    gameId: string?,
+    title: string?,
+    description: string?,
+    changes: { ChangelogChange }?,
+}
+
+export type ChangelogProps = {
+    name: string?,
+    description: string?,
+    emptyText: string?,
+    entries: { ChangelogEntry }?,
+}
+
 export type DividerProps = {
     text: string?,     spacing: number?,     line: boolean?, }
 
@@ -261,6 +284,13 @@ export type Text = Moveable & {
     SetTitle: (self: Text, title: string) -> (),
 }
 
+export type Changelog = Moveable & {
+    Set: (self: Changelog, entries: { ChangelogEntry }) -> (),
+    Refresh: (self: Changelog, entries: { ChangelogEntry }) -> (),
+    Add: (self: Changelog, entry: ChangelogEntry, prepend: boolean?) -> (),
+    Clear: (self: Changelog) -> (),
+}
+
 export type Divider = Moveable & {
     text: string,     Set: (self: Divider, text: string?) -> (),
 }
@@ -307,6 +337,7 @@ export type Tab = {
     CreateConsole: (self: Tab, props: ConsoleProps) -> Console,
     CreateSection: (self: Tab, props: SectionProps) -> Section,
     CreateText: (self: Tab, props: TextProps) -> Text,
+    CreateChangelog: (self: Tab, props: ChangelogProps) -> Changelog,
     CreateDivider: (self: Tab, props: DividerProps?) -> Divider,
     CreateGroup: (self: Tab, props: GroupProps?) -> Group,
 }
