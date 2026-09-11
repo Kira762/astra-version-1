@@ -314,7 +314,7 @@ for index, details in ipairs(testTabs) do
             end,
             })
         end
-    end
+    end)
 end
 
 -- [[Select the first tab explicitly so the example is deterministic on startup.]]

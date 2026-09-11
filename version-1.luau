@@ -6840,7 +6840,7 @@ end)() end,
 local Changelog = {}
 Changelog.__index = Changelog
 Changelog.__type = "Changelog"
-local moveable = require(script.Parent.Parent.Parent.utilities.moveable)
+local moveable = require(script.Parent.Parent.utilities.moveable)
 export type ChangelogChange = {
     symbol: string,
     text: string,
