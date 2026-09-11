@@ -18,7 +18,7 @@ local window = Astra:CreateWindow({
 -- Window tags are rendered beside the window title and remain available in the chrome.
 window:CreateTag({
     icon = "tag",
-    text = "0.0.31",
+    text = "0.0.32",
     color = Color3.fromRGB(96, 205, 255),
 })
 
@@ -111,33 +111,6 @@ information:CreateButton({
         window:Toast({ title = "Astra", subtitle = "All example tabs are available." })
     end,
 })
-information:CreateChangelog({
-    name = "Recent changes",
-    description = "Structured release notes with categorized changes.",
-    entries = {
-        {
-            version = "0.0.31",
-            date = "2026-09-11",
-            title = "Expanded element examples",
-            description = "Added more supported elements to the example client for API and layout testing.",
-            changes = {
-                { symbol = "added", category = "Added", text = "Added progress, stat, keybind, console, and grouped element examples." },
-                { symbol = "changed", category = "Example", text = "The example now documents more element combinations without console output calls." },
-            },
-        },
-        {
-            version = "0.0.30",
-            date = "2026-09-11",
-            title = "Changelog element",
-            description = "Added the Changelog element to Astra.",
-            changes = {
-                { symbol = "added", category = "Added", text = "CreateChangelog is now available on tabs." },
-                { symbol = "changed", category = "Compatibility", text = "Supports lowercase and PascalCase properties." },
-            },
-        },
-    },
-})
-
 information:CreateSection({ name = "Additional elements" })
 information:CreateProgress({
     name = "Progress",
@@ -171,7 +144,66 @@ elementGroup:CreateButton({
         window:Toast({ title = "Group", subtitle = "Grouped element action completed" })
     end,
 })
-elementGroup:CreateToggle({ name = "Grouped toggle", value = true })
+elementGroup:CreateToggle({
+    name = "Grouped toggle",
+    value = true,
+    callback = function(value)
+        window:Toast({ title = "Grouped toggle", subtitle = if value then "Enabled" else "Disabled" })
+    end,
+})
+
+-- Changelog: a dedicated tab so release news is always visible in the main window.
+local changelogTab = window:CreateTab({ name = "Changelog", icon = "history" })
+local changelog = changelogTab:CreateChangelog({
+    name = "Recent changes",
+    description = "Structured release notes with categorized changes.",
+    entries = {
+        {
+            version = "0.0.32",
+            date = "2026-09-11",
+            title = "Dedicated Changelog tab",
+            description = "The example now exposes release news in its own main-window tab.",
+            changes = {
+                { symbol = "added", category = "Added", text = "Added a dedicated Changelog tab with release entries." },
+                { symbol = "changed", category = "Example", text = "Test controls now use working callbacks and state updates." },
+            },
+        },
+        {
+            version = "0.0.31",
+            date = "2026-09-11",
+            title = "Expanded element examples",
+            description = "Added more supported elements to the example client for API and layout testing.",
+            changes = {
+                { symbol = "added", category = "Added", text = "Added progress, stat, keybind, console, and grouped element examples." },
+                { symbol = "changed", category = "Example", text = "The example now documents more element combinations without console output calls." },
+            },
+        },
+        {
+            version = "0.0.30",
+            date = "2026-09-11",
+            title = "Changelog element",
+            description = "Added the Changelog element to Astra.",
+            changes = {
+                { symbol = "added", category = "Added", text = "CreateChangelog is now available on tabs." },
+                { symbol = "changed", category = "Compatibility", text = "Supports lowercase and PascalCase properties." },
+            },
+        },
+    },
+})
+changelogTab:CreateButton({
+    name = "Add test news",
+    callback = function()
+        changelog:Add({
+            version = "Test",
+            date = "Live",
+            title = "Runtime update",
+            changes = {
+                { symbol = "added", text = "This release note was added at runtime." },
+            },
+        })
+        window:Toast({ title = "Changelog", subtitle = "New entry added" })
+    end,
+})
 
 -- Additional test tabs: twenty main-window tabs with varied elements.
 local testTabs = {
@@ -190,7 +222,6 @@ local testTabs = {
     { name = "Debug", icon = "bug" },
     { name = "Logs", icon = "scroll-text" },
     { name = "Experiments", icon = "flask-conical" },
-    { name = "Diagnostics", icon = "activity" },
 }
 
 for index, details in ipairs(testTabs) do
@@ -208,17 +239,56 @@ for index, details in ipairs(testTabs) do
     })
 
     if index % 4 == 1 then
-        tab:CreateToggle({ name = "Enabled", value = index % 3 == 0 })
-        tab:CreateSlider({ name = "Intensity", range = { 0, 100 }, value = index * 5, increment = 5 })
+        tab:CreateToggle({
+            name = "Enabled",
+            value = index % 3 == 0,
+            callback = function(value)
+                window:Toast({ title = details.name, subtitle = if value then "Enabled" else "Disabled" })
+            end,
+        })
+        tab:CreateSlider({
+            name = "Intensity",
+            range = { 0, 100 },
+            value = index * 5,
+            increment = 5,
+            callback = function(value)
+                window:Toast({ title = details.name, subtitle = "Intensity: " .. tostring(value) })
+            end,
+        })
     elseif index % 4 == 2 then
-        tab:CreateDropdown({ name = "Preset", options = { "Low", "Medium", "High" }, value = "Medium" })
-        tab:CreateInput({ name = "Label", placeholder = "Test input" })
+        tab:CreateDropdown({
+            name = "Preset",
+            options = { "Low", "Medium", "High" },
+            value = "Medium",
+            callback = function(value)
+                window:Toast({ title = details.name, subtitle = "Preset: " .. tostring(value) })
+            end,
+        })
+        tab:CreateInput({
+            name = "Label",
+            placeholder = "Test input",
+            callback = function(value)
+                window:Toast({ title = details.name, subtitle = "Label: " .. tostring(value) })
+            end,
+        })
     elseif index % 4 == 3 then
-        tab:CreateColorPicker({ name = "Color", color = Color3.fromHSV(index / #testTabs, 0.7, 1) })
+        tab:CreateColorPicker({
+            name = "Color",
+            color = Color3.fromHSV(index / #testTabs, 0.7, 1),
+            callback = function(value)
+                window:Toast({ title = details.name, subtitle = "Color updated: " .. tostring(value) })
+            end,
+        })
         tab:CreateDivider()
     else
         tab:CreateText({ name = "Status", text = "Ready for testing." })
-        tab:CreateToggle({ name = "Experimental mode", value = false })
+        tab:CreateToggle({
+            name = "Experimental mode",
+            value = false,
+            callback = function(value)
+                window:Toast({ title = details.name, subtitle = if value then "Experimental mode on" else "Experimental mode off" })
+            end,
+        })
     end
 end
 
