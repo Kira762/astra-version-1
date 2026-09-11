@@ -29939,7 +29939,7 @@ local task_defer = task and task.defer
 
 -- If we're not running on the Roblox engine, we won't have a `task` global
 local Defer = task_defer or function(f, ...)
-    coroutine_wrap(f)(...)
+    coroutine.wrap(f)(...)
 end
 
 -- ClassName "IDs"
