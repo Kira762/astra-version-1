@@ -6,15 +6,24 @@ Load Astra and build your first window in a few lines.
 
 ## Load the library
 
-Add one line at the top of your script to pull in Astra. It's in the same repo — just require it like any other file, no links.
+Two ways in, depending on where you run:
 
 ```lua
 -- Studio / Rojo (recommended): Astra is a ModuleScript in ReplicatedStorage
 local Astra = require(game:GetService("ReplicatedStorage").Astra)
--- If Astra isn't there yet, the example loader falls back automatically:
--- sibling version-1 ModuleScript -> or local file readfile("version-1.luau") + loadstring
--- No HttpGet needed — everything is same-repo.
 ```
+
+```lua
+-- Executor: the example loads the bundle from the repo and compiles it.
+-- This is what example.client.luau does:
+local bundleSource = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
+local compile = loadstring or load
+local bundleLoader = compile(bundleSource)
+local Astra = bundleLoader()
+```
+
+The bundle (`version-1.luau`) is a generated artifact — require/load the single
+bundle, never the modular tree, when running outside Rojo.
 
 ---
 
@@ -45,7 +54,7 @@ tab:CreateToggle({
 })
 ```
 
-The first visible tab opens on its own, so there is nothing else to wire up. Layout is built-in — switch it anytime in **Astra Settings → Bar Layout**.
+The first visible tab opens on its own, so there is nothing else to wire up. Layout is built-in — switch it anytime in **Settings → Appearance → Bar Layout**.
 
 ---
 
@@ -100,11 +109,12 @@ Titles, tags, themes, and every window method.
 | `window:CreateSection({ name, icon })` | Top-level section — a `TabSection`. |
 | `window:CreateTag({ text, title, icon, color, order })` | Small tag in the window footer. |
 | `window:Notify({ title, content, icon, duration })` | Classic notification. |
-| `window:Toast({ title, subtitle, icon, duration, position })` | Compact toast. |
-| `window:Popup({ title, content, boxes, options })` | Modal popup. Returns `Popup:Close()`. |
+| `window:Toast({ title, subtitle, icon, duration, position, ... })` | Compact toast. |
+| `window:Popup({ title, content, boxes, options, ... })` | Modal popup. Returns `Popup:Close()`. |
 | `window:Navigate(tab)` | Select a tab by name or Tab object. |
 | `window:Show()` / `window:Hide()` / `window:ToggleHide()` | Visibility. |
 | `window:ToggleMinimise()` | Collapse/expand the rail. |
+| `window:Close()` | Animated close (confirm popup is added by the topbar action); unloads the window when the transition finishes. |
 | `window:Save(name?)` / `window:Load(name?)` | Save/load flags. |
 | `window:ListConfigs()` | Array of saved config names. |
 | `window:DeleteConfig(name)` | Delete a saved config. |
@@ -114,16 +124,27 @@ Titles, tags, themes, and every window method.
 | `window:ResolveIcon(value, pack?)` | Icon name → asset id. |
 | `window:GetPath()` | Returns the (folder, file) persistence path. |
 | `window:Unload()` | Destroy the window. |
-| `window:AddSettingsTab({ name, icon })` | Add a sub-tab inside the built-in Settings page. |
 | `window.Flags` | Table of every registered flag's current value. |
 
+Additional runtime helpers (used by the library internals, safe for extensions):
+`window:Create(className, props, themeBindings?)` (instance factory with theme
+and locale binding), `window:Connect(instance, event, fn)` /
+`window:ConnectFor(instance, event, fn)` / `window:Disconnect(connection)` /
+`window:DisconnectMany(list)`, `window:DestroySubtree(instance)` /
+`window:DestroySubtrees(list)`, `window:CreateGlow(parent, color, blurRadius, transparency)`,
+`window:CreateHoverOverlay(parent)`, `window:StyleElementBody(frame)` /
+`window:StyleElementPanel(frame)`, `window:SaveSettings()` /
+`window:LoadSettings()`, `window:SetProfile(text)`.
+
 Popup options: `options = { { text = "Cancel" }, { text = "Confirm", style = "primary" | "danger" | "neutral", callback = fn } }`.
+Popup props: `title`, `subtitle`, `icon`, `content`, `boxes`, `options`, `dismissable`.
 
 ### Tabs and groups
 
 ```lua
 local tab = window:CreateTab({ name = "Home", icon = "house" })
 tab:Select()      -- switch to it
+tab:Deselect()    -- switch away
 tab:Remove()      -- destroy it
 
 local row = window:CreateGroup()                       -- horizontal row
@@ -131,11 +152,13 @@ local col = row:CreateGroup({ direction = "column" }) -- nested column
 col:CreateToggle({ name = "Left 1" })
 ```
 
-Tab methods: `CreateButton`, `CreateToggle`/`CreateSwitch`, `CreateSlider`, `CreateDropdown`, `CreateInput`, `CreateKeybind`, `CreateColorPicker`, `CreateStat`, `CreateProgress`, `CreateConsole`, `CreateSection`, `CreateText`, `CreateDivider`, `CreateGroup`.
+Tab methods: `CreateButton`, `CreateToggle`/`CreateSwitch`, `CreateSlider`, `CreateDropdown`, `CreateInput`, `CreateKeybind`, `CreateColorPicker`, `CreateStat`, `CreateProgress`, `CreateConsole`, `CreateSection`, `CreateText`, `CreateChangelog`, `CreateDivider`, `CreateGroup`.
+
+Groups support: `CreateButton`, `CreateToggle`/`CreateSwitch`, `CreateSlider`, `CreateDropdown`, `CreateStat`, `CreateSection`, `CreateText`, `CreateDivider`, `CreateGroup`.
 
 ### Elements
 
-Every element supports `Moveable` (`:MoveTo`, `:MoveToTop` …) and most support `Lockable` (`:Lock`, `:Unlock`).
+Every element supports `Moveable` (`:MoveTo`, `:MoveToTop`, `:MoveToBottom`, `:MoveUp`, `:MoveDown`) and most support `Lockable` (`:Lock`, `:Unlock`, `:IsLocked`). Most element props also accept `description` (helper text under the name) and `icon`.
 
 ```lua
 tab:CreateButton({ name = "Click Me", icon = "play", callback = function() end })
@@ -192,7 +215,7 @@ d:Remove("A")
 ```lua
 tab:CreateInput({
     name = "Name", placeholder = "Type here",
-    numeric = true, clearOnFocus = true,
+    value = "Initial", numeric = true, clearOnFocus = true,
     callback = function(text) end,
 })
 ```
@@ -212,6 +235,7 @@ local c = tab:CreateColorPicker({
     name = "Accent", color = Color3.fromRGB(96, 205, 255), alpha = 0.8,
     callback = function(color, alpha) end,
 })
+c:Set(Color3.fromRGB(255, 0, 0))
 c:SetAlpha(0.5)
 ```
 
@@ -221,40 +245,93 @@ local s = tab:CreateStat({ name = "Kills", value = 128, prefix = "", suffix = " 
 s:Set(200)
 s:ResetBaseline(0)
 ```
+Extra props: `display`, `compact`, `changeMode`, `changeBaseline`, `numberEasing`.
 
 ### Progress
 ```lua
 local p = tab:CreateProgress({ name = "Download", range = { 0, 100 }, value = 35 })
 p:Set(80)
+p:Get()                 -- current value
+p:GetPercentage()       -- 0–100
 p:SetRange(0, 500)
 p:SetText("Downloading...")
 p:SetIndeterminate(true)
+p:Remove()
 ```
+Extra props: `steps`, `text`, `format(value, min, max)`, `showValue`, `indeterminate`.
 
 ### Text / Divider / Console / Group
 ```lua
 local x = tab:CreateText({ name = "Title", text = "Body text", icon = "info" })
 x:Set("New body") x:SetTitle("New title")
 
-tab:CreateDivider()  tab:CreateDivider({ text = "or" })  tab:CreateDivider({ line = false })
+tab:CreateDivider()  tab:CreateDivider({ text = "or" })  tab:CreateDivider({ line = false, spacing = 8 })
 
 local con = tab:CreateConsole({ name = "Log", text = "-- ready", height = 130, follow = true, maxLines = 50 })
-con:Append("hello") con:Set("reset") con:Get() con:Clear() con:SetHeight(200)
+con:Append("hello") con:Set("reset") con:Get() con:Clear() con:Copy() con:SetHeight(200)
 
 local row = tab:CreateGroup()
 local col = row:CreateGroup({ direction = "column" })
 col:CreateToggle({ name = "Left 1" })
 ```
 
-### Built-in Settings (window only)
+### Changelog
 
-Every window ships a hidden "Astra Settings" tab (gear action in the topbar). It's window-scoped: it edits this window's own behaviour (layout mode, duplicate-window guard, keybind, etc.), stored per-window — not global.
+Scrollable release-history element with `+` (added), `-` (removed) and `~` (changed) change symbols, rendered in green/red/amber.
 
 ```lua
-local sub = window:AddSettingsTab({ name = "Hotkeys", icon = "keyboard" })
-sub:CreateSection({ name = "Combat" })
-sub:CreateToggle({ name = "Auto Sprint", flag = "hotkeyAutoSprint", value = true })
+local log = tab:CreateChangelog({
+    name = "Release history",
+    description = "Recent changes and fixes.",
+    emptyText = "No entries yet.",   -- optional
+    entries = {
+        {
+            version = "0.0.35",
+            date = "2026-09-11",
+            game = "Game Name",      -- optional, game = "..." or gameId = number
+            title = "Settings highlight",
+            description = "Improved the built-in Settings active state.",
+            changes = {
+                { symbol = "~", category = "Fixed", text = "Settings stays highlighted while its tab is active." },
+                { symbol = "+", text = "Added the Changelog element." },
+                { symbol = "-", text = "Removed the old sub-tab API." },
+            },
+        },
+    },
+})
+
+log:Add({ version = "Test", date = "Live", changes = { { symbol = "+", text = "Runtime entry." } } })  -- prepends by default
+log:Add(entry, false)  -- append at the end instead
+log:Set({ ... })       -- replace all entries
+log:Refresh({ ... })   -- alias of Set
+log:Clear()
 ```
+
+### Tag
+
+```lua
+local tag = window:CreateTag({ text = "0.0.35", icon = "tag", color = Color3.fromRGB(88, 70, 170), order = 1 })
+tag:Set({ text = "0.0.36" })
+tag:SetText("0.0.36")  tag:SetColor(Color3.new())  tag:SetIcon("badge-check")  tag:Remove()
+```
+
+### Built-in Settings (window only)
+
+Every window ships a built-in Settings group (gear action in the topbar). Clicking the gear switches into settings mode — only the settings tabs are shown — and clicking it again returns to the previous tab. It's window-scoped: it edits this window's own behaviour, stored per-window — not global.
+
+The settings tabs are:
+
+| Tab | Contents |
+|---|---|
+| **General** | Toggle keybind (show/hide), unlock-cursor toggle, welcome toast toggle. |
+| **Appearance** | Theme dropdown + Apply (popup confirm), Bar Layout dropdown (Default Topbar / Sidebar / Collapsed Sidebar), Show profile / Reveal full username, Keep window on screen, Draggable capsule, Reset Window Position. |
+| **Behavior** | Prevent duplicate windows. |
+| **Performance** | Haptics. |
+| **Persistence** | Saved-configurations dropdown + name input + Save/Load/Delete. Only present when `configuration` was passed to `CreateWindow`. |
+| **About** | Library info and links. |
+
+There is no sub-tab API: these tabs are built by the window itself
+(`Window:_buildSettingsUI`), not by user code.
 
 ### Themes
 
@@ -273,11 +350,15 @@ window:ChangeTheme({
 ```lua
 Astra.Icons.get("house")
 Astra.Icons.get("play", "material")
+Astra.Icons.getByPack("tabler", "home")
 Astra.Icons.list("lucide")
 Astra.Icons.packs() Astra.Icons.count()
+Astra.Icons.isPack("feather")
 window:ResolveIcon("house")
 ```
 `iconPack`: `"lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather"`.
+
+Icon names resolve to 48x48 PNGs that ship in this repo under `assets/icons/<pack>/`; the resolver maps them to the repo's raw GitHub URL (or your executor's `getcustomasset` if provided), so no `rbxassetid` lookups are needed. See `assets/icons/feather-pack.md` and `assets/icons/tabler-pack.md` for pack details.
 
 ### Localisation
 
@@ -289,7 +370,7 @@ window:SetTranslator(function(source, localeId) return ... end)
 
 ### Full example
 
-See `example.client.luau` — demonstrates every element end to end with `local window = Astra:CreateWindow` and `local tab = window:CreateTab`.
+See `example.client.luau` — a 20-tab example (Home, Controls, Appearance, Information, Changelog, Updates, plus 15 labelled test tabs) that loads the bundle with the remote loader and exercises tags, every element type, groups, and the Changelog element end to end.
 
 ---
 
@@ -300,9 +381,14 @@ local window = Astra:CreateWindow({
     name = "My UI",              -- title (left side of topbar)
     subtitle = "v1.0",           -- small text next to title
     icon = "house",              -- topbar icon (pack name or asset id)
-    iconPack = "lucide",         -- "lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather"
-    theme = "default",           -- "default" | "amethyst" | "cobalt" | "ember" | "frost" | "rose" | custom table
+    iconPack = "lucide",         -- "lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather" (PascalCase alias: IconPack)
+    theme = "default",           -- built-in name (10 built-ins, see Themes below) or custom table
     profile = "Display Name",    -- optional profile (avatar + name)
+    showName = "Astra",          -- name shown when the window is minimised to the capsule (default "Astra")
+    showIcon = "house",          -- capsule icon while minimised
+    showIconOnly = false,        -- capsule shows only the icon, no name
+    fallbackFont = Enum.Font.Gotham,  -- font used when the brand font cannot load
+    translator = function(source, localeId) return ... end,  -- optional custom translator
     locale = "en",
     translations = { ... },
     configuration = {            -- persistence
@@ -313,4 +399,4 @@ local window = Astra:CreateWindow({
     },
 })
 ```
-Layout is **not** a CreateWindow prop — switch it in **Astra Settings → Bar Layout**.
+Layout is **not** a CreateWindow prop — switch it in **Settings → Appearance → Bar Layout**.

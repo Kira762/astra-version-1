@@ -23,6 +23,19 @@ A set of 5,130+ open-source SVG icons, designed to be clean and modern.
 - Regularly updated with new icons
 - MIT licensed - completely free
 
+## How Astra ships this pack
+
+- Data module: `icons/tabler.luau` — 5,130 entries, `{ [name] =
+  "assets/icons/tabler-pack/<letter>/tabler<Name>.png" }` (name → 48x48 PNG
+  path), lazy-loaded and cached by `icons/init.luau`.
+- Look it up with `Astra.Icons.get("home", "tabler")`,
+  `Astra.Icons.getByPack("tabler", "home")`, or pass `iconPack = "tabler"`
+  to `CreateWindow`/elements and use plain names via
+  `window:ResolveIcon(name)`.
+- At resolve time the repo-relative PNG path is mapped onto the repo's
+  raw-GitHub base URL (or your executor's `getcustomasset` if provided), so
+  no `rbxassetid` lookups are needed.
+
 ## Icon Categories
 
 | Category | Examples |

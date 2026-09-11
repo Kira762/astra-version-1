@@ -22,6 +22,19 @@ A collection of beautifully crafted, open-source icons by Cole Bemis.
 - Perfect for interfaces and dashboards
 - MIT licensed - free for commercial use
 
+## How Astra ships this pack
+
+- Data module: `icons/feather.luau` — 287 entries, `{ [name] =
+  "assets/icons/feather-pack/<letter>/feather<Name>.png" }` (name → 48x48
+  PNG path), lazy-loaded and cached by `icons/init.luau`.
+- Look it up with `Astra.Icons.get("play", "feather")`,
+  `Astra.Icons.getByPack("feather", "play")`, or pass `iconPack = "feather"`
+  to `CreateWindow`/elements and use plain names via
+  `window:ResolveIcon(name)`.
+- At resolve time the repo-relative PNG path is mapped onto the repo's
+  raw-GitHub base URL (or your executor's `getcustomasset` if provided), so
+  no `rbxassetid` lookups are needed.
+
 ## Icon Categories
 
 Feather icons cover these common categories:
