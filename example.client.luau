@@ -1,34 +1,12 @@
-local bundleUrl = "https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"
-local function fetchBundle(url)
-    if not game then
-        return false, "game is unavailable"
-    end
+-- Astra multi-tab supported-usage example.
+-- This example loads the current bundle with remote icon asset resolution.
 
-    -- Keep the method bound to `game`. Some executors expose HttpGet through
-    -- userdata/metamethods and calling a detached `game.HttpGet` can become a
-    -- nil-call even though `game:HttpGet(...)` works normally.
-    if type(game.HttpGet) == "function" then
-        return pcall(function()
-            return game:HttpGet(url)
-        end)
-    end
-    if type(game.HttpGetAsync) == "function" then
-        return pcall(function()
-            return game:HttpGetAsync(url)
-        end)
-    end
-    return false, "this executor does not provide game:HttpGet or game:HttpGetAsync"
-end
-
-local requestOk, bundleSource = fetchBundle(bundleUrl)
-assert(requestOk and type(bundleSource) == "string", "[Astra] Failed to download the Astra bundle: " .. tostring(bundleSource))
+local bundleSource = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
 local compile = loadstring or load
 assert(type(compile) == "function", "[Astra] This executor does not provide loadstring/load.")
-local compileOk, bundleLoader, compileError = pcall(compile, bundleSource)
-assert(compileOk, "[Astra] Bundle compilation raised an error: " .. tostring(bundleLoader))
+local bundleLoader, compileError = compile(bundleSource)
 assert(type(bundleLoader) == "function", "[Astra] Bundle compilation failed: " .. tostring(compileError))
-local runOk, Astra = pcall(bundleLoader)
-assert(runOk, "[Astra] Bundle startup raised an error: " .. tostring(Astra))
+local Astra = bundleLoader()
 
 assert(
     type(Astra) == "table" and type(Astra.CreateWindow) == "function",
@@ -43,7 +21,7 @@ local window = Astra:CreateWindow({
 -- Window tags are rendered beside the window title and remain available in the chrome.
 window:CreateTag({
     icon = "tag",
-    text = "0.0.36",
+    text = "0.0.35",
     color = Color3.fromRGB(96, 205, 255),
 })
 
@@ -183,15 +161,6 @@ local changelog = changelogTab:CreateChangelog({
     name = "Recent changes",
     description = "Structured release notes with categorized changes.",
     entries = {
-        {
-            version = "0.0.36",
-            date = "2026-09-11",
-            title = "Executor compatibility diagnostics",
-            description = "Guarded HTTP retrieval and bundle execution so missing executor APIs no longer produce an opaque nil-call.",
-            changes = {
-                { symbol = "~", category = "Fixed", text = "Added explicit checks for HttpGet, compilation, and bundle startup." },
-            },
-        },
         {
             version = "0.0.35",
             date = "2026-09-11",
