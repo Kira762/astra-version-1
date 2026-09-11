@@ -22,7 +22,12 @@ local window = Astra:CreateWindow({
 window:CreateTag({
     icon = "tag",
     text = "0.0.35",
-    color = Color3.fromRGB(96, 205, 255),
+    color = Color3.fromRGB(88, 70, 170),
+})
+window:CreateTag({
+    icon = "badge-check",
+    text = "Beta",
+    color = Color3.fromRGB(190, 55, 125),
 })
 
 -- [[Home: use a tab for overview content and simple state controls.]]
@@ -98,7 +103,7 @@ local information = window:CreateTab({ name = "Information", icon = "info" })
 information:CreateSection({ name = "Usage" })
 information:CreateText({
     name = "Create a tab",
-    text = 'local tab = window:CreateTab({ icon = "settings" })',
+    text = 'local tab = window:CreateTab({ name = "Settings", icon = "settings" })',
 })
 information:CreateText({
     name = "Create an element",
@@ -155,74 +160,65 @@ elementGroup:CreateToggle({
     end,
 })
 
--- [[Changelog: a dedicated tab so release news is always visible in the main window.]]
 local changelogTab = window:CreateTab({ name = "Changelog", icon = "history" })
 local changelog = changelogTab:CreateChangelog({
-    name = "Recent changes",
-    description = "Structured release notes with categorized changes.",
+    name = "Release history",
+    description = "Recent Astra changes and fixes.",
     entries = {
         {
             version = "0.0.35",
             date = "2026-09-11",
-            title = "Bundle loader diagnostics",
-            description = "Improved startup errors so executor and bundle-loading failures are reported clearly.",
+            title = "Settings highlight",
+            description = "Improved the built-in Settings active state.",
             changes = {
-                { symbol = "~", category = "Fixed", text = "Replaced the opaque nil-call startup path with explicit loader validation." },
+                { symbol = "~", category = "Fixed", text = "Settings now stays highlighted while its tab is active." },
             },
         },
         {
             version = "0.0.34",
             date = "2026-09-11",
-            title = "Tab visibility safeguard",
-            description = "All twenty example tab selectors now remain available even when an optional test element cannot be constructed.",
+            title = "Example tab coverage",
+            description = "Expanded the example with named and icon-backed tabs.",
             changes = {
-                { symbol = "~", category = "Fixed", text = "Prevented one failed optional element from stopping later tabs from loading." },
-            },
-        },
-        {
-            version = "0.0.33",
-            date = "2026-09-11",
-            title = "Grouped toggle fix",
-            description = "Fixed grouped toggles failing during construction and standardized release symbols.",
-            changes = {
-                { symbol = "~", category = "Fixed", text = "Grouped toggles now inherit the parent tab flag helper correctly." },
-                { symbol = "~", category = "Changelog", text = "Release entries now use + for additions, - for removals, and ~ for fixes." },
-            },
-        },
-        {
-            version = "0.0.31",
-            date = "2026-09-11",
-            title = "Expanded element examples",
-            description = "Added more supported elements to the example client for API and layout testing.",
-            changes = {
-                { symbol = "+", category = "Added", text = "Added progress, stat, keybind, console, and grouped element examples." },
-                { symbol = "~", category = "Example", text = "The example now documents more element combinations without console output calls." },
-            },
-        },
-        {
-            version = "0.0.30",
-            date = "2026-09-11",
-            title = "Changelog element",
-            description = "Added the Changelog element to Astra.",
-            changes = {
-                { symbol = "+", category = "Added", text = "CreateChangelog is now available on tabs." },
-                { symbol = "~", category = "Compatibility", text = "Supports lowercase and PascalCase properties." },
+                { symbol = "+", category = "Added", text = "Added more tabs for layout and element testing." },
             },
         },
     },
 })
 changelogTab:CreateButton({
-    name = "Add test news",
+    name = "Add test entry",
     callback = function()
         changelog:Add({
             version = "Test",
             date = "Live",
             title = "Runtime update",
             changes = {
-                { symbol = "+", text = "This release note was added at runtime." },
+                { symbol = "+", text = "This changelog entry was added at runtime." },
             },
         })
         window:Toast({ title = "Changelog", subtitle = "New entry added" })
+    end,
+})
+
+-- [[Updates: use standard elements so release information is always visible.]]
+local updatesTab = window:CreateTab({ name = "Updates", icon = "megaphone" })
+updatesTab:CreateSection({ name = "Recent changes" })
+updatesTab:CreateText({
+    name = "0.0.35",
+    text = "Improved bundle-loader diagnostics and settings navigation feedback.",
+})
+updatesTab:CreateText({
+    name = "0.0.34",
+    text = "Added a safeguard that keeps example tabs available when optional test elements fail.",
+})
+updatesTab:CreateText({
+    name = "Beta preview",
+    text = "This example is a Beta preview of the multi-tab Astra API.",
+})
+updatesTab:CreateButton({
+    name = "Show update notice",
+    callback = function()
+        window:Toast({ title = "Updates", subtitle = "The replacement Updates tab is working." })
     end,
 })
 
@@ -246,6 +242,13 @@ local testTabs = {
 }
 
 for index, details in ipairs(testTabs) do
+    assert(
+        type(details.name) == "string"
+            and details.name ~= ""
+            and type(details.icon) == "string"
+            and details.icon ~= "",
+        "Each example tab must define both a name and an icon."
+    )
     local tab = window:CreateTab({ name = details.name, icon = details.icon })
     -- [[Keep the tab selector registered even if an optional element has an]]
     -- [[environment-specific constructor issue; this lets the remaining tabs load.]]
