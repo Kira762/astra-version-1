@@ -1,7 +1,7 @@
 -- [[Astra multi-tab supported-usage example.]]
 -- [[This example loads the current bundle with remote icon asset resolution.]]
 
-local bundleSource = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
+local bundleSource = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/develop/version-1.luau")
 local compile = loadstring or load
 assert(type(compile) == "function", "[Astra] This executor does not provide loadstring/load.")
 local bundleLoader, compileError = compile(bundleSource)
