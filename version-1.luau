@@ -26268,10 +26268,18 @@ return tabler
 
 end)() end,
     [76] = function()local wax,script,require=ImportGlobals(76)local ImportGlobals return (function(...)
--- Astra theme resolution engine.
--- Built-in themes may provide semantic tokens and legacy consumer keys. Custom
--- themes are merged onto the default palette so missing values never crash UI
--- construction or leave a component with an invalid Color3/ColorSequence.
+-- Theme resolution engine (themes/init.luau).
+--
+-- Extracted verbatim from components/window.luau so the window no longer owns
+-- theme logic. Responsibilities: named-theme lookup against the themes folder,
+-- value coercion (Color3 -> ColorSequence for gradient keys), stroke
+-- derivation for user-supplied theme tables, and brand-font fallbacks.
+-- Only the default theme module is required eagerly; named themes load on
+-- demand when selected.
+
+-- This file IS the `themes` ModuleScript (init.luau semantics): the theme
+-- modules (default, frost, ...) are children of `script`, and other folders
+-- (core, utilities) are siblings reachable through script.Parent.
 local themesFolder = script
 local variables = require(script.Parent.core.state)
 local log = require(script.Parent.utilities.log)
@@ -26287,19 +26295,6 @@ local gradientKeys = {
     SliderProgress = true,
 }
 
-local semanticAliases = {
-    WindowSurface = { "WindowColor" },
-    ElementSurface = { "CardSurface" },
-    Stroke = { "ElementStroke", "SurfaceStroke" },
-    Accent = { "AccentColor", "DropdownHighlight" },
-    AccentStrokeSemantic = { "AccentStroke" },
-    PrimaryText = { "ContentColor", "TitlingColor" },
-    MutedText = { "PlaceholderColor" },
-    ElementHover = { "NeutralButtonHover", "SliderBackgroundHover", "ElementStrokeHover" },
-    SecondaryElement = { "NeutralButton", "SliderBackground" },
-    InputSurface = { "FieldBackground" },
-}
-
 function themes.coerceValue(key, value)
     if gradientKeys[key] and typeof(value) == "Color3" then
         return ColorSequence.new(value)
@@ -26308,68 +26303,32 @@ function themes.coerceValue(key, value)
 end
 
 function themes.firstColor(value)
-    if typeof(value) == "ColorSequence" then
-        return value.Keypoints[1].Value
-    end
-    return value
+    return if typeof(value) == "ColorSequence" then value.Keypoints[1].Value else value
 end
 
 local function edgeShade(color, amount)
-    if typeof(color) ~= "Color3" then
-        return nil
-    end
     local luminance = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B
     local target = if luminance > 0.5 then Color3.new(0, 0, 0) else Color3.new(1, 1, 1)
     return color:Lerp(target, amount)
 end
 
-local function aliasValue(key, value)
-    if key == "WindowColor" or key == "ElementGradient" or key == "ElementStrokeGradient" then
-        return themes.coerceValue(key, value)
-    end
-    if typeof(value) == "Color3" then
-        return value
-    end
-    return nil
-end
-
-local function applySemanticAliases(resolved, overrides)
-    for semantic, legacyKeys in semanticAliases do
-        local override = overrides[semantic]
-        if override ~= nil then
-            local value = aliasValue(legacyKeys[1], override)
-            if value ~= nil then
-                for _, legacyKey in legacyKeys do
-                    if overrides[legacyKey] == nil then
-                        resolved[legacyKey] = value
-                    end
-                end
-            end
-        end
-    end
-end
-
+-- Stroke derivation for user-supplied theme tables. Exposed so ChangeTheme
+-- can re-derive derived stroke colors after merging user overrides.
 function themes.deriveStrokes(resolved, overrides)
     if overrides.ElementGradient then
         local fill = themes.firstColor(resolved.ElementGradient)
         if overrides.ElementStroke == nil then
-            resolved.ElementStroke = edgeShade(fill, 0.28) or resolved.ElementStroke
+            resolved.ElementStroke = edgeShade(fill, 0.28)
         end
         if overrides.ElementStrokeGradient == nil then
-            local shade = edgeShade(fill, 0.4)
-            if shade then
-                resolved.ElementStrokeGradient = ColorSequence.new(shade)
-            end
+            resolved.ElementStrokeGradient = ColorSequence.new(edgeShade(fill, 0.4))
         end
         if overrides.ElementStrokeHover == nil then
-            resolved.ElementStrokeHover = edgeShade(fill, 0.52) or resolved.ElementStrokeHover
+            resolved.ElementStrokeHover = edgeShade(fill, 0.52)
         end
     end
     if overrides.TabBackground and overrides.TabStroke == nil then
-        local shade = edgeShade(themes.firstColor(resolved.TabBackground), 0.4)
-        if shade then
-            resolved.TabStroke = ColorSequence.new(shade)
-        end
+        resolved.TabStroke = ColorSequence.new(edgeShade(themes.firstColor(resolved.TabBackground), 0.4))
     end
 end
 
@@ -26388,25 +26347,26 @@ local function themeOverrides(value)
     return require(themesFolder["default"])
 end
 
+-- Resolve a theme value (nil, built-in name, or theme table) to a full theme
+-- table. Public API: window code calls themes.resolve(value).
 function themes.resolve(value)
     local resolved = table.clone(require(themesFolder["default"]))
     local overrides = themeOverrides(value)
-    for key, override in overrides do
-        resolved[key] = themes.coerceValue(key, override)
-    end
-    applySemanticAliases(resolved, overrides)
-    if typeof(value) == "table" then
-        themes.deriveStrokes(resolved, overrides)
-    end
+	for key, override in overrides do
+		resolved[key] = themes.coerceValue(key, override)
+	end
+	if typeof(value) == "table" then
+		themes.deriveStrokes(resolved, overrides)
+	end
 
-    -- Keep font fallback behavior compatible with existing custom themes.
-    local userTable = if typeof(value) == "table" then value else nil
+	local userTable = if typeof(value) == "table" then value else nil
     if not (userTable and (userTable.Font or userTable.font)) then
         resolved.Font = variables.brandFont(Enum.FontWeight.Medium)
     end
     if not (userTable and (userTable.TitleFont or userTable.titleFont)) then
         resolved.TitleFont = variables.brandFont(Enum.FontWeight.SemiBold)
     end
+
     return resolved
 end
 
@@ -29459,37 +29419,37 @@ local LineOffsets = {
     [67] = 19613,
     [68] = 21133,
     [69] = 15541,
-    [70] = 26417,
-    [71] = 26479,
-    [72] = 26541,
-    [73] = 26623,
-    [74] = 26685,
-    [75] = 26760,
+    [70] = 26377,
+    [71] = 26439,
+    [72] = 26501,
+    [73] = 26583,
+    [74] = 26645,
+    [75] = 26720,
     [76] = 26271,
-    [77] = 26822,
-    [78] = 26920,
-    [79] = 27098,
-    [80] = 27149,
-    [81] = 27179,
-    [82] = 27430,
-    [83] = 27479,
-    [84] = 27932,
-    [85] = 27950,
-    [86] = 28104,
-    [87] = 28203,
-    [88] = 28225,
-    [89] = 28275,
-    [90] = 28311,
-    [91] = 28329,
-    [92] = 28642,
-    [93] = 28658,
-    [94] = 28709,
-    [95] = 28728,
-    [96] = 28970,
-    [97] = 29014,
-    [98] = 29206,
-    [99] = 29234,
-    [100] = 29245,
+    [77] = 26782,
+    [78] = 26880,
+    [79] = 27058,
+    [80] = 27109,
+    [81] = 27139,
+    [82] = 27390,
+    [83] = 27439,
+    [84] = 27892,
+    [85] = 27910,
+    [86] = 28064,
+    [87] = 28163,
+    [88] = 28185,
+    [89] = 28235,
+    [90] = 28271,
+    [91] = 28289,
+    [92] = 28602,
+    [93] = 28618,
+    [94] = 28669,
+    [95] = 28688,
+    [96] = 28930,
+    [97] = 28974,
+    [98] = 29166,
+    [99] = 29194,
+    [100] = 29205,
 }
 
 -- Misc AOT variable imports
@@ -30234,30 +30194,9 @@ local ObjectTree = {
 
 local task_defer = task and task.defer
 
-if type(table.clone) ~= "function" then
-    function table.clone(source)
-        local copy = {}
-        for key, value in next, source do
-            copy[key] = value
-        end
-        return copy
-    end
-end
-if type(table.clear) ~= "function" then
-    function table.clear(source)
-        for key in next, source do
-            source[key] = nil
-        end
-    end
-end
-
 -- If we're not running on the Roblox engine, we won't have a `task` global
-local Defer = if type(task_defer) == "function" then task_defer else function(f, ...)
-    if type(coroutine) == "table" and type(coroutine.wrap) == "function" then
-        coroutine.wrap(f)(...)
-        return
-    end
-    error("Astra bundle requires task.defer or coroutine.wrap", 0)
+local Defer = task_defer or function(f, ...)
+    coroutine_wrap(f)(...)
 end
 
 -- ClassName "IDs"
