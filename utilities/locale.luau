@@ -1,96 +1,96 @@
-local locale = require(script.Parent.Parent.core.state)
-local translator = require(script.Parent.log)
+local coreState = require(script.Parent.Parent.core.state)
+local logger = require(script.Parent.log)
 
-local translations = {}
+local locale = {}
 
 export type LocaleToken = { [any]: string }
 export type Translator = (source: string, localeId: string) -> string?
 export type TranslationTables = { [string]: { [string]: string } }
 
-translations.strings = {} :: TranslationTables
-translations.current = "en"
-translations.translator = nil :: Translator?
+locale.strings = {} :: TranslationTables
+locale.current = "en"
+locale.translator = nil :: Translator?
 
-local currentLocale = {}
+local tokenKey = {}
 
-local function a5(id: string): string
+local function languagePrefix(id: string): string
     return string.match(id, "^(%a+)") or id
 end
 
-function translations.t(a6: unknown): unknown
-    if type(a6) ~= "string" or a6 == "" then
-        return a6
+function locale.t(value: unknown): unknown
+    if type(value) ~= "string" or value == "" then
+        return value
     end
-    return { [currentLocale] = a6 }
+    return { [tokenKey] = value }
 end
 
-function translations.isToken(a7: unknown): boolean
-    return type(a7) == "table" and type((a7 :: { [any]: unknown })[currentLocale]) == "string"
+function locale.isToken(candidate: unknown): boolean
+    return type(candidate) == "table" and type((candidate :: { [any]: unknown })[tokenKey]) == "string"
 end
 
-function translations.sourceOf(a8: LocaleToken): string
-    return a8[currentLocale]
+function locale.sourceOf(token: LocaleToken): string
+    return token[tokenKey]
 end
 
-function translations.resolve(a9: unknown): any
-    if type(a9) ~= "string" then
-        return a9
+function locale.resolve(text: unknown): any
+    if type(text) ~= "string" then
+        return text
     end
 
-    if translations.translator then
-        local ok, a10 = pcall(translations.translator, a9, translations.current)
-        if ok and type(a10) == "string" and a10 ~= "" then
-            return a10
+    if locale.translator then
+        local ok, translated = pcall(locale.translator, text, locale.current)
+        if ok and type(translated) == "string" and translated ~= "" then
+            return translated
         end
     end
 
-    local a11 = translations.strings[translations.current]
-    if a11 and a11[a9] then
-        return a11[a9]
+    local exactTable = locale.strings[locale.current]
+    if exactTable and exactTable[text] then
+        return exactTable[text]
     end
 
-    local a12 = translations.strings[a5(translations.current)]
-    if a12 and a12[a9] then
-        return a12[a9]
+    local prefixTable = locale.strings[languagePrefix(locale.current)]
+    if prefixTable and prefixTable[text] then
+        return prefixTable[text]
     end
 
-    return a9
+    return text
 end
 
-function translations.register(a13: TranslationTables?)
-    if type(a13) ~= "table" then
+function locale.register(tables: TranslationTables?)
+    if type(tables) ~= "table" then
         return
     end
-    for id, a14 in a13 do
-        if type(id) == "string" and type(a14) == "table" then
+    for id, entryTable in tables do
+        if type(id) == "string" and type(entryTable) == "table" then
             id = string.lower(id)
-            local a15 = translations.strings[id]
-            if not a15 then
-                a15 = {}
-                translations.strings[id] = a15
+            local target = locale.strings[id]
+            if not target then
+                target = {}
+                locale.strings[id] = target
             end
-            for a16, a17 in a14 do
-                if type(a16) == "string" and type(a17) == "string" then
-                    a15[a16] = a17
+            for sourceKey, sourceText in entryTable do
+                if type(sourceKey) == "string" and type(sourceText) == "string" then
+                    target[sourceKey] = sourceText
                 else
-                    translator.warn(`Astra: skipping a '{id}' translation, entries must be string to string.`)
+                    logger.warn(`Astra: skipping a '{id}' translation, entries must be string to string.`)
                 end
             end
         end
     end
 end
 
-function translations.setActive(a18: string?): string
-    translations.current = if type(a18) == "string" and a18 ~= "" then string.lower(a18) else "en"
-    return translations.current
+function locale.setActive(requestedLocale: string?): string
+    locale.current = if type(requestedLocale) == "string" and requestedLocale ~= "" then string.lower(requestedLocale) else "en"
+    return locale.current
 end
 
-function translations.detect(): string
-    local id = locale.localizationService.RobloxLocaleId
+function locale.detect(): string
+    local id = coreState.localizationService.RobloxLocaleId
     if type(id) == "string" and id ~= "" then
         return string.lower(id)
     end
     return "en"
 end
 
-return translations
+return locale

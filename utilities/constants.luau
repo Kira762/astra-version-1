@@ -1,18 +1,18 @@
-local constants = require(script.Parent.Parent.images.windowIcons)
-local a2 = {}
+local iconRegistry = require(script.Parent.Parent.images.windowIcons)
+local constants = {}
 
-a2.fontAsset = "rbxassetid://12187375716"
+constants.fontAsset = "rbxassetid://12187375716"
 
-a2.pillResizeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+constants.pillResizeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
-a2.icons = constants.ids
+constants.icons = iconRegistry.ids
 
-a2.accent = {
+constants.accent = {
     on = Color3.fromRGB(23, 153, 110),
     onStroke = Color3.fromRGB(32, 201, 144),
 }
 
-a2.statAccents = {
+constants.statAccents = {
     positive = {
         fill = ColorSequence.new(Color3.fromRGB(0, 170, 127), Color3.fromRGB(0, 134, 98)),
         stroke = ColorSequence.new(Color3.fromRGB(0, 213, 156), Color3.fromRGB(0, 189, 135)),
@@ -21,28 +21,28 @@ a2.statAccents = {
         fill = ColorSequence.new(Color3.fromRGB(172, 47, 47), Color3.fromRGB(135, 37, 37)),
         stroke = ColorSequence.new(Color3.fromRGB(255, 75, 75), Color3.fromRGB(244, 67, 67)),
     },
-        neutral = {
+    neutral = {
         fill = ColorSequence.new(Color3.fromRGB(0, 170, 127), Color3.fromRGB(0, 134, 98)),
         stroke = ColorSequence.new(Color3.fromRGB(0, 213, 156), Color3.fromRGB(0, 189, 135)),
     },
 }
 
-a2.zIndex = {
-        elementLock = 60,
+constants.zIndex = {
+    elementLock = 60,
     elementLockContent = 65,
     bottomFade = 100,
-            notification = 1500,
+    notification = 1500,
     drag = 100003,
-        toast = 2000,
+    toast = 2000,
     toastContent = 2001,
     restoreContent = 100001,
     restoreInteract = 100002,
 }
 
-a2.displayOrder = {
+constants.displayOrder = {
     window = 99999,
 
-        popup = 100001,
+    popup = 100001,
 }
 
-return a2
+return constants

@@ -1,4 +1,4 @@
-local haptic = require(script.Parent.Parent.core.state)
+local coreState = require(script.Parent.Parent.core.state)
 
 local hapticService = {}
 
@@ -8,87 +8,87 @@ type HapticTypes = {
     notify: Enum.HapticEffectType?,
 }
 
-local enabled: HapticTypes = {}
-local container, a5 = pcall(function()
+local effectTypes: HapticTypes = {}
+local probeOk, probeResult = pcall(function()
     Instance.new("HapticEffect"):Destroy()     return {
         click = Enum.HapticEffectType.UIHover,         notify = Enum.HapticEffectType.UIClick,     }
 end)
-if container then
-    enabled = a5
+if probeOk then
+    effectTypes = probeResult
 end
 
-local a6: { [Enum.HapticEffectType]: Instance } = {}
-local a7: Instance? = nil
+local effectInstances: { [Enum.HapticEffectType]: Instance } = {}
+local containerInstance: Instance? = nil
 
-function hapticService.setContainer(a8: Instance?)
-    a7 = a8
+function hapticService.setContainer(newContainer: Instance?)
+    containerInstance = newContainer
 end
 
-function hapticService.releaseContainer(a9: Instance?)
-    if a9 == nil or a7 == a9 then
-        a7 = nil
+function hapticService.releaseContainer(releasedContainer: Instance?)
+    if releasedContainer == nil or containerInstance == releasedContainer then
+        containerInstance = nil
     end
 end
 
-local function a10(): Instance
-    if a7 and a7.Parent then
-        return a7
+local function resolveContainer(): Instance
+    if containerInstance and containerInstance.Parent then
+        return containerInstance
     end
-    return haptic.guiContainer
+    return coreState.guiContainer
 end
 
-local function a11(a12: Enum.HapticEffectType): Instance?
-    local a13 = a6[a12]
-        if a13 and a13.Parent then
-        return a13
+local function getEffect(effectType: Enum.HapticEffectType): Instance?
+    local cached = effectInstances[effectType]
+        if cached and cached.Parent then
+        return cached
     end
-    local ok, a14 = pcall(Instance.new, "HapticEffect")
+    local ok, instance = pcall(Instance.new, "HapticEffect")
     if not ok then
         return nil
     end
-    local a15 = a14 :: any
-    a15.Type = a12
-    local a16 = pcall(function()
-        a14.Parent = a10()
+    local typed = instance :: any
+    typed.Type = effectType
+    local parentOk = pcall(function()
+        instance.Parent = resolveContainer()
     end)
-    if not a16 then
-        a14:Destroy()
+    if not parentOk then
+        instance:Destroy()
         return nil
     end
-    a6[a12] = a14
-    return a14
+    effectInstances[effectType] = instance
+    return instance
 end
 
-local function a17(a18: Enum.HapticEffectType?)
-    if not a18 or not hapticService.enabled then
+local function play(requestedType: Enum.HapticEffectType?)
+    if not requestedType or not hapticService.enabled then
         return
     end
-    local a19 = a11(a18)
-    if a19 then
-        local a20 = a19 :: any
-        pcall(a20.Play, a19)
+    local effect = getEffect(requestedType)
+    if effect then
+        local playable = effect :: any
+        pcall(playable.Play, effect)
     end
 end
 
 function hapticService.click()
-    a17(enabled.click)
+    play(effectTypes.click)
 end
 
 function hapticService.notify()
-    a17(enabled.notify)
+    play(effectTypes.notify)
 end
 
-function hapticService.setEnabled(a21: boolean?)
-    hapticService.enabled = a21 and true or false
+function hapticService.setEnabled(isEnabled: boolean?)
+    hapticService.enabled = isEnabled and true or false
     if not hapticService.enabled then
         hapticService.teardown()
     end
 end
 
 function hapticService.teardown()
-    for a22, a23 in a6 do
-        pcall(a23.Destroy, a23)
-        a6[a22] = nil
+    for cachedType, cachedInstance in effectInstances do
+        pcall(cachedInstance.Destroy, cachedInstance)
+        effectInstances[cachedType] = nil
     end
 end
 

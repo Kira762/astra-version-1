@@ -1,8 +1,8 @@
-local filesystem = require(script.Parent.services)
-local a2 = {}
+local serviceProvider = require(script.Parent.services)
+local filesystem = {}
 
-local a3 = filesystem.getService("RunService"):IsStudio()
-local a4 = not a3
+local isStudio = serviceProvider.getService("RunService"):IsStudio()
+local hasExecutorFilesystem = not isStudio
     and typeof(writefile) == "function"
     and typeof(readfile) == "function"
     and typeof(isfile) == "function"
@@ -12,237 +12,237 @@ local a4 = not a3
     and typeof(delfile) == "function"
     and typeof(delfolder) == "function"
 
-if a4 then
-        function a2.writefile(a5: string, a6: string)
-        writefile(a5, a6)
+if hasExecutorFilesystem then
+        function filesystem.writefile(writePath: string, writeContents: string)
+        writefile(writePath, writeContents)
     end
 
-    function a2.readfile(a7: string): string
-        return readfile(a7)
+    function filesystem.readfile(readPath: string): string
+        return readfile(readPath)
     end
 
             if typeof(appendfile) == "function" then
-        function a2.appendfile(a8: string, a9: string)
-            appendfile(a8, a9)
+        function filesystem.appendfile(appendPath: string, appendContents: string)
+            appendfile(appendPath, appendContents)
         end
     end
 
-    function a2.isfile(a10: string): boolean
-        return isfile(a10)
+    function filesystem.isfile(isFilePath: string): boolean
+        return isfile(isFilePath)
     end
 
-    function a2.delfile(a11: string)
-        delfile(a11)
+    function filesystem.delfile(deleteFilePath: string)
+        delfile(deleteFilePath)
     end
 
-    function a2.listfiles(a12: string): { string }
-        return listfiles(a12)
+    function filesystem.listfiles(listDir: string): { string }
+        return listfiles(listDir)
     end
 
-    function a2.makefolder(a13: string)
-        makefolder(a13)
+    function filesystem.makefolder(makeFolderPath: string)
+        makefolder(makeFolderPath)
     end
 
-    function a2.isfolder(a14: string): boolean
-        return isfolder(a14)
+    function filesystem.isfolder(isFolderPath: string): boolean
+        return isfolder(isFolderPath)
     end
 
-    function a2.delfolder(a15: string)
-        delfolder(a15)
+    function filesystem.delfolder(deleteFolderPath: string)
+        delfolder(deleteFolderPath)
     end
-elseif a3 then
-            local a16 = Instance.new("Folder")
-    a16.Name = "Filesystem"
-    a16.Parent = filesystem.getService("ReplicatedStorage")
+elseif isStudio then
+            local rootFolder = Instance.new("Folder")
+    rootFolder.Name = "Filesystem"
+    rootFolder.Parent = serviceProvider.getService("ReplicatedStorage")
 
-    local function a17(a18: string): { string }
-        local a19 = {}
-        for a20 in string.gmatch(a18, "[^/]+") do
-            table.insert(a19, a20)
+    local function splitPath(splitInput: string): { string }
+        local segments = {}
+        for segment in string.gmatch(splitInput, "[^/]+") do
+            table.insert(segments, segment)
         end
-        return a19
+        return segments
     end
 
-    local function a21(a22: { string }, a23: boolean): Instance?
-        local a24: Instance = a16
-        for i = 1, #a22 - 1 do
-            local a25 = a24:FindFirstChild(a22[i])
-            if not a25 then
-                if not a23 then
+    local function resolveParent(parentSegments: { string }, createMissing: boolean): Instance?
+        local current: Instance = rootFolder
+        for i = 1, #parentSegments - 1 do
+            local child = current:FindFirstChild(parentSegments[i])
+            if not child then
+                if not createMissing then
                     return nil
                 end
-                local a26 = Instance.new("Folder")
-                a26.Name = a22[i]
-                a26.Parent = a24
-                a25 = a26
+                local newFolder = Instance.new("Folder")
+                newFolder.Name = parentSegments[i]
+                newFolder.Parent = current
+                child = newFolder
             end
-            a24 = a25 :: Instance
+            current = child :: Instance
         end
-        return a24
+        return current
     end
 
-    local function a27(a28: Instance?): StringValue?
-        if a28 and a28:IsA("StringValue") then
-            return a28
+    local function asStringValue(candidate: Instance?): StringValue?
+        if candidate and candidate:IsA("StringValue") then
+            return candidate
         end
         return nil
     end
 
-    function a2.writefile(a29: string, a30: string)
-        local a31 = a17(a29)
-        assert(#a31 > 0, "Invalid path")
+    function filesystem.writefile(studioWritePath: string, studioWriteContents: string)
+        local writeSegments = splitPath(studioWritePath)
+        assert(#writeSegments > 0, "Invalid path")
 
-        local a32 = a21(a31, true)
-        assert(a32, "Invalid path")
-        local a33 = a31[#a31]
+        local writeParent = resolveParent(writeSegments, true)
+        assert(writeParent, "Invalid path")
+        local writeName = writeSegments[#writeSegments]
 
-        local a34 = a32:FindFirstChild(a33)
-        local a35 = a27(a34)
-        if a35 then
-            a35.Value = a30
+        local existingWrite = writeParent:FindFirstChild(writeName)
+        local existingValue = asStringValue(existingWrite)
+        if existingValue then
+            existingValue.Value = studioWriteContents
         else
-            if a34 then
-                a34:Destroy()
+            if existingWrite then
+                existingWrite:Destroy()
             end
-            local a36 = Instance.new("StringValue")
-            a36.Name = a33
-            a36.Value = a30
-            a36.Parent = a32
+            local newValue = Instance.new("StringValue")
+            newValue.Name = writeName
+            newValue.Value = studioWriteContents
+            newValue.Parent = writeParent
         end
     end
 
-    function a2.readfile(a37: string): string
-        local a38 = a17(a37)
-        assert(#a38 > 0, "Invalid path")
+    function filesystem.readfile(studioReadPath: string): string
+        local readSegments = splitPath(studioReadPath)
+        assert(#readSegments > 0, "Invalid path")
 
-        local a39 = a21(a38, false)
-        assert(a39, "File not found: " .. a37)
+        local readParent = resolveParent(readSegments, false)
+        assert(readParent, "File not found: " .. studioReadPath)
 
-        local a40 = a39:FindFirstChild(a38[#a38])
-        local a41 = a27(a40)
-        assert(a41, "File not found: " .. a37)
+        local readChild = readParent:FindFirstChild(readSegments[#readSegments])
+        local readValue = asStringValue(readChild)
+        assert(readValue, "File not found: " .. studioReadPath)
 
-        return a41.Value
+        return readValue.Value
     end
 
-    function a2.isfile(a42: string): boolean
-        local a43 = a17(a42)
-        if #a43 == 0 then
+    function filesystem.isfile(studioIsFilePath: string): boolean
+        local isFileSegments = splitPath(studioIsFilePath)
+        if #isFileSegments == 0 then
             return false
         end
 
-        local a44 = a21(a43, false)
-        if not a44 then
+        local isFileParent = resolveParent(isFileSegments, false)
+        if not isFileParent then
             return false
         end
 
-        return a27(a44:FindFirstChild(a43[#a43])) ~= nil
+        return asStringValue(isFileParent:FindFirstChild(isFileSegments[#isFileSegments])) ~= nil
     end
 
-    function a2.listfiles(a45: string): { string }
-        local a46 = a17(a45)
-        local a47: Instance = a16
+    function filesystem.listfiles(studioListDir: string): { string }
+        local listSegments = splitPath(studioListDir)
+        local listFolder: Instance = rootFolder
 
-        for _, a48 in a46 do
-            local a49 = a47:FindFirstChild(a48)
-            if not a49 or not a49:IsA("Folder") then
-                error("Folder not found: " .. a45)
+        for _, listSegment in listSegments do
+            local listChild = listFolder:FindFirstChild(listSegment)
+            if not listChild or not listChild:IsA("Folder") then
+                error("Folder not found: " .. studioListDir)
             end
-            a47 = a49
+            listFolder = listChild
         end
 
-        local a50: { string } = {}
-        for _, a51 in a47:GetChildren() do
-            table.insert(a50, a45 .. "/" .. a51.Name)
+        local listed: { string } = {}
+        for _, listEntry in listFolder:GetChildren() do
+            table.insert(listed, studioListDir .. "/" .. listEntry.Name)
         end
-        return a50
+        return listed
     end
 
-    function a2.delfile(a52: string)
-        local a53 = a17(a52)
-        assert(#a53 > 0, "Invalid path")
+    function filesystem.delfile(studioDeleteFilePath: string)
+        local deleteFileSegments = splitPath(studioDeleteFilePath)
+        assert(#deleteFileSegments > 0, "Invalid path")
 
-        local a54 = a21(a53, false)
-        assert(a54, "File not found: " .. a52)
+        local deleteFileParent = resolveParent(deleteFileSegments, false)
+        assert(deleteFileParent, "File not found: " .. studioDeleteFilePath)
 
-        local a55 = a54:FindFirstChild(a53[#a53])
-        local a56 = a27(a55)
-        assert(a56, "File not found: " .. a52)
+        local deleteFileChild = deleteFileParent:FindFirstChild(deleteFileSegments[#deleteFileSegments])
+        local deleteFileValue = asStringValue(deleteFileChild)
+        assert(deleteFileValue, "File not found: " .. studioDeleteFilePath)
 
-        a56:Destroy()
+        deleteFileValue:Destroy()
     end
 
-    function a2.makefolder(a57: string)
-        local a58 = a17(a57)
-        if #a58 == 0 then
+    function filesystem.makefolder(studioMakeFolderPath: string)
+        local makeFolderSegments = splitPath(studioMakeFolderPath)
+        if #makeFolderSegments == 0 then
             return
         end
 
-        local a59: Instance = a16
-        for _, a60 in a58 do
-            local a61 = a59:FindFirstChild(a60)
-            if not a61 then
-                local a62 = Instance.new("Folder")
-                a62.Name = a60
-                a62.Parent = a59
-                a61 = a62
+        local makeFolderCurrent: Instance = rootFolder
+        for _, makeFolderSegment in makeFolderSegments do
+            local makeFolderChild = makeFolderCurrent:FindFirstChild(makeFolderSegment)
+            if not makeFolderChild then
+                local makeFolderNew = Instance.new("Folder")
+                makeFolderNew.Name = makeFolderSegment
+                makeFolderNew.Parent = makeFolderCurrent
+                makeFolderChild = makeFolderNew
             end
-            a59 = a61 :: Instance
+            makeFolderCurrent = makeFolderChild :: Instance
         end
     end
 
-    function a2.isfolder(a63: string): boolean
-        local a64 = a17(a63)
-        if #a64 == 0 then
+    function filesystem.isfolder(studioIsFolderPath: string): boolean
+        local isFolderSegments = splitPath(studioIsFolderPath)
+        if #isFolderSegments == 0 then
             return false
         end
 
-        local a65: Instance = a16
-        for _, a66 in a64 do
-            local a67 = a65:FindFirstChild(a66)
-            if not a67 or not a67:IsA("Folder") then
+        local isFolderCurrent: Instance = rootFolder
+        for _, isFolderSegment in isFolderSegments do
+            local isFolderChild = isFolderCurrent:FindFirstChild(isFolderSegment)
+            if not isFolderChild or not isFolderChild:IsA("Folder") then
                 return false
             end
-            a65 = a67
+            isFolderCurrent = isFolderChild
         end
         return true
     end
 
-    function a2.delfolder(a68: string)
-        local a69 = a17(a68)
-        assert(#a69 > 0, "Invalid path")
+    function filesystem.delfolder(studioDeleteFolderPath: string)
+        local deleteFolderSegments = splitPath(studioDeleteFolderPath)
+        assert(#deleteFolderSegments > 0, "Invalid path")
 
-        local a70 = a21(a69, false)
-        assert(a70, "Folder not found: " .. a68)
+        local deleteFolderParent = resolveParent(deleteFolderSegments, false)
+        assert(deleteFolderParent, "Folder not found: " .. studioDeleteFolderPath)
 
-        local a71 = a70:FindFirstChild(a69[#a69])
-        assert(a71 and a71:IsA("Folder"), "Folder not found: " .. a68)
+        local deleteFolderChild = deleteFolderParent:FindFirstChild(deleteFolderSegments[#deleteFolderSegments])
+        assert(deleteFolderChild and deleteFolderChild:IsA("Folder"), "Folder not found: " .. studioDeleteFolderPath)
 
-        a71:Destroy()
+        deleteFolderChild:Destroy()
     end
 end
 
-if a2.writefile and not a2.appendfile then
-    function a2.appendfile(a72: string, a73: string)
-        local a74 = if a2.isfile(a72) then a2.readfile(a72) else nil
-        a2.writefile(a72, if a74 then a74 .. a73 else a73)
+if filesystem.writefile and not filesystem.appendfile then
+    function filesystem.appendfile(fallbackAppendPath: string, fallbackAppendContents: string)
+        local fallbackExisting = if filesystem.isfile(fallbackAppendPath) then filesystem.readfile(fallbackAppendPath) else nil
+        filesystem.writefile(fallbackAppendPath, if fallbackExisting then fallbackExisting .. fallbackAppendContents else fallbackAppendContents)
     end
 end
 
-function a2.ensureFolder(a75: string)
-    if not a2.isfolder(a75) then
-        a2.makefolder(a75)
+function filesystem.ensureFolder(ensureFolderPath: string)
+    if not filesystem.isfolder(ensureFolderPath) then
+        filesystem.makefolder(ensureFolderPath)
     end
 end
 
-function a2.ensureDir(a76: string)
-    local a77 = ""
-    for a78 in string.gmatch(a76, "[^/]+") do
-        a77 = if a77 == "" then a78 else a77 .. "/" .. a78
-        if not a2.isfolder(a77) then
-            a2.makefolder(a77)
+function filesystem.ensureDir(ensureDirPath: string)
+    local partial = ""
+    for ensureSegment in string.gmatch(ensureDirPath, "[^/]+") do
+        partial = if partial == "" then ensureSegment else partial .. "/" .. ensureSegment
+        if not filesystem.isfolder(partial) then
+            filesystem.makefolder(partial)
         end
     end
 end
 
-return a2
+return filesystem

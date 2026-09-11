@@ -1,7 +1,7 @@
-local persistencePaths = require(script.Parent.Parent.core.state)
-local a2 = require(script.Parent.path)
+local coreState = require(script.Parent.Parent.core.state)
+local pathUtil = require(script.Parent.path)
 
-local a3 = {}
+local persistencePaths = {}
 
 type ConfigWindow = {
     configuration: {
@@ -11,31 +11,31 @@ type ConfigWindow = {
     name: string,
 }
 
-function a3.getConfigPath(window: ConfigWindow, a4: unknown?): (string?, string?)
-    local a5 = persistencePaths.fileSystemManager:getPath("Configurations")
+function persistencePaths.getConfigPath(window: ConfigWindow, configName: unknown?): (string?, string?)
+    local folder = coreState.fileSystemManager:getPath("config")
     if window.configuration.customFolder then
-        a5 = a2.join(a5, a2.sanitizeFolder(window.configuration.customFolder))
+        folder = pathUtil.join(folder, pathUtil.sanitizeFolder(window.configuration.customFolder))
     end
-    if a4 ~= nil then
-        local a6 = a2.sanitizeFile(a4)
-        if a6 == "" then
+    if configName ~= nil then
+        local sanitizedName = pathUtil.sanitizeFile(configName)
+        if sanitizedName == "" then
             return nil, nil
         end
-        return a5, a2.join(a5, a6 .. ".rfld")
+        return folder, pathUtil.join(folder, sanitizedName .. ".rfld")
     end
-    local a7 = a2.sanitizeFile(window.configuration.fileName or window.name)
-    if a7 == "" then
-        a7 = a2.sanitizeFile(window.name)
+    local baseName = pathUtil.sanitizeFile(window.configuration.fileName or window.name)
+    if baseName == "" then
+        baseName = pathUtil.sanitizeFile(window.name)
     end
-    if a7 == "" then
-        a7 = "Configuration"
+    if baseName == "" then
+        baseName = "Configuration"
     end
-    return a5, a2.join(a5, a7 .. ".rfld")
+    return folder, pathUtil.join(folder, baseName .. ".rfld")
 end
 
-function a3.getSettingsPath(): (string, string)
-    local a8 = persistencePaths.fileSystemManager:getPath("Settings")
-    return a8, a2.join(a8, "astra.rfld")
+function persistencePaths.getSettingsPath(): (string, string)
+    local settingsFolder = coreState.fileSystemManager:getPath("settings")
+    return settingsFolder, pathUtil.join(settingsFolder, "astra.rfld")
 end
 
-return a3
+return persistencePaths

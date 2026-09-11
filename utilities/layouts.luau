@@ -1,14 +1,14 @@
 local layouts = {}
 
-local aTopbar = require(script.Parent.Parent.layouts.Topbar)
-local aSidebar = require(script.Parent.Parent.layouts.Sidebar)
-local aSidebarCollapsed = require(script.Parent.Parent.layouts.SidebarCollapsed)
+local topbarLayout = require(script.Parent.Parent.layouts.Topbar)
+local sidebarLayout = require(script.Parent.Parent.layouts.Sidebar)
+local sidebarCollapsedLayout = require(script.Parent.Parent.layouts.SidebarCollapsed)
 
-local implementations = 64
+local topbarHeightConstant = 64
 
-local a3 = implementations - 1
-local a4 = 38
-local a5 = 3
+local tabStripTopOffset = topbarHeightConstant - 1
+local tabStripRowHeight = 38
+local chromeGap = 3
 
 export type Mode = "top" | "sidebar"
 
@@ -50,11 +50,11 @@ export type Layout = {
 layouts.top = {
     mode = "top" :: Mode,
 
-    topbarHeight = implementations,
-    chromeHeight = a3 + a4 + a5,
+    topbarHeight = topbarHeightConstant,
+    chromeHeight = tabStripTopOffset + tabStripRowHeight + chromeGap,
 
-    tabStripTop = a3,
-    tabStripHeight = a4,
+    tabStripTop = tabStripTopOffset,
+    tabStripHeight = tabStripRowHeight,
 
     profileHeight = 48,
     avatarSize = 34,
@@ -73,8 +73,8 @@ layouts.top = {
 layouts.sidebar = {
     mode = "sidebar" :: Mode,
 
-    topbarHeight = implementations,
-    chromeHeight = implementations,
+    topbarHeight = topbarHeightConstant,
+    chromeHeight = topbarHeightConstant,
 
             railWidth = 219,
             railCollapsedWidth = 64,
@@ -113,39 +113,39 @@ layouts.sidebar = {
         fadeCorners = { "BottomLeftRadius", "BottomRightRadius" },
 } :: Layout
 
-local a6 = table.clone(layouts.sidebar)
-a6.forceCollapsed = true
+local collapsedSidebarLayout = table.clone(layouts.sidebar)
+collapsedSidebarLayout.forceCollapsed = true
 
-local aImplementations = {
-    top = aTopbar,
-    sidebar = aSidebar,
-    collapsedSidebar = aSidebarCollapsed,
+local implementments = {
+    top = topbarLayout,
+    sidebar = sidebarLayout,
+    collapsedSidebar = sidebarCollapsedLayout,
 }
 
-function layouts.get(a7: unknown): Layout?
-    if a7 == "sidebar" then
+function layouts.get(requestedMode: unknown): Layout?
+    if requestedMode == "sidebar" then
         return layouts.sidebar
-    elseif a7 == "collapsedSidebar" then
-        return a6
-    elseif a7 == "top" then
+    elseif requestedMode == "collapsedSidebar" then
+        return collapsedSidebarLayout
+    elseif requestedMode == "top" then
         return layouts.top
     end
     return nil
 end
 
-function layouts.implementation(a7: unknown)
-    return aImplementations[a7]
+function layouts.implementation(requestedMode: unknown)
+    return implementments[requestedMode]
 end
 
-function layouts.railWidthFor(a8: Layout, a9: number): number
-    if a8.mode ~= "sidebar" then
+function layouts.railWidthFor(layout: Layout, viewportWidth: number): number
+    if layout.mode ~= "sidebar" then
         return 0
     end
-    local a10 = a8.railWidth :: number
-    if a8.forceCollapsed or a9 < (a8.railCollapseBelow :: number) then
-        return a8.railCollapsedWidth :: number
+    local expandedWidth = layout.railWidth :: number
+    if layout.forceCollapsed or viewportWidth < (layout.railCollapseBelow :: number) then
+        return layout.railCollapsedWidth :: number
     end
-    return a10
+    return expandedWidth
 end
 
 return layouts

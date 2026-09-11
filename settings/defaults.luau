@@ -10,7 +10,8 @@ defaults.values = {
     showProfile = true,
     showFullUsername = false,
     antiWindowDuplicate = true,
-    layoutMode = "top",    activeSubTab = 1,
+    layoutMode = "top",
+    activeSubTab = 1,
 }
 
 function defaults.clone(overrides: { [string]: any }?): { [string]: any }
