@@ -27,6 +27,7 @@ function state.new(tab, element)
         tab = assert(tab, "Missing argument #1 (Tab expected)"),         window = tab.window,
         direction = a11,
         compact = a10,         forgetState = tab.forgetState,         elements = {},
+        deriveFlagFromName = tab.deriveFlagFromName,
     }, state)
 
         local a12 = tab.direction == Enum.FillDirection.Horizontal

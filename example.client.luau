@@ -18,7 +18,7 @@ local window = Astra:CreateWindow({
 -- Window tags are rendered beside the window title and remain available in the chrome.
 window:CreateTag({
     icon = "tag",
-    text = "0.0.32",
+    text = "0.0.33",
     color = Color3.fromRGB(96, 205, 255),
 })
 
@@ -159,13 +159,13 @@ local changelog = changelogTab:CreateChangelog({
     description = "Structured release notes with categorized changes.",
     entries = {
         {
-            version = "0.0.32",
+            version = "0.0.33",
             date = "2026-09-11",
-            title = "Dedicated Changelog tab",
-            description = "The example now exposes release news in its own main-window tab.",
+            title = "Grouped toggle fix",
+            description = "Fixed grouped toggles failing during construction and standardized release symbols.",
             changes = {
-                { symbol = "added", category = "Added", text = "Added a dedicated Changelog tab with release entries." },
-                { symbol = "changed", category = "Example", text = "Test controls now use working callbacks and state updates." },
+                { symbol = "~", category = "Fixed", text = "Grouped toggles now inherit the parent tab flag helper correctly." },
+                { symbol = "~", category = "Changelog", text = "Release entries now use + for additions, - for removals, and ~ for fixes." },
             },
         },
         {
@@ -174,8 +174,8 @@ local changelog = changelogTab:CreateChangelog({
             title = "Expanded element examples",
             description = "Added more supported elements to the example client for API and layout testing.",
             changes = {
-                { symbol = "added", category = "Added", text = "Added progress, stat, keybind, console, and grouped element examples." },
-                { symbol = "changed", category = "Example", text = "The example now documents more element combinations without console output calls." },
+                { symbol = "+", category = "Added", text = "Added progress, stat, keybind, console, and grouped element examples." },
+                { symbol = "~", category = "Example", text = "The example now documents more element combinations without console output calls." },
             },
         },
         {
@@ -184,8 +184,8 @@ local changelog = changelogTab:CreateChangelog({
             title = "Changelog element",
             description = "Added the Changelog element to Astra.",
             changes = {
-                { symbol = "added", category = "Added", text = "CreateChangelog is now available on tabs." },
-                { symbol = "changed", category = "Compatibility", text = "Supports lowercase and PascalCase properties." },
+                { symbol = "+", category = "Added", text = "CreateChangelog is now available on tabs." },
+                { symbol = "~", category = "Compatibility", text = "Supports lowercase and PascalCase properties." },
             },
         },
     },
