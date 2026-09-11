@@ -208,14 +208,19 @@ function state:Select(a24)
         end
     end
 
-    if self ~= self.window.rfSettings and self.window.settingsAction and not a25 then
-        Tab.tweenService
-            :Create(
-                self.window.settingsAction.iconLabel,
-                TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-                { ImageTransparency = 0.6 }
-            )
-            :Play()
+    if self.window.settingsAction then
+        local actionTransparency = if self._isSettingsTab then 0 else 0.6
+        if a25 then
+            self.window.settingsAction.iconLabel.ImageTransparency = actionTransparency
+        else
+            Tab.tweenService
+                :Create(
+                    self.window.settingsAction.iconLabel,
+                    TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                    { ImageTransparency = actionTransparency }
+                )
+                :Play()
+        end
     end
 end
 
