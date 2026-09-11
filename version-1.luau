@@ -29937,9 +29937,30 @@ local ObjectTree = {
 
 local task_defer = task and task.defer
 
+if type(table.clone) ~= "function" then
+    function table.clone(source)
+        local copy = {}
+        for key, value in next, source do
+            copy[key] = value
+        end
+        return copy
+    end
+end
+if type(table.clear) ~= "function" then
+    function table.clear(source)
+        for key in next, source do
+            source[key] = nil
+        end
+    end
+end
+
 -- If we're not running on the Roblox engine, we won't have a `task` global
-local Defer = task_defer or function(f, ...)
-    coroutine.wrap(f)(...)
+local Defer = if type(task_defer) == "function" then task_defer else function(f, ...)
+    if type(coroutine) == "table" and type(coroutine.wrap) == "function" then
+        coroutine.wrap(f)(...)
+        return
+    end
+    error("Astra bundle requires task.defer or coroutine.wrap", 0)
 end
 
 -- ClassName "IDs"
