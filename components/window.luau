@@ -698,6 +698,9 @@ function Window:CreateTab(props)
                 TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
             )
         end
+        -- [[A runtime-created tab may belong to the other rail.]]
+        -- [[Re-apply the rail filter so it lands in the correct rail.]]
+        self:_applySettingsLayout(self._settingsMode)
     end
 
     return tab
@@ -1073,6 +1076,8 @@ function Window:ToggleMinimise()
                     tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected", surfaceTween)
                 end
             end
+            -- [[Restore the settings/normal rail split; the loop above shows all tabs.]]
+            self:_applySettingsLayout(self._settingsMode)
             self:_setTabSectionsVisible(true)
             self:_setTabSectionsShown(true, surfaceTween)
 
@@ -2048,6 +2053,8 @@ function Window:_quickRestore()
             element:_setShown(true, false)
         end
     end
+    -- [[Restore the settings/normal rail split; the loop above shows all tabs.]]
+    self:_applySettingsLayout(self._settingsMode)
     self:_fadeSurfaces(true)
 
     if self.topbarIcon then
@@ -2109,6 +2116,8 @@ function Window:_firstShow()
             element:_setShown(true, false)
         end
     end
+    -- [[Restore the settings/normal rail split; the loop above shows all tabs.]]
+    self:_applySettingsLayout(self._settingsMode)
     for _, tag in self.tags do
         tag:_setShown(false, false)
     end
