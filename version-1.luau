@@ -2403,16 +2403,19 @@ local profilePanel = {}
 -- [[window and the panel are centred on screen as a single unit, so]]
 -- [[the window sits half a panel (width + gap) away from the screen]]
 -- [[centre, on the opposite side of the panel.]]
-profilePanel.width = 96
-profilePanel.gap = 8
+-- A full profile card, intentionally wide enough for the Roblox-style details
+-- layout. Every colour below is a theme binding (rather than a hard-coded
+-- colour), so ChangeTheme refreshes the card along with the rest of the UI.
+profilePanel.width = 304
+profilePanel.gap = 12
 
-local avatarSize = 48
-local nameGap = 6
-local nameHeight = 18
-local subGap = 2
-local subHeight = 14
-local paddingX = 8
-local contentMinTop = 14
+local avatarSize = 82
+local nameGap = 10
+local nameHeight = 24
+local subGap = 3
+local subHeight = 18
+local paddingX = 18
+local contentMinTop = 18
 local gearSize = 32
 local gearIconSize = 20
 local gearBottomMargin = 12
@@ -2533,10 +2536,16 @@ function profilePanel.build(window, onOpenSettings)
         CornerRadius = UDim.new(1, 0),
         Parent = window.profileAvatar,
     })
+    local onlineDot = window:Create("Frame", {
+        Name = "Online", AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, avatarSize / 2 - 4, 0, contentMinTop + avatarSize - 4),
+        Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0, Parent = window.profilePanelSurface,
+    }, { BackgroundColor3 = "Success" })
+    window:Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = onlineDot })
 
     window.profileName = window:Create("TextLabel", {
         Name = "Name",
-        Text = if player then sidebar.maskUsername(player.Name) else "",
+        Text = if player then player.DisplayName else "",
         Size = UDim2.new(1, -paddingX * 2, 0, nameHeight),
         Position = UDim2.new(0, paddingX, 0, contentMinTop + avatarSize + nameGap),
         BackgroundTransparency = 1,
@@ -2564,6 +2573,59 @@ function profilePanel.build(window, onOpenSettings)
         TextTransparency = 1,
         Parent = window.profilePanelSurface,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
+
+    local function label(name, text, position, size, textSize, color)
+        return window:Create("TextLabel", {
+            Name = name,
+            Text = text,
+            Position = position,
+            Size = size,
+            BackgroundTransparency = 1,
+            TextSize = textSize or 13,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Center,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            Parent = window.profilePanelSurface,
+        }, { TextColor3 = color or "ContentColor", FontFace = "Font" })
+    end
+
+    local function rule(y)
+        window:Create("Frame", {
+            Name = "Divider",
+            Position = UDim2.new(0, paddingX, 0, y),
+            Size = UDim2.new(1, -paddingX * 2, 0, 1),
+            BorderSizePixel = 0,
+            Parent = window.profilePanelSurface,
+        }, { BackgroundColor3 = "ElementStroke" })
+    end
+
+    rule(176)
+    label("DetailsHeading", "◈  ACCOUNT DETAILS", UDim2.fromOffset(paddingX, 190), UDim2.new(1, -paddingX * 2, 0, 20), 12, "ActionColor")
+    label("UserId", "▣  User ID", UDim2.fromOffset(paddingX, 218), UDim2.new(1, -paddingX * 2, 0, 18), 13)
+    local userId = label("UserIdValue", if player then tostring(player.UserId) else "—", UDim2.fromOffset(paddingX + 22, 237), UDim2.new(1, -paddingX * 2 - 48, 0, 20), 14, "TitlingColor")
+    local copy = window:Create("TextButton", {
+        Name = "CopyUserId", Text = "COPY", Position = UDim2.new(1, -paddingX - 44, 0, 238),
+        Size = UDim2.fromOffset(44, 18), BackgroundTransparency = 1, BorderSizePixel = 0,
+        TextSize = 10, Parent = window.profilePanelSurface,
+    }, { TextColor3 = "ActionColor", FontFace = "Font" })
+    window:Connect(copy.Activated, function()
+        if setclipboard and player then setclipboard(tostring(player.UserId)) end
+    end)
+    label("JoinDate", "◷  Join date", UDim2.fromOffset(paddingX, 267), UDim2.new(1, -paddingX * 2, 0, 18), 13)
+    label("JoinDateValue", if player then ("Account age: " .. tostring(player.AccountAge) .. " days") else "—", UDim2.fromOffset(paddingX + 22, 286), UDim2.new(1, -paddingX * 2, 0, 20), 14, "TitlingColor")
+    label("SocialStats", "♟  Friends     —        Followers     —", UDim2.fromOffset(paddingX, 320), UDim2.new(1, -paddingX * 2, 0, 22), 13, "PlaceholderColor")
+    rule(354)
+    label("GameHeading", "▣  CURRENT GAME", UDim2.fromOffset(paddingX, 368), UDim2.new(1, -paddingX * 2, 0, 20), 12, "ActionColor")
+    local gameCard = window:Create("Frame", {
+        Name = "CurrentGame", Position = UDim2.fromOffset(paddingX, 396), Size = UDim2.new(1, -paddingX * 2, 0, 82),
+        BorderSizePixel = 0, Parent = window.profilePanelSurface,
+    }, { BackgroundColor3 = "ContentColor" })
+    window:Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = gameCard })
+    label("GameName", game.Name, UDim2.fromOffset(paddingX + 12, 407), UDim2.new(1, -paddingX * 2 - 24, 0, 20), 14, "TitlingColor")
+    label("GameBy", "by Astra player  •  Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 12, 430), UDim2.new(1, -paddingX * 2 - 24, 0, 18), 11)
+    label("PlayingTime", "◷  Playing now", UDim2.fromOffset(paddingX + 12, 452), UDim2.new(1, -paddingX * 2 - 24, 0, 18), 11, "ActionColor")
+
+    label("PremiumBadge", "PREMIUM", UDim2.new(0.5, -42, 0, contentMinTop + avatarSize + nameGap + nameHeight + subGap + subHeight + 6), UDim2.fromOffset(84, 18), 10, "AccentColor")
 
     window.profileGear = window:Create("TextButton", {
         Name = "OpenSettings",
@@ -2804,8 +2866,9 @@ function profilePanel.setSubtitle(window, text)
     end
 
     local resolved = if type(text) == "string" and text ~= "" then locale.resolve(text) else nil
-    subtitle.Text = resolved or ""
-    subtitle.Visible = resolved ~= nil
+    local username = if state.localPlayer then "@" .. state.localPlayer.Name else ""
+    subtitle.Text = resolved or username
+    subtitle.Visible = subtitle.Text ~= ""
 end
 
 function profilePanel.refreshName(window)
@@ -30076,94 +30139,94 @@ local LineOffsets = {
     [12] = 1365,
     [13] = 1672,
     [14] = 2390,
-    [15] = 2824,
-    [16] = 3159,
-    [17] = 3220,
-    [18] = 3590,
-    [19] = 3967,
-    [21] = 6908,
-    [22] = 7175,
-    [23] = 7619,
-    [24] = 8750,
-    [25] = 9084,
-    [26] = 9145,
-    [27] = 9290,
-    [28] = 10610,
-    [29] = 10812,
-    [30] = 11073,
-    [31] = 11535,
-    [32] = 11985,
-    [33] = 12072,
-    [34] = 12637,
-    [35] = 13255,
-    [36] = 13637,
-    [37] = 13767,
-    [38] = 13931,
-    [39] = 14085,
-    [41] = 14596,
-    [42] = 14619,
-    [43] = 14636,
-    [44] = 14666,
-    [45] = 14782,
-    [46] = 14796,
-    [47] = 14845,
-    [48] = 14571,
-    [49] = 14952,
-    [50] = 15255,
-    [51] = 15286,
-    [52] = 14941,
-    [53] = 15329,
-    [54] = 15349,
-    [55] = 15381,
-    [56] = 15311,
-    [57] = 15488,
-    [58] = 15547,
-    [59] = 15607,
-    [61] = 15666,
-    [62] = 15831,
-    [63] = 15651,
-    [64] = 16091,
-    [65] = 16386,
-    [66] = 17042,
-    [67] = 18826,
-    [68] = 19967,
-    [69] = 21487,
-    [70] = 15895,
-    [71] = 26731,
-    [72] = 26793,
-    [73] = 26855,
-    [74] = 26930,
-    [75] = 27012,
-    [76] = 27074,
-    [77] = 27149,
-    [78] = 27224,
-    [79] = 27299,
-    [80] = 27374,
-    [81] = 26625,
-    [82] = 27436,
-    [83] = 27534,
-    [84] = 27712,
-    [85] = 27763,
-    [86] = 27793,
-    [87] = 28044,
-    [88] = 28093,
-    [89] = 28546,
-    [90] = 28564,
-    [91] = 28710,
-    [92] = 28809,
-    [93] = 28831,
-    [94] = 28881,
-    [95] = 28917,
-    [96] = 28935,
-    [97] = 29248,
-    [98] = 29264,
-    [99] = 29315,
-    [100] = 29334,
-    [101] = 29576,
-    [102] = 29620,
-    [103] = 29820,
-    [104] = 29848,
-    [105] = 29859,
+    [15] = 2887,
+    [16] = 3222,
+    [17] = 3283,
+    [18] = 3653,
+    [19] = 4030,
+    [21] = 6971,
+    [22] = 7238,
+    [23] = 7682,
+    [24] = 8813,
+    [25] = 9147,
+    [26] = 9208,
+    [27] = 9353,
+    [28] = 10673,
+    [29] = 10875,
+    [30] = 11136,
+    [31] = 11598,
+    [32] = 12048,
+    [33] = 12135,
+    [34] = 12700,
+    [35] = 13318,
+    [36] = 13700,
+    [37] = 13830,
+    [38] = 13994,
+    [39] = 14148,
+    [41] = 14659,
+    [42] = 14682,
+    [43] = 14699,
+    [44] = 14729,
+    [45] = 14845,
+    [46] = 14859,
+    [47] = 14908,
+    [48] = 14634,
+    [49] = 15015,
+    [50] = 15318,
+    [51] = 15349,
+    [52] = 15004,
+    [53] = 15392,
+    [54] = 15412,
+    [55] = 15444,
+    [56] = 15374,
+    [57] = 15551,
+    [58] = 15610,
+    [59] = 15670,
+    [61] = 15729,
+    [62] = 15894,
+    [63] = 15714,
+    [64] = 16154,
+    [65] = 16449,
+    [66] = 17105,
+    [67] = 18889,
+    [68] = 20030,
+    [69] = 21550,
+    [70] = 15958,
+    [71] = 26794,
+    [72] = 26856,
+    [73] = 26918,
+    [74] = 26993,
+    [75] = 27075,
+    [76] = 27137,
+    [77] = 27212,
+    [78] = 27287,
+    [79] = 27362,
+    [80] = 27437,
+    [81] = 26688,
+    [82] = 27499,
+    [83] = 27597,
+    [84] = 27775,
+    [85] = 27826,
+    [86] = 27856,
+    [87] = 28107,
+    [88] = 28156,
+    [89] = 28609,
+    [90] = 28627,
+    [91] = 28773,
+    [92] = 28872,
+    [93] = 28894,
+    [94] = 28944,
+    [95] = 28980,
+    [96] = 28998,
+    [97] = 29311,
+    [98] = 29327,
+    [99] = 29378,
+    [100] = 29397,
+    [101] = 29639,
+    [102] = 29683,
+    [103] = 29883,
+    [104] = 29911,
+    [105] = 29922,
 }
 
 -- [[Misc AOT variable imports]]
