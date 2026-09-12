@@ -2,6 +2,44 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-12 — Responsive sidebar tab sizing: rows follow the longest tab name
+
+- **The responsive sidebar (`Sidebar (Responsive)` bar layout) now sizes its
+  tab rows from the tab names.** The longest visible row in the current rail
+  group (tabs or settings tabs, whichever mode the rail shows) determines the
+  group's natural width via the existing `functions.textWidth` measurement of
+  the row title (icon + spacing + paddings included); every row in that rail
+  shares that width, so short names expand to match the longest one.
+- **The rail's available width is the cap, not a constant.** Row width is
+  `min(longest natural width, rail width - row insets)` — there is no new
+  fixed pixel value. When a very long name would exceed the available rail
+  space, the rows hold the available width and the title label is constrained
+  to the remaining slot, where its existing `TextWrapped` keeps the name
+  readable. The rail itself never grows (or shrinks) because of tab names —
+  the responsive rail widths (`railWidthFor`: expanded / collapsed under
+  `railCollapseBelow`) and the collapse-to-icon-only behavior are unchanged.
+- **Sizing is re-derived whenever the visible rail group or its inputs
+  change:** tab create/remove, layout-mode switch, settings-mode toggle,
+  viewport/rail width changes (`applyRailRows`), locale changes (translated
+  titles measure differently) and theme changes (title font).
+- **Scope:** only the responsive sidebar path
+  (`components/tabSelector.luau` `relayoutSidebarRows` + hook points in
+  `components/sidebar.luau`, `components/window.luau`, `elements/tab.luau`).
+  The topbar layout's per-pill `AutomaticSize.X` sizing, the collapsed
+  sidebar's icon-only rows, all tab styles, animations, selection and
+  scrolling behavior are untouched. `setRowCollapsed` additionally skips
+  rows whose rail was already destroyed mid-layout-switch (a destroyed
+  instance must not have properties written to it) and restores the row's
+  full-rail width when the rail collapses.
+- **Verification:** new `scripts/sidebar_tab_sizing_test.sh` (Luau CLI
+  harness with a mini Roblox environment, `sidebar_sizing_stubs.luau`)
+  exercises the real bundle: identical short names, short/long mixes, one
+  very long name (cap + wrapped title), multiple long names, narrow/wide
+  window (collapse/expand round-trip), settings-mode rail, icon-less and
+  `neglectSelector` tabs, locale changes, and confirms the topbar layout
+  keeps its existing per-pill sizing. The test fails against the pre-change
+  tree (negative control). Bundle regenerated (99 modules).
+
 ## 2026-09-11 — Window sizing: 600x420 default, fixed mobile profile
 
 - **Default window size is now `600x420`** (was `720x600`) in both bar-layout

@@ -2992,6 +2992,7 @@ function sidebar.applyRailRows(window, width, layout)
             tabSelector.setRowCollapsed(tab, isCollapsed, layout)
         end
     end
+    tabSelector.relayoutSidebarRows(window, layout, width)
     if window.profileContainer and layout.mode == "sidebar" then
         window.profileContainer.Position = UDim2.new(0, if isCollapsed then 0 else layout.rowInset, 0.5, 0)
         window.profileContainer.Size = UDim2.new(1, if isCollapsed then 0 else -layout.rowInset, 1, 0)
@@ -3366,9 +3367,100 @@ function tabSelector.build(tab, layoutMode)
     end
 end
 
-function tabSelector.setRowCollapsed(tab, collapsed, layout)
-    if layout.mode ~= "sidebar" or not tab.topbarItem then
+-- [[Responsive sidebar row sizing: the tab names drive the row group's]]
+-- [[natural width. The longest visible row sets it, every row in the rail]]
+-- [[shares that width, and the rail's available width is the cap, so a long]]
+-- [[name never overflows a row and never enlarges the rail itself.]]
+
+local function inCurrentRail(window, tab)
+    -- [[Parent guards out rows destroyed mid-layout-switch: their parent]]
+    -- [[rail is gone before the rebuilt rows exist, and a destroyed]]
+    -- [[instance must not have properties written to it.]]
+    return not tab.neglectSelector
+        and tab.topbarItem ~= nil
+        and tab.topbarItem.Parent ~= nil
+        and (tab._isSettingsTab == true) == (window._settingsMode == true)
+end
+
+local function rowNaturalWidth(tab, window, layout)
+    local width = layout.rowPadding * 2
+    if tab.icon then
+        width += layout.rowIconSize
+        if tab.name then
+            width += layout.rowContentSpacing
+        end
+    end
+    if tab.name then
+        width += functions.textWidth(window.theme.Font, 16, locale.resolve(tab.name))
+    end
+    return width
+end
+
+function tabSelector.relayoutSidebarRows(window, layout, railWidth)
+    if layout.mode ~= "sidebar" or layout.forceCollapsed then
         return
+    end
+    if not window.sidebar then
+        return
+    end
+    railWidth = railWidth or layout.railWidth
+    if railWidth < (layout.railWidth :: number) then
+        -- [[Collapsed rail: rows are icon-only and keep the full-rail width.]]
+        return
+    end
+
+    local available = railWidth - layout.rowInset * 2
+    if available <= 0 then
+        return
+    end
+
+    local required = 0
+    for _, tab in window.tabs do
+        if inCurrentRail(window, tab) then
+            required = math.max(required, rowNaturalWidth(tab, window, layout))
+        end
+    end
+
+    local width = if required > 0 then math.floor(math.min(required, available)) else available
+
+    for _, tab in window.tabs do
+        if inCurrentRail(window, tab) then
+            tab.topbarItem.Size = UDim2.new(0, width, 0, layout.rowHeight)
+
+            local title = tab.topbarItemTitle
+            if title then
+                local slot = width - layout.rowPadding * 2
+                    - (if tab.icon then layout.rowIconSize + layout.rowContentSpacing else 0)
+                if
+                    slot >= 24
+                    and functions.textWidth(window.theme.Font, 16, locale.resolve(tab.name)) > slot
+                then
+                    -- [[Capped: hold the label inside the row; its existing]]
+                    -- [[TextWrapped then keeps the name readable.]]
+                    title.Size = UDim2.fromOffset(slot, 16)
+                    title.AutomaticSize = Enum.AutomaticSize.Y
+                else
+                    title.Size = UDim2.fromOffset(0, 16)
+                    title.AutomaticSize = Enum.AutomaticSize.XY
+                end
+            end
+        end
+    end
+end
+
+function tabSelector.setRowCollapsed(tab, collapsed, layout)
+    -- [[Parent check: during a layout-mode switch the previous rail's rows]]
+    -- [[are destroyed before the rebuilt ones exist, and properties must]]
+    -- [[not be written to a destroyed instance.]]
+    if layout.mode ~= "sidebar" or not tab.topbarItem or not tab.topbarItem.Parent then
+        return
+    end
+
+    if collapsed then
+        -- [[Icon-only rail: drop the name-driven width so the row tracks the]]
+        -- [[collapsed rail again (the expanded width is re-applied by]]
+        -- [[relayoutSidebarRows whenever the rail is expanded).]]
+        tab.topbarItem.Size = UDim2.new(1, -layout.rowInset * 2, 0, layout.rowHeight)
     end
 
     if tab.topbarItemTitle then
@@ -3810,6 +3902,7 @@ local layouts = require(utilities.layouts)
 local chrome = require(script.Parent.chrome)
 local search = require(script.Parent.search)
 local sidebar = require(script.Parent.sidebar)
+local tabSelector = require(script.Parent.tabSelector)
 
 local state = require(utilities.Parent.core.state)
 
@@ -4452,6 +4545,8 @@ function Window:ChangeTheme(themeInput)
     end
 
     self:_syncLiveAnimation()
+    -- [[A theme can change the row title font.]]
+    tabSelector.relayoutSidebarRows(self, self.layout, layouts.railWidthFor(self.layout, self.size.X.Offset))
 end
 
 function Window:_refreshElementThemes()
@@ -5657,6 +5752,9 @@ function Window:_applySettingsLayout(isSettings)
         self.selectedTab.tabPage.Size = if self.layout.mode == "sidebar" then UDim2.new(1, -35, 1, 0) else UDim2.new(1, -20, 1, 0)
         self.selectedTab.tabPage.Position = if self.layout.mode == "sidebar" then UDim2.new(0, 35, 0, 0) else UDim2.new(0, 0, 0, 0)
     end
+    -- [[The visible rail group changed: re-derive the responsive sidebar's]]
+    -- [[row width from the tabs now shown (no-op for the other layouts).]]
+    tabSelector.relayoutSidebarRows(self, self.layout, layouts.railWidthFor(self.layout, self.size.X.Offset))
 end
 
 function Window:_setSettingsMode(active)
@@ -6090,6 +6188,8 @@ function Window:SetLocale(localeId)
             instance[prop] = locale.resolve(token)
         end
     end
+    -- [[Translated row titles may measure differently.]]
+    tabSelector.relayoutSidebarRows(self, self.layout, layouts.railWidthFor(self.layout, self.size.X.Offset))
 end
 
 function Window:SetTranslator(translator)
@@ -12932,6 +13032,7 @@ local props = require(constants.HapticEngine)
 local name = require(script.Parent.Parent.components.search)
 local icon = require(script.Parent.Parent.components.tabSelector)
 local flagNames = require(script.Parent.Parent.functions.flagNames)
+local layouts = require(script.Parent.Parent.utilities.layouts)
 
 local function customOrder(window, forgetState)
     for _, element in forgetState do
@@ -13285,6 +13386,9 @@ function state:Remove()
     if self.tabPage then
         window:DestroySubtree(self.tabPage)
     end
+    -- [[The removed row may have been the widest: re-derive the responsive]]
+    -- [[sidebar's row width from the rows that remain (no-op elsewhere).]]
+    icon.relayoutSidebarRows(window, window.layout, layouts.railWidthFor(window.layout, window.size.X.Offset))
     self.topbarItem = nil
     self.tabPage = nil
     self.elements = {}
@@ -29743,92 +29847,92 @@ local LineOffsets = {
     [13] = 1664,
     [14] = 2382,
     [15] = 2717,
-    [16] = 3144,
-    [17] = 3422,
-    [18] = 3799,
-    [20] = 6576,
-    [21] = 6843,
-    [22] = 7287,
-    [23] = 8418,
-    [24] = 8752,
-    [25] = 8813,
-    [26] = 8958,
-    [27] = 10278,
-    [28] = 10480,
-    [29] = 10741,
-    [30] = 11203,
-    [31] = 11653,
-    [32] = 11740,
-    [33] = 12305,
-    [34] = 12923,
-    [35] = 13297,
-    [36] = 13427,
-    [37] = 13591,
-    [38] = 13745,
-    [40] = 14256,
-    [41] = 14279,
-    [42] = 14296,
-    [43] = 14326,
-    [44] = 14442,
-    [45] = 14456,
-    [46] = 14505,
-    [47] = 14231,
-    [48] = 14606,
-    [49] = 14909,
-    [50] = 14940,
-    [51] = 14595,
-    [52] = 14983,
-    [53] = 15003,
-    [54] = 15035,
-    [55] = 14965,
-    [56] = 15142,
-    [57] = 15204,
-    [58] = 15267,
-    [60] = 15330,
-    [61] = 15495,
-    [62] = 15315,
-    [63] = 15755,
-    [64] = 16050,
-    [65] = 16706,
-    [66] = 18490,
-    [67] = 19631,
-    [68] = 21151,
-    [69] = 15559,
-    [70] = 26395,
-    [71] = 26457,
-    [72] = 26519,
-    [73] = 26594,
-    [74] = 26676,
-    [75] = 26738,
-    [76] = 26813,
-    [77] = 26888,
-    [78] = 26963,
-    [79] = 27038,
-    [80] = 26289,
-    [81] = 27100,
-    [82] = 27198,
-    [83] = 27376,
-    [84] = 27427,
-    [85] = 27457,
-    [86] = 27708,
-    [87] = 27757,
-    [88] = 28210,
-    [89] = 28228,
-    [90] = 28382,
-    [91] = 28481,
-    [92] = 28503,
-    [93] = 28553,
-    [94] = 28589,
-    [95] = 28607,
-    [96] = 28920,
-    [97] = 28936,
-    [98] = 28987,
-    [99] = 29006,
-    [100] = 29248,
-    [101] = 29292,
-    [102] = 29486,
-    [103] = 29514,
-    [104] = 29525,
+    [16] = 3145,
+    [17] = 3514,
+    [18] = 3891,
+    [20] = 6676,
+    [21] = 6943,
+    [22] = 7387,
+    [23] = 8518,
+    [24] = 8852,
+    [25] = 8913,
+    [26] = 9058,
+    [27] = 10378,
+    [28] = 10580,
+    [29] = 10841,
+    [30] = 11303,
+    [31] = 11753,
+    [32] = 11840,
+    [33] = 12405,
+    [34] = 13023,
+    [35] = 13401,
+    [36] = 13531,
+    [37] = 13695,
+    [38] = 13849,
+    [40] = 14360,
+    [41] = 14383,
+    [42] = 14400,
+    [43] = 14430,
+    [44] = 14546,
+    [45] = 14560,
+    [46] = 14609,
+    [47] = 14335,
+    [48] = 14710,
+    [49] = 15013,
+    [50] = 15044,
+    [51] = 14699,
+    [52] = 15087,
+    [53] = 15107,
+    [54] = 15139,
+    [55] = 15069,
+    [56] = 15246,
+    [57] = 15308,
+    [58] = 15371,
+    [60] = 15434,
+    [61] = 15599,
+    [62] = 15419,
+    [63] = 15859,
+    [64] = 16154,
+    [65] = 16810,
+    [66] = 18594,
+    [67] = 19735,
+    [68] = 21255,
+    [69] = 15663,
+    [70] = 26499,
+    [71] = 26561,
+    [72] = 26623,
+    [73] = 26698,
+    [74] = 26780,
+    [75] = 26842,
+    [76] = 26917,
+    [77] = 26992,
+    [78] = 27067,
+    [79] = 27142,
+    [80] = 26393,
+    [81] = 27204,
+    [82] = 27302,
+    [83] = 27480,
+    [84] = 27531,
+    [85] = 27561,
+    [86] = 27812,
+    [87] = 27861,
+    [88] = 28314,
+    [89] = 28332,
+    [90] = 28486,
+    [91] = 28585,
+    [92] = 28607,
+    [93] = 28657,
+    [94] = 28693,
+    [95] = 28711,
+    [96] = 29024,
+    [97] = 29040,
+    [98] = 29091,
+    [99] = 29110,
+    [100] = 29352,
+    [101] = 29396,
+    [102] = 29590,
+    [103] = 29618,
+    [104] = 29629,
 }
 
 -- [[Misc AOT variable imports]]

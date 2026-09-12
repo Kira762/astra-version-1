@@ -123,6 +123,16 @@ Profile/avatar machinery:
 ### `components/action.luau`, `chrome.luau`, `tabSelector.luau`
 Small window-furniture classes; top-level `utility` require + constructor locals for created frames/buttons.
 
+`tabSelector.relayoutSidebarRows(window, layout, railWidth)` — responsive
+sidebar row sizing: the longest row in the current rail group (tabs or
+settings tabs per `_settingsMode`) sets the shared row width
+(`functions.textWidth` of the title + icon/spacing/paddings), capped at the
+rail's available width so long names wrap in place and the rail itself never
+grows. Called from `sidebar.applyRailRows` (rail width changes),
+`Window:_applySettingsLayout` (visible rail group changes), `Tab:Remove`,
+`Window:SetLocale` and `Window:ChangeTheme`. No-op for the topbar and
+collapsed-sidebar layouts.
+
 ### `components/notification.luau`, `toast.luau`, `popup.luau`
 Overlay queues: `a1..a4` — container frame, TweenInfo presets, queue table, active-instance guard.
 

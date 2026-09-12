@@ -12,6 +12,7 @@ local layouts = require(utilities.layouts)
 local chrome = require(script.Parent.chrome)
 local search = require(script.Parent.search)
 local sidebar = require(script.Parent.sidebar)
+local tabSelector = require(script.Parent.tabSelector)
 
 local state = require(utilities.Parent.core.state)
 
@@ -654,6 +655,8 @@ function Window:ChangeTheme(themeInput)
     end
 
     self:_syncLiveAnimation()
+    -- [[A theme can change the row title font.]]
+    tabSelector.relayoutSidebarRows(self, self.layout, layouts.railWidthFor(self.layout, self.size.X.Offset))
 end
 
 function Window:_refreshElementThemes()
@@ -1859,6 +1862,9 @@ function Window:_applySettingsLayout(isSettings)
         self.selectedTab.tabPage.Size = if self.layout.mode == "sidebar" then UDim2.new(1, -35, 1, 0) else UDim2.new(1, -20, 1, 0)
         self.selectedTab.tabPage.Position = if self.layout.mode == "sidebar" then UDim2.new(0, 35, 0, 0) else UDim2.new(0, 0, 0, 0)
     end
+    -- [[The visible rail group changed: re-derive the responsive sidebar's]]
+    -- [[row width from the tabs now shown (no-op for the other layouts).]]
+    tabSelector.relayoutSidebarRows(self, self.layout, layouts.railWidthFor(self.layout, self.size.X.Offset))
 end
 
 function Window:_setSettingsMode(active)
@@ -2292,6 +2298,8 @@ function Window:SetLocale(localeId)
             instance[prop] = locale.resolve(token)
         end
     end
+    -- [[Translated row titles may measure differently.]]
+    tabSelector.relayoutSidebarRows(self, self.layout, layouts.railWidthFor(self.layout, self.size.X.Offset))
 end
 
 function Window:SetTranslator(translator)

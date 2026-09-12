@@ -276,6 +276,7 @@ function sidebar.applyRailRows(window, width, layout)
             tabSelector.setRowCollapsed(tab, isCollapsed, layout)
         end
     end
+    tabSelector.relayoutSidebarRows(window, layout, width)
     if window.profileContainer and layout.mode == "sidebar" then
         window.profileContainer.Position = UDim2.new(0, if isCollapsed then 0 else layout.rowInset, 0.5, 0)
         window.profileContainer.Size = UDim2.new(1, if isCollapsed then 0 else -layout.rowInset, 1, 0)
