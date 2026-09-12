@@ -1255,7 +1255,9 @@ function Window:_applyWindowSize()
     self:_syncDragBar()
     -- [[A viewport change (rotation, inset, keyboard) can turn the profile]]
     -- [[panel on or off: there may suddenly be room for it, or none.]]
-    -- [[Re-evaluate its visibility alongside the resize.]]
+    -- [[Re-evaluate its visibility alongside the resize and keep the card]]
+    -- [[height matched to the window height.]]
+    profilePanel.layout(self)
     profilePanel.setShown(self, true, nil)
     if self.main.Position.X.Scale == 0.5 and self.main.Position.Y.Scale == 0.5 then
         -- [[Still anchored at the screen centre (the user has not dragged]]
