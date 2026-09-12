@@ -88,8 +88,10 @@ Method map (names preserved through minification). Settings-related:
   (`Tab:Select`, after construction), so `CreateWindow` stays fast.
   Appearance hosts theme picker + Bar Layout picker (both
   popup-confirmed), the profile toggles (Show profile, Profile side
-  Right/Left, Reveal full username) and window toggles, Reset Window
-  Position;
+  Right/Left, Reveal profile details — refused with a "Show profile is
+  required" notification while Show profile is off, and switched off with
+  the card when Show profile goes off) and window toggles, Reset Window
+  Position (recentres the window + card pair);
   Persistence always hosts saved-config Save/Load/Delete (independent of
   the `configuration` prop — paths fall back to the window name, and the
   dropdown shows its "No saved configurations" placeholder when none
@@ -118,9 +120,13 @@ Public surface:
 Internal: `_reveal*`/`_fadeSurfaces`/`_firstShow`/`_quickRestore` (reveal
 engine), `_bindTopbarDrag`/`_bindKeybind`/`_bindMouseOverride`,
 `_applyWindowSize`/`_applyRailWidth`/`_clampToScreen`/`_watchViewport`,
-`_profileCenterPosition`/`_recenterForProfile` (window + profile-panel
-recentering), `_setLayoutMode`, `_toggleSettingsMode` (topbar gear + profile
-panel gear), `_registerControl`/`_unregisterControl`/`_persist`,
+`_clampedPosition` (keep-on-screen clamp — measures the window + profile-card
+pair through `profilePanel.pairHalfSize`, so neither half can be dragged off
+the edge), `_profileCenterPosition`/`_recenterForProfile` (window + profile-panel
+recentering; re-derived by `_firstShow` and `_quickRestore` while the window is
+still at its anchored resting spot, and by `ToggleMinimise`'s expand, which
+re-clamps for the card that comes back), `_setLayoutMode`, `_toggleSettingsMode`
+(topbar gear + profile panel gear), `_registerControl`/`_unregisterControl`/`_persist`,
 `_runGuarded`, `_setElementLocked`/`_buildLockScrim`, `_updateWindowTitle`.
 
 ### `components/sidebar.luau`
@@ -130,35 +136,113 @@ Tab-rail reflow (the profile system moved to `components/profilePanel.luau`):
 - `applyRailRows(window, width, layout)` — rows collapse only at the icon-only width (the responsive rail is often narrower than the old 219px fixed rail); ends with `tabSelector.relayoutSidebarRows`.
 
 ### `components/profilePanel.luau`
-The profile panel — a 96px companion card floating beside the window frame
-(a sibling in the same ScreenGui), replacing the in-window profile:
-- `build(window, onOpenSettings)` — surface with the window's treatment
-  (WindowColor gradient, `CornerRoundness` corners, SurfaceStroke stroke,
-  ShadowColor glow); 48px circular avatar (ContentColor plate fallback,
-  `images.image.avatar` with a generation guard); centered 16px name /
-  14px subtitle (truncated at end); bottom-pinned settings gear sharing
+The profile panel — a compact 260x420 companion card floating beside the
+window frame (a sibling in the same ScreenGui), exactly the default window's
+height, replacing the in-window profile. It is built from the same tokens as
+the window itself (WindowColor gradient surface, `CornerRoundness` corners,
+SurfaceStroke, ShadowColor glow) so it reads as part of the shell rather than
+a separate card, and it matches the design mock's structure:
+
+- **Pinned header** — 48px avatar with a presence dot and hairline ring,
+  left-aligned display name (`TitlingColor`, 15px) over the `@username`
+  subtitle (12px, `ContentColor`), the PREMIUM pill when the platform
+  reports a paid `MembershipType` (it rides the handle row and drops below
+  the name only when it does not fit), and the settings gear. A 1px
+  divider closes the header.
+- **Scrolling details** — `ACCOUNT`, `CURRENT GAME`, `SERVER` and
+  `USER SESSION` headings (muted, 10px, icon + label) over rounded
+  `CardSurface` plates: User ID (with its COPY action), Join date, Account
+  age, Friends and Followers, Key and Whitelist; the game thumbnail, name
+  and Place ID; Players, Server ID and Server uptime; and the session
+  timer. Only this region scrolls — the header never moves, the card never
+  grows past the window's height, and the 6px themed scrollbar appears
+  only once the content is taller than the region.
+
+- `build(window, onOpenSettings)` — builds the surface, header, detail
+  cards and tooltip; avatar with a generation guard via
+  `images.image.avatar`; text truncated at end; the gear shares
   `Window:_toggleSettingsMode` (hover pill + stroke hover, pcalled).
-  Mirrors `main`'s Position/Size through property-change signals, so it
-  follows drags/restores/resizes without a per-frame loop.
-- `layout(window)` — places the panel on the selected side
+  Mirrors `main`'s Position through property-change signals, so it follows
+  drags/restores/resizes without a per-frame loop.
+- `layout(window)` — places the fixed-size card on the selected side
   (`settings.profileSide`, default `"right"`) flush with the window edge
-  (8px gap), spanning the full window height, content vertically centred.
+  (12px gap), vertically centred on the window's centre; re-flows the
+  scroll region (and its scrollbar thickness) whenever the window height
+  or the content changes, so the card never has to be taller than the
+  window.
 - `setShown(window, shown, info)` — effective = requested AND enabled AND
-  window visible (not hidden/minimised); fades avatar/name/subtitle/gear/
-  stroke; idempotent (skips instances already at target).
-- `isEnabled` / `shiftFor` — content-enabled check (`showProfile` on,
-  player known, and the screen has horizontal room for window + gap +
-  panel — a space check, so landscape phones count) and the off-centre
-  shift `((96 + 8) / 2 = 52px)`, 0 while the panel is off.
+  window visible (not hidden/minimised); fades every registered target
+  (panel pieces, text, gear, premium pill); idempotent (skips instances
+  already at target).
+- `applyLive(window)` — the 1s Heartbeat tick while the card is shown:
+  player count (`#Players:GetPlayers()` / `MaxPlayers`), server uptime
+  (`workspace.DistributedGameTime`), session time (`os.clock()` since the
+  panel loaded) and the whitelist countdown. The connection is stored once
+  in `window.profileRefreshConnection`.
+- `isEnabled` / `isShown` / `shiftFor` — content-enabled check
+  (`showProfile` on, player known, and the screen has horizontal room for
+  window + gap + panel plus vertical room for the card's height — a space
+  check, so landscape phones count), the same plus the window's own
+  visibility (what the on-screen clamp asks: a minimised capsule is not
+  shoved around by a card that is not there), and the off-centre shift
+  `((260 + 12) / 2 = 136px)`, 0 while the panel is off.
+- `pairHalfSize(window, width?, height?)` — how far the window + card pair
+  reaches left, right and up/down from the window's centre: the card adds
+  `width + gap` to its own side and, at 420px, can out-tall a short window.
+  Plain window halves while the card is not shown. `Window:_clampedPosition`
+  and the topbar drag both clamp with it, so "Keep window on screen" keeps
+  the card on screen too.
 - `setEnabled`, `setSide` — settings drivers (both recenter the window).
-- `setSubtitle` (from `Window:SetProfile`), `refreshName` (masked vs
-  `showFullUsername`).
+  `setEnabled` also raises a notification when the card is switched on but
+  `hasRoom` fails, so an active toggle on a cramped viewport explains
+  itself instead of showing nothing; switching the card *off* clears the
+  reveal toggle with it (and says so), returning `revealCleared` so the
+  settings UI can roll its switch back.
+- `revealEnabled(window)` — the "Reveal profile details" toggle, still
+  persisted under the legacy `showFullUsername` key.
+- `revealAllowed` / `setReveal` / `syncReveal` — that toggle's dependency on
+  `showProfile`: it unmasks values that live on the card, so `setReveal`
+  refuses the on state while the card is off (setting stays off, card stays
+  masked, "Show profile is required" notification, `false` returned so the
+  caller rolls its switch back), and `syncReveal` normalises settings that
+  arrive from disk with reveal = on and the card off (`Window:LoadSettings`).
+- `applyIdentity(window)` — writes every identifying value on the card
+  from the local player and that toggle: display name (headline) and
+  @username (subtitle) through `sidebar.maskUsername`, user ID, place ID
+  and server ID as a fixed `••••••` block, plus the COPY action (hidden
+  while the user ID is masked, and it refuses to copy a masked value). An
+  explicit `Window:SetProfile` subtitle is developer copy, so the toggle
+  leaves it alone. Nil-safe on both the instances and the player; runs at
+  the end of `build`, so the card never shows an unmasked value first.
+- `applyCounts` / `applyLicense` — the live rows: players, uptime, session,
+  key and whitelist. Astra ships no key store of its own, so the key and
+  whitelist come from what the host handed to `Window:SetProfile` and read
+  `—` when nothing was supplied. `applyLicense` takes
+  `{ key, whitelist = { status, daysLeft | expiresAt } }` (`␣` the host's
+  table, copied, never mutated): the whitelist row shows `14 days left`,
+  `1 day left`, `Expired`, a non-"Active" status spelled out, or the
+  placeholder.
+- `setProfile` / `setSubtitle` / `refreshName` — `Window:SetProfile`
+  accepts a string or `nil` (legacy: swaps only the subtitle line and
+  leaves the host's key/whitelist rows alone), or a table
+  (`{ subtitle, key, whitelist }`; omitted fields clear their rows).
+  `refreshName` is kept as an alias for `applyIdentity`.
+- `showTooltip` / `hideTooltip` — the card's own hover-help for values
+  that do not fit their row (measured with `functions.textWidth`), shown
+  on the card surface so the scroll region never clips it.
 
 The window rests off-centre so window + gap + panel are centred as one unit
 (`Window:_profileCenterPosition` / `Window:_recenterForProfile`): with the
-panel on the right the window sits 52px left of screen centre, and
-vice-versa. The panel hides when the screen lacks room for the pair
-(portrait phones) and with hide/minimise/close.
+panel on the right the window sits 136px left of screen centre, and
+vice-versa. The resting centre is re-derived whenever the pair's state can
+have changed while nothing was on screen to move — `_firstShow` (a player
+turning up between the build and the first show), `_quickRestore` (a recenter
+that ran while hidden only parks `_restorePosition`) and `_applyWindowSize`
+(viewport changes) — but only while the window is still at its anchored
+`0.5/0.5` spot, so a position the user dragged to is never overridden
+(Reset Window Position recentres the pair on purpose). The panel hides when
+the screen lacks room for the pair (portrait phones) and with
+hide/minimise/close.
 
 ### `components/drag.luau`
 - `utility` — `core.state` alias. Locals `a1..a8` — drag input state (start pos, delta thresholds, RenderStepped connection).
@@ -239,7 +323,9 @@ Per-element specifics:
   entry per setting. Keys: `toggleKeybind` (keybind/behavior),
   `mouseOverride` (boolean/behavior), `keepOnScreen` (boolean/appearance),
   `welcomeToast` (boolean/behavior), `haptics` (boolean/performance),
-  `showProfile` (boolean/appearance), `showFullUsername` (boolean/appearance),
+  `showProfile` (boolean/appearance), `showFullUsername` (boolean/appearance —
+  documented as requiring `showProfile`, the rule `profilePanel.setReveal`
+  enforces),
   `antiWindowDuplicate` (boolean/behavior), `layoutMode` (enum/appearance),
   `activeSubTab` (enum/appearance — persisted, retained for compatibility
   with the pre-rebuild sub-tab UI). Lookup: `registry.definition(key)`,
@@ -351,6 +437,20 @@ Per-element specifics:
 - `enums.luau`, `ordering.luau`, `odometer.luau`, `fontManager.luau`, `functions.luau` (legacy shim), `path.luau` — small helpers.
 
 ---
+
+## scripts/ (verification + previews)
+
+| Script | What it does |
+|---|---|
+| `generate_bundle.js` | Rebuilds `version-1.luau` from the modular tree. |
+| `check_requires.py` | Static require graph: every module resolves, no cycles. |
+| `check_instance_fields.py` | Fails on custom-field writes on instances (the `_profileGeneration` crash class). |
+| `profile_{compact,centering,reveal,details}_test.sh` | Profile card suites: geometry/visibility, window-pair centring, the reveal toggle, and the redesigned card (tokens, pinned header + scrolling, live server/session values, license rows, tooltip, no-player case). |
+| `sidebar_tab_sizing_test.sh`, `smoke_test_bundle.sh` | Rail sizing and a bundle smoke run. |
+| `profile_panel_preview.sh` | Builds the real card under the mini Roblox stubs, dumps it as JSON and renders `assets/profile-panel-preview{,-revealed}.png` (needs Pillow) — the fastest way to eyeball a layout change without Roblox. |
+
+All of them assemble `scripts/sidebar_sizing_stubs.luau` + `version-1.luau`
+(so regenerate the bundle after a source edit) and run under the Luau CLI.
 
 ## Naming conventions after minification
 

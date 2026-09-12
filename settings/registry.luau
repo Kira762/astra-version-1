@@ -49,7 +49,10 @@ registry.definitions = {
         key = "showFullUsername",
         kind = "boolean",
         domain = "appearance",
-        description = "Shows the full Roblox username instead of the masked one.",
+        -- [[Depends on showProfile: it unmasks values that live on the]]
+        -- [[profile card, so it can only be on while the card is. The rule]]
+        -- [[is enforced by profilePanel.revealAllowed/setReveal.]]
+        description = "Reveals the display name, username, user ID, place ID, server ID and license key on the profile card instead of the masked versions. Requires showProfile to be on.",
     },
     profileSide = {
         key = "profileSide",
