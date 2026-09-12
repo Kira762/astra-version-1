@@ -77,26 +77,34 @@ shell and `components/window.luau` follows it:
 
 - The card is still a sibling of `main` in the same ScreenGui, but it is now
   a 260x420 plate built from the shared tokens (WindowColor gradient,
-  `CornerRoundness`, SurfaceStroke, ShadowColor glow, `CardSurface` plates,
-  `TitlingColor` / `ContentColor` / `MutedText` text) with a pinned header
-  (avatar + presence dot, display name, `@username`, PREMIUM pill, gear) over
-  a 1px divider and a vertically scrolling detail region (ACCOUNT, CURRENT
-  GAME, SERVER, USER SESSION). The scrollbar is theme-thin and only appears
-  when the content is taller than the region, so the card never grows past
-  the window's height and nothing overflows the frame.
-- Live rows come from real sources only: `MembershipType` (premium),
-  `AccountAge` (join date + age), the friends/followers count endpoints
-  (per-user cache), `#Players:GetPlayers()` / `Players.MaxPlayers`,
-  `game.JobId`, `workspace.DistributedGameTime` and `os.clock()` for the
-  session timer, refreshed by a 1s Heartbeat while the card is shown
-  (`window.profileRefreshConnection`). Anything unavailable reads `—`,
-  `Unknown` or `Not available` instead of a invented value; identifying
-  values stay masked behind "Reveal profile details".
+  `CornerRoundness`, SurfaceStroke, ShadowColor glow) whose interior reuses
+  the window's element language verbatim: section plates are
+  `Window:StyleElementBody` bodies (`ElementGradient`, `ElementCornerRadius`,
+  `ElementStroke` at `ElementStrokeTransparency`), headings are Section
+  elements (16px `ContentColor` icon at 0.65 beside a 15px `ContentColor`
+  title at 0.6) and rows use the element text colour, with a pinned header
+  (avatar + presence dot, display name, `@username`, tier pill) over a 1px
+  divider and a vertically scrolling detail region (Account, Current Game,
+  Server, User Session). The scrollbar is theme-thin and only appears when
+  the content is taller than the region, so the card never grows past the
+  window's height and nothing overflows the frame. The card carries no
+  settings gear: the window's topbar gear is the only settings entry point.
+- Live rows come from real sources only: `MembershipType` (the tier pill's
+  PREMIUM / FREEMIUM, or the host's own `tier` word), `AccountAge` (join date
+  + age), Roblox's official two-step game-name API (place id -> universe id
+  -> the games list's `name`, with `DataModel.Name` as the until-then label),
+  `#Players:GetPlayers()` / `Players.MaxPlayers`, `game.JobId` and
+  `os.clock()` for the session timer, refreshed by a 1s Heartbeat while the
+  card is shown (`window.profileRefreshConnection`). Anything unavailable
+  reads `—`, `Unknown` or `Not available` instead of a invented value;
+  identifying values stay masked behind "Reveal profile details", and every
+  COPY action writes through the executor's clipboard (`setclipboard`) with
+  a green check that returns to the copy icon.
 - `Window:SetProfile` keeps its legacy string/`nil` form (subtitle only) and
-  accepts a table payload (`{ subtitle, key, whitelist = { status, daysLeft
-  | expiresAt } }`) for the license rows; omitted fields clear to the
-  placeholder. Astra ships no key store, so those two rows stay `—` until a
-  host supplies them.
+  accepts a table payload (`{ subtitle, key, tier, whitelist = { status,
+  daysLeft | expiresAt } }`) for the license rows and the tier pill; omitted
+  fields clear to the placeholder. Astra ships no key store, so those two
+  rows stay `—` until a host supplies them.
 - Reveal now unmasks the server ID and the license key as well; the settings
   copy (`components/window.luau`, `settings/registry.luau`) and `USAGE.md`
   say so. The card's off-centre rest shift follows the new width (`(260 +

@@ -4,8 +4,6 @@ local services = require(utilities.services)
 local image = require(script.Parent.Parent.images.image)
 local functions = require(script.Parent.Parent.functions)
 local locale = require(utilities.locale)
-local log = require(utilities.log)
-local constants = require(utilities.constants)
 local sidebar = require(script.Parent.sidebar)
 local network = require(utilities.network)
 
@@ -15,30 +13,42 @@ local network = require(utilities.network)
 -- [[panel (width + gap) away from the screen centre, on the opposite side of]]
 -- [[the panel.]]
 -- [[
---   Visual language: the card is built from the same tokens as the window —
---   the WindowColor plate, a hairline SurfaceStroke, ElementCornerRadius on
---   the inner containers, the brand Font, muted PlaceholderColor labels and
---   brighter ContentColor/TitlingColor values. Nothing here introduces a
---   colour, radius or shadow the rest of Astra does not already use.
+--   Visual language: the card is the window, in miniature. Its surface is the
+--   window frame's own (WindowColor gradient, CornerRoundness, hairline
+--   SurfaceStroke, ShadowColor glow); every section plate is a window element
+--   body (Window:StyleElementBody — ElementGradient over ElementTransparency,
+--   ElementCornerRadius, ElementStroke at ElementStrokeTransparency); every
+--   heading is a window Section title (16px ContentColor icon at 0.65 beside
+--   a 15px ContentColor label at 0.6); every row reuses the element row
+--   colours (ContentColor icons and values, muted ContentColor labels) and
+--   the brand Font. Nothing here introduces a colour, radius, gradient or
+--   shadow the rest of Astra does not already use.
 --
 --   Layout, top to bottom:
 --     header   avatar (with its presence dot) on the left; display name,
---              @username and the PREMIUM pill beside it; the settings gear in
---              the top-right corner. The header is pinned — it never scrolls.
+--              @username and the tier pill (PREMIUM / FREEMIUM, or the host's
+--              own word) beside it. The header is pinned — it never scrolls.
 --     divider  one hairline rule, inset by the card padding.
---     details  a vertically scrolling column of sections, each a subtle
---              uppercase label above a rounded dark container of compact
+--     details  a vertically scrolling column of sections, each a window-style
+--              section heading above an element-style plate of compact
 --              label/value rows:
---                ACCOUNT       user ID (+ COPY), join date, account age,
---                              friends, followers, key, whitelist
---                CURRENT GAME  thumbnail, game name, place ID
---                SERVER        players, server ID, uptime
---                USER SESSION  time in server
+--                Account       user ID (+ COPY), join date, account age,
+--                              key (+ COPY), whitelist
+--                Current Game  thumbnail, game name, place ID (+ COPY)
+--                Server        players, server ID (+ COPY)
+--                User Session  time in server
+--
+--   Every plate, heading, row and pill on the card is styled with the very
+--   same theme tokens the window and its elements use — nothing here
+--   introduces a colour, radius, gradient or transparency of its own.
 --
 --   Every value is bound to a real source (see the DATA section below) and
 --   falls back to a neutral "—" when the source is unavailable. Nothing on the
 --   card is fabricated, and values the app treats as identifying stay masked
---   until "Reveal profile details" is on.
+--   until "Reveal profile details" is on. The game name comes from Roblox's
+--   official two-step API (place id -> universe id -> games list), falling
+--   back to the DataModel's own name while the request is in flight or when
+--   the executor exposes no request function.
 -- ]]
 
 local profilePanel = {}
@@ -56,24 +66,35 @@ local dividerHeight = 1
 local scrollPaddingTop = 12
 local scrollPaddingBottom = 16
 local sectionGap = 12
-local headingHeight = 13
-local headingGap = 7
-local headingIconSize = 12
+-- [[Heading metrics mirror the window's Section element: a 16px icon beside a]]
+-- [[16px-tall title row, both in ContentColor at the section's own]]
+-- [[transparencies (title 0.6, icon 0.65).]]
+local headingHeight = 16
+local headingGap = 8
+local headingIconSize = 16
+local headingIconGap = 6
 local cardPaddingX = 10
 local cardPaddingY = 10
 local rowHeight = 18
 local rowGap = 6
-local rowIconSize = 12
+local rowIconSize = 14
 local labelWidth = 92
 local actionSize = 16
 local actionInset = actionSize + 6
-local gearSize = 26
-local gearIconSize = 15
 local gameThumbnailSize = 40
 local tooltipHeight = 32
 local scrollBarThickness = 6
 local scrollBarTransparency = 0.8
 local refreshInterval = 1
+-- [[How long a copy action keeps its green check before the copy icon]]
+-- [[returns.]]
+local copyFlashDuration = 1.2
+-- [[Tier pill box: measured from its own label so any tier word fits.]]
+local tierHeight = 16
+local tierPaddingLeft = 6
+local tierPaddingRight = 7
+local tierIconSize = 10
+local tierGap = 4
 
 -- [[Neutral placeholder for a value the application cannot supply. Never a
 -- [[made-up number: "—" reads as "no data" in every locale.]]
@@ -86,15 +107,16 @@ local maskedId = "••••••"
 local maskedKey = "••••••••"
 
 local nameTransparency = 0
-local subtitleTransparency = 0.4
+-- [[The window's own secondary-text transparency (the topbar subtitle fades]]
+-- [[to 0.7), reused for the card's @username line.]]
+local subtitleTransparency = 0.7
 local labelTransparency = 0.45
-local headingTransparency = 0.45
-local iconTransparency = 0.35
+-- [[Section title / icon transparencies, taken from the Section element's]]
+-- [[reveal values so headings read exactly like the window's own.]]
+local headingTransparency = 0.6
+local iconTransparency = 0.65
 local avatarBgTransparency = 0.95
 local idleStrokeTransparency = 0.95
-local hoverStrokeTransparency = 0.25
-local cardStrokeTransparency = 0.55
-local pillHoverTransparency = 0.92
 local glowTransparency = 0.6
 
 local settleTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
@@ -260,19 +282,9 @@ local function setText(label, text)
     end
 end
 
-local function groupDigits(value: number): string
-    local rounded = math.floor(math.abs(value))
-    local text = tostring(rounded)
-    local formatted = text:reverse():gsub("%d%d%d", "%1,"):reverse()
-    if formatted:sub(1, 1) == "," then
-        formatted = formatted:sub(2)
-    end
-    return if value < 0 then "-" .. formatted else formatted
-end
-
 -- [[Compact duration notation: "8s", "47m 12s", "2h 34m", "3d 4h". Used for]]
--- [[server uptime and the current session; a missing/negative source is the
--- [[neutral placeholder, never a zero that would read as real.]]
+-- [[the current session; a missing/negative source is the neutral]]
+-- [[placeholder, never a zero that would read as real.]]
 local function formatDuration(seconds: number?): string
     if type(seconds) ~= "number" or seconds ~= seconds or seconds < 0 then
         return fallbackValue
@@ -371,16 +383,19 @@ end
 -- [[when the source is unavailable.
 --
 --   display name / username / user ID  Players.LocalPlayer
---   premium pill                       LocalPlayer.MembershipType
+--   tier pill                          the host's `tier` from
+--                                      Window:SetProfile, else
+--                                      LocalPlayer.MembershipType
+--                                      (PREMIUM / FREEMIUM)
 --   join date / account age            LocalPlayer.AccountAge (days)
---   friends / followers                Roblox friends endpoints (public,
---                                      same request function as thumbnails)
---   game name                          DataModel.Name
+--   game name                          Roblox's official two-step API:
+--                                      place id -> universe id -> the games
+--                                      list's "name" (DataModel.Name until
+--                                      the request answers)
 --   place ID                           DataModel.PlaceId
---   game thumbnail                     thumbnails.roblox.com (DataModel.GameId)
+--   game thumbnail                     thumbnails.roblox.com (universe id)
 --   players                            Players:GetPlayers() / Players.MaxPlayers
 --   server ID                          DataModel.JobId
---   server uptime                      Workspace.DistributedGameTime
 --   session time                       os.clock() since the client loaded
 --   key / whitelist                    supplied by the host through
 --                                      Window:SetProfile — no built-in store
@@ -407,19 +422,6 @@ local function sessionSeconds(): number?
         return nil
     end
     return math.max(0, now - clientSessionStart)
-end
-
--- [[Workspace.DistributedGameTime is the time the server has been running.
--- [[Roblox exposes no dedicated uptime API, so this is the server's own clock
--- [[rather than a value we invent.]]
-local function serverUptimeSeconds(): number?
-    local ok, value = pcall(function()
-        return state.workspace.DistributedGameTime
-    end)
-    if ok and type(value) == "number" and value == value and value >= 0 then
-        return value
-    end
-    return nil
 end
 
 local function getJobId(): string?
@@ -474,13 +476,15 @@ local function isPremium(player): boolean
 end
 
 -- =========================================================================
--- Remote data: game thumbnail, friends / followers counts
+-- Remote data: universe id, game name, game thumbnail
 -- =========================================================================
 
 local resolvedGameIcons: { [number]: string? } = {}
 local pendingGameIconRequests: { [number]: { (string?) -> () } } = {}
-local resolvedCounts: { [number]: { friends: number?, followers: number? } } = {}
-local pendingCountRequests: { [number]: { ({ friends: number?, followers: number? }) -> () } } = {}
+local resolvedUniverseIds: { [number]: number? } = {}
+local pendingUniverseRequests: { [number]: { (number?) -> () } } = {}
+local resolvedGameNames: { [number]: string? } = {}
+local pendingGameNameRequests: { [number]: { (string?) -> () } } = {}
 
 local function toValidNumber(value: any): number?
     if type(value) == "number" and value > 0 then
@@ -490,21 +494,6 @@ local function toValidNumber(value: any): number?
         local n = tonumber(value)
         if n and n > 0 then
             return n
-        end
-    end
-    return nil
-end
-
--- [[Counts may legitimately be 0, so they need their own coercion (the
--- [[identifier coercion above rejects 0 as "missing").]]
-local function toCount(value: any): number?
-    if type(value) == "number" and value == value and value >= 0 then
-        return math.floor(value)
-    end
-    if type(value) == "string" then
-        local n = tonumber(value)
-        if n and n >= 0 then
-            return math.floor(n)
         end
     end
     return nil
@@ -650,55 +639,122 @@ local function fetchOfficialGameIcon(universeId: number, callback: (string?) -> 
     end)
 end
 
--- [[Friends and followers counts: Roblox's public friends endpoints (no auth
--- [[required). Both requests share one callback so a value only lands on the
--- [[card when the platform actually answered.]]
-local function fetchProfileCounts(userId: number, callback: ({ friends: number?, followers: number? }) -> ())
-    local cached = resolvedCounts[userId]
-    if cached then
+-- [[Step 1 of the official game-name flow: the universes endpoint converts a]]
+-- [[place id into the universe that owns it. Cached per place and queued]]
+-- [[while a request is in flight, exactly like the icon fetch above.]]
+local function fetchUniverseId(placeId: number, callback: (number?) -> ())
+    local cached = resolvedUniverseIds[placeId]
+    if cached ~= nil then
         callback(cached)
         return
     end
 
-    local pending = pendingCountRequests[userId]
+    local pending = pendingUniverseRequests[placeId]
     if pending then
         table.insert(pending, callback)
         return
     end
 
-    pendingCountRequests[userId] = { callback }
+    pendingUniverseRequests[placeId] = { callback }
 
-    task.spawn(function()
-        local counts: { friends: number?, followers: number? } = {}
-        local remaining = 2
-
-        local function finish()
-            remaining -= 1
-            if remaining > 0 then
-                return
-            end
-            if counts.friends ~= nil or counts.followers ~= nil then
-                -- [[Only cache a real answer; a failed pair retries later.]]
-                resolvedCounts[userId] = counts
-            end
-            local callbacks = pendingCountRequests[userId]
-            pendingCountRequests[userId] = nil
-            for _, cb in ipairs(callbacks or {}) do
-                pcall(cb, counts)
-            end
+    requestJson(`https://apis.roblox.com/universes/v1/places/{placeId}/universe`, function(parsed)
+        local universeId: number? = nil
+        if type(parsed) == "table" then
+            universeId = toValidNumber(
+                (parsed :: any).universeId
+                    or (parsed :: any).universeID
+                    or (parsed :: any).universe_id
+                    or (parsed :: any).id
+            )
         end
+        if universeId then
+            resolvedUniverseIds[placeId] = universeId
+        end
+        local callbacks = pendingUniverseRequests[placeId]
+        pendingUniverseRequests[placeId] = nil
+        for _, cb in ipairs(callbacks or {}) do
+            pcall(cb, universeId)
+        end
+    end)
+end
 
-        requestJson(`https://friends.roblox.com/v1/users/{userId}/friends/count`, function(parsed)
+-- [[The universe id the thumbnail and the name flow need: DataModel.GameId]]
+-- [[when the runtime supplies one, otherwise the official place -> universe]]
+-- [[lookup (step 1).]]
+local function resolveUniverseId(callback: (number?) -> ())
+    local direct = getUniverseId()
+    if direct then
+        callback(direct)
+        return
+    end
+    local placeId = getPlaceId()
+    if placeId then
+        fetchUniverseId(placeId, callback)
+    else
+        callback(nil)
+    end
+end
+
+-- [[Step 2 of the official game-name flow: the games endpoint answers the]]
+-- [[game's detail list for a universe, and the matching entry's "name" field]]
+-- [[IS the game name (DataModel.Name only carries the current place's title,]]
+-- [[which is why the card asks the platform instead). The DataModel name]]
+-- [[stays on the label until this answers, so the row is never empty.]]
+local function fetchGameName(placeId: number, callback: (string?) -> ())
+    local cached = resolvedGameNames[placeId]
+    if cached ~= nil then
+        callback(if type(cached) == "string" and cached ~= "" then cached else nil)
+        return
+    end
+
+    local pending = pendingGameNameRequests[placeId]
+    if pending then
+        table.insert(pending, callback)
+        return
+    end
+
+    pendingGameNameRequests[placeId] = { callback }
+
+    local function finish(name: string?)
+        if type(name) == "string" and name ~= "" then
+            resolvedGameNames[placeId] = name
+        end
+        local callbacks = pendingGameNameRequests[placeId]
+        pendingGameNameRequests[placeId] = nil
+        for _, cb in ipairs(callbacks or {}) do
+            pcall(cb, name)
+        end
+    end
+
+    fetchUniverseId(placeId, function(universeId: number?)
+        if not universeId then
+            finish(nil)
+            return
+        end
+        requestJson(`https://games.roblox.com/v1/games?universeIds={universeId}`, function(parsed)
+            local name: string? = nil
             if type(parsed) == "table" then
-                counts.friends = toCount((parsed :: any).count)
+                local data = (parsed :: any).data
+                if type(data) == "table" then
+                    -- [[Match by the universe id when the entry carries one;]]
+                    -- [[the response order is not guaranteed.]]
+                    for _, entry in ipairs(data) do
+                        if type(entry) == "table" then
+                            local entryId = tonumber((entry :: any).id or (entry :: any).universeId)
+                            local entryName = (entry :: any).name
+                            if
+                                type(entryName) == "string"
+                                and #entryName > 0
+                                and (entryId == nil or entryId == universeId)
+                            then
+                                name = entryName
+                                break
+                            end
+                        end
+                    end
+                end
             end
-            finish()
-        end)
-        requestJson(`https://friends.roblox.com/v1/users/{userId}/followers/count`, function(parsed)
-            if type(parsed) == "table" then
-                counts.followers = toCount((parsed :: any).count)
-            end
-            finish()
+            finish(name)
         end)
     end)
 end
@@ -752,10 +808,109 @@ function profilePanel.applyLicense(window)
     setText(window.profileWhitelistValue, whitelistText)
 end
 
--- [[Premium pill placement. The reference keeps the pill on the handle row,
--- [[so it rides just after the subtitle text; it only drops under the headline
+-- [[The tier word the header pill shows. A host-supplied `tier` (through]]
+-- [[Window:SetProfile) wins — uppercased, so "premium" and "PREMIUM" read the]]
+-- [[same; without one the platform's own membership decides between PREMIUM]]
+-- [[and FREEMIUM. The pill therefore always states a real tier instead of]]
+-- [[vanishing for free accounts.]]
+function profilePanel.tierText(window): string
+    local data = window.profileData or {}
+    local custom = data.tier
+    if type(custom) == "string" and custom ~= "" then
+        return string.upper(custom)
+    end
+    return if isPremium(state.localPlayer) then "PREMIUM" else "FREEMIUM"
+end
+
+-- [[Write the tier pill: word, icon, colour and width. PREMIUM keeps the]]
+-- [[accent crown; every other tier reads in the muted placeholder colour]]
+-- [[with a plain badge icon, so a free account is labelled, not decorated.]]
+function profilePanel.applyTier(window)
+    local badge = window.profilePremium
+    local label = window.profileTierLabel
+    local icon = window.profileTierIcon
+    if not (badge and label and icon) then
+        return
+    end
+    local text = profilePanel.tierText(window)
+    setText(label, text)
+    local premium = text == "PREMIUM"
+    local color = if premium then window.theme.AccentColor else window.theme.PlaceholderColor
+    if label.TextColor3 ~= color then
+        label.TextColor3 = color
+    end
+    if icon.ImageColor3 ~= color then
+        icon.ImageColor3 = color
+    end
+    local wantedIcon = window:ResolveIcon(if premium then "crown" else "badge-check")
+    if icon.Image ~= wantedIcon then
+        icon.Image = wantedIcon
+    end
+    -- [[A fixed box measured from its own label, so the pill only ever grows]]
+    -- [[as wide as its word needs.]]
+    local textWidth = functions.textWidth(window.theme.Font, label.TextSize, text)
+    local width = tierPaddingLeft + tierIconSize + tierGap + textWidth + tierPaddingRight
+    badge.Size = UDim2.fromOffset(width, tierHeight)
+    label.Size = UDim2.fromOffset(textWidth, tierHeight)
+    profilePanel.layoutPremium(window)
+end
+
+-- [[The executor's clipboard entry point. `setclipboard` is the common name;]]
+-- [[the other spellings (and a Clipboard table) cover the remaining]]
+-- [[executors. A missing or failing function means "copied nowhere", so the]]
+-- [[icon gives no false success feedback.]]
+local function getClipboardFn(): ((string) -> ())?
+    local env = getfenv()
+    for _, candidate in ipairs({ "setclipboard", "set_clipboard", "toclipboard", "to_clipboard" }) do
+        local fn = env[candidate]
+        if type(fn) == "function" then
+            return fn
+        end
+    end
+    local clipboard = env.Clipboard
+    if type(clipboard) == "table" and type(clipboard.set) == "function" then
+        return function(text: string)
+            clipboard.set(clipboard, text)
+        end
+    end
+    return nil
+end
+
+local function clipboardSet(text: string): boolean
+    local fn = getClipboardFn()
+    if not fn then
+        return false
+    end
+    local ok = pcall(fn, text)
+    return ok
+end
+
+-- [[Copy feedback: the row's copy icon turns into a green check for a moment]]
+-- [[and then the copy icon returns. A repeat click restarts the window; a]]
+-- [[rebuilt card (stale entry) is simply ignored by the timer.]]
+function profilePanel.flashCopied(window, name: string)
+    local entry = (window.profileCopyButtons or {})[name]
+    if not entry or not entry.icon or not entry.icon.Parent then
+        return
+    end
+    entry.icon.Image = window:ResolveIcon("check")
+    entry.icon.ImageColor3 = window.theme.Success
+    entry.flashStamp = (entry.flashStamp or 0) + 1
+    local stamp = entry.flashStamp
+    task.delay(copyFlashDuration, function()
+        if entry.flashStamp ~= stamp or not entry.icon or not entry.icon.Parent then
+            return
+        end
+        entry.icon.Image = window:ResolveIcon("copy")
+        entry.icon.ImageColor3 = window.theme.ActionColor
+    end)
+end
+
+-- [[Tier pill placement. The reference keeps the pill on the handle row, so
+-- [[it rides just after the subtitle text; it only drops under the headline
 -- [[when there is no subtitle, or when the pair would not fit before the
--- [[settings gear. Re-run whenever the headline or subtitle text changes.]]
+-- [[card's right edge. Re-run whenever the headline, subtitle or tier text
+-- [[changes (the pill's width is measured from its own label).]]
 function profilePanel.layoutPremium(window)
     local badge = window.profilePremium
     local subtitle = window.profileSubtitle
@@ -767,7 +922,7 @@ function profilePanel.layoutPremium(window)
         return
     end
     local nameX = paddingX + avatarSize + 10
-    local limit = profilePanel.width - paddingX - gearSize - 8
+    local limit = profilePanel.width - paddingX - 8
     local belowY = 49
     local function inlineAfter(instance, y)
         local text = instance.Text
@@ -834,12 +989,7 @@ function profilePanel.applyIdentity(window)
         setText(subtitle, text or "")
         subtitle.Visible = subtitle.Text ~= ""
     end
-    profilePanel.layoutPremium(window)
-
-    local premium = window.profilePremium
-    if premium then
-        premium.Visible = isPremium(player)
-    end
+    profilePanel.applyTier(window)
 
     local userId = window.profileUserIdValue
     if userId then
@@ -847,9 +997,26 @@ function profilePanel.applyIdentity(window)
         setText(userId, if id == "" then fallbackValue elseif reveal then id else maskedId)
     end
 
-    local copy = window.profileCopyUserId
-    if copy then
-        copy.Visible = reveal and player ~= nil
+    -- [[Copy actions ride only on values the reveal toggle unmasks: with the]]
+    -- [[detail masked there is nothing meaningful to copy, so the buttons]]
+    -- [[hide with it.]]
+    for name, entry in pairs(window.profileCopyButtons or {}) do
+        local shown = false
+        if reveal then
+            if name == "UserId" then
+                shown = player ~= nil
+            elseif name == "PlaceId" then
+                shown = getPlaceId() ~= nil
+            elseif name == "ServerId" then
+                shown = getJobId() ~= nil and not isStudio()
+            elseif name == "Key" then
+                local key = (window.profileData or {}).key
+                shown = type(key) == "string" and key ~= ""
+            end
+        end
+        if entry.button then
+            entry.button.Visible = shown
+        end
     end
 
     local placeId = window.profilePlaceId
@@ -883,27 +1050,8 @@ function profilePanel.applyIdentity(window)
     profilePanel.applyLicense(window)
 end
 
--- [[Friends / followers counts arrive asynchronously; this is the sink they
--- [[land in. Guarded by the build generation so a rebuilt or unloaded card
--- [[never receives them.]]
-function profilePanel.applyCounts(window, counts)
-    if window.unloaded or not counts then
-        return
-    end
-    if counts.friends ~= nil then
-        setText(window.profileFriendsValue, groupDigits(counts.friends))
-    else
-        setText(window.profileFriendsValue, fallbackValue)
-    end
-    if counts.followers ~= nil then
-        setText(window.profileFollowersValue, groupDigits(counts.followers))
-    else
-        setText(window.profileFollowersValue, fallbackValue)
-    end
-end
-
--- [[Live values: player count, server uptime and the current session. Called
--- [[by the refresh loop, by reveal changes and whenever the card comes back.]]
+-- [[Live values: player count and the current session. Called by the refresh
+-- [[loop, by reveal changes and whenever the card comes back.]]
 function profilePanel.applyLive(window)
     if window.unloaded or not window.profileDetails then
         return
@@ -915,7 +1063,6 @@ function profilePanel.applyLive(window)
         if current ~= nil and capacity ~= nil then `{current} / {capacity}` else fallbackValue
     )
 
-    setText(window.profileUptimeValue, formatDuration(serverUptimeSeconds()))
     setText(window.profileSessionValue, formatDuration(sessionSeconds()))
 
     -- [[A whitelist entry that expires at a timestamp counts down here too.]]
@@ -942,17 +1089,20 @@ local function addRow(window, card, spec)
     local x = spec.x or cardPaddingX
     local textX = x
     local rowLabelWidth = spec.labelWidth or labelWidth
+    -- [[Row icons follow the window's element icons: ContentColor, revealed]]
+    -- [[to the section icon's transparency so a compact row reads like a]]
+    -- [[small element line.]]
     if spec.icon then
         local icon = window:Create("ImageLabel", {
             Name = spec.name .. "Icon",
             Image = window:ResolveIcon(spec.icon),
-            Position = UDim2.fromOffset(x, y + 3),
+            Position = UDim2.fromOffset(x, y + (rowHeight - rowIconSize) / 2),
             Size = UDim2.fromOffset(rowIconSize, rowIconSize),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             ImageTransparency = 1,
             Parent = card,
-        }, { ImageColor3 = spec.iconColor or "PlaceholderColor" })
+        }, { ImageColor3 = spec.iconColor or "ContentColor" })
         fade(icon, "ImageTransparency", iconTransparency)
         textX = x + rowIconSize + 5
     end
@@ -970,7 +1120,7 @@ local function addRow(window, card, spec)
         TextTruncate = Enum.TextTruncate.AtEnd,
         TextTransparency = 1,
         Parent = card,
-    }, { TextColor3 = "PlaceholderColor", FontFace = "Font" })
+    }, { TextColor3 = spec.labelColor or "ContentColor", FontFace = "Font" })
     fade(label, "TextTransparency", labelTransparency)
 
     local inset = if spec.action then actionInset else 0
@@ -987,12 +1137,12 @@ local function addRow(window, card, spec)
         TextTruncate = Enum.TextTruncate.AtEnd,
         TextTransparency = 1,
         Parent = card,
-    }, { TextColor3 = spec.valueColor or "TitlingColor", FontFace = "Font" })
+    }, { TextColor3 = spec.valueColor or "ContentColor", FontFace = "Font" })
     fade(value, "TextTransparency", nameTransparency)
 
     if spec.action == "copy" then
         local button = window:Create("TextButton", {
-            Name = "CopyUserId",
+            Name = "Copy" .. spec.name,
             Text = "",
             Position = UDim2.new(1, -(cardPaddingX + actionSize), 0, y + (rowHeight - actionSize) / 2),
             Size = UDim2.fromOffset(actionSize, actionSize),
@@ -1013,17 +1163,27 @@ local function addRow(window, card, spec)
             Parent = button,
         }, { ImageColor3 = "ActionColor" })
         fade(icon, "ImageTransparency", 0.15)
-        window.profileCopyUserId = button
+        window.profileCopyButtons = window.profileCopyButtons or {}
+        window.profileCopyButtons[spec.name] = { button = button, icon = icon }
+        if spec.name == "UserId" then
+            -- [[Legacy handle, kept so hosts and tests that grabbed the]]
+            -- [[user ID's copy button still find it.]]
+            window.profileCopyUserId = button
+        end
         window:Connect(button.Activated, function()
-            -- [[The action only exists while the ID is revealed: with the
-            -- [[detail hidden there is nothing meaningful to copy, and the
-            -- [[button is hidden too (applyIdentity).]]
+            -- [[The action only exists while the value is revealed: with the]]
+            -- [[detail hidden there is nothing meaningful to copy, and the]]
+            -- [[button is hidden too (applyIdentity). A successful copy runs]]
+            -- [[through the executor's clipboard and flashes the green check.]]
             if not profilePanel.revealEnabled(window) then
                 return
             end
-            local current = state.localPlayer
-            if setclipboard and current then
-                setclipboard(tostring(current.UserId))
+            local text = if spec.copy then spec.copy() else nil
+            if type(text) ~= "string" or text == "" then
+                return
+            end
+            if clipboardSet(text) then
+                profilePanel.flashCopied(window, spec.name)
             end
         end)
     end
@@ -1094,7 +1254,7 @@ function profilePanel.hideTooltip(window)
     end)
 end
 
-function profilePanel.build(window, onOpenSettings)
+function profilePanel.build(window)
     if window.profilePanel then
         window:DestroySubtree(window.profilePanel)
         window.profilePanel = nil
@@ -1188,7 +1348,9 @@ function profilePanel.build(window, onOpenSettings)
     }, { Color = "Background" })
 
     local nameX = paddingX + avatarSize + 10
-    local nameWidth = profilePanel.width - nameX - gearSize - 14
+    -- [[No gear occupies the header's right edge any more, so the handle]]
+    -- [[text may run to the card's own padding.]]
+    local nameWidth = profilePanel.width - nameX - paddingX
 
     -- [[The headline/subtitle are filled by applyIdentity at the end of the
     -- [[build, so the card never flashes an unmasked display name first.]]
@@ -1225,26 +1387,21 @@ function profilePanel.build(window, onOpenSettings)
         Visible = false,
         TextTransparency = 1,
         Parent = window.profilePanelSurface,
-    }, { TextColor3 = "ContentColor", FontFace = "Font" })
+    }, { TextColor3 = "TitlingColor", FontFace = "Font" })
 
     fade(window.profileSubtitle, "TextTransparency", subtitleTransparency)
 
-    -- [[PREMIUM pill: only shown while the platform reports a paid
-    -- [[membership (MembershipType), never as decoration. The pill width is
-    -- [[measured from its own label so it stays a fixed, predictable box.]]
-    local premiumLabelText = "PREMIUM"
-    local premiumTextWidth = functions.textWidth(window.theme.Font, 9, premiumLabelText)
-    local premiumPaddingLeft = 6
-    local premiumPaddingRight = 7
-    local premiumIconSize = 10
-    local premiumGap = 4
-    local premiumWidth = premiumPaddingLeft + premiumIconSize + premiumGap + premiumTextWidth + premiumPaddingRight
+    -- [[Tier pill: always present, because a tier always exists — the host's]]
+    -- [[own word from Window:SetProfile, else PREMIUM / FREEMIUM from the]]
+    -- [[platform membership (applyTier writes word, icon, colour and width).]]
+    -- [[The pill width is measured from its own label, so it only ever grows]]
+    -- [[as wide as its word needs.]]
     local premium = window:Create("Frame", {
-        Name = "PremiumBadge",
+        Name = "TierBadge",
         Position = UDim2.fromOffset(nameX, 49),
-        Size = UDim2.fromOffset(premiumWidth, 16),
+        Size = UDim2.fromOffset(tierPaddingLeft + tierIconSize + tierGap + tierPaddingRight, tierHeight),
         BorderSizePixel = 0,
-        Visible = false,
+        Visible = true,
         Parent = window.profilePanelSurface,
     }, { BackgroundColor3 = "ElementSurface", BackgroundTransparency = "ElementTransparency" })
     window.profilePremium = premium
@@ -1258,16 +1415,17 @@ function profilePanel.build(window, onOpenSettings)
     local premiumIcon = window:Create("ImageLabel", {
         Name = "Crown",
         Image = window:ResolveIcon("crown"),
-        Position = UDim2.fromOffset(premiumPaddingLeft, 3),
-        Size = UDim2.fromOffset(premiumIconSize, premiumIconSize),
+        Position = UDim2.fromOffset(tierPaddingLeft, (tierHeight - tierIconSize) / 2),
+        Size = UDim2.fromOffset(tierIconSize, tierIconSize),
         BackgroundTransparency = 1,
+        ImageTransparency = 1,
         Parent = premium,
     }, { ImageColor3 = "AccentColor" })
     local premiumLabel = window:Create("TextLabel", {
         Name = "Label",
-        Text = premiumLabelText,
-        Position = UDim2.fromOffset(premiumPaddingLeft + premiumIconSize + premiumGap, 0),
-        Size = UDim2.fromOffset(premiumTextWidth, 16),
+        Text = "",
+        Position = UDim2.fromOffset(tierPaddingLeft + tierIconSize + tierGap, 0),
+        Size = UDim2.fromOffset(0, tierHeight),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         TextSize = 9,
@@ -1276,6 +1434,8 @@ function profilePanel.build(window, onOpenSettings)
         TextTransparency = 1,
         Parent = premium,
     }, { TextColor3 = "AccentColor", FontFace = "Font" })
+    window.profileTierIcon = premiumIcon
+    window.profileTierLabel = premiumLabel
     fade(premiumIcon, "ImageTransparency", 0)
     fade(premium, "BackgroundTransparency", 0)
     fade(premiumLabel, "TextTransparency", 0)
@@ -1357,50 +1517,53 @@ function profilePanel.build(window, onOpenSettings)
     })
     window.profileDetailsContent = content
 
-    -- [[Section heading: a small muted icon + uppercase label, matching the
-    -- [[way the rest of the window titles its groups.]]
+    -- [[Section heading: the window's Section element, verbatim — a 16px]]
+    -- [[ContentColor icon beside a 15px ContentColor title at the section's]]
+    -- [[own transparencies, so the card titles its groups exactly the way]]
+    -- [[the window titles its tabs' sections.]]
     local function heading(y: number, title: string, iconName: string): number
         local icon = window:Create("ImageLabel", {
             Name = title .. "Icon",
             Image = window:ResolveIcon(iconName),
-            Position = UDim2.fromOffset(paddingX, y + 1),
+            Position = UDim2.fromOffset(paddingX, y + (headingHeight - headingIconSize) / 2),
             Size = UDim2.fromOffset(headingIconSize, headingIconSize),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             ImageTransparency = 1,
             Parent = content,
-        }, { ImageColor3 = "PlaceholderColor" })
+        }, { ImageColor3 = "ContentColor" })
         fade(icon, "ImageTransparency", iconTransparency)
 
         label(
             content,
             title,
-            string.upper(title),
-            UDim2.fromOffset(paddingX + headingIconSize + 5, y),
-            UDim2.new(1, -(paddingX * 2 + headingIconSize + 5), 0, headingHeight),
-            10,
-            "PlaceholderColor",
+            title,
+            UDim2.fromOffset(paddingX + headingIconSize + headingIconGap, y),
+            UDim2.new(1, -(paddingX * 2 + headingIconSize + headingIconGap), 0, headingHeight),
+            15,
+            "ContentColor",
             Enum.TextXAlignment.Left,
             headingTransparency
         )
         return y + headingHeight + headingGap
     end
 
-    -- [[Rounded dark container for a section's rows.]]
+    -- [[A section's plate: Window:StyleElementBody, verbatim — the element]]
+    -- [[gradient over a white body at ElementTransparency, the element]]
+    -- [[corner, and the element stroke at the theme's own transparency, so]]
+    -- [[every container on the card IS one of the window's element bodies.]]
     local function card(y: number, name: string, height: number)
         local frame = window:Create("Frame", {
             Name = name,
             Position = UDim2.fromOffset(paddingX, y),
             Size = UDim2.new(1, -paddingX * 2, 0, height),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
             BorderSizePixel = 0,
             Parent = content,
-        }, { BackgroundColor3 = "CardSurface", BackgroundTransparency = "ElementTransparency" })
-        window:Create("UICorner", { Parent = frame }, { CornerRadius = "ElementCornerRadius" })
-        window:Create("UIStroke", {
-            Transparency = cardStrokeTransparency,
-            Parent = frame,
-        }, { Color = "ElementStroke" })
+        }, { BackgroundTransparency = "ElementTransparency" })
+        local stroke = window:StyleElementBody(frame)
         fade(frame, "BackgroundTransparency", 0)
+        fade(stroke, "Transparency", window.theme.ElementStrokeTransparency or 0)
         return frame
     end
 
@@ -1409,16 +1572,34 @@ function profilePanel.build(window, onOpenSettings)
     -- ===== ACCOUNT =====
 
     local accountRows = {
-        { name = "UserId", label = "USER ID", icon = "id-card", action = "copy" },
-        { name = "JoinDate", label = "JOIN DATE", icon = "calendar-days" },
-        { name = "AccountAge", label = "ACCOUNT AGE", icon = "hourglass" },
-        { name = "Friends", label = "FRIENDS", icon = "users-round", instanceName = "Friends" },
-        { name = "Followers", label = "FOLLOWERS", icon = "user-round", instanceName = "Followers" },
-        { name = "Key", label = "KEY", icon = "key-round", labelWidth = 62, valueSize = 12 },
-        { name = "Whitelist", label = "WHITELIST", icon = "shield-check", labelWidth = 62, valueSize = 12 },
+        {
+            name = "UserId",
+            label = "User ID",
+            icon = "id-card",
+            action = "copy",
+            copy = function()
+                local current = state.localPlayer
+                return if current and current.UserId then tostring(current.UserId) else nil
+            end,
+        },
+        { name = "JoinDate", label = "Join date", icon = "calendar-days" },
+        { name = "AccountAge", label = "Account age", icon = "hourglass" },
+        {
+            name = "Key",
+            label = "Key",
+            icon = "key-round",
+            labelWidth = 62,
+            valueSize = 12,
+            action = "copy",
+            copy = function()
+                local key = (window.profileData or {}).key
+                return if type(key) == "string" and key ~= "" then key else nil
+            end,
+        },
+        { name = "Whitelist", label = "Whitelist", icon = "shield-check", labelWidth = 62, valueSize = 12 },
     }
 
-    y = heading(y, "ACCOUNT", "user-round")
+    y = heading(y, "Account", "user-round")
     local accountCardY = y
     local accountCard = card(y, "AccountCard", sectionHeight(#accountRows))
     for index, row in ipairs(accountRows) do
@@ -1427,6 +1608,7 @@ function profilePanel.build(window, onOpenSettings)
             label = row.label,
             icon = row.icon,
             action = row.action,
+            copy = row.copy,
             instanceName = row.instanceName,
             labelWidth = row.labelWidth,
             valueSize = row.valueSize,
@@ -1439,10 +1621,6 @@ function profilePanel.build(window, onOpenSettings)
             window.profileJoinDateValue = value
         elseif row.name == "AccountAge" then
             window.profileAccountAgeValue = value
-        elseif row.name == "Friends" then
-            window.profileFriendsValue = value
-        elseif row.name == "Followers" then
-            window.profileFollowersValue = value
         elseif row.name == "Key" then
             window.profileKeyValue = value
         elseif row.name == "Whitelist" then
@@ -1453,7 +1631,7 @@ function profilePanel.build(window, onOpenSettings)
 
     -- ===== CURRENT GAME =====
 
-    y = heading(y, "CURRENT GAME", "gamepad-2")
+    y = heading(y, "Current Game", "gamepad-2")
     local gameCardY = y
     local gameCardHeight = cardPaddingY * 2 + gameThumbnailSize
     local gameCard = card(y, "CurrentGame", gameCardHeight)
@@ -1467,13 +1645,15 @@ function profilePanel.build(window, onOpenSettings)
         BackgroundTransparency = 0,
         Parent = gameCard,
     }, { BackgroundColor3 = "ElementSurface" })
-    window:Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = gameThumbnail })
+    window:Create("UICorner", { Parent = gameThumbnail }, { CornerRadius = "ElementCornerRadius" })
     window:Create("UIStroke", {
-        Transparency = cardStrokeTransparency,
         Parent = gameThumbnail,
-    }, { Color = "ElementStroke" })
+    }, { Color = "ElementStroke", Transparency = "ElementStrokeTransparency" })
 
     local gameNameX = cardPaddingX + gameThumbnailSize + 10
+    -- [[The DataModel's own name fills the row immediately; the official]]
+    -- [[two-step lookup (place -> universe -> games list) replaces it with]]
+    -- [[the real game name as soon as the platform answers.]]
     local gameName = label(
         gameCard,
         "GameName",
@@ -1483,6 +1663,7 @@ function profilePanel.build(window, onOpenSettings)
         13,
         "TitlingColor"
     )
+    window.profileGameName = gameName
     window.profilePlaceId = addRow(window, gameCard, {
         name = "PlaceId",
         label = "Place ID",
@@ -1491,6 +1672,11 @@ function profilePanel.build(window, onOpenSettings)
         x = gameNameX,
         labelWidth = 52,
         cardY = gameCardY,
+        action = "copy",
+        copy = function()
+            local id = getPlaceId()
+            return if id then tostring(id) else nil
+        end,
     })
 
     window:Connect(gameName.MouseEnter, function()
@@ -1513,12 +1699,21 @@ function profilePanel.build(window, onOpenSettings)
     -- ===== SERVER =====
 
     local serverRows = {
-        { name = "Players", label = "PLAYERS", icon = "users" },
-        { name = "ServerId", label = "SERVER ID", icon = "server" },
-        { name = "Uptime", label = "SERVER UPTIME", icon = "timer" },
+        { name = "Players", label = "Players", icon = "users" },
+        {
+            name = "ServerId",
+            label = "Server ID",
+            icon = "server",
+            labelWidth = 64,
+            action = "copy",
+            copy = function()
+                local jobId = getJobId()
+                return if jobId and not isStudio() then jobId else nil
+            end,
+        },
     }
 
-    y = heading(y, "SERVER", "server")
+    y = heading(y, "Server", "server")
     local serverCardY = y
     local serverCard = card(y, "ServerCard", sectionHeight(#serverRows))
     for index, row in ipairs(serverRows) do
@@ -1526,6 +1721,8 @@ function profilePanel.build(window, onOpenSettings)
             name = row.name,
             label = row.label,
             icon = row.icon,
+            action = row.action,
+            copy = row.copy,
             y = cardPaddingY + (index - 1) * (rowHeight + rowGap),
             cardY = serverCardY,
         })
@@ -1533,20 +1730,18 @@ function profilePanel.build(window, onOpenSettings)
             window.profilePlayersValue = value
         elseif row.name == "ServerId" then
             window.profileServerIdValue = value
-        elseif row.name == "Uptime" then
-            window.profileUptimeValue = value
         end
     end
     y = serverCardY + sectionHeight(#serverRows) + sectionGap
 
     -- ===== USER SESSION =====
 
-    y = heading(y, "USER SESSION", "clock")
+    y = heading(y, "User Session", "clock")
     local sessionCardY = y
     local sessionCard = card(y, "SessionCard", sectionHeight(1))
     window.profileSessionValue = addRow(window, sessionCard, {
         name = "Session",
-        label = "TIME IN SERVER",
+        label = "Time in server",
         icon = "activity",
         y = cardPaddingY,
         cardY = sessionCardY,
@@ -1596,89 +1791,6 @@ function profilePanel.build(window, onOpenSettings)
         Parent = tooltip,
     }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
-    -- ===== settings gear, top-right of the header =====
-
-    window.profileGear = window:Create("TextButton", {
-        Name = "OpenSettings",
-        AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -8, 0, 10),
-        Size = UDim2.fromOffset(gearSize, gearSize),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Text = "",
-        TextTransparency = 1,
-        ZIndex = 3,
-        Parent = window.profilePanelSurface,
-    })
-
-    window.profileGearPill = window:Create("Frame", {
-        Name = "HoverPill",
-        Size = UDim2.fromScale(1, 1),
-        BorderSizePixel = 0,
-        BackgroundTransparency = 1,
-        ZIndex = 1,
-        Parent = window.profileGear,
-    }, { BackgroundColor3 = "ElementHover" })
-
-    window:Create("UICorner", {
-        CornerRadius = UDim.new(0, 8),
-        Parent = window.profileGearPill,
-    })
-
-    window.profileGearIcon = window:Create("ImageLabel", {
-        Name = "Icon",
-        Image = window:ResolveIcon(constants.icons.settings),
-        BackgroundTransparency = 1,
-        Size = UDim2.fromOffset(gearIconSize, gearIconSize),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.fromScale(0.5, 0.5),
-        ImageTransparency = 1,
-        ZIndex = 2,
-        Parent = window.profileGear,
-    }, { ImageColor3 = "ActionColor" })
-
-    fade(window.profileGearIcon, "ImageTransparency", 0)
-
-    window:Connect(window.profileGear.MouseEnter, function()
-        if not window:_interactive() then
-            return
-        end
-        state.tweenService
-            :Create(window.profileGearPill, hoverTween, { BackgroundTransparency = pillHoverTransparency })
-            :Play()
-        state.tweenService
-            :Create(
-                window.profilePanelStroke,
-                hoverTween,
-                { Color = window.theme.ElementStrokeHover, Transparency = hoverStrokeTransparency }
-            )
-            :Play()
-    end)
-
-    window:Connect(window.profileGear.MouseLeave, function()
-        state.tweenService
-            :Create(window.profileGearPill, hoverTween, { BackgroundTransparency = 1 })
-            :Play()
-        state.tweenService
-            :Create(
-                window.profilePanelStroke,
-                hoverTween,
-                { Color = window.theme.SurfaceStroke, Transparency = idleStrokeTransparency }
-            )
-            :Play()
-    end)
-
-    window:Connect(window.profileGear.Activated, function()
-        if not window:_interactive() or not onOpenSettings then
-            return
-        end
-        local ok, err = pcall(onOpenSettings)
-        if not ok then
-            log.warn("Astra: the profile panel's settings action failed: " .. tostring(err))
-        end
-    end)
-
     -- [[The panel is a sibling of the window frame: mirroring the frame's]]
     -- [[position keeps it following drags, restores and resizes without a]]
     -- [[per-frame loop.]]
@@ -1726,9 +1838,17 @@ function profilePanel.build(window, onOpenSettings)
         image.assign(gameThumbnail, "Image", url)
     end
 
-    local universeId = getUniverseId()
+    -- [[Game thumbnail: the universe id comes from DataModel.GameId when the]]
+    -- [[runtime supplies one, otherwise from the official place -> universe]]
+    -- [[lookup; the legacy rbxthumb URI is the last-resort fallback.]]
     local fallbackUrl = buildFallbackUrl(getPlaceId())
-    if universeId then
+    resolveUniverseId(function(universeId: number?)
+        if not universeId then
+            if fallbackUrl ~= "" then
+                safeAssign(fallbackUrl)
+            end
+            return
+        end
         local cachedIcon = resolvedGameIcons[universeId]
         if type(cachedIcon) == "string" and cachedIcon ~= "" then
             safeAssign(cachedIcon)
@@ -1741,8 +1861,26 @@ function profilePanel.build(window, onOpenSettings)
                 end
             end)
         end
-    elseif fallbackUrl ~= "" then
-        safeAssign(fallbackUrl)
+    end)
+
+    -- [[The official game name (place -> universe -> games list). The label]]
+    -- [[keeps the DataModel's own name until the platform answers, and a]]
+    -- [[cached answer lands immediately on the next build.]]
+    local placeId = getPlaceId()
+    if placeId then
+        local cachedName = resolvedGameNames[placeId]
+        if type(cachedName) == "string" and cachedName ~= "" then
+            setText(gameName, cachedName)
+        else
+            fetchGameName(placeId, function(officialName: string?)
+                if window.unloaded or gameThumbnailGenerations[gameThumbnail] ~= generation then
+                    return
+                end
+                if type(officialName) == "string" and officialName ~= "" then
+                    setText(gameName, officialName)
+                end
+            end)
+        end
     end
 
     if player then
@@ -1783,17 +1921,6 @@ function profilePanel.build(window, onOpenSettings)
             applyAvatar(window.profileAvatar, cachedUri)
         end
 
-        -- [[Public profile counts: fetched once per build and applied through
-        -- [[the generation guard. Unavailable counts stay "—".]]
-        local userId = tonumber(player.UserId)
-        if userId then
-            fetchProfileCounts(userId, function(counts)
-                if window.unloaded or window.profileBuildGeneration ~= generation then
-                    return
-                end
-                profilePanel.applyCounts(window, counts)
-            end)
-        end
     end
 
     profilePanel.applyIdentity(window)
@@ -1970,7 +2097,11 @@ end
 
 -- [[Window:SetProfile accepts either the legacy subtitle string / nil or a
 -- [[table carrying everything the card's host-owned rows show:
--- [[  { subtitle = "…", key = "…", whitelist = { status = "Active", daysLeft = 14 } }
+-- [[  { subtitle = "…", key = "…", tier = "PREMIUM",
+-- [[    whitelist = { status = "Active", daysLeft = 14 } }
+-- [[`tier` drives the header pill (any word, uppercased on the card); with
+-- [[none supplied the pill falls back to PREMIUM / FREEMIUM from the
+-- [[platform membership.
 -- [[`whitelist.expiresAt` (unix seconds) is accepted instead of `daysLeft` and
 -- [[counted down live. Anything not supplied reads "—".]]
 function profilePanel.setProfile(window, props)
@@ -1989,6 +2120,10 @@ function profilePanel.setProfile(window, props)
         local key = props.key or props.Key
         if type(key) == "string" and key ~= "" then
             data.key = key
+        end
+        local tier = props.tier or props.Tier
+        if type(tier) == "string" and tier ~= "" then
+            data.tier = tier
         end
         local whitelist = props.whitelist or props.Whitelist
         if type(whitelist) == "table" then
@@ -2009,15 +2144,15 @@ function profilePanel.setProfile(window, props)
     return data
 end
 
--- [[Legacy setter (string / nil): swaps the subtitle while leaving any key or
--- [[whitelist the host supplied in place.]]
+-- [[Legacy setter (string / nil): swaps the subtitle while leaving any key,
+-- [[tier or whitelist the host supplied in place.]]
 function profilePanel.setSubtitle(window, text)
     if type(text) == "table" then
         return profilePanel.setProfile(window, text)
     end
     local data = window.profileData or {}
     -- [[Copy before mutating: the caller may still hold the table it passed.]]
-    data = { subtitle = data.subtitle, key = data.key, whitelist = data.whitelist }
+    data = { subtitle = data.subtitle, key = data.key, tier = data.tier, whitelist = data.whitelist }
     data.subtitle = if type(text) == "string" and text ~= "" then text else nil
     window.profileData = data
     window.profileText = data.subtitle

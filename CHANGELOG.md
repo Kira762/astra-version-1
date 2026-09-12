@@ -2,6 +2,51 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-12 — Profile card: window-matched styling, real game name, tier pill, clipboard feedback
+
+- **The card now speaks the window's visual language verbatim.** Section
+  plates are built with `Window:StyleElementBody` — the same `ElementGradient`
+  body, `ElementCornerRadius` and `ElementStroke` (at `ElementStrokeTransparency`)
+  every window element uses — instead of flat `CardSurface` boxes with a faded
+  hairline. Headings are the Section element's own look (16px `ContentColor`
+  icon at 0.65 beside a 15px `ContentColor` title at 0.6, normal case:
+  `Account`, `Current Game`, `Server`, `User Session`), rows reuse the element
+  text colour (`ContentColor` icons/labels/values, labels muted at 0.45) and
+  the `@username` line uses the window's secondary-text treatment
+  (`TitlingColor` at 0.7). The game thumbnail's ring is the element stroke too.
+- **The game name is the real one.** The card follows Roblox's official
+  two-step flow — `apis.roblox.com/universes/v1/places/{PlaceId}/universe`
+  converts the place id to its universe id, then
+  `games.roblox.com/v1/games?universeIds={UniverseId}` supplies the `name`
+  field — with per-place caching and in-flight queuing, so `DataModel.Name`
+  (the current place's title) only fills the label until the platform
+  answers. The same universe resolution (`DataModel.GameId` first, official
+  lookup second) now feeds the thumbnail fetch.
+- **Copy actions use the executor clipboard and confirm visually.** Every
+  identifier row (User ID, Place ID, Server ID, Key) carries a COPY button
+  that writes through `setclipboard` (with the common executor aliases and a
+  `Clipboard` table as fallbacks); a successful copy swaps the icon to a
+  green `Success` check for ~1.2s and then returns to the copy icon. Buttons
+  stay hidden while their value is masked, and a missing/failing clipboard
+  function means no feedback rather than a false success.
+- **The tier pill is always present.** It reads the host's `tier` from
+  `Window:SetProfile` (uppercased) or falls back to PREMIUM / FREEMIUM from
+  `MembershipType`, so a free account is labelled instead of undecorated.
+  PREMIUM keeps the accent crown; other tiers read muted with a
+  `badge-check` icon, and the pill width re-measures itself from its word.
+- **Removed from the card:** the settings gear and its `_toggleSettingsMode`
+  action (the topbar gear is now the only settings entry point), the SERVER
+  UPTIME row (`workspace.DistributedGameTime`), and the FRIENDS / FOLLOWERS
+  rows together with their friends-endpoint fetch. The header's name and
+  subtitle reclaim the width the gear used to reserve.
+- **Verification:** `profile_details_test` now asserts the element-body
+  plates (gradient/corner/stroke tokens), Section-style headings, the
+  element row colours, the always-present tier pill (PREMIUM, FREEMIUM and a
+  host override) and the clipboard flash cycle (E7/E8); `profile_compact_test`
+  asserts the removed rows/gear are gone; `sidebar_tab_sizing_test` drops its
+  gear expectation. The offline preview (`scripts/profile_panel_preview.sh`)
+  re-renders both card states.
+
 ## 2026-09-12 — Compact profile card: exactly the window's height (240x420)
 
 - **The profile card is now 240px wide x 420px high** — slimmer, and exactly

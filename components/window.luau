@@ -573,9 +573,7 @@ function Window.new(props)
     end)
     haptic.setContainer(self.screenGui)     haptic.setEnabled(self.settings.haptics)     chrome.buildCollapsedFace(self)
 
-    profilePanel.build(self, function()
-        self:_toggleSettingsMode()
-    end)
+    profilePanel.build(self)
     profilePanel.setSubtitle(self, self.profileText)
     if profilePanel.isEnabled(self) then
         self.main.Position = self:_profileCenterPosition()
@@ -1827,7 +1825,8 @@ end
 -- [[Profile card content owned by the host. Accepts either the legacy
 -- [[subtitle string (nil clears it and falls back to the @username line) or a
 -- [[table carrying the card's host-supplied rows:
--- [[  window:SetProfile({ subtitle = "…", key = "…", whitelist = { status = "Active", daysLeft = 14 } })
+-- [[  window:SetProfile({ subtitle = "…", key = "…", tier = "PREMIUM",
+-- [[    whitelist = { status = "Active", daysLeft = 14 } })
 -- [[Anything not supplied reads "—" on the card; Astra holds no key or
 -- [[whitelist store of its own.]]
 function Window:SetProfile(profile)

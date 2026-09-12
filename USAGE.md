@@ -140,6 +140,7 @@ and locale binding), `window:Connect(signal, fn)` /
 window:SetProfile({
     subtitle = "Beta tester",              -- optional, replaces the @username line
     key = "ASTRA-XXXX-XXXX",               -- optional, masked until "Reveal profile details"
+    tier = "PREMIUM",                      -- optional, the header pill's word (else PREMIUM / FREEMIUM from membership)
     whitelist = { status = "Active", daysLeft = 14 },  -- or expiresAt = os.time() + n
 })
 ```
