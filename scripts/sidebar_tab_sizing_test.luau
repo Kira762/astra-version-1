@@ -211,8 +211,9 @@ do
 	end
 end
 
--- T9b: the Persistence tab must have content even when the window was
--- created without a `configuration` prop (no saved configs anywhere).
+-- T9b: the Persistence tab must build its content on first open even when
+-- the window was created without a `configuration` prop (no saved configs
+-- anywhere) - and it must build it exactly once.
 local persistenceTab
 for _, tab in window._settingsTabs do
 	if tab.name == "Persistence" then
@@ -220,10 +221,17 @@ for _, tab in window._settingsTabs do
 	end
 end
 expect(persistenceTab ~= nil, "T9b the Persistence settings tab exists")
+eq(#persistenceTab.elements, 0, "T9b settings content is lazy before first open")
+persistenceTab:Select()
+TestPump(0.2)
 expect(
 	#persistenceTab.elements >= 4,
 	"T9b Persistence tab builds its content without a configuration prop (got " .. tostring(#persistenceTab.elements) .. " elements)"
 )
+local builtOnce = #persistenceTab.elements
+persistenceTab:Select()
+TestPump(0.2)
+eq(#persistenceTab.elements, builtOnce, "T9b settings content is built exactly once")
 
 window.rfSettings:Select()
 TestPump(0.2)
@@ -238,7 +246,8 @@ local settingsRail = math.max(
 assertGroupSized(settingsRail, "T9 settings-mode rail group uses its own longest name")
 
 -- T9c: opening settings via the gear path lands on the FIRST settings tab
--- (General), and the page the content area shows is General's page.
+-- (General), the page the content area shows is General's page, and the
+-- lazy content for General is built on that first open.
 window.selectedTab = t1
 window._previousTab = t1
 window._settingsMode = false
@@ -250,6 +259,35 @@ expect(
 	currentPage == window.rfSettings.tabPage,
 	"T9c the content area shows General's page when settings opens"
 )
+expect(
+	#window.rfSettings.elements >= 4,
+	"T9c opening settings builds General's lazy content (got " .. tostring(#window.rfSettings.elements) .. " elements)"
+)
+
+-- T9d: every settings tab opens with its full content on its own page.
+local expectedSettingsContent = {
+	General = 4,
+	Appearance = 12,
+	Behavior = 2,
+	Performance = 2,
+	Persistence = 4,
+	About = 9,
+}
+for name, wanted in expectedSettingsContent do
+	for _, tab in window._settingsTabs do
+		if tab.name == name then
+			tab:Select()
+			TestPump(0.15)
+			eq(#tab.elements, wanted, "T9d " .. name .. " tab opens with its full content")
+			expect(
+				window.elementsLayout.__currentPage == tab.tabPage,
+				"T9d " .. name .. " opens on its own page"
+			)
+			break
+		end
+	end
+end
+
 t1:Select()
 TestPump(0.2)
 assertGroupSized(shortRail, "T9 leaving settings restores the normal group width")

@@ -2,6 +2,36 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-12 — Faster window startup: lazy settings content + deferred auto-show
+
+- **Settings tab content is now built lazily.** `CreateWindow` previously
+  built all six settings tabs *and* every one of their elements
+  synchronously (~600 of the ~760 instances created at window
+  construction, in the example layout). Window construction now creates
+  only the tab shells (rows + pages); each tab's elements are created the
+  first time that tab is opened (`Tab:Select` →
+  `Window:_buildSettingsContent`, exactly once per tab, pcalled so one bad
+  element can't take the window down). The visible behavior is
+  unchanged — content exists the instant a settings tab is opened — but
+  synchronous startup instance creation drops from 764 to 169 in the
+  harness (the user's own tabs are unaffected).
+- **The auto-show is deferred by one tick.** `CreateWindow` showed the
+  window before the calling script could create its tabs, so the window
+  appeared empty and then filled in. The show now happens in a
+  `task.defer`: a script that builds its tabs synchronously finishes
+  first, so the window appears once, fully populated. Scripts that yield
+  are unaffected (the show lands one tick after creation), and an
+  explicit `Hide()` before the tick cancels the auto-show.
+- **Scope:** startup timing only — no visual, animation, or API changes
+  (the opening animation and staggered element reveal are untouched).
+  Icon/font preloading was already async and disk-cached, so first-run
+  icon downloads were left alone.
+- **Verification:** the sizing test now asserts lazy settings content
+  (empty before first open, built on first open, built exactly once, full
+  element counts per tab on the correct page) alongside the existing
+  assertions; the harness measures 169 instances at `CreateWindow`
+  (was 764). Bundle regenerated (99 modules).
+
 ## 2026-09-12 — Settings screen: rail order and empty Persistence tab
 
 - **Opening Settings now highlights the first rail row.** The rail rows

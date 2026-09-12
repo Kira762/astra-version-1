@@ -589,6 +589,11 @@ function Window.new(props)
 
     self:_syncLiveAnimation()
 
+    -- [[Construction is complete: settings tab content may now be built]]
+    -- [[lazily on first open (it is skipped while the window is still]]
+    -- [[being constructed, e.g. by the first-tab auto-select).]]
+    self._constructed = true
+
     return self
 end
 
@@ -924,6 +929,9 @@ function Window:Hide()
             if self.animating or self.hidden then
         return
     end
+
+    -- [[Cancel the one-tick-late auto-show, if it has not run yet.]]
+    self._autoShowCancelled = true
 
             if self._searching then
         search.close(self, { showTabs = false, jumpTo = self.selectedTab and self.selectedTab.tabPage })
@@ -1454,6 +1462,14 @@ function Window:_buildSettingsUI()
         table.insert(self._settingsTabs, tab)
     end
 
+    -- [[The settings content is built lazily: window construction only]]
+    -- [[creates the tab shells (rows + pages), and each tab's elements]]
+    -- [[are created the first time that tab is opened (see]]
+    -- [[_buildSettingsContent), so opening the window stays fast. The]]
+    -- [[builders run at most once, in the original creation order.]]
+    self._settingsContentBuilt = self._settingsContentBuilt or {}
+
+    local function buildAbout()
     about:CreateSection({ name = "Rayfield Gen2" })
     about:CreateText({
         name = "About Rayfield Gen2",
@@ -1481,7 +1497,10 @@ function Window:_buildSettingsUI()
         name = "Documentation",
         text = "https://docs.sirius.menu/rayfield-gen2",
     })
+    end
+    about._settingsContentBuilder = buildAbout
 
+    local function buildGeneral()
     self.rfSettings:CreateSection({ name = "General" })
     self.rfSettings:CreateKeybind({
         name = "Toggle Keybind", icon = constants.icons.search, value = self.settings.toggleKeybind,
@@ -1503,6 +1522,10 @@ function Window:_buildSettingsUI()
         callback = function(value) self.settings.welcomeToast = value; self:SaveSettings() end,
     })
 
+    end
+    self.rfSettings._settingsContentBuilder = buildGeneral
+
+    local function buildAppearance()
     appearance:CreateSection({ name = "Theme" })
     local themes = {
         default = "Default",
@@ -1619,17 +1642,6 @@ function Window:_buildSettingsUI()
         end,
     })
 
-    behavior:CreateSection({ name = "Window behavior" })
-    behavior:CreateToggle({
-        name = "Prevent duplicate windows", description = "Prevents Astra from creating another window while this window is active.", value = self.settings.antiWindowDuplicate,
-        callback = function(value) self.settings.antiWindowDuplicate = value; self:SaveSettings() end,
-    })
-    performance:CreateSection({ name = "Performance" })
-    performance:CreateToggle({
-        name = "Haptics", description = "A subtle tap as you interact, on devices that support haptics.", value = self.settings.haptics,
-        callback = function(value) self.settings.haptics = value; haptic.setEnabled(value); self:SaveSettings() end,
-    })
-
     appearance:CreateSection({ name = "Window" })
     appearance:CreateToggle({
         name = "Keep window on screen", description = "Stops the window being dragged off the edge of the screen and lost.", value = self.settings.keepOnScreen,
@@ -1645,7 +1657,28 @@ function Window:_buildSettingsUI()
             state.tweenService:Create(self.drag.drag, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, self.size.Y.Offset / 2 + 15) }):Play()
         end,
     })
+    end
+    appearance._settingsContentBuilder = buildAppearance
 
+    local function buildBehavior()
+    behavior:CreateSection({ name = "Window behavior" })
+    behavior:CreateToggle({
+        name = "Prevent duplicate windows", description = "Prevents Astra from creating another window while this window is active.", value = self.settings.antiWindowDuplicate,
+        callback = function(value) self.settings.antiWindowDuplicate = value; self:SaveSettings() end,
+    })
+    end
+    behavior._settingsContentBuilder = buildBehavior
+
+    local function buildPerformance()
+    performance:CreateSection({ name = "Performance" })
+    performance:CreateToggle({
+        name = "Haptics", description = "A subtle tap as you interact, on devices that support haptics.", value = self.settings.haptics,
+        callback = function(value) self.settings.haptics = value; haptic.setEnabled(value); self:SaveSettings() end,
+    })
+    end
+    performance._settingsContentBuilder = buildPerformance
+
+    local function buildPersistence()
     -- [[Built unconditionally like every other settings tab: the]]
     -- [[configuration save/load system works without a `configuration`]]
     -- [[prop (paths fall back to the window name), so gating the content]]
@@ -1675,6 +1708,22 @@ function Window:_buildSettingsUI()
         if not name or name == "" then self:Toast({ title = locale.resolve("Pick a configuration to delete") }); return end
         if self:DeleteConfig(name) then refresh(); self:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name }) end
     end })
+    end
+    persistence._settingsContentBuilder = buildPersistence
+end
+
+function Window:_buildSettingsContent(tab)
+    -- [[Lazy settings content: a tab's elements are created the first]]
+    -- [[time it is opened, keeping window construction fast. The pcall]]
+    -- [[keeps one bad element from taking the whole window down.]]
+    if self._settingsContentBuilt[tab] or not tab._settingsContentBuilder then
+        return
+    end
+    self._settingsContentBuilt[tab] = true
+    local ok, err = pcall(tab._settingsContentBuilder)
+    if not ok then
+        self:Notify({ title = "Settings", content = "Some settings content failed to load: " .. tostring(err) })
+    end
 end
 
 function Window:SetProfile(text)

@@ -155,7 +155,15 @@ function Astra:CreateWindow(props: types.WindowProps): types.Window
 	end
 
 	if not window.unloaded then
-		window:Show()
+		-- [[Defer the auto-show by one tick so a script that builds its]]
+		-- [[tabs synchronously right after CreateWindow can finish]]
+		-- [[first: the window then appears once, fully populated, instead]]
+		-- [[of empty and filling in. An explicit Hide() cancels it.]]
+		task.defer(function()
+			if not window.unloaded and not window._autoShowCancelled then
+				window:Show()
+			end
+		end)
 	end
 
 	return window
@@ -4483,6 +4491,11 @@ function Window.new(props)
 
     self:_syncLiveAnimation()
 
+    -- [[Construction is complete: settings tab content may now be built]]
+    -- [[lazily on first open (it is skipped while the window is still]]
+    -- [[being constructed, e.g. by the first-tab auto-select).]]
+    self._constructed = true
+
     return self
 end
 
@@ -4818,6 +4831,9 @@ function Window:Hide()
             if self.animating or self.hidden then
         return
     end
+
+    -- [[Cancel the one-tick-late auto-show, if it has not run yet.]]
+    self._autoShowCancelled = true
 
             if self._searching then
         search.close(self, { showTabs = false, jumpTo = self.selectedTab and self.selectedTab.tabPage })
@@ -5348,6 +5364,14 @@ function Window:_buildSettingsUI()
         table.insert(self._settingsTabs, tab)
     end
 
+    -- [[The settings content is built lazily: window construction only]]
+    -- [[creates the tab shells (rows + pages), and each tab's elements]]
+    -- [[are created the first time that tab is opened (see]]
+    -- [[_buildSettingsContent), so opening the window stays fast. The]]
+    -- [[builders run at most once, in the original creation order.]]
+    self._settingsContentBuilt = self._settingsContentBuilt or {}
+
+    local function buildAbout()
     about:CreateSection({ name = "Rayfield Gen2" })
     about:CreateText({
         name = "About Rayfield Gen2",
@@ -5375,7 +5399,10 @@ function Window:_buildSettingsUI()
         name = "Documentation",
         text = "https://docs.sirius.menu/rayfield-gen2",
     })
+    end
+    about._settingsContentBuilder = buildAbout
 
+    local function buildGeneral()
     self.rfSettings:CreateSection({ name = "General" })
     self.rfSettings:CreateKeybind({
         name = "Toggle Keybind", icon = constants.icons.search, value = self.settings.toggleKeybind,
@@ -5397,6 +5424,10 @@ function Window:_buildSettingsUI()
         callback = function(value) self.settings.welcomeToast = value; self:SaveSettings() end,
     })
 
+    end
+    self.rfSettings._settingsContentBuilder = buildGeneral
+
+    local function buildAppearance()
     appearance:CreateSection({ name = "Theme" })
     local themes = {
         default = "Default",
@@ -5513,17 +5544,6 @@ function Window:_buildSettingsUI()
         end,
     })
 
-    behavior:CreateSection({ name = "Window behavior" })
-    behavior:CreateToggle({
-        name = "Prevent duplicate windows", description = "Prevents Astra from creating another window while this window is active.", value = self.settings.antiWindowDuplicate,
-        callback = function(value) self.settings.antiWindowDuplicate = value; self:SaveSettings() end,
-    })
-    performance:CreateSection({ name = "Performance" })
-    performance:CreateToggle({
-        name = "Haptics", description = "A subtle tap as you interact, on devices that support haptics.", value = self.settings.haptics,
-        callback = function(value) self.settings.haptics = value; haptic.setEnabled(value); self:SaveSettings() end,
-    })
-
     appearance:CreateSection({ name = "Window" })
     appearance:CreateToggle({
         name = "Keep window on screen", description = "Stops the window being dragged off the edge of the screen and lost.", value = self.settings.keepOnScreen,
@@ -5539,7 +5559,28 @@ function Window:_buildSettingsUI()
             state.tweenService:Create(self.drag.drag, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, self.size.Y.Offset / 2 + 15) }):Play()
         end,
     })
+    end
+    appearance._settingsContentBuilder = buildAppearance
 
+    local function buildBehavior()
+    behavior:CreateSection({ name = "Window behavior" })
+    behavior:CreateToggle({
+        name = "Prevent duplicate windows", description = "Prevents Astra from creating another window while this window is active.", value = self.settings.antiWindowDuplicate,
+        callback = function(value) self.settings.antiWindowDuplicate = value; self:SaveSettings() end,
+    })
+    end
+    behavior._settingsContentBuilder = buildBehavior
+
+    local function buildPerformance()
+    performance:CreateSection({ name = "Performance" })
+    performance:CreateToggle({
+        name = "Haptics", description = "A subtle tap as you interact, on devices that support haptics.", value = self.settings.haptics,
+        callback = function(value) self.settings.haptics = value; haptic.setEnabled(value); self:SaveSettings() end,
+    })
+    end
+    performance._settingsContentBuilder = buildPerformance
+
+    local function buildPersistence()
     -- [[Built unconditionally like every other settings tab: the]]
     -- [[configuration save/load system works without a `configuration`]]
     -- [[prop (paths fall back to the window name), so gating the content]]
@@ -5569,6 +5610,22 @@ function Window:_buildSettingsUI()
         if not name or name == "" then self:Toast({ title = locale.resolve("Pick a configuration to delete") }); return end
         if self:DeleteConfig(name) then refresh(); self:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name }) end
     end })
+    end
+    persistence._settingsContentBuilder = buildPersistence
+end
+
+function Window:_buildSettingsContent(tab)
+    -- [[Lazy settings content: a tab's elements are created the first]]
+    -- [[time it is opened, keeping window construction fast. The pcall]]
+    -- [[keeps one bad element from taking the whole window down.]]
+    if self._settingsContentBuilt[tab] or not tab._settingsContentBuilder then
+        return
+    end
+    self._settingsContentBuilt[tab] = true
+    local ok, err = pcall(tab._settingsContentBuilder)
+    if not ok then
+        self:Notify({ title = "Settings", content = "Some settings content failed to load: " .. tostring(err) })
+    end
 end
 
 function Window:SetProfile(text)
@@ -13248,6 +13305,11 @@ function state:Select(a24)
         self.window:_setSettingsMode(self._isSettingsTab == true)
     elseif self.window._applySettingsLayout then
         self.window:_applySettingsLayout(self == self.window.rfSettings)
+    end
+    -- [[Settings tab content is created lazily (after construction):]]
+    -- [[make sure it exists before the page is shown.]]
+    if self._isSettingsTab and self.window._constructed and self.window._buildSettingsContent ~= nil then
+        self.window:_buildSettingsContent(self)
     end
     self.window:_jumpTo(self.tabPage)
 
@@ -29867,104 +29929,104 @@ end)() end,
 
 local LineOffsets = {
     [2] = 12,
-    [3] = 168,
-    [5] = 579,
-    [6] = 614,
-    [7] = 659,
-    [8] = 565,
-    [9] = 776,
-    [10] = 886,
-    [11] = 1130,
-    [12] = 1357,
-    [13] = 1664,
-    [14] = 2382,
-    [15] = 2717,
-    [16] = 3148,
-    [17] = 3518,
-    [18] = 3895,
-    [20] = 6709,
-    [21] = 6976,
-    [22] = 7420,
-    [23] = 8551,
-    [24] = 8885,
-    [25] = 8946,
-    [26] = 9091,
-    [27] = 10411,
-    [28] = 10613,
-    [29] = 10874,
-    [30] = 11336,
-    [31] = 11786,
-    [32] = 11873,
-    [33] = 12438,
-    [34] = 13056,
-    [35] = 13433,
-    [36] = 13563,
-    [37] = 13727,
-    [38] = 13881,
-    [40] = 14392,
-    [41] = 14415,
-    [42] = 14432,
-    [43] = 14462,
-    [44] = 14578,
-    [45] = 14592,
-    [46] = 14641,
-    [47] = 14367,
-    [48] = 14742,
-    [49] = 15045,
-    [50] = 15076,
-    [51] = 14731,
-    [52] = 15119,
-    [53] = 15139,
-    [54] = 15171,
-    [55] = 15101,
-    [56] = 15278,
-    [57] = 15340,
-    [58] = 15403,
-    [60] = 15466,
-    [61] = 15631,
-    [62] = 15451,
-    [63] = 15891,
-    [64] = 16186,
-    [65] = 16842,
-    [66] = 18626,
-    [67] = 19767,
-    [68] = 21287,
-    [69] = 15695,
-    [70] = 26531,
-    [71] = 26593,
-    [72] = 26655,
-    [73] = 26730,
-    [74] = 26812,
-    [75] = 26874,
-    [76] = 26949,
-    [77] = 27024,
-    [78] = 27099,
-    [79] = 27174,
-    [80] = 26425,
-    [81] = 27236,
-    [82] = 27334,
-    [83] = 27512,
-    [84] = 27563,
-    [85] = 27593,
-    [86] = 27844,
-    [87] = 27893,
-    [88] = 28346,
-    [89] = 28364,
-    [90] = 28518,
-    [91] = 28617,
-    [92] = 28639,
-    [93] = 28689,
-    [94] = 28725,
-    [95] = 28743,
-    [96] = 29056,
-    [97] = 29072,
-    [98] = 29123,
-    [99] = 29142,
-    [100] = 29384,
-    [101] = 29428,
-    [102] = 29622,
-    [103] = 29650,
-    [104] = 29661,
+    [3] = 176,
+    [5] = 587,
+    [6] = 622,
+    [7] = 667,
+    [8] = 573,
+    [9] = 784,
+    [10] = 894,
+    [11] = 1138,
+    [12] = 1365,
+    [13] = 1672,
+    [14] = 2390,
+    [15] = 2725,
+    [16] = 3156,
+    [17] = 3526,
+    [18] = 3903,
+    [20] = 6766,
+    [21] = 7033,
+    [22] = 7477,
+    [23] = 8608,
+    [24] = 8942,
+    [25] = 9003,
+    [26] = 9148,
+    [27] = 10468,
+    [28] = 10670,
+    [29] = 10931,
+    [30] = 11393,
+    [31] = 11843,
+    [32] = 11930,
+    [33] = 12495,
+    [34] = 13113,
+    [35] = 13495,
+    [36] = 13625,
+    [37] = 13789,
+    [38] = 13943,
+    [40] = 14454,
+    [41] = 14477,
+    [42] = 14494,
+    [43] = 14524,
+    [44] = 14640,
+    [45] = 14654,
+    [46] = 14703,
+    [47] = 14429,
+    [48] = 14804,
+    [49] = 15107,
+    [50] = 15138,
+    [51] = 14793,
+    [52] = 15181,
+    [53] = 15201,
+    [54] = 15233,
+    [55] = 15163,
+    [56] = 15340,
+    [57] = 15402,
+    [58] = 15465,
+    [60] = 15528,
+    [61] = 15693,
+    [62] = 15513,
+    [63] = 15953,
+    [64] = 16248,
+    [65] = 16904,
+    [66] = 18688,
+    [67] = 19829,
+    [68] = 21349,
+    [69] = 15757,
+    [70] = 26593,
+    [71] = 26655,
+    [72] = 26717,
+    [73] = 26792,
+    [74] = 26874,
+    [75] = 26936,
+    [76] = 27011,
+    [77] = 27086,
+    [78] = 27161,
+    [79] = 27236,
+    [80] = 26487,
+    [81] = 27298,
+    [82] = 27396,
+    [83] = 27574,
+    [84] = 27625,
+    [85] = 27655,
+    [86] = 27906,
+    [87] = 27955,
+    [88] = 28408,
+    [89] = 28426,
+    [90] = 28580,
+    [91] = 28679,
+    [92] = 28701,
+    [93] = 28751,
+    [94] = 28787,
+    [95] = 28805,
+    [96] = 29118,
+    [97] = 29134,
+    [98] = 29185,
+    [99] = 29204,
+    [100] = 29446,
+    [101] = 29490,
+    [102] = 29684,
+    [103] = 29712,
+    [104] = 29723,
 }
 
 -- [[Misc AOT variable imports]]

@@ -22,7 +22,7 @@ Public API singleton. Key top-level locals:
 - Requires — `core` (state/registry/loader), `core.state`, `images.image`, `utilities.locale`, `utilities.constants`, `icons`, `settings`, `Types`.
 - Singleton bookkeeping: existing-window guard backed by a module-local `activeWindow` **and** a `getgenv()`-backed global store (key `__ASTRA_ACTIVE_WINDOW_V1`) so the anti-duplicate guard survives across `loadstring`ed instances; the `CreateWindow` dispatcher (pcall around `components.window.new`, re-throws on failure); the export table.
 Exported names (typed surface is `Types.luau`'s `Astra`): `CreateWindow`, `Icons`; `Core` and `Settings` are also assigned on the table at runtime. There is no top-level `ChangeTheme`/`SetLocale`/`SetTranslator`/`RegisterTranslations`/`Unload` — those are window methods.
-`CreateWindow` side effects: enforces the anti-duplicate guard (persisted `antiWindowDuplicate` setting, per-window opt-out via `settings.antiWindowDuplicate`), in secure mode preloads window images (`Image.preload` → failure `Notify`) and swaps in the brand fonts via `ChangeTheme({ Font, TitleFont })` when they load, then auto-`Show()`s the window.
+`CreateWindow` side effects: enforces the anti-duplicate guard (persisted `antiWindowDuplicate` setting, per-window opt-out via `settings.antiWindowDuplicate`), in secure mode preloads window images (`Image.preload` → failure `Notify`) and swaps in the brand fonts via `ChangeTheme({ Font, TitleFont })` when they load, then auto-`Show()`s the window one tick later (a `task.defer`, so a script that builds its tabs synchronously can finish first and the window appears once, fully populated; an explicit `Hide()` before that tick cancels it via `_autoShowCancelled`).
 
 ### `example.client.luau`
 Usage example (not minified). Loads the bundle with `game:HttpGet` + `loadstring`, then builds a 20-tab window: Home, Controls, Appearance, Information, Changelog, Updates, plus 15 labelled test tabs. Demonstrates window tags, every element type, groups, console, and the `CreateChangelog` element (including a runtime `changelog:Add`), and ends with an explicit `home:Select()`.
@@ -78,16 +78,20 @@ built-in "General" settings tab), `_settingsTabs` (settings-tab list),
 `Flags` (metatable view over `controls`).
 
 Method map (names preserved through minification). Settings-related:
-- `_buildSettingsUI` — builds the six built-in settings tabs (General via
-  `rfSettings`, plus Appearance, Behavior, Performance, Persistence, About;
-  all `isSettingsTab`, `forgetState`). Rail/page order follows
-  `customOrder` (General 1001 first, About 1006 last) so opening settings
-  highlights the first rail row. Appearance hosts theme picker +
-  Bar Layout picker (both popup-confirmed), profile and window toggles,
-  Reset Window Position; Persistence always hosts saved-config
-  Save/Load/Delete (independent of the `configuration` prop — paths fall
-  back to the window name, and the dropdown shows its
-  "No saved configurations" placeholder when none exist).
+- `_buildSettingsUI` — creates the six built-in settings tab shells
+  (General via `rfSettings`, plus Appearance, Behavior, Performance,
+  Persistence, About; all `isSettingsTab`, `forgetState`). Rail/page order
+  follows `customOrder` (General 1001 first, About 1006 last) so opening
+  settings highlights the first rail row. Element content is built lazily:
+  each tab stores a `_settingsContentBuilder` closure and
+  `Window:_buildSettingsContent(tab)` runs it on the tab's first open
+  (`Tab:Select`, after construction), so `CreateWindow` stays fast.
+  Appearance hosts theme picker + Bar Layout picker (both
+  popup-confirmed), profile and window toggles, Reset Window Position;
+  Persistence always hosts saved-config Save/Load/Delete (independent of
+  the `configuration` prop — paths fall back to the window name, and the
+  dropdown shows its "No saved configurations" placeholder when none
+  exist).
 - `settingsAction` (topbar gear, `linkedTab = rfSettings`) — toggles
   settings mode: `_setSettingsMode(true)` shows only settings tabs and
   remembers the previous tab; a second click restores it.
