@@ -194,6 +194,11 @@ function state:Select(a24)
     elseif self.window._applySettingsLayout then
         self.window:_applySettingsLayout(self == self.window.rfSettings)
     end
+    -- [[Settings tab content is created lazily (after construction):]]
+    -- [[make sure it exists before the page is shown.]]
+    if self._isSettingsTab and self.window._constructed and self.window._buildSettingsContent ~= nil then
+        self.window:_buildSettingsContent(self)
+    end
     self.window:_jumpTo(self.tabPage)
 
                     local a25 = a24 or not self.window:_interactive()
@@ -363,6 +368,9 @@ function state:Remove()
     if self.tabPage then
         window:DestroySubtree(self.tabPage)
     end
+    -- [[The removed row may have been the widest: re-derive the]]
+    -- [[responsive rail's width from the rows that remain (no-op elsewhere).]]
+    window:_applyContentRailWidth()
     self.topbarItem = nil
     self.tabPage = nil
     self.elements = {}

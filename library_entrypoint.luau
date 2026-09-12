@@ -144,7 +144,15 @@ function Astra:CreateWindow(props: types.WindowProps): types.Window
 	end
 
 	if not window.unloaded then
-		window:Show()
+		-- [[Defer the auto-show by one tick so a script that builds its]]
+		-- [[tabs synchronously right after CreateWindow can finish]]
+		-- [[first: the window then appears once, fully populated, instead]]
+		-- [[of empty and filling in. An explicit Hide() cancels it.]]
+		task.defer(function()
+			if not window.unloaded and not window._autoShowCancelled then
+				window:Show()
+			end
+		end)
 	end
 
 	return window

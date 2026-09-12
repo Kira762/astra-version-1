@@ -43,8 +43,6 @@ function SidebarCollapsed.Build(window, layout)
         Parent = window.main,
     })
     buildRail(window, layout)
-    sidebar.buildProfile(window, layout)
-    sidebar.reflowProfile(window)
 end
 
 function SidebarCollapsed.ApplyWidth(window)
@@ -54,7 +52,6 @@ function SidebarCollapsed.ApplyWidth(window)
     window.elements.Size = UDim2.new(1, -width, 1, -layout.chromeHeight)
     window.bottomFade.Size = UDim2.new(1, -width, layout.fadeSize.Y.Scale, layout.fadeSize.Y.Offset)
     sidebar.applyRailRows(window, width, layout)
-    sidebar.reflowProfile(window)
 end
 
 return SidebarCollapsed
