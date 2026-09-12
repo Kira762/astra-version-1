@@ -368,12 +368,13 @@ assertGroupSized(shortRail, "T14 responsive sidebar rail is name-sized again")
 -- profile). The window + gap + panel rest centred on screen as one unit:
 -- the window itself sits half a panel away from the screen centre, on the
 -- opposite side of the panel.
-local PANEL_W = 96
-local PANEL_GAP = 8
+local PANEL_W = 280
+local PANEL_GAP = 12
+local PANEL_H = 500 -- profilePanel.height: the card hugs its stacked content
 local PANEL_SHIFT = (PANEL_W + PANEL_GAP) / 2
 local main = window.main
 local halfW = main.Size.X.Offset / 2
-local halfH = main.Size.Y.Offset / 2
+local halfPanelH = PANEL_H / 2
 
 expect(window.profilePanel ~= nil, "T15 the profile panel exists beside the window")
 eq(window.profilePanel.Visible, true, "T15 panel is visible while the window is shown")
@@ -389,11 +390,11 @@ eqUDim2(
 	0.5,
 	main.Position.X.Offset + halfW + PANEL_GAP,
 	0.5,
-	-halfH,
-	"T15 panel flush with the window's right edge"
+	-halfPanelH,
+	"T15 panel flush with the window's right edge, centred on the window"
 )
 eq(window.profilePanel.Size.X.Offset, PANEL_W, "T15 panel width")
-eq(window.profilePanel.Size.Y.Offset, main.Size.Y.Offset, "T15 panel spans the full window height")
+eq(window.profilePanel.Size.Y.Offset, PANEL_H, "T15 panel uses its intrinsic content height")
 
 eq(window.profileName.Text, "Tes****", "T15 username masked by default")
 expect(window.profileAvatar ~= nil, "T15 avatar exists")
@@ -432,8 +433,8 @@ eqUDim2(
 	0.5,
 	main.Position.X.Offset - halfW - PANEL_GAP,
 	0.5,
-	-halfH,
-	"T15 panel flush with the window's left edge"
+	-halfPanelH,
+	"T15 panel flush with the window's left edge, centred on the window"
 )
 sideDropdown:Set("Right")
 TestPump(0.2)

@@ -2,6 +2,32 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-12 — Profile panel: fixed card layout per the design mock
+
+- **The panel is now a content-sized card (280x500) instead of a full-window-height
+  strip.** It rests vertically centred beside the window, and its interior stacks
+  top-to-bottom in one flow so nothing can overlap at any window size: 72px avatar
+  with presence dot, centred display name, centred @username, centred PREMIUM
+  badge, divider, ACCOUNT DETAILS (User ID with the COPY action on the value row,
+  Join date with account age, Friends / Followers on their own rows), divider,
+  CURRENT GAME card, and the bottom-pinned settings gear.
+- **Four rendering bugs from the reverted layout are gone.** The card surface is
+  actually visible now (it was created with `BackgroundTransparency = 1`, leaving
+  the text floating over the 3D world); the name / subtitle no longer vertically
+  centre into the details stack on tall windows; the PREMIUM badge no longer lands
+  on the first divider; and the CURRENT GAME plate uses the dark `CardSurface`
+  theme key instead of the light `ContentColor` text colour (the white box).
+- **`hasRoom` now checks vertical room too** (the card's 500px height plus margins),
+  and `layout` positions the fixed-size card centred on the window centre; the
+  interior is static, so drags/resizes never reflow it.
+- **Scope:** presentation only — no public API change; `setSubtitle`,
+  `refreshName`, `setEnabled`, `setSide`, `setShown` keep their signatures.
+- **Verification:** T15 in `scripts/sidebar_tab_sizing_test.luau` updated to the
+  real geometry (280 wide / 12 gap / 500 tall, panel centred on the window centre);
+  static require + instance-field checkers pass; bundle regenerated (100 modules).
+  The runtime smoke/sizing suites need the Luau CLI, which this sandbox could not
+  download (release-asset hosts are TLS-blocked), so they were not executed here.
+
 ## 2026-09-12 — Profile system: the profile panel beside the window
 
 - **The profile now lives in a panel beside the window, not inside it.**

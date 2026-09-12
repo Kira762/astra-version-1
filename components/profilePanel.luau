@@ -10,34 +10,59 @@ local sidebar = require(script.Parent.sidebar)
 local profilePanel = {}
 
 -- [[The profile panel lives OUTSIDE the window frame, beside it: a]]
--- [[96px-wide companion card that spans the window's full height. The]]
--- [[window and the panel are centred on screen as a single unit, so]]
--- [[the window sits half a panel (width + gap) away from the screen]]
--- [[centre, on the opposite side of the panel.]]
+-- [[companion card with its own content-driven height, vertically]]
+-- [[centred against the window. The window and the panel are centred]]
+-- [[on screen as a single unit, so the window sits half a panel]]
+-- [[(width + gap) away from the screen centre, on the opposite side]]
+-- [[of the panel.]]
 -- A full profile card, intentionally wide enough for the Roblox-style details
--- layout. Every colour below is a theme binding (rather than a hard-coded
--- colour), so ChangeTheme refreshes the card along with the rest of the UI.
+-- layout. Content stacks top-to-bottom in one flow — avatar, name, username,
+-- premium badge, account details, current game, settings gear — so nothing
+-- ever overlaps no matter how tall the window is. Every colour below is a
+-- theme binding (rather than a hard-coded colour), so ChangeTheme refreshes
+-- the card along with the rest of the UI.
 profilePanel.width = 280
 profilePanel.gap = 12
 
 local avatarSize = 72
-local nameGap = 10
-local nameHeight = 24
-local subGap = 3
-local subHeight = 18
 local paddingX = 16
-local contentMinTop = 18
+local topPad = 16
+local iconSize = 16
+local indent = iconSize + 7 -- value text aligns under the label text, past its icon
+
+-- [[Vertical flow (y offsets from the panel top). Kept as explicit steps so]]
+-- [[the stack reads like the design mock, top to bottom.]]
+local avatarTop = topPad -- 16..88
+local nameTop = avatarTop + avatarSize + 8 -- 96..118
+local nameHeight = 22
+local subtitleTop = nameTop + nameHeight + 3 -- 121..137
+local subtitleHeight = 16
+local badgeTop = subtitleTop + subtitleHeight + 6 -- 143..159
+local badgeHeight = 16
+local rule1Top = badgeTop + badgeHeight + 12 -- 171
+local detailsHeadingTop = rule1Top + 12 -- 183..201
+local userIdLabelTop = detailsHeadingTop + 26 -- 209..227
+local userIdValueTop = userIdLabelTop + 19 -- 228..248
+local joinLabelTop = userIdValueTop + 28 -- 256..274
+local joinValueTop = joinLabelTop + 19 -- 275..295
+local friendsTop = joinValueTop + 28 -- 303..321
+local followersTop = friendsTop + 18 -- 321..339
+local rule2Top = followersTop + 30 -- 351
+local gameHeadingTop = rule2Top + 12 -- 363..381
+local gameCardTop = gameHeadingTop + 26 -- 389..445
+local gameCardHeight = 56
 local gearSize = 32
 local gearIconSize = 20
 local gearBottomMargin = 12
 
-local contentHeight = avatarSize + nameGap + nameHeight + subGap + subHeight
+-- [[The card hugs its content: last row + breathing room + the gear zone.]]
+profilePanel.height = gameCardTop + gameCardHeight + 11 + gearSize + gearBottomMargin -- 500
 
 local nameTransparency = 0
 local subtitleTransparency = 0.7
 local avatarBgTransparency = 0.95
-local idleStrokeTransparency = 0.95
-local hoverStrokeTransparency = 0.65
+local idleStrokeTransparency = 0.6
+local hoverStrokeTransparency = 0.25
 local pillHoverTransparency = 0.92
 
 local settleTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
@@ -53,11 +78,12 @@ local avatarGenerations = setmetatable({}, { __mode = "k" })
 
 local avatarReady = setmetatable({}, { __mode = "k" })
 
--- [[The panel needs horizontal room: window + gap + panel must fit on the]]
--- [[screen (the pair is centred, so both edges keep a small margin). This]]
--- [[is a space check, not a device check: a portrait phone has no room and]]
--- [[hides the panel, while a landscape phone (and every desktop) usually]]
--- [[has room and shows it.]]
+-- [[The panel needs room on both axes: window + gap + panel must fit]]
+-- [[horizontally (the pair is centred, so both edges keep a small]]
+-- [[margin), and the card's own height must fit vertically. This is a]]
+-- [[space check, not a device check: a portrait phone has no room and]]
+-- [[hides the panel, while a landscape phone (and every desktop)]
+-- [[usually has room and shows it.]]
 local edgeMargin = 8
 
 local function hasRoom(window)
@@ -66,7 +92,10 @@ local function hasRoom(window)
     if not viewport then
         return true
     end
-    return viewport.X >= window.size.X.Offset + profilePanel.gap + profilePanel.width + edgeMargin * 2
+    if viewport.X < window.size.X.Offset + profilePanel.gap + profilePanel.width + edgeMargin * 2 then
+        return false
+    end
+    return viewport.Y >= profilePanel.height + edgeMargin * 2
 end
 
 -- [[The panel is "enabled" when its content should exist at all: the user]]
@@ -99,7 +128,7 @@ function profilePanel.build(window, onOpenSettings)
         Name = "ProfilePanel",
         AnchorPoint = Vector2.new(0, 0),
         Position = UDim2.fromOffset(0, 0),
-        Size = UDim2.fromOffset(profilePanel.width, window.size.Y.Offset),
+        Size = UDim2.fromOffset(profilePanel.width, profilePanel.height),
         BackgroundTransparency = 1,
         ZIndex = 1,
         Visible = false,
@@ -107,11 +136,13 @@ function profilePanel.build(window, onOpenSettings)
         Parent = window.screenGui,
     })
 
+    -- [[The card surface: a visible themed plate (the gradient supplies]]
+    -- [[the colour; transparency stays 0 so the card actually shows).]]
     window.profilePanelSurface = window:Create("Frame", {
         Name = "Surface",
         Size = UDim2.fromScale(1, 1),
         BorderSizePixel = 0,
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 0,
         Parent = window.profilePanel,
     })
 
@@ -132,10 +163,12 @@ function profilePanel.build(window, onOpenSettings)
 
     window:CreateGlow(window.profilePanelSurface, "ShadowColor", 20, 1)
 
+    -- ===== header: avatar + presence dot + name + username + badge =====
+
     window.profileAvatar = window:Create("ImageLabel", {
         Name = "Avatar",
         AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 0, contentMinTop),
+        Position = UDim2.new(0.5, 0, 0, avatarTop),
         Size = UDim2.fromOffset(avatarSize, avatarSize),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
@@ -147,10 +180,14 @@ function profilePanel.build(window, onOpenSettings)
         CornerRadius = UDim.new(1, 0),
         Parent = window.profileAvatar,
     })
+
     local onlineDot = window:Create("Frame", {
-        Name = "Online", AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, avatarSize / 2 - 4, 0, contentMinTop + avatarSize - 4),
-        Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0, Parent = window.profilePanelSurface,
+        Name = "Online",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, avatarSize / 2 + 12, 0, avatarTop + avatarSize / 2),
+        Size = UDim2.fromOffset(12, 12),
+        BorderSizePixel = 0,
+        Parent = window.profilePanelSurface,
     }, { BackgroundColor3 = "Success" })
     window:Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = onlineDot })
 
@@ -158,7 +195,7 @@ function profilePanel.build(window, onOpenSettings)
         Name = "Name",
         Text = if player then player.DisplayName else "",
         Size = UDim2.new(1, -paddingX * 2, 0, nameHeight),
-        Position = UDim2.new(0, paddingX, 0, contentMinTop + avatarSize + nameGap),
+        Position = UDim2.new(0, paddingX, 0, nameTop),
         BackgroundTransparency = 1,
         TextSize = 16,
         TextXAlignment = Enum.TextXAlignment.Center,
@@ -172,10 +209,10 @@ function profilePanel.build(window, onOpenSettings)
     window.profileSubtitle = window:Create("TextLabel", {
         Name = "Subtitle",
         Text = "",
-        Size = UDim2.new(1, -paddingX * 2, 0, subHeight),
-        Position = UDim2.new(0, paddingX, 0, contentMinTop + avatarSize + nameGap + nameHeight + subGap),
+        Size = UDim2.new(1, -paddingX * 2, 0, subtitleHeight),
+        Position = UDim2.new(0, paddingX, 0, subtitleTop),
         BackgroundTransparency = 1,
-        TextSize = 14,
+        TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Center,
         TextYAlignment = Enum.TextYAlignment.Center,
         TextWrapped = false,
@@ -184,6 +221,21 @@ function profilePanel.build(window, onOpenSettings)
         TextTransparency = 1,
         Parent = window.profilePanelSurface,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
+
+    window:Create("TextLabel", {
+        Name = "PremiumBadge",
+        Text = "PREMIUM",
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.5, 0, 0, badgeTop),
+        Size = UDim2.fromOffset(84, badgeHeight),
+        BackgroundTransparency = 1,
+        TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        Parent = window.profilePanelSurface,
+    }, { TextColor3 = "AccentColor", FontFace = "Font" })
+
+    -- ===== details stack =====
 
     local function label(name, text, position, size, textSize, color)
         return window:Create("TextLabel", {
@@ -200,12 +252,11 @@ function profilePanel.build(window, onOpenSettings)
         }, { TextColor3 = color or "ContentColor", FontFace = "Font" })
     end
 
-    local function iconLabel(name, iconName, text, position, size, textSize, color)
-        local iconSize = 16
+    local function iconLabel(name, iconName, text, y, height, textSize, color)
         window:Create("ImageLabel", {
             Name = name .. "Icon",
             Image = window:ResolveIcon(iconName),
-            Position = position,
+            Position = UDim2.fromOffset(paddingX, y + 1),
             Size = UDim2.fromOffset(iconSize, iconSize),
             BackgroundTransparency = 1,
             ImageTransparency = 0.15,
@@ -214,8 +265,8 @@ function profilePanel.build(window, onOpenSettings)
         return label(
             name,
             text,
-            UDim2.new(position.X.Scale, position.X.Offset + iconSize + 7, position.Y.Scale, position.Y.Offset - 1),
-            UDim2.new(size.X.Scale, size.X.Offset - iconSize - 7, size.Y.Scale, size.Y.Offset),
+            UDim2.fromOffset(paddingX + indent, y),
+            UDim2.new(1, -paddingX * 2 - indent, 0, height),
             textSize,
             color
         )
@@ -231,43 +282,79 @@ function profilePanel.build(window, onOpenSettings)
         }, { BackgroundColor3 = "ElementStroke" })
     end
 
-    rule(150)
-    iconLabel("DetailsHeading", "info", "ACCOUNT DETAILS", UDim2.fromOffset(paddingX, 163), UDim2.new(1, -paddingX * 2, 0, 18), 11, "ActionColor")
-    iconLabel("UserId", "id-card", "User ID", UDim2.fromOffset(paddingX, 190), UDim2.new(1, -paddingX * 2, 0, 18), 12)
-    local userId = label("UserIdValue", if player then tostring(player.UserId) else "-", UDim2.fromOffset(paddingX, 207), UDim2.new(1, -paddingX * 2 - 48, 0, 20), 14, "TitlingColor")
+    rule(rule1Top)
+    iconLabel("DetailsHeading", "info", "ACCOUNT DETAILS", detailsHeadingTop, 18, 11, "ActionColor")
+
+    iconLabel("UserId", "id-card", "User ID", userIdLabelTop, 18, 12)
+    label(
+        "UserIdValue",
+        if player then tostring(player.UserId) else "-",
+        UDim2.fromOffset(paddingX + indent, userIdValueTop),
+        UDim2.new(1, -paddingX * 2 - indent - 48, 0, 20),
+        14,
+        "TitlingColor"
+    )
     local copy = window:Create("TextButton", {
-        Name = "CopyUserId", Text = "COPY", Position = UDim2.new(1, -paddingX - 44, 0, 208),
-        Size = UDim2.fromOffset(44, 18), BackgroundTransparency = 1, BorderSizePixel = 0,
-        TextSize = 10, Parent = window.profilePanelSurface,
+        Name = "CopyUserId",
+        Text = "COPY",
+        Position = UDim2.new(1, -paddingX - 44, 0, userIdValueTop + 1),
+        Size = UDim2.fromOffset(44, 18),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        TextSize = 10,
+        Parent = window.profilePanelSurface,
     }, { TextColor3 = "ActionColor", FontFace = "Font" })
     window:Connect(copy.Activated, function()
         if setclipboard and player then setclipboard(tostring(player.UserId)) end
     end)
-    iconLabel("JoinDate", "calendar-days", "Join date", UDim2.fromOffset(paddingX, 238), UDim2.new(1, -paddingX * 2, 0, 18), 12)
-    label("JoinDateValue", if player then ("Account age: " .. tostring(player.AccountAge) .. " days") else "-", UDim2.fromOffset(paddingX, 255), UDim2.new(1, -paddingX * 2, 0, 20), 14, "TitlingColor")
-    iconLabel("SocialStats", "users-round", "Friends     -        Followers     -", UDim2.fromOffset(paddingX, 286), UDim2.new(1, -paddingX * 2, 0, 20), 12, "PlaceholderColor")
-    rule(318)
-    iconLabel("GameHeading", "gamepad-2", "CURRENT GAME", UDim2.fromOffset(paddingX, 331), UDim2.new(1, -paddingX * 2, 0, 18), 11, "ActionColor")
+
+    iconLabel("JoinDate", "calendar-days", "Join date", joinLabelTop, 18, 12)
+    label(
+        "JoinDateValue",
+        if player then ("Account age: " .. tostring(player.AccountAge) .. " days") else "-",
+        UDim2.fromOffset(paddingX + indent, joinValueTop),
+        UDim2.new(1, -paddingX * 2 - indent, 0, 20),
+        14,
+        "TitlingColor"
+    )
+
+    iconLabel("Friends", "users-round", "Friends  -", friendsTop, 18, 12, "PlaceholderColor")
+    label("Followers", "Followers  -", UDim2.fromOffset(paddingX + indent, followersTop), UDim2.new(1, -paddingX * 2 - indent, 0, 18), 12, "PlaceholderColor")
+
+    rule(rule2Top)
+    iconLabel("GameHeading", "gamepad-2", "CURRENT GAME", gameHeadingTop, 18, 11, "ActionColor")
+
+    -- ===== current game card =====
+
     local gameCard = window:Create("Frame", {
-        Name = "CurrentGame", Position = UDim2.fromOffset(paddingX, 356), Size = UDim2.new(1, -paddingX * 2, 0, 52),
-        BorderSizePixel = 0, Parent = window.profilePanelSurface,
-    }, { BackgroundColor3 = "ContentColor" })
+        Name = "CurrentGame",
+        Position = UDim2.fromOffset(paddingX, gameCardTop),
+        Size = UDim2.new(1, -paddingX * 2, 0, gameCardHeight),
+        BorderSizePixel = 0,
+        Parent = window.profilePanelSurface,
+    }, { BackgroundColor3 = "CardSurface" })
     window:Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = gameCard })
+    window:Create("UIStroke", {
+        Transparency = 0.5,
+        Parent = gameCard,
+    }, { Color = "ElementStroke" })
+
     local gameThumbnail = window:Create("ImageLabel", {
         Name = "GameThumbnail",
         Image = "",
-        Position = UDim2.fromOffset(paddingX + 8, 362),
+        Position = UDim2.fromOffset(8, 8),
         Size = UDim2.fromOffset(40, 40),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
-        Parent = window.profilePanelSurface,
+        Parent = gameCard,
     })
     window:Create("UICorner", { CornerRadius = UDim.new(0, 7), Parent = gameThumbnail })
     image.assign(gameThumbnail, "Image", `rbxthumb://type=GameIcon&id={game.PlaceId}&w=150&h=150`)
-    label("GameName", game.Name, UDim2.fromOffset(paddingX + 58, 363), UDim2.new(1, -paddingX * 2 - 70, 0, 18), 13, "TitlingColor")
-    label("GameBy", "Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 58, 384), UDim2.new(1, -paddingX * 2 - 70, 0, 16), 10)
 
-    label("PremiumBadge", "PREMIUM", UDim2.new(0.5, -42, 0, contentMinTop + avatarSize + nameGap + nameHeight + subGap + subHeight + 6), UDim2.fromOffset(84, 18), 10, "AccentColor")
+    label("GameName", game.Name, UDim2.fromOffset(paddingX + 56, gameCardTop + 10), UDim2.new(1, -paddingX * 2 - 64, 0, 18), 13, "TitlingColor")
+    label("GameBy", "Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 56, gameCardTop + 30), UDim2.new(1, -paddingX * 2 - 64, 0, 16), 10)
+
+    -- ===== settings gear, pinned to the card's bottom edge =====
 
     window.profileGear = window:Create("TextButton", {
         Name = "OpenSettings",
@@ -349,8 +436,8 @@ function profilePanel.build(window, onOpenSettings)
     end)
 
     -- [[The panel is a sibling of the window frame: mirroring the frame's]]
-    -- [[position and size keeps it following drags, restores and resizes]]
-    -- [[without a per-frame loop.]]
+    -- [[position keeps it following drags, restores and resizes without a]]
+    -- [[per-frame loop.]]
     window:Connect(window.main:GetPropertyChangedSignal("Position"), function()
         profilePanel.layout(window)
     end)
@@ -402,10 +489,12 @@ function profilePanel.build(window, onOpenSettings)
     return window.profilePanel
 end
 
--- [[Place the panel beside the window frame. The frame's position may]]
--- [[carry scale (the centred resting position) or be pure offset after]]
--- [[a drag: the scale passes through untouched, the offset gets the]]
--- [[half-window + gap edge, and the panel mirrors the window's height.]]
+-- [[Place the card beside the window frame, vertically centred on the]]
+-- [[window's centre. The frame's position may carry scale (the centred]]
+-- [[resting position) or be pure offset after a drag: the scale passes]]
+-- [[through untouched, the offset gets the half-window + gap edge. The]]
+-- [[card's height is intrinsic (its stacked content), so the interior]]
+-- [[never needs reflow.]]
 function profilePanel.layout(window)
     local panel = window.profilePanel
     if not panel then
@@ -415,18 +504,17 @@ function profilePanel.layout(window)
     local main = window.main
     local pos = main.Position
     local width = main.Size.X.Offset
-    local height = main.Size.Y.Offset
     local left = (window.settings.profileSide or "right") == "left"
     local edge = width / 2 + profilePanel.gap
 
     panel.AnchorPoint = Vector2.new(if left then 1 else 0, 0)
-    panel.Position = UDim2.new(pos.X.Scale, pos.X.Offset + (if left then -edge else edge), pos.Y.Scale, pos.Y.Offset - height / 2)
-    panel.Size = UDim2.fromOffset(profilePanel.width, height)
-
-    local contentTop = math.max(contentMinTop, (height - contentHeight) / 2)
-    window.profileAvatar.Position = UDim2.new(0.5, 0, 0, contentTop)
-    window.profileName.Position = UDim2.new(0, paddingX, 0, contentTop + avatarSize + nameGap)
-    window.profileSubtitle.Position = UDim2.new(0, paddingX, 0, contentTop + avatarSize + nameGap + nameHeight + subGap)
+    panel.Position = UDim2.new(
+        pos.X.Scale,
+        pos.X.Offset + (if left then -edge else edge),
+        pos.Y.Scale,
+        pos.Y.Offset - profilePanel.height / 2
+    )
+    panel.Size = UDim2.fromOffset(profilePanel.width, profilePanel.height)
 end
 
 function profilePanel.setShown(window, shown, tweenInfo)
@@ -519,7 +607,7 @@ function profilePanel.refreshName(window)
         return
     end
     local fullName = state.localPlayer.Name
-    name.Text = if window.settings.showFullUsername then fullName else sidebar.maskUsername(fullName)
+    name.Text = if window.settings.showFullUsername then fullName else sidebar.mask_username(fullName)
 end
 
 return profilePanel

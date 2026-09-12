@@ -2399,34 +2399,59 @@ local sidebar = require(script.Parent.sidebar)
 local profilePanel = {}
 
 -- [[The profile panel lives OUTSIDE the window frame, beside it: a]]
--- [[96px-wide companion card that spans the window's full height. The]]
--- [[window and the panel are centred on screen as a single unit, so]]
--- [[the window sits half a panel (width + gap) away from the screen]]
--- [[centre, on the opposite side of the panel.]]
+-- [[companion card with its own content-driven height, vertically]]
+-- [[centred against the window. The window and the panel are centred]]
+-- [[on screen as a single unit, so the window sits half a panel]]
+-- [[(width + gap) away from the screen centre, on the opposite side]]
+-- [[of the panel.]]
 -- A full profile card, intentionally wide enough for the Roblox-style details
--- layout. Every colour below is a theme binding (rather than a hard-coded
--- colour), so ChangeTheme refreshes the card along with the rest of the UI.
-profilePanel.width = 304
+-- layout. Content stacks top-to-bottom in one flow — avatar, name, username,
+-- premium badge, account details, current game, settings gear — so nothing
+-- ever overlaps no matter how tall the window is. Every colour below is a
+-- theme binding (rather than a hard-coded colour), so ChangeTheme refreshes
+-- the card along with the rest of the UI.
+profilePanel.width = 280
 profilePanel.gap = 12
 
-local avatarSize = 82
-local nameGap = 10
-local nameHeight = 24
-local subGap = 3
-local subHeight = 18
-local paddingX = 18
-local contentMinTop = 18
+local avatarSize = 72
+local paddingX = 16
+local topPad = 16
+local iconSize = 16
+local indent = iconSize + 7 -- value text aligns under the label text, past its icon
+
+-- [[Vertical flow (y offsets from the panel top). Kept as explicit steps so]]
+-- [[the stack reads like the design mock, top to bottom.]]
+local avatarTop = topPad -- 16..88
+local nameTop = avatarTop + avatarSize + 8 -- 96..118
+local nameHeight = 22
+local subtitleTop = nameTop + nameHeight + 3 -- 121..137
+local subtitleHeight = 16
+local badgeTop = subtitleTop + subtitleHeight + 6 -- 143..159
+local badgeHeight = 16
+local rule1Top = badgeTop + badgeHeight + 12 -- 171
+local detailsHeadingTop = rule1Top + 12 -- 183..201
+local userIdLabelTop = detailsHeadingTop + 26 -- 209..227
+local userIdValueTop = userIdLabelTop + 19 -- 228..248
+local joinLabelTop = userIdValueTop + 28 -- 256..274
+local joinValueTop = joinLabelTop + 19 -- 275..295
+local friendsTop = joinValueTop + 28 -- 303..321
+local followersTop = friendsTop + 18 -- 321..339
+local rule2Top = followersTop + 30 -- 351
+local gameHeadingTop = rule2Top + 12 -- 363..381
+local gameCardTop = gameHeadingTop + 26 -- 389..445
+local gameCardHeight = 56
 local gearSize = 32
 local gearIconSize = 20
 local gearBottomMargin = 12
 
-local contentHeight = avatarSize + nameGap + nameHeight + subGap + subHeight
+-- [[The card hugs its content: last row + breathing room + the gear zone.]]
+profilePanel.height = gameCardTop + gameCardHeight + 11 + gearSize + gearBottomMargin -- 500
 
 local nameTransparency = 0
 local subtitleTransparency = 0.7
 local avatarBgTransparency = 0.95
-local idleStrokeTransparency = 0.95
-local hoverStrokeTransparency = 0.65
+local idleStrokeTransparency = 0.6
+local hoverStrokeTransparency = 0.25
 local pillHoverTransparency = 0.92
 
 local settleTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
@@ -2442,11 +2467,12 @@ local avatarGenerations = setmetatable({}, { __mode = "k" })
 
 local avatarReady = setmetatable({}, { __mode = "k" })
 
--- [[The panel needs horizontal room: window + gap + panel must fit on the]]
--- [[screen (the pair is centred, so both edges keep a small margin). This]]
--- [[is a space check, not a device check: a portrait phone has no room and]]
--- [[hides the panel, while a landscape phone (and every desktop) usually]]
--- [[has room and shows it.]]
+-- [[The panel needs room on both axes: window + gap + panel must fit]]
+-- [[horizontally (the pair is centred, so both edges keep a small]]
+-- [[margin), and the card's own height must fit vertically. This is a]]
+-- [[space check, not a device check: a portrait phone has no room and]]
+-- [[hides the panel, while a landscape phone (and every desktop)]
+-- [[usually has room and shows it.]]
 local edgeMargin = 8
 
 local function hasRoom(window)
@@ -2455,7 +2481,10 @@ local function hasRoom(window)
     if not viewport then
         return true
     end
-    return viewport.X >= window.size.X.Offset + profilePanel.gap + profilePanel.width + edgeMargin * 2
+    if viewport.X < window.size.X.Offset + profilePanel.gap + profilePanel.width + edgeMargin * 2 then
+        return false
+    end
+    return viewport.Y >= profilePanel.height + edgeMargin * 2
 end
 
 -- [[The panel is "enabled" when its content should exist at all: the user]]
@@ -2488,7 +2517,7 @@ function profilePanel.build(window, onOpenSettings)
         Name = "ProfilePanel",
         AnchorPoint = Vector2.new(0, 0),
         Position = UDim2.fromOffset(0, 0),
-        Size = UDim2.fromOffset(profilePanel.width, window.size.Y.Offset),
+        Size = UDim2.fromOffset(profilePanel.width, profilePanel.height),
         BackgroundTransparency = 1,
         ZIndex = 1,
         Visible = false,
@@ -2496,11 +2525,13 @@ function profilePanel.build(window, onOpenSettings)
         Parent = window.screenGui,
     })
 
+    -- [[The card surface: a visible themed plate (the gradient supplies]]
+    -- [[the colour; transparency stays 0 so the card actually shows).]]
     window.profilePanelSurface = window:Create("Frame", {
         Name = "Surface",
         Size = UDim2.fromScale(1, 1),
         BorderSizePixel = 0,
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 0,
         Parent = window.profilePanel,
     })
 
@@ -2521,10 +2552,12 @@ function profilePanel.build(window, onOpenSettings)
 
     window:CreateGlow(window.profilePanelSurface, "ShadowColor", 20, 1)
 
+    -- ===== header: avatar + presence dot + name + username + badge =====
+
     window.profileAvatar = window:Create("ImageLabel", {
         Name = "Avatar",
         AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 0, contentMinTop),
+        Position = UDim2.new(0.5, 0, 0, avatarTop),
         Size = UDim2.fromOffset(avatarSize, avatarSize),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
@@ -2536,10 +2569,14 @@ function profilePanel.build(window, onOpenSettings)
         CornerRadius = UDim.new(1, 0),
         Parent = window.profileAvatar,
     })
+
     local onlineDot = window:Create("Frame", {
-        Name = "Online", AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, avatarSize / 2 - 4, 0, contentMinTop + avatarSize - 4),
-        Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0, Parent = window.profilePanelSurface,
+        Name = "Online",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, avatarSize / 2 + 12, 0, avatarTop + avatarSize / 2),
+        Size = UDim2.fromOffset(12, 12),
+        BorderSizePixel = 0,
+        Parent = window.profilePanelSurface,
     }, { BackgroundColor3 = "Success" })
     window:Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = onlineDot })
 
@@ -2547,7 +2584,7 @@ function profilePanel.build(window, onOpenSettings)
         Name = "Name",
         Text = if player then player.DisplayName else "",
         Size = UDim2.new(1, -paddingX * 2, 0, nameHeight),
-        Position = UDim2.new(0, paddingX, 0, contentMinTop + avatarSize + nameGap),
+        Position = UDim2.new(0, paddingX, 0, nameTop),
         BackgroundTransparency = 1,
         TextSize = 16,
         TextXAlignment = Enum.TextXAlignment.Center,
@@ -2561,10 +2598,10 @@ function profilePanel.build(window, onOpenSettings)
     window.profileSubtitle = window:Create("TextLabel", {
         Name = "Subtitle",
         Text = "",
-        Size = UDim2.new(1, -paddingX * 2, 0, subHeight),
-        Position = UDim2.new(0, paddingX, 0, contentMinTop + avatarSize + nameGap + nameHeight + subGap),
+        Size = UDim2.new(1, -paddingX * 2, 0, subtitleHeight),
+        Position = UDim2.new(0, paddingX, 0, subtitleTop),
         BackgroundTransparency = 1,
-        TextSize = 14,
+        TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Center,
         TextYAlignment = Enum.TextYAlignment.Center,
         TextWrapped = false,
@@ -2573,6 +2610,21 @@ function profilePanel.build(window, onOpenSettings)
         TextTransparency = 1,
         Parent = window.profilePanelSurface,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
+
+    window:Create("TextLabel", {
+        Name = "PremiumBadge",
+        Text = "PREMIUM",
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.5, 0, 0, badgeTop),
+        Size = UDim2.fromOffset(84, badgeHeight),
+        BackgroundTransparency = 1,
+        TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        Parent = window.profilePanelSurface,
+    }, { TextColor3 = "AccentColor", FontFace = "Font" })
+
+    -- ===== details stack =====
 
     local function label(name, text, position, size, textSize, color)
         return window:Create("TextLabel", {
@@ -2589,6 +2641,26 @@ function profilePanel.build(window, onOpenSettings)
         }, { TextColor3 = color or "ContentColor", FontFace = "Font" })
     end
 
+    local function iconLabel(name, iconName, text, y, height, textSize, color)
+        window:Create("ImageLabel", {
+            Name = name .. "Icon",
+            Image = window:ResolveIcon(iconName),
+            Position = UDim2.fromOffset(paddingX, y + 1),
+            Size = UDim2.fromOffset(iconSize, iconSize),
+            BackgroundTransparency = 1,
+            ImageTransparency = 0.15,
+            Parent = window.profilePanelSurface,
+        }, { ImageColor3 = color or "ContentColor" })
+        return label(
+            name,
+            text,
+            UDim2.fromOffset(paddingX + indent, y),
+            UDim2.new(1, -paddingX * 2 - indent, 0, height),
+            textSize,
+            color
+        )
+    end
+
     local function rule(y)
         window:Create("Frame", {
             Name = "Divider",
@@ -2599,33 +2671,79 @@ function profilePanel.build(window, onOpenSettings)
         }, { BackgroundColor3 = "ElementStroke" })
     end
 
-    rule(176)
-    label("DetailsHeading", "◈  ACCOUNT DETAILS", UDim2.fromOffset(paddingX, 190), UDim2.new(1, -paddingX * 2, 0, 20), 12, "ActionColor")
-    label("UserId", "▣  User ID", UDim2.fromOffset(paddingX, 218), UDim2.new(1, -paddingX * 2, 0, 18), 13)
-    local userId = label("UserIdValue", if player then tostring(player.UserId) else "—", UDim2.fromOffset(paddingX + 22, 237), UDim2.new(1, -paddingX * 2 - 48, 0, 20), 14, "TitlingColor")
+    rule(rule1Top)
+    iconLabel("DetailsHeading", "info", "ACCOUNT DETAILS", detailsHeadingTop, 18, 11, "ActionColor")
+
+    iconLabel("UserId", "id-card", "User ID", userIdLabelTop, 18, 12)
+    label(
+        "UserIdValue",
+        if player then tostring(player.UserId) else "-",
+        UDim2.fromOffset(paddingX + indent, userIdValueTop),
+        UDim2.new(1, -paddingX * 2 - indent - 48, 0, 20),
+        14,
+        "TitlingColor"
+    )
     local copy = window:Create("TextButton", {
-        Name = "CopyUserId", Text = "COPY", Position = UDim2.new(1, -paddingX - 44, 0, 238),
-        Size = UDim2.fromOffset(44, 18), BackgroundTransparency = 1, BorderSizePixel = 0,
-        TextSize = 10, Parent = window.profilePanelSurface,
+        Name = "CopyUserId",
+        Text = "COPY",
+        Position = UDim2.new(1, -paddingX - 44, 0, userIdValueTop + 1),
+        Size = UDim2.fromOffset(44, 18),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        TextSize = 10,
+        Parent = window.profilePanelSurface,
     }, { TextColor3 = "ActionColor", FontFace = "Font" })
     window:Connect(copy.Activated, function()
         if setclipboard and player then setclipboard(tostring(player.UserId)) end
     end)
-    label("JoinDate", "◷  Join date", UDim2.fromOffset(paddingX, 267), UDim2.new(1, -paddingX * 2, 0, 18), 13)
-    label("JoinDateValue", if player then ("Account age: " .. tostring(player.AccountAge) .. " days") else "—", UDim2.fromOffset(paddingX + 22, 286), UDim2.new(1, -paddingX * 2, 0, 20), 14, "TitlingColor")
-    label("SocialStats", "♟  Friends     —        Followers     —", UDim2.fromOffset(paddingX, 320), UDim2.new(1, -paddingX * 2, 0, 22), 13, "PlaceholderColor")
-    rule(354)
-    label("GameHeading", "▣  CURRENT GAME", UDim2.fromOffset(paddingX, 368), UDim2.new(1, -paddingX * 2, 0, 20), 12, "ActionColor")
-    local gameCard = window:Create("Frame", {
-        Name = "CurrentGame", Position = UDim2.fromOffset(paddingX, 396), Size = UDim2.new(1, -paddingX * 2, 0, 82),
-        BorderSizePixel = 0, Parent = window.profilePanelSurface,
-    }, { BackgroundColor3 = "ContentColor" })
-    window:Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = gameCard })
-    label("GameName", game.Name, UDim2.fromOffset(paddingX + 12, 407), UDim2.new(1, -paddingX * 2 - 24, 0, 20), 14, "TitlingColor")
-    label("GameBy", "by Astra player  •  Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 12, 430), UDim2.new(1, -paddingX * 2 - 24, 0, 18), 11)
-    label("PlayingTime", "◷  Playing now", UDim2.fromOffset(paddingX + 12, 452), UDim2.new(1, -paddingX * 2 - 24, 0, 18), 11, "ActionColor")
 
-    label("PremiumBadge", "PREMIUM", UDim2.new(0.5, -42, 0, contentMinTop + avatarSize + nameGap + nameHeight + subGap + subHeight + 6), UDim2.fromOffset(84, 18), 10, "AccentColor")
+    iconLabel("JoinDate", "calendar-days", "Join date", joinLabelTop, 18, 12)
+    label(
+        "JoinDateValue",
+        if player then ("Account age: " .. tostring(player.AccountAge) .. " days") else "-",
+        UDim2.fromOffset(paddingX + indent, joinValueTop),
+        UDim2.new(1, -paddingX * 2 - indent, 0, 20),
+        14,
+        "TitlingColor"
+    )
+
+    iconLabel("Friends", "users-round", "Friends  -", friendsTop, 18, 12, "PlaceholderColor")
+    label("Followers", "Followers  -", UDim2.fromOffset(paddingX + indent, followersTop), UDim2.new(1, -paddingX * 2 - indent, 0, 18), 12, "PlaceholderColor")
+
+    rule(rule2Top)
+    iconLabel("GameHeading", "gamepad-2", "CURRENT GAME", gameHeadingTop, 18, 11, "ActionColor")
+
+    -- ===== current game card =====
+
+    local gameCard = window:Create("Frame", {
+        Name = "CurrentGame",
+        Position = UDim2.fromOffset(paddingX, gameCardTop),
+        Size = UDim2.new(1, -paddingX * 2, 0, gameCardHeight),
+        BorderSizePixel = 0,
+        Parent = window.profilePanelSurface,
+    }, { BackgroundColor3 = "CardSurface" })
+    window:Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = gameCard })
+    window:Create("UIStroke", {
+        Transparency = 0.5,
+        Parent = gameCard,
+    }, { Color = "ElementStroke" })
+
+    local gameThumbnail = window:Create("ImageLabel", {
+        Name = "GameThumbnail",
+        Image = "",
+        Position = UDim2.fromOffset(8, 8),
+        Size = UDim2.fromOffset(40, 40),
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        Parent = gameCard,
+    })
+    window:Create("UICorner", { CornerRadius = UDim.new(0, 7), Parent = gameThumbnail })
+    image.assign(gameThumbnail, "Image", `rbxthumb://type=GameIcon&id={game.PlaceId}&w=150&h=150`)
+
+    label("GameName", game.Name, UDim2.fromOffset(paddingX + 56, gameCardTop + 10), UDim2.new(1, -paddingX * 2 - 64, 0, 18), 13, "TitlingColor")
+    label("GameBy", "Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 56, gameCardTop + 30), UDim2.new(1, -paddingX * 2 - 64, 0, 16), 10)
+
+    -- ===== settings gear, pinned to the card's bottom edge =====
 
     window.profileGear = window:Create("TextButton", {
         Name = "OpenSettings",
@@ -2707,8 +2825,8 @@ function profilePanel.build(window, onOpenSettings)
     end)
 
     -- [[The panel is a sibling of the window frame: mirroring the frame's]]
-    -- [[position and size keeps it following drags, restores and resizes]]
-    -- [[without a per-frame loop.]]
+    -- [[position keeps it following drags, restores and resizes without a]]
+    -- [[per-frame loop.]]
     window:Connect(window.main:GetPropertyChangedSignal("Position"), function()
         profilePanel.layout(window)
     end)
@@ -2760,10 +2878,12 @@ function profilePanel.build(window, onOpenSettings)
     return window.profilePanel
 end
 
--- [[Place the panel beside the window frame. The frame's position may]]
--- [[carry scale (the centred resting position) or be pure offset after]]
--- [[a drag: the scale passes through untouched, the offset gets the]]
--- [[half-window + gap edge, and the panel mirrors the window's height.]]
+-- [[Place the card beside the window frame, vertically centred on the]]
+-- [[window's centre. The frame's position may carry scale (the centred]]
+-- [[resting position) or be pure offset after a drag: the scale passes]]
+-- [[through untouched, the offset gets the half-window + gap edge. The]]
+-- [[card's height is intrinsic (its stacked content), so the interior]]
+-- [[never needs reflow.]]
 function profilePanel.layout(window)
     local panel = window.profilePanel
     if not panel then
@@ -2773,18 +2893,17 @@ function profilePanel.layout(window)
     local main = window.main
     local pos = main.Position
     local width = main.Size.X.Offset
-    local height = main.Size.Y.Offset
     local left = (window.settings.profileSide or "right") == "left"
     local edge = width / 2 + profilePanel.gap
 
     panel.AnchorPoint = Vector2.new(if left then 1 else 0, 0)
-    panel.Position = UDim2.new(pos.X.Scale, pos.X.Offset + (if left then -edge else edge), pos.Y.Scale, pos.Y.Offset - height / 2)
-    panel.Size = UDim2.fromOffset(profilePanel.width, height)
-
-    local contentTop = math.max(contentMinTop, (height - contentHeight) / 2)
-    window.profileAvatar.Position = UDim2.new(0.5, 0, 0, contentTop)
-    window.profileName.Position = UDim2.new(0, paddingX, 0, contentTop + avatarSize + nameGap)
-    window.profileSubtitle.Position = UDim2.new(0, paddingX, 0, contentTop + avatarSize + nameGap + nameHeight + subGap)
+    panel.Position = UDim2.new(
+        pos.X.Scale,
+        pos.X.Offset + (if left then -edge else edge),
+        pos.Y.Scale,
+        pos.Y.Offset - profilePanel.height / 2
+    )
+    panel.Size = UDim2.fromOffset(profilePanel.width, profilePanel.height)
 end
 
 function profilePanel.setShown(window, shown, tweenInfo)
@@ -2877,7 +2996,7 @@ function profilePanel.refreshName(window)
         return
     end
     local fullName = state.localPlayer.Name
-    name.Text = if window.settings.showFullUsername then fullName else sidebar.maskUsername(fullName)
+    name.Text = if window.settings.showFullUsername then fullName else sidebar.mask_username(fullName)
 end
 
 return profilePanel
@@ -30139,94 +30258,94 @@ local LineOffsets = {
     [12] = 1365,
     [13] = 1672,
     [14] = 2390,
-    [15] = 2887,
-    [16] = 3222,
-    [17] = 3283,
-    [18] = 3653,
-    [19] = 4030,
-    [21] = 6971,
-    [22] = 7238,
-    [23] = 7682,
-    [24] = 8813,
-    [25] = 9147,
-    [26] = 9208,
-    [27] = 9353,
-    [28] = 10673,
-    [29] = 10875,
-    [30] = 11136,
-    [31] = 11598,
-    [32] = 12048,
-    [33] = 12135,
-    [34] = 12700,
-    [35] = 13318,
-    [36] = 13700,
-    [37] = 13830,
-    [38] = 13994,
-    [39] = 14148,
-    [41] = 14659,
-    [42] = 14682,
-    [43] = 14699,
-    [44] = 14729,
-    [45] = 14845,
-    [46] = 14859,
-    [47] = 14908,
-    [48] = 14634,
-    [49] = 15015,
-    [50] = 15318,
-    [51] = 15349,
-    [52] = 15004,
-    [53] = 15392,
-    [54] = 15412,
-    [55] = 15444,
-    [56] = 15374,
-    [57] = 15551,
-    [58] = 15610,
-    [59] = 15670,
-    [61] = 15729,
-    [62] = 15894,
-    [63] = 15714,
-    [64] = 16154,
-    [65] = 16449,
-    [66] = 17105,
-    [67] = 18889,
-    [68] = 20030,
-    [69] = 21550,
-    [70] = 15958,
-    [71] = 26794,
-    [72] = 26856,
-    [73] = 26918,
-    [74] = 26993,
-    [75] = 27075,
-    [76] = 27137,
-    [77] = 27212,
-    [78] = 27287,
-    [79] = 27362,
-    [80] = 27437,
-    [81] = 26688,
-    [82] = 27499,
-    [83] = 27597,
-    [84] = 27775,
-    [85] = 27826,
-    [86] = 27856,
-    [87] = 28107,
-    [88] = 28156,
-    [89] = 28609,
-    [90] = 28627,
-    [91] = 28773,
-    [92] = 28872,
-    [93] = 28894,
-    [94] = 28944,
-    [95] = 28980,
-    [96] = 28998,
-    [97] = 29311,
-    [98] = 29327,
-    [99] = 29378,
-    [100] = 29397,
-    [101] = 29639,
-    [102] = 29683,
-    [103] = 29883,
-    [104] = 29911,
-    [105] = 29922,
+    [15] = 3006,
+    [16] = 3341,
+    [17] = 3402,
+    [18] = 3772,
+    [19] = 4149,
+    [21] = 7090,
+    [22] = 7357,
+    [23] = 7801,
+    [24] = 8932,
+    [25] = 9266,
+    [26] = 9327,
+    [27] = 9472,
+    [28] = 10792,
+    [29] = 10994,
+    [30] = 11255,
+    [31] = 11717,
+    [32] = 12167,
+    [33] = 12254,
+    [34] = 12819,
+    [35] = 13437,
+    [36] = 13819,
+    [37] = 13949,
+    [38] = 14113,
+    [39] = 14267,
+    [41] = 14778,
+    [42] = 14801,
+    [43] = 14818,
+    [44] = 14848,
+    [45] = 14964,
+    [46] = 14978,
+    [47] = 15027,
+    [48] = 14753,
+    [49] = 15134,
+    [50] = 15437,
+    [51] = 15468,
+    [52] = 15123,
+    [53] = 15511,
+    [54] = 15531,
+    [55] = 15563,
+    [56] = 15493,
+    [57] = 15670,
+    [58] = 15729,
+    [59] = 15789,
+    [61] = 15848,
+    [62] = 16013,
+    [63] = 15833,
+    [64] = 16273,
+    [65] = 16568,
+    [66] = 17224,
+    [67] = 19008,
+    [68] = 20149,
+    [69] = 21669,
+    [70] = 16077,
+    [71] = 26913,
+    [72] = 26975,
+    [73] = 27037,
+    [74] = 27112,
+    [75] = 27194,
+    [76] = 27256,
+    [77] = 27331,
+    [78] = 27406,
+    [79] = 27481,
+    [80] = 27556,
+    [81] = 26807,
+    [82] = 27618,
+    [83] = 27716,
+    [84] = 27894,
+    [85] = 27945,
+    [86] = 27975,
+    [87] = 28226,
+    [88] = 28275,
+    [89] = 28728,
+    [90] = 28746,
+    [91] = 28892,
+    [92] = 28991,
+    [93] = 29013,
+    [94] = 29063,
+    [95] = 29099,
+    [96] = 29117,
+    [97] = 29430,
+    [98] = 29446,
+    [99] = 29497,
+    [100] = 29516,
+    [101] = 29758,
+    [102] = 29802,
+    [103] = 30002,
+    [104] = 30030,
+    [105] = 30041,
 }
 
 -- [[Misc AOT variable imports]]
