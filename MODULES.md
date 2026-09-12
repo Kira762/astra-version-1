@@ -130,26 +130,33 @@ Tab-rail reflow (the profile system moved to `components/profilePanel.luau`):
 - `applyRailRows(window, width, layout)` — rows collapse only at the icon-only width (the responsive rail is often narrower than the old 219px fixed rail); ends with `tabSelector.relayoutSidebarRows`.
 
 ### `components/profilePanel.luau`
-The profile panel — a 96px companion card floating beside the window frame
-(a sibling in the same ScreenGui), replacing the in-window profile:
-- `build(window, onOpenSettings)` — surface with the window's treatment
-  (WindowColor gradient, `CornerRoundness` corners, SurfaceStroke stroke,
-  ShadowColor glow); 48px circular avatar (ContentColor plate fallback,
-  `images.image.avatar` with a generation guard); centered 16px name /
-  14px subtitle (truncated at end); bottom-pinned settings gear sharing
-  `Window:_toggleSettingsMode` (hover pill + stroke hover, pcalled).
-  Mirrors `main`'s Position/Size through property-change signals, so it
-  follows drags/restores/resizes without a per-frame loop.
-- `layout(window)` — places the panel on the selected side
+The profile panel — a 280x500 companion card floating beside the window
+frame (a sibling in the same ScreenGui), replacing the in-window profile.
+Content stacks top-to-bottom in one flow, matching the design mock: 72px
+avatar with presence dot, centred display name / @username subtitle,
+PREMIUM badge, an ACCOUNT DETAILS stack (User ID with a COPY action on the
+value row, Join date with account age, Friends / Followers rows), a
+CURRENT GAME card (dark `CardSurface` plate with the game icon thumbnail,
+game name and Place ID), and a bottom-pinned settings gear:
+- `build(window, onOpenSettings)` — visible themed surface (WindowColor
+  gradient, `CornerRoundness` corners, SurfaceStroke stroke, ShadowColor
+  glow); avatar with a generation guard via `images.image.avatar`;
+  centred name / subtitle (truncated at end); bottom-pinned settings gear
+  sharing `Window:_toggleSettingsMode` (hover pill + stroke hover,
+  pcalled). Mirrors `main`'s Position through property-change signals, so
+  it follows drags/restores/resizes without a per-frame loop.
+- `layout(window)` — places the fixed-size card on the selected side
   (`settings.profileSide`, default `"right"`) flush with the window edge
-  (8px gap), spanning the full window height, content vertically centred.
+  (12px gap), vertically centred on the window's centre; the interior is
+  static, so it never needs reflow.
 - `setShown(window, shown, info)` — effective = requested AND enabled AND
   window visible (not hidden/minimised); fades avatar/name/subtitle/gear/
   stroke; idempotent (skips instances already at target).
 - `isEnabled` / `shiftFor` — content-enabled check (`showProfile` on,
   player known, and the screen has horizontal room for window + gap +
-  panel — a space check, so landscape phones count) and the off-centre
-  shift `((96 + 8) / 2 = 52px)`, 0 while the panel is off.
+  panel plus vertical room for the card's height — a space check, so
+  landscape phones count) and the off-centre shift
+  `((280 + 12) / 2 = 146px)`, 0 while the panel is off.
 - `setEnabled`, `setSide` — settings drivers (both recenter the window).
 - `setSubtitle` (from `Window:SetProfile`), `refreshName` (masked vs
   `showFullUsername`).
