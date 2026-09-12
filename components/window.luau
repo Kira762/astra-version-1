@@ -11,7 +11,8 @@ local windowSizing = require(utilities.windowSizing)
 local layouts = require(utilities.layouts)
 local chrome = require(script.Parent.chrome)
 local search = require(script.Parent.search)
-local sidebar = require(script.Parent.sidebar)
+local tabSelector = require(script.Parent.tabSelector)
+local profilePanel = require(script.Parent.profilePanel)
 
 local state = require(utilities.Parent.core.state)
 
@@ -197,6 +198,7 @@ function Window.new(props)
         dragMinimisedBar = false,
         showProfile = true,
         showFullUsername = false,
+        profileSide = "right",
         antiWindowDuplicate = true,
         layoutMode = layout.mode,
         activeSubTab = 1,
@@ -439,7 +441,7 @@ function Window.new(props)
 
             local initialLayout = layouts.implementation(layoutKey(self.layout))
     initialLayout.Build(self, self.layout)
-    initialLayout.ApplyWidth(self, layouts.railWidthFor(self.layout, self.size.X.Offset))
+    initialLayout.ApplyWidth(self, self:_railWidth())
 
         self.actionContainer = self:Create("Frame", {
 
@@ -512,24 +514,7 @@ function Window.new(props)
         linkedTab = self.rfSettings,
 
         callback = function()
-            if self._settingsMode then
-                local previousTab = self._previousTab
-                self._previousTab = nil
-                if previousTab and previousTab.window == self and previousTab.tabPage and not previousTab._isSettingsTab then
-                    previousTab:Select()
-                    return
-                end
-                for _, tab in self.tabs do
-                    if not tab._isSettingsTab and tab.window == self and tab.tabPage then
-                        tab:Select()
-                        return
-                    end
-                end
-                return
-            end
-
-            self._previousTab = self.selectedTab
-            self.rfSettings:Select()
+            self:_toggleSettingsMode()
         end,
     })
 
@@ -551,13 +536,9 @@ function Window.new(props)
     then
         self:_setLayoutMode(self.settings.layoutMode)
     end
-    if self.layout.mode == "sidebar" then
-        sidebar.reflowProfile(self)
-        sidebar.setSubtitle(self, self.profileText)
-    end
 
     task.defer(function()
-        if self.unloaded or state.localPlayer or not self.profile then
+        if self.unloaded or state.localPlayer or not self.profilePanel then
             return
         end
         local deadline = os.clock() + 2
@@ -569,16 +550,31 @@ function Window.new(props)
             end
             if state.localPlayer or os.clock() > deadline then
                 connection:Disconnect()
-                if state.localPlayer and self.profile then
-                    sidebar.refreshProfileName(self)
-                    sidebar.reflowProfile(self)
-                    sidebar.setProfileShown(self, true, sidebar.settleInfo)
+                if state.localPlayer and self.profilePanel then
+                    profilePanel.refreshName(self)
+                    profilePanel.setShown(self, true, profilePanel.settleInfo)
+                    -- [[The player may have arrived after construction, when]]
+                    -- [[the panel was still disabled and the window was not]]
+                    -- [[shifted. If the window is still anchored at the]]
+                    -- [[screen centre (the user has not dragged it), centre]]
+                    -- [[the window + panel pair now.]]
+                    if self.main.Position.X.Scale == 0.5 and self.main.Position.Y.Scale == 0.5 then
+                        self:_recenterForProfile(true)
+                    end
                 end
             end
         end)
         self:Connect(connection)
     end)
     haptic.setContainer(self.screenGui)     haptic.setEnabled(self.settings.haptics)     chrome.buildCollapsedFace(self)
+
+    profilePanel.build(self, function()
+        self:_toggleSettingsMode()
+    end)
+    profilePanel.setSubtitle(self, self.profileText)
+    if profilePanel.isEnabled(self) then
+        self.main.Position = self:_profileCenterPosition()
+    end
     self:_bindKeybind()
     self:_bindMouseOverride()
     self:_bindTopbarDrag()
@@ -587,6 +583,11 @@ function Window.new(props)
     self:_updateWindowTitle()
 
     self:_syncLiveAnimation()
+
+    -- [[Construction is complete: settings tab content may now be built]]
+    -- [[lazily on first open (it is skipped while the window is still]]
+    -- [[being constructed, e.g. by the first-tab auto-select).]]
+    self._constructed = true
 
     return self
 end
@@ -654,6 +655,8 @@ function Window:ChangeTheme(themeInput)
     end
 
     self:_syncLiveAnimation()
+    -- [[A theme can change the row title font, hence the rail width.]]
+    self:_applyContentRailWidth()
 end
 
 function Window:_refreshElementThemes()
@@ -922,6 +925,9 @@ function Window:Hide()
         return
     end
 
+    -- [[Cancel the one-tick-late auto-show, if it has not run yet.]]
+    self._autoShowCancelled = true
+
             if self._searching then
         search.close(self, { showTabs = false, jumpTo = self.selectedTab and self.selectedTab.tabPage })
     end
@@ -1166,6 +1172,47 @@ function Window:_clampToScreen()
     self.main.Position = self:_clampedPosition(self.main.Position)
 end
 
+-- [[The window's canonical resting position. With the profile panel]]
+-- [[enabled, the window + gap + panel are treated as one unit and that]]
+-- [[unit is centred: the window itself sits half a panel away from the]]
+-- [[screen centre, on the opposite side of the panel, so neither side of]]
+-- [[the pair looks cramped.]]
+function Window:_profileCenterPosition(): UDim2
+    local shift = profilePanel.shiftFor(self)
+    if shift <= 0 then
+        return UDim2.new(0.5, 0, 0.5, 0)
+    end
+    local left = (self.settings.profileSide or "right") == "left"
+    return UDim2.new(0.5, if left then shift else -shift, 0.5, 0)
+end
+
+function Window:_recenterForProfile(animate)
+    local target = self:_profileCenterPosition()
+    if self.hidden or self.minimised then
+        -- [[Nothing is on screen to move; park the remembered position so]]
+        -- [[the next restore lands centred for the current panel state.]]
+        self._restorePosition = target
+        return
+    end
+    if self.main.Position == target then
+        return
+    end
+    if animate and not self.animating then
+        local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+        state.tweenService:Create(self.main, tweenInfo, { Position = target }):Play()
+        state.tweenService
+            :Create(
+                self.drag.drag,
+                tweenInfo,
+                { Position = UDim2.new(target.X.Scale, target.X.Offset, target.Y.Scale, target.Y.Offset + self.size.Y.Offset / 2 + 15) }
+            )
+            :Play()
+    else
+        self.main.Position = target
+        self:_syncDragBar()
+    end
+end
+
 function Window:_applyWindowSize()
     if self.unloaded then
         return
@@ -1188,12 +1235,48 @@ function Window:_applyWindowSize()
     self.main.Size = newSize
     self:_clampToScreen()
     self:_syncDragBar()
+    -- [[A viewport change (rotation, inset, keyboard) can turn the profile]]
+    -- [[panel on or off: there may suddenly be room for it, or none.]]
+    -- [[Re-evaluate its visibility alongside the resize.]]
+    profilePanel.setShown(self, true, nil)
+    if self.main.Position.X.Scale == 0.5 and self.main.Position.Y.Scale == 0.5 then
+        -- [[Still anchored at the screen centre (the user has not dragged]]
+        -- [[it): re-apply the resting centre for the new panel state.]]
+        self:_recenterForProfile(false)
+    end
+end
+
+-- [[Effective rail width. Non-sidebar and collapsed rails keep the existing]]
+-- [[fixed behavior; the expanded responsive rail instead hugs the widest]]
+-- [[visible tab row (railContentWidth), capped by the window's available]]
+-- [[space so the elements area always keeps at least half the window.]]
+function Window:_railWidth()
+    local base = layouts.railWidthFor(self.layout, self.size.X.Offset)
+    if self.layout.mode ~= "sidebar" or self.layout.forceCollapsed then
+        return base
+    end
+    if base < (self.layout.railWidth :: number) then
+        return base
+    end
+    local content = tabSelector.railContentWidth(self, self.layout)
+    if content <= 0 then
+        return base
+    end
+    local cap = math.floor(self.size.X.Offset * 0.5)
+    return math.min(content, cap)
+end
+
+function Window:_applyContentRailWidth()
+    if self.layout.mode ~= "sidebar" or self.layout.forceCollapsed then
+        return
+    end
+    local implementation = layouts.implementation(layoutKey(self.layout))
+    implementation.ApplyWidth(self, self:_railWidth())
 end
 
 function Window:_applyRailWidth()
-    local railWidth = layouts.railWidthFor(self.layout, self.size.X.Offset)
     local implementation = layouts.implementation(layoutKey(self.layout))
-    implementation.ApplyWidth(self, railWidth)
+    implementation.ApplyWidth(self, self:_railWidth())
 
     if self._settingsLayoutActive or self.selectedTab == self.rfSettings then
         self:_applySettingsLayout(true)
@@ -1418,12 +1501,20 @@ function Window:_buildSettingsUI()
     local behavior = self:CreateTab({ name = "Behavior", icon = "shield-check", customOrder = 1003, forgetState = true, isSettingsTab = true })
     local performance = self:CreateTab({ name = "Performance", icon = "gauge", customOrder = 1004, forgetState = true, isSettingsTab = true })
     local persistence = self:CreateTab({ name = "Persistence", icon = "save", customOrder = 1005, forgetState = true, isSettingsTab = true })
-    local about = self:CreateTab({ name = "About", icon = "info", customOrder = 1000, forgetState = true, isSettingsTab = true })
+    local about = self:CreateTab({ name = "About", icon = "info", customOrder = 1006, forgetState = true, isSettingsTab = true })
     for _, tab in { appearance, behavior, performance, persistence, about } do
         tab._isSettingsTab = true
         table.insert(self._settingsTabs, tab)
     end
 
+    -- [[The settings content is built lazily: window construction only]]
+    -- [[creates the tab shells (rows + pages), and each tab's elements]]
+    -- [[are created the first time that tab is opened (see]]
+    -- [[_buildSettingsContent), so opening the window stays fast. The]]
+    -- [[builders run at most once, in the original creation order.]]
+    self._settingsContentBuilt = self._settingsContentBuilt or {}
+
+    local function buildAbout()
     about:CreateSection({ name = "Rayfield Gen2" })
     about:CreateText({
         name = "About Rayfield Gen2",
@@ -1451,7 +1542,10 @@ function Window:_buildSettingsUI()
         name = "Documentation",
         text = "https://docs.sirius.menu/rayfield-gen2",
     })
+    end
+    about._settingsContentBuilder = buildAbout
 
+    local function buildGeneral()
     self.rfSettings:CreateSection({ name = "General" })
     self.rfSettings:CreateKeybind({
         name = "Toggle Keybind", icon = constants.icons.search, value = self.settings.toggleKeybind,
@@ -1473,6 +1567,10 @@ function Window:_buildSettingsUI()
         callback = function(value) self.settings.welcomeToast = value; self:SaveSettings() end,
     })
 
+    end
+    self.rfSettings._settingsContentBuilder = buildGeneral
+
+    local function buildAppearance()
     appearance:CreateSection({ name = "Theme" })
     local themes = {
         default = "Default",
@@ -1575,29 +1673,31 @@ function Window:_buildSettingsUI()
     })
     appearance:CreateSection({ name = "Profile" })
     appearance:CreateToggle({
-        name = "Show profile", description = "Shows your account profile in the active bar layout.", value = self.settings.showProfile,
+        name = "Show profile", description = "Shows your account profile in a panel beside the window.", value = self.settings.showProfile,
         callback = function(value)
-            self.settings.showProfile = value == true
-            sidebar.reflowProfile(self); sidebar.setProfileShown(self, self.settings.showProfile, sidebar.settleInfo); self:SaveSettings()
+            profilePanel.setEnabled(self, value)
+            self:SaveSettings()
+        end,
+    })
+    appearance:CreateDropdown({
+        name = "Profile side", description = "Which side of the window the profile panel sits on. The window recentres so it and the panel stay centred together.",
+        options = { "Right", "Left" },
+        value = if (self.settings.profileSide or "right") == "left" then "Left" else "Right",
+        callback = function(choice)
+            local side = if choice == "Left" then "left" else "right"
+            if (self.settings.profileSide or "right") == side then
+                return
+            end
+            profilePanel.setSide(self, side)
+            self:SaveSettings()
         end,
     })
     appearance:CreateToggle({
-        name = "Reveal full username", description = "Shows your full Roblox username in the sidebar instead of the masked version.", value = self.settings.showFullUsername,
+        name = "Reveal full username", description = "Shows your full Roblox username in the profile panel instead of the masked version.", value = self.settings.showFullUsername,
         callback = function(value)
             self.settings.showFullUsername = value == true
-            sidebar.refreshProfileName(self); self:SaveSettings()
+            profilePanel.refreshName(self); self:SaveSettings()
         end,
-    })
-
-    behavior:CreateSection({ name = "Window behavior" })
-    behavior:CreateToggle({
-        name = "Prevent duplicate windows", description = "Prevents Astra from creating another window while this window is active.", value = self.settings.antiWindowDuplicate,
-        callback = function(value) self.settings.antiWindowDuplicate = value; self:SaveSettings() end,
-    })
-    performance:CreateSection({ name = "Performance" })
-    performance:CreateToggle({
-        name = "Haptics", description = "A subtle tap as you interact, on devices that support haptics.", value = self.settings.haptics,
-        callback = function(value) self.settings.haptics = value; haptic.setEnabled(value); self:SaveSettings() end,
     })
 
     appearance:CreateSection({ name = "Window" })
@@ -1611,43 +1711,81 @@ function Window:_buildSettingsUI()
     })
     appearance:CreateButton({
         name = "Reset Window Position", callback = function()
-            state.tweenService:Create(self.main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
-            state.tweenService:Create(self.drag.drag, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, self.size.Y.Offset / 2 + 15) }):Play()
+            self:_recenterForProfile(true)
         end,
     })
+    end
+    appearance._settingsContentBuilder = buildAppearance
 
-    if next(self.configuration) ~= nil then
-        persistence:CreateSection({ name = "Configurations" })
-        local selected = self:ListConfigs()[1]
-        local configDropdown, configName
-        local function refresh()
-            local configs = self:ListConfigs(); configDropdown:Refresh(configs)
-            if selected and not table.find(configs, selected) then selected = configs[1] end
-            if selected then configDropdown:Set(selected, true) end
-        end
-        configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = constants.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
-        configName = persistence:CreateInput({ name = "Configuration Name", description = "Name a new configuration, or leave blank to overwrite the selected one.", placeholder = "e.g. PvP Loadout", clearOnFocus = false })
-        local group = persistence:CreateGroup()
-        group:CreateButton({ name = "Save", icon = constants.icons.config, callback = function()
-            local name = configName.value; if name == "" then name = selected end
-            if not name or name == "" then self:Toast({ title = locale.resolve("Name your configuration first") }); return end
-            if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = locale.resolve("Saved configuration"), subtitle = name, icon = constants.icons.config }) else self:Toast({ title = locale.resolve("Couldn't save configuration"), subtitle = name }) end
-        end })
-        group:CreateButton({ name = "Load", callback = function()
-            if not selected or selected == "" then self:Toast({ title = locale.resolve("Pick a configuration to load") }); return end
-            if self:_applyNamedConfig(selected) then self:Toast({ title = locale.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = locale.resolve("Couldn't load configuration"), subtitle = selected }) end
-        end })
-        group:CreateButton({ name = "Delete", callback = function()
-            local name = selected
-            if not name or name == "" then self:Toast({ title = locale.resolve("Pick a configuration to delete") }); return end
-            if self:DeleteConfig(name) then refresh(); self:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name }) end
-        end })
+    local function buildBehavior()
+    behavior:CreateSection({ name = "Window behavior" })
+    behavior:CreateToggle({
+        name = "Prevent duplicate windows", description = "Prevents Astra from creating another window while this window is active.", value = self.settings.antiWindowDuplicate,
+        callback = function(value) self.settings.antiWindowDuplicate = value; self:SaveSettings() end,
+    })
+    end
+    behavior._settingsContentBuilder = buildBehavior
+
+    local function buildPerformance()
+    performance:CreateSection({ name = "Performance" })
+    performance:CreateToggle({
+        name = "Haptics", description = "A subtle tap as you interact, on devices that support haptics.", value = self.settings.haptics,
+        callback = function(value) self.settings.haptics = value; haptic.setEnabled(value); self:SaveSettings() end,
+    })
+    end
+    performance._settingsContentBuilder = buildPerformance
+
+    local function buildPersistence()
+    -- [[Built unconditionally like every other settings tab: the]]
+    -- [[configuration save/load system works without a `configuration`]]
+    -- [[prop (paths fall back to the window name), so gating the content]]
+    -- [[on it left the tab empty for windows created without one.]]
+    persistence:CreateSection({ name = "Configurations" })
+    local selected = self:ListConfigs()[1]
+    local configDropdown, configName
+    local function refresh()
+        local configs = self:ListConfigs(); configDropdown:Refresh(configs)
+        if selected and not table.find(configs, selected) then selected = configs[1] end
+        if selected then configDropdown:Set(selected, true) end
+    end
+    configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = constants.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
+    configName = persistence:CreateInput({ name = "Configuration Name", description = "Name a new configuration, or leave blank to overwrite the selected one.", placeholder = "e.g. PvP Loadout", clearOnFocus = false })
+    local group = persistence:CreateGroup()
+    group:CreateButton({ name = "Save", icon = constants.icons.config, callback = function()
+        local name = configName.value; if name == "" then name = selected end
+        if not name or name == "" then self:Toast({ title = locale.resolve("Name your configuration first") }); return end
+        if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = locale.resolve("Saved configuration"), subtitle = name, icon = constants.icons.config }) else self:Toast({ title = locale.resolve("Couldn't save configuration"), subtitle = name }) end
+    end })
+    group:CreateButton({ name = "Load", callback = function()
+        if not selected or selected == "" then self:Toast({ title = locale.resolve("Pick a configuration to load") }); return end
+        if self:_applyNamedConfig(selected) then self:Toast({ title = locale.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = locale.resolve("Couldn't load configuration"), subtitle = selected }) end
+    end })
+    group:CreateButton({ name = "Delete", callback = function()
+        local name = selected
+        if not name or name == "" then self:Toast({ title = locale.resolve("Pick a configuration to delete") }); return end
+        if self:DeleteConfig(name) then refresh(); self:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name }) end
+    end })
+    end
+    persistence._settingsContentBuilder = buildPersistence
+end
+
+function Window:_buildSettingsContent(tab)
+    -- [[Lazy settings content: a tab's elements are created the first]]
+    -- [[time it is opened, keeping window construction fast. The pcall]]
+    -- [[keeps one bad element from taking the whole window down.]]
+    if self._settingsContentBuilt[tab] or not tab._settingsContentBuilder then
+        return
+    end
+    self._settingsContentBuilt[tab] = true
+    local ok, err = pcall(tab._settingsContentBuilder)
+    if not ok then
+        self:Notify({ title = "Settings", content = "Some settings content failed to load: " .. tostring(err) })
     end
 end
 
 function Window:SetProfile(text)
     self.profileText = text
-    sidebar.setSubtitle(self, text)
+    profilePanel.setSubtitle(self, text)
 end
 
 function Window:SaveSettings()
@@ -1816,7 +1954,7 @@ function Window:_setLayoutMode(modeName)
         self.elements.Size = UDim2.new(1, 0, 1, -newLayout.chromeHeight)
         self.bottomFade.Size = UDim2.new(1, 0, newLayout.fadeSize.Y.Scale, newLayout.fadeSize.Y.Offset)
     end
-    implementation.ApplyWidth(self, layouts.railWidthFor(newLayout, self.size.X.Offset))
+    implementation.ApplyWidth(self, self:_railWidth())
     self.elementsLayout.FillDirection = newLayout.pageDirection
 
     for _, tab in self.tabs do
@@ -1859,6 +1997,31 @@ function Window:_applySettingsLayout(isSettings)
         self.selectedTab.tabPage.Size = if self.layout.mode == "sidebar" then UDim2.new(1, -35, 1, 0) else UDim2.new(1, -20, 1, 0)
         self.selectedTab.tabPage.Position = if self.layout.mode == "sidebar" then UDim2.new(0, 35, 0, 0) else UDim2.new(0, 0, 0, 0)
     end
+    -- [[The visible rail group changed: re-derive the responsive rail's]]
+    -- [[width from the tabs now shown (no-op for the other layouts).]]
+    self:_applyContentRailWidth()
+end
+
+-- [[Shared by the topbar gear action and the profile panel's gear.]]
+function Window:_toggleSettingsMode()
+    if self._settingsMode then
+        local previousTab = self._previousTab
+        self._previousTab = nil
+        if previousTab and previousTab.window == self and previousTab.tabPage and not previousTab._isSettingsTab then
+            previousTab:Select()
+            return
+        end
+        for _, tab in self.tabs do
+            if not tab._isSettingsTab and tab.window == self and tab.tabPage then
+                tab:Select()
+                return
+            end
+        end
+        return
+    end
+
+    self._previousTab = self.selectedTab
+    self.rfSettings:Select()
 end
 
 function Window:_setSettingsMode(active)
@@ -1920,8 +2083,7 @@ function Window:_fadeSurfaces(shown, tweenInfo)
         end
     end
 
-    sidebar.reflowProfile(self)
-    sidebar.setProfileShown(self, shown, tweenInfo)
+    profilePanel.setShown(self, shown, tweenInfo)
 end
 
 function Window:_fadeSelectedElementsOut()
@@ -2292,6 +2454,8 @@ function Window:SetLocale(localeId)
             instance[prop] = locale.resolve(token)
         end
     end
+    -- [[Translated row titles may measure differently.]]
+    self:_applyContentRailWidth()
 end
 
 function Window:SetTranslator(translator)

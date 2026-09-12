@@ -38,8 +38,6 @@ export type Layout = {
     rowPadding: number?,
     rowContentSpacing: number?,
     rowIconSize: number?,
-    footerHeight: number?,
-    avatarSize: number?,
     cardTransparency: number?,
     cardStrokeRotation: number?,
     cardStrokeTransparency: NumberSequence?,
@@ -55,9 +53,6 @@ layouts.top = {
 
     tabStripTop = tabStripTopOffset,
     tabStripHeight = tabStripRowHeight,
-
-    profileHeight = 48,
-    avatarSize = 34,
 
     pageDirection = Enum.FillDirection.Horizontal,
 
@@ -88,9 +83,6 @@ layouts.sidebar = {
     rowPadding = 10,
     rowContentSpacing = 6,
     rowIconSize = 20,
-
-    footerHeight = 60,
-    avatarSize = 34,
 
     pageDirection = Enum.FillDirection.Vertical,
 

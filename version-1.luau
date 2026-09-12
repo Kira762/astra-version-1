@@ -155,7 +155,15 @@ function Astra:CreateWindow(props: types.WindowProps): types.Window
 	end
 
 	if not window.unloaded then
-		window:Show()
+		-- [[Defer the auto-show by one tick so a script that builds its]]
+		-- [[tabs synchronously right after CreateWindow can finish]]
+		-- [[first: the window then appears once, fully populated, instead]]
+		-- [[of empty and filling in. An explicit Hide() cancels it.]]
+		task.defer(function()
+			if not window.unloaded and not window._autoShowCancelled then
+				window:Show()
+			end
+		end)
 	end
 
 	return window
@@ -2381,6 +2389,440 @@ end)() end,
     [14] = function()local wax,script,require=ImportGlobals(14)local ImportGlobals return (function(...)
 local utilities = script.Parent.Parent.utilities
 local state = require(utilities.Parent.core.state)
+local image = require(script.Parent.Parent.images.image)
+local functions = require(script.Parent.Parent.functions)
+local locale = require(utilities.locale)
+local log = require(utilities.log)
+local constants = require(utilities.constants)
+local sidebar = require(script.Parent.sidebar)
+
+local profilePanel = {}
+
+-- [[The profile panel lives OUTSIDE the window frame, beside it: a]]
+-- [[96px-wide companion card that spans the window's full height. The]]
+-- [[window and the panel are centred on screen as a single unit, so]]
+-- [[the window sits half a panel (width + gap) away from the screen]]
+-- [[centre, on the opposite side of the panel.]]
+profilePanel.width = 96
+profilePanel.gap = 8
+
+local avatarSize = 48
+local nameGap = 6
+local nameHeight = 18
+local subGap = 2
+local subHeight = 14
+local paddingX = 8
+local contentMinTop = 14
+local gearSize = 32
+local gearIconSize = 20
+local gearBottomMargin = 12
+
+local contentHeight = avatarSize + nameGap + nameHeight + subGap + subHeight
+
+local nameTransparency = 0
+local subtitleTransparency = 0.7
+local avatarBgTransparency = 0.95
+local idleStrokeTransparency = 0.95
+local hoverStrokeTransparency = 0.65
+local pillHoverTransparency = 0.92
+
+local settleTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local hoverTween = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+
+local fallbackUri = "rbxassetid://0"
+
+profilePanel.settleInfo = settleTween
+
+local buildGeneration = 0
+
+local avatarGenerations = setmetatable({}, { __mode = "k" })
+
+local avatarReady = setmetatable({}, { __mode = "k" })
+
+-- [[The panel needs horizontal room: window + gap + panel must fit on the]]
+-- [[screen (the pair is centred, so both edges keep a small margin). This]]
+-- [[is a space check, not a device check: a portrait phone has no room and]]
+-- [[hides the panel, while a landscape phone (and every desktop) usually]]
+-- [[has room and shows it.]]
+local edgeMargin = 8
+
+local function hasRoom(window)
+    local camera = state.workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize
+    if not viewport then
+        return true
+    end
+    return viewport.X >= window.size.X.Offset + profilePanel.gap + profilePanel.width + edgeMargin * 2
+end
+
+-- [[The panel is "enabled" when its content should exist at all: the user]]
+-- [[toggled it on, the player is known, and the screen has room. Window]]
+-- [[visibility (hidden/minimised) layers on top in setShown.]]
+function profilePanel.isEnabled(window)
+    return window.settings.showProfile
+        and state.localPlayer ~= nil
+        and hasRoom(window)
+end
+
+-- [[How far the window rests off the screen centre so that the]]
+-- [[window + gap + panel pair is centred (0 while the panel is off).]]
+function profilePanel.shiftFor(window)
+    if not profilePanel.isEnabled(window) then
+        return 0
+    end
+    return (profilePanel.width + profilePanel.gap) / 2
+end
+
+function profilePanel.build(window, onOpenSettings)
+    if window.profilePanel then
+        window:DestroySubtree(window.profilePanel)
+        window.profilePanel = nil
+    end
+
+    local player = state.localPlayer
+
+    window.profilePanel = window:Create("Frame", {
+        Name = "ProfilePanel",
+        AnchorPoint = Vector2.new(0, 0),
+        Position = UDim2.fromOffset(0, 0),
+        Size = UDim2.fromOffset(profilePanel.width, window.size.Y.Offset),
+        BackgroundTransparency = 1,
+        ZIndex = 1,
+        Visible = false,
+
+        Parent = window.screenGui,
+    })
+
+    window.profilePanelSurface = window:Create("Frame", {
+        Name = "Surface",
+        Size = UDim2.fromScale(1, 1),
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        Parent = window.profilePanel,
+    })
+
+    window:Create("UIGradient", {
+        Rotation = 270,
+        Offset = Vector2.new(0, -0.1),
+        Parent = window.profilePanelSurface,
+    }, { Color = { "WindowColor", functions.toColorSequence } })
+
+    window.profilePanelCorner = window:Create("UICorner", {
+        Parent = window.profilePanelSurface,
+    }, { CornerRadius = "CornerRoundness" })
+
+    window.profilePanelStroke = window:Create("UIStroke", {
+        Transparency = 1,
+        Parent = window.profilePanelSurface,
+    }, { Color = "SurfaceStroke" })
+
+    window:CreateGlow(window.profilePanelSurface, "ShadowColor", 20, 1)
+
+    window.profileAvatar = window:Create("ImageLabel", {
+        Name = "Avatar",
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.5, 0, 0, contentMinTop),
+        Size = UDim2.fromOffset(avatarSize, avatarSize),
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        ImageTransparency = 1,
+        Parent = window.profilePanelSurface,
+    }, { BackgroundColor3 = "ContentColor" })
+
+    window:Create("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = window.profileAvatar,
+    })
+
+    window.profileName = window:Create("TextLabel", {
+        Name = "Name",
+        Text = if player then sidebar.maskUsername(player.Name) else "",
+        Size = UDim2.new(1, -paddingX * 2, 0, nameHeight),
+        Position = UDim2.new(0, paddingX, 0, contentMinTop + avatarSize + nameGap),
+        BackgroundTransparency = 1,
+        TextSize = 16,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextWrapped = false,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextTransparency = 1,
+        Parent = window.profilePanelSurface,
+    }, { TextColor3 = "TitlingColor", FontFace = "Font" })
+
+    window.profileSubtitle = window:Create("TextLabel", {
+        Name = "Subtitle",
+        Text = "",
+        Size = UDim2.new(1, -paddingX * 2, 0, subHeight),
+        Position = UDim2.new(0, paddingX, 0, contentMinTop + avatarSize + nameGap + nameHeight + subGap),
+        BackgroundTransparency = 1,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextWrapped = false,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        Visible = false,
+        TextTransparency = 1,
+        Parent = window.profilePanelSurface,
+    }, { TextColor3 = "TitlingColor", FontFace = "Font" })
+
+    window.profileGear = window:Create("TextButton", {
+        Name = "OpenSettings",
+        AnchorPoint = Vector2.new(0.5, 1),
+        Position = UDim2.new(0.5, 0, 1, -gearBottomMargin),
+        Size = UDim2.fromOffset(gearSize, gearSize),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Text = "",
+        TextTransparency = 1,
+        ZIndex = 2,
+        Parent = window.profilePanelSurface,
+    })
+
+    window.profileGearPill = window:Create("Frame", {
+        Name = "HoverPill",
+        Size = UDim2.fromScale(1, 1),
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        ZIndex = 1,
+        Parent = window.profileGear,
+    }, { BackgroundColor3 = "ElementHover" })
+
+    window:Create("UICorner", {
+        CornerRadius = UDim.new(0, 12),
+        Parent = window.profileGearPill,
+    })
+
+    window.profileGearIcon = window:Create("ImageLabel", {
+        Name = "Icon",
+        Image = window:ResolveIcon(constants.icons.settings),
+        BackgroundTransparency = 1,
+        Size = UDim2.fromOffset(gearIconSize, gearIconSize),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.5, 0.5),
+        ImageTransparency = 1,
+        ZIndex = 2,
+        Parent = window.profileGear,
+    }, { ImageColor3 = "ActionColor" })
+
+    window:Connect(window.profileGear.MouseEnter, function()
+        if not window:_interactive() then
+            return
+        end
+        state.tweenService
+            :Create(window.profileGearPill, hoverTween, { BackgroundTransparency = pillHoverTransparency })
+            :Play()
+        state.tweenService
+            :Create(
+                window.profilePanelStroke,
+                hoverTween,
+                { Color = window.theme.ElementStrokeHover, Transparency = hoverStrokeTransparency }
+            )
+            :Play()
+    end)
+
+    window:Connect(window.profileGear.MouseLeave, function()
+        state.tweenService
+            :Create(window.profileGearPill, hoverTween, { BackgroundTransparency = 1 })
+            :Play()
+        state.tweenService
+            :Create(
+                window.profilePanelStroke,
+                hoverTween,
+                { Color = window.theme.SurfaceStroke, Transparency = idleStrokeTransparency }
+            )
+            :Play()
+    end)
+
+    window:Connect(window.profileGear.Activated, function()
+        if not window:_interactive() or not onOpenSettings then
+            return
+        end
+        local ok, err = pcall(onOpenSettings)
+        if not ok then
+            log.warn("Astra: the profile panel's settings action failed: " .. tostring(err))
+        end
+    end)
+
+    -- [[The panel is a sibling of the window frame: mirroring the frame's]]
+    -- [[position and size keeps it following drags, restores and resizes]]
+    -- [[without a per-frame loop.]]
+    window:Connect(window.main:GetPropertyChangedSignal("Position"), function()
+        profilePanel.layout(window)
+    end)
+    window:Connect(window.main:GetPropertyChangedSignal("Size"), function()
+        profilePanel.layout(window)
+    end)
+
+    if player then
+        buildGeneration += 1
+        local generation = buildGeneration
+        avatarGenerations[window.profileAvatar] = generation
+
+        local function applyAvatar(avatarLabel, uri)
+            if avatarGenerations[avatarLabel] ~= generation then
+                return
+            end
+            if uri ~= nil and uri ~= "" then
+                avatarReady[avatarLabel] = true
+                image.assign(avatarLabel, "Image", uri)
+                -- [[The avatar may finish loading after the panel already]]
+                -- [[faded in: reveal it now instead of waiting for the]]
+                -- [[next show/hide cycle.]]
+                if window.profilePanel.Visible then
+                    state.tweenService:Create(avatarLabel, settleTween, { ImageTransparency = 0 }):Play()
+                end
+            else
+                avatarReady[avatarLabel] = nil
+                image.assign(avatarLabel, "Image", fallbackUri)
+            end
+        end
+
+        local cachedUri = image.avatar(player.UserId, function(uri)
+            if window.unloaded then
+                return
+            end
+            local avatar = window.profileAvatar
+            if not avatar then
+                return
+            end
+            applyAvatar(avatar, uri)
+        end)
+
+        if cachedUri ~= "" then
+            applyAvatar(window.profileAvatar, cachedUri)
+        end
+    end
+
+    profilePanel.layout(window)
+    return window.profilePanel
+end
+
+-- [[Place the panel beside the window frame. The frame's position may]]
+-- [[carry scale (the centred resting position) or be pure offset after]]
+-- [[a drag: the scale passes through untouched, the offset gets the]]
+-- [[half-window + gap edge, and the panel mirrors the window's height.]]
+function profilePanel.layout(window)
+    local panel = window.profilePanel
+    if not panel then
+        return
+    end
+
+    local main = window.main
+    local pos = main.Position
+    local width = main.Size.X.Offset
+    local height = main.Size.Y.Offset
+    local left = (window.settings.profileSide or "right") == "left"
+    local edge = width / 2 + profilePanel.gap
+
+    panel.AnchorPoint = Vector2.new(if left then 1 else 0, 0)
+    panel.Position = UDim2.new(pos.X.Scale, pos.X.Offset + (if left then -edge else edge), pos.Y.Scale, pos.Y.Offset - height / 2)
+    panel.Size = UDim2.fromOffset(profilePanel.width, height)
+
+    local contentTop = math.max(contentMinTop, (height - contentHeight) / 2)
+    window.profileAvatar.Position = UDim2.new(0.5, 0, 0, contentTop)
+    window.profileName.Position = UDim2.new(0, paddingX, 0, contentTop + avatarSize + nameGap)
+    window.profileSubtitle.Position = UDim2.new(0, paddingX, 0, contentTop + avatarSize + nameGap + nameHeight + subGap)
+end
+
+function profilePanel.setShown(window, shown, tweenInfo)
+    local panel = window.profilePanel
+    if not panel then
+        return
+    end
+
+    -- [[Window visibility wins over the requested state: never fade the]]
+    -- [[panel in while the window is hidden or minimised.]]
+    shown = shown == true
+        and profilePanel.isEnabled(window)
+        and not window.hidden
+        and not window.minimised
+
+    local avatar = window.profileAvatar
+    local name = window.profileName
+    local subtitle = window.profileSubtitle
+    local gearIcon = window.profileGearIcon
+    local stroke = window.profilePanelStroke
+
+    panel.Visible = shown
+
+    if not (avatar and name and subtitle and gearIcon and stroke) then
+        return
+    end
+
+    local hasImage = avatarReady[avatar] == true
+        or (type(avatar.Image) == "string" and avatar.Image ~= "" and avatar.Image ~= fallbackUri)
+
+    local targets = {
+        [avatar] = {
+            ImageTransparency = if shown and hasImage then 0 else 1,
+            BackgroundTransparency = if shown then avatarBgTransparency else 1,
+        },
+        [name] = { TextTransparency = if shown then nameTransparency else 1 },
+        [subtitle] = { TextTransparency = if shown then subtitleTransparency else 1 },
+        [gearIcon] = { ImageTransparency = if shown then 0 else 1 },
+        [stroke] = { Transparency = if shown then idleStrokeTransparency else 1 },
+    }
+
+    for instance, props in targets do
+        local needsUpdate = false
+        for prop, value in props do
+            if instance[prop] ~= value then
+                needsUpdate = true
+                break
+            end
+        end
+        if not needsUpdate then
+            continue
+        end
+        if tweenInfo then
+            state.tweenService:Create(instance, tweenInfo, props):Play()
+        else
+            for prop, value in props do
+                instance[prop] = value
+            end
+        end
+    end
+end
+
+function profilePanel.setEnabled(window, enabled)
+    window.settings.showProfile = enabled == true
+    profilePanel.setShown(window, window.settings.showProfile, settleTween)
+    window:_recenterForProfile(window.settings.showProfile)
+end
+
+function profilePanel.setSide(window, side)
+    window.settings.profileSide = if side == "left" then "left" else "right"
+    profilePanel.layout(window)
+    window:_recenterForProfile(true)
+end
+
+function profilePanel.setSubtitle(window, text)
+    local subtitle = window.profileSubtitle
+    if not subtitle then
+        return
+    end
+
+    local resolved = if type(text) == "string" and text ~= "" then locale.resolve(text) else nil
+    subtitle.Text = resolved or ""
+    subtitle.Visible = resolved ~= nil
+end
+
+function profilePanel.refreshName(window)
+    local name = window.profileName
+    if not name or not state.localPlayer then
+        return
+    end
+    local fullName = state.localPlayer.Name
+    name.Text = if window.settings.showFullUsername then fullName else sidebar.maskUsername(fullName)
+end
+
+return profilePanel
+
+end)() end,
+    [15] = function()local wax,script,require=ImportGlobals(15)local ImportGlobals return (function(...)
+local utilities = script.Parent.Parent.utilities
+local state = require(utilities.Parent.core.state)
 local constants = require(utilities.constants)
 local locale = require(utilities.locale)
 local actionComponent = require(script.Parent.action)
@@ -2713,245 +3155,18 @@ end
 return search
 
 end)() end,
-    [15] = function()local wax,script,require=ImportGlobals(15)local ImportGlobals return (function(...)
-local utilities = script.Parent.Parent.utilities
-local state = require(utilities.Parent.core.state)
-local image = require(script.Parent.Parent.images.image)
-local locale = require(utilities.locale)
+    [16] = function()local wax,script,require=ImportGlobals(16)local ImportGlobals return (function(...)
 local tabSelector = require(script.Parent.tabSelector)
 local search = require(script.Parent.search)
 
 local sidebar = {}
 
-local nameTransparency = 0
-local subtitleTransparency = 0.7
-local avatarBgTransparency = 0.95
-
-local function maskUsername(name)
+function sidebar.maskUsername(name)
     name = tostring(name or "")
     if name == "" then
         return "****"
     end
     return string.sub(name, 1, math.min(3, #name)) .. "****"
-end
-
-function sidebar.refreshProfileName(window)
-    if not window.profileName or not state.localPlayer then
-        return
-    end
-    local fullName = state.localPlayer.Name
-    window.profileName.Text = if window.settings.showFullUsername then fullName else maskUsername(fullName)
-end
-
-local settleTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-sidebar.settleInfo = settleTween
-
-local buildGeneration = 0
-
-local avatarGenerations = setmetatable({}, { __mode = "k" })
-
-local avatarReady = setmetatable({}, { __mode = "k" })
-
-local fallbackUri = "rbxassetid://0"
-
-local function shouldShowProfile(window)
-    -- [[Profile.Visible = Window.Visible AND settings.showProfile: the profile]]
-    -- [[also hides while the window is minimised to the pill, where the topbar]]
-    -- [[remains technically visible but the window content is not shown.]]
-    return window.profile ~= nil
-        and window.settings.showProfile
-        and not window.hidden
-        and not window.minimised
-        and state.localPlayer ~= nil
-end
-
-function sidebar.buildProfile(window, layout)
-    local player = state.localPlayer
-    if not player then
-        return
-    end
-
-    -- [[Re-layout safety: drop any previous profile before building a new one]]
-    -- [[so switching layout modes can never orphan the old instance.]]
-    if window.profile then
-        window:DestroySubtree(window.profile)
-        window.profile = nil
-        window.profileContainer = nil
-        window.profileLayout = nil
-        window.profileAvatar = nil
-        window.profileName = nil
-        window.profileSubtitle = nil
-        window.profileLabels = nil
-    end
-
-    buildGeneration += 1
-    local generation = buildGeneration
-
-    local isSidebar = layout.mode == "sidebar" and not layout.forceCollapsed
-    local isCollapsed = layout.forceCollapsed == true
-    local isTop = layout.mode == "top"
-
-    if isSidebar then
-        window.profile = window:Create("Frame", {
-            Name = "Profile",
-            AnchorPoint = Vector2.new(0.5, 1),
-            Position = UDim2.fromScale(0.5, 1),
-            Size = UDim2.new(1, 0, 0, layout.footerHeight),
-            BackgroundTransparency = 1,
-            Parent = window.sidebar,
-        })
-
-        window.profileContainer = window:Create("Frame", {
-            AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, layout.rowInset, 0.5, 0),
-            Size = UDim2.new(1, -layout.rowInset, 1, 0),
-            BackgroundTransparency = 1,
-            Parent = window.profile,
-        })
-
-        window.profileLayout = window:Create("UIListLayout", {
-            Padding = UDim.new(0, 10),
-            FillDirection = Enum.FillDirection.Horizontal,
-            VerticalAlignment = Enum.VerticalAlignment.Center,
-            HorizontalAlignment = Enum.HorizontalAlignment.Left,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = window.profileContainer,
-        })
-    elseif isTop then
-        window.profile = window:Create("Frame", {
-            Name = "Profile",
-            AnchorPoint = Vector2.new(0, 1),
-            Position = UDim2.new(0, 0, 1, -0),
-            Size = UDim2.new(1, 0, 0, layout.profileHeight),
-            BackgroundTransparency = 1,
-            Parent = window.topbar,
-        })
-
-        window.profileContainer = window:Create("Frame", {
-            AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, -10, 0.5, 0),
-            Size = UDim2.new(0, 0, 1, -4),
-            AutomaticSize = Enum.AutomaticSize.X,
-            BackgroundTransparency = 1,
-            Parent = window.profile,
-        })
-
-        window.profileLayout = window:Create("UIListLayout", {
-            Padding = UDim.new(0, 12),
-            FillDirection = Enum.FillDirection.Horizontal,
-            VerticalAlignment = Enum.VerticalAlignment.Center,
-            HorizontalAlignment = Enum.HorizontalAlignment.Right,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = window.profileContainer,
-        })
-    else
-        window.profile = window:Create("Frame", {
-            Name = "Profile",
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.new(1, -8, 1, -8),
-            BackgroundTransparency = 1,
-            Parent = window.sidebar,
-        })
-
-        window.profileContainer = window.profile
-        window.profileLayout = window:Create("UIListLayout", {
-            Padding = UDim.new(0, 0),
-            FillDirection = Enum.FillDirection.Horizontal,
-            VerticalAlignment = Enum.VerticalAlignment.Center,
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = window.profileContainer,
-        })
-    end
-
-    local avatarSize = layout.avatarSize
-
-    window.profileAvatar = window:Create("ImageLabel", {
-        Name = "Avatar",
-        Size = UDim2.fromOffset(avatarSize, avatarSize),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BorderSizePixel = 0,
-        BackgroundTransparency = 1,
-        ImageTransparency = 1,
-        Parent = window.profileContainer,
-    })
-
-    window:Create("UICorner", {
-        CornerRadius = UDim.new(1, 0),
-        Parent = window.profileAvatar,
-    })
-
-    window.profileLabels = window:Create("Frame", {
-        Size = UDim2.fromOffset(50, avatarSize),
-        AutomaticSize = Enum.AutomaticSize.X,
-        BackgroundTransparency = 1,
-        LayoutOrder = isCollapsed and 0 or 1,
-        Parent = window.profileContainer,
-    })
-
-    window:Create("UIListLayout", {
-        Padding = UDim.new(0, 2),
-        FillDirection = Enum.FillDirection.Vertical,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        HorizontalAlignment = Enum.HorizontalAlignment.Left,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = window.profileLabels,
-    })
-
-    window.profileName = window:Create("TextLabel", {
-        Text = if window.settings.showFullUsername then player.Name else maskUsername(player.Name),
-        Size = UDim2.fromOffset(50, 16),
-        AutomaticSize = Enum.AutomaticSize.X,
-        BackgroundTransparency = 1,
-        TextSize = 16,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTransparency = 1,
-        Parent = window.profileLabels,
-    }, { TextColor3 = "TitlingColor", FontFace = "Font" })
-
-    window.profileSubtitle = window:Create("TextLabel", {
-        Text = "",
-        Size = UDim2.fromOffset(50, 14),
-        AutomaticSize = Enum.AutomaticSize.X,
-        BackgroundTransparency = 1,
-        TextSize = 14,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        LayoutOrder = 1,
-        Visible = false,
-        TextTransparency = 1,
-        Parent = window.profileLabels,
-    }, { TextColor3 = "TitlingColor", FontFace = "Font" })
-
-    avatarGenerations[window.profileAvatar] = generation
-
-    local function applyAvatar(avatarLabel, uri)
-        if avatarGenerations[avatarLabel] ~= generation then
-            return
-        end
-        if uri ~= nil and uri ~= "" then
-            avatarReady[avatarLabel] = true
-            image.assign(avatarLabel, "Image", uri)
-        else
-            avatarReady[avatarLabel] = nil
-            image.assign(avatarLabel, "Image", fallbackUri)
-        end
-    end
-
-    local cachedUri = image.avatar(player.UserId, function(uri)
-        if window.unloaded then
-            return
-        end
-        local avatar = window.profileAvatar
-        if not avatar then
-            return
-        end
-        applyAvatar(avatar, uri)
-    end)
-
-    if cachedUri ~= "" then
-        applyAvatar(window.profileAvatar, cachedUri)
-    end
 end
 
 function sidebar.buildTabRail(window, layout, collapsed)
@@ -2986,161 +3201,22 @@ end
 
 function sidebar.applyRailRows(window, width, layout)
     search.railWidth(window, width)
-    local isCollapsed = width < (layout.railWidth :: number)
+    -- [[The rail is collapsed only when it is at the icon-only width. The]]
+    -- [[responsive rail otherwise hugs the widest tab name, which is often]]
+    -- [[narrower than the fixed 219px rail the layout used to have.]]
+    local isCollapsed = width <= (layout.railCollapsedWidth :: number)
     for _, tab in window.tabs do
         if not tab.neglectSelector then
             tabSelector.setRowCollapsed(tab, isCollapsed, layout)
         end
     end
-    if window.profileContainer and layout.mode == "sidebar" then
-        window.profileContainer.Position = UDim2.new(0, if isCollapsed then 0 else layout.rowInset, 0.5, 0)
-        window.profileContainer.Size = UDim2.new(1, if isCollapsed then 0 else -layout.rowInset, 1, 0)
-        window.profileLayout.HorizontalAlignment = if isCollapsed
-            then Enum.HorizontalAlignment.Center
-            else Enum.HorizontalAlignment.Left
-        if window.profileLabels then
-            window.profileLabels.Visible = not isCollapsed and not layout.forceCollapsed
-        end
-    end
-end
-
-function sidebar.build(window, layout)
-    if layout.mode == "sidebar" then
-        window.sidebar = window:Create("Frame", {
-            Name = "Sidebar",
-            AnchorPoint = Vector2.new(0, 1),
-            Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(0, layout.railWidth, 1, -layout.chromeHeight),
-            BackgroundTransparency = 1,
-            Visible = false,
-            Parent = window.main,
-        })
-        sidebar.buildTabRail(window, layout, layout.forceCollapsed == true)
-    end
-    sidebar.buildProfile(window, layout)
-    sidebar.reflowProfile(window)
-end
-
-function sidebar.reflowProfile(window)
-    local layout = window.layout
-    local shouldShow = shouldShowProfile(window)
-
-    if window.profile then
-        window.profile.Visible = shouldShow
-    end
-
-    if layout.mode == "sidebar" and not layout.forceCollapsed then
-        window.tabList.Size = UDim2.new(1, 0, 1, if shouldShow then -layout.footerHeight else 0)
-    elseif layout.mode == "top" then
-        window.profile.Size = UDim2.new(1, 0, 0, if shouldShow then layout.profileHeight else 0)
-        if window.profileContainer then
-            window.profileContainer.Visible = shouldShow
-        end
-    end
-
-    if window.profileLabels and window.profileLabels.Visible ~= (not layout.forceCollapsed) then
-        window.profileLabels.Visible = not layout.forceCollapsed
-    end
-
-    if window.profileContainer and layout.mode == "sidebar" then
-        local sidebarWidth = window.sidebar and window.sidebar.AbsoluteSize.X or layout.railWidth
-        local isCollapsed = sidebarWidth < (layout.railWidth :: number)
-        window.profileContainer.Position = UDim2.new(0, if isCollapsed then 0 else layout.rowInset, 0.5, 0)
-        window.profileContainer.Size = UDim2.new(1, if isCollapsed then 0 else -layout.rowInset, 1, 0)
-        window.profileLayout.HorizontalAlignment = if isCollapsed
-            then Enum.HorizontalAlignment.Center
-            else Enum.HorizontalAlignment.Left
-    end
-end
-
-function sidebar.applyWidth(window, width)
-    local layout = window.layout
-
-    window.sidebar.Size = UDim2.new(0, width, 1, -layout.chromeHeight)
-    window.elements.Size = UDim2.new(1, -width, 1, -layout.chromeHeight)
-    window.bottomFade.Size = UDim2.new(1, -width, layout.fadeSize.Y.Scale, layout.fadeSize.Y.Offset)
-    sidebar.applyRailRows(window, width, layout)
-end
-
-function sidebar.setProfileShown(window, shown, tweenInfo)
-    if not window.profile then
-        return
-    end
-
-    -- [[Window visibility wins over the requested state: never fade the]]
-    -- [[profile in while the window is hidden or minimised.]]
-    if shown and not shouldShowProfile(window) then
-        shown = false
-    end
-
-    local avatar = window.profileAvatar
-    local avatarProps
-    if avatar then
-        local hasImage = avatarReady[avatar] == true
-            or (type(avatar.Image) == "string" and avatar.Image ~= "" and avatar.Image ~= fallbackUri)
-        if shown and hasImage then
-            avatarProps = {
-                ImageTransparency = 0,
-                BackgroundTransparency = avatarBgTransparency,
-            }
-        else
-            avatarProps = {
-                ImageTransparency = 1,
-                BackgroundTransparency = if shown then avatarBgTransparency else 1,
-                BackgroundColor3 = window.theme.ContentColor,
-            }
-        end
-    end
-
-    local targets = {
-        [avatar] = avatarProps,
-        [window.profileName] = { TextTransparency = if shown then nameTransparency else 1 },
-        [window.profileSubtitle] = { TextTransparency = if shown then subtitleTransparency else 1 },
-    }
-
-    for instance, props in targets do
-        if instance and props then
-            if tweenInfo then
-                state.tweenService:Create(instance, tweenInfo, props):Play()
-            else
-                for prop, value in props do
-                    instance[prop] = value
-                end
-            end
-        end
-    end
-end
-
-function sidebar.setProfileEnabled(window, enabled)
-    if not window.profile then
-        window.settings.showProfile = enabled
-        return
-    end
-
-    window.settings.showProfile = enabled
-    sidebar.reflowProfile(window)
-
-    if enabled then
-        sidebar.setProfileShown(window, true, settleTween)
-    else
-        sidebar.setProfileShown(window, false, settleTween)
-    end
-end
-
-function sidebar.setSubtitle(window, text)
-    if not window.profileSubtitle then
-        return
-    end
-
-    local resolved = if type(text) == "string" and text ~= "" then locale.resolve(text) else nil
-    window.profileSubtitle.Text = resolved or ""
-    window.profileSubtitle.Visible = resolved ~= nil
+    tabSelector.relayoutSidebarRows(window, layout, width)
 end
 
 return sidebar
 
 end)() end,
-    [16] = function()local wax,script,require=ImportGlobals(16)local ImportGlobals return (function(...)
+    [17] = function()local wax,script,require=ImportGlobals(17)local ImportGlobals return (function(...)
 local utilities = script.Parent.Parent.utilities
 local state = require(utilities.Parent.core.state)
 local functions = require(script.Parent.Parent.functions)
@@ -3366,8 +3442,100 @@ function tabSelector.build(tab, layoutMode)
     end
 end
 
+-- [[Responsive sidebar sizing: the tab names drive the rail's width. The]]
+-- [[longest visible row sets the rail's natural width, so every row (which]]
+-- [[stays full-rail, as before) shares the width of the longest tab, and]]
+-- [[the elements area takes back whatever the rail frees up. The window's]]
+-- [[available space is the cap, so a long name wraps in place instead of]]
+-- [[swallowing the content area.]]
+
+local function inCurrentRail(window, tab)
+    -- [[Parent guards out rows destroyed mid-layout-switch: their parent]]
+    -- [[rail is gone before the rebuilt rows exist, and a destroyed]]
+    -- [[instance must not have properties written to it.]]
+    return not tab.neglectSelector
+        and tab.topbarItem ~= nil
+        and tab.topbarItem.Parent ~= nil
+        and (tab._isSettingsTab == true) == (window._settingsMode == true)
+end
+
+local function rowNaturalWidth(tab, window, layout)
+    local width = layout.rowPadding * 2
+    if tab.icon then
+        width += layout.rowIconSize
+        if tab.name then
+            width += layout.rowContentSpacing
+        end
+    end
+    if tab.name then
+        width += functions.textWidth(window.theme.Font, 16, locale.resolve(tab.name))
+    end
+    return width
+end
+
+-- [[The rail width at which the widest row in the current rail group fits]]
+-- [[exactly (row insets included). 0 when the group is empty.]]
+function tabSelector.railContentWidth(window, layout)
+    local maxRow = 0
+    for _, tab in window.tabs do
+        if inCurrentRail(window, tab) then
+            maxRow = math.max(maxRow, rowNaturalWidth(tab, window, layout))
+        end
+    end
+    if maxRow <= 0 then
+        return 0
+    end
+    return maxRow + layout.rowInset * 2
+end
+
+-- [[Rows stay full-rail; this only holds a title inside its row when the]]
+-- [[rail's available width capped below the name's natural width.]]
+function tabSelector.relayoutSidebarRows(window, layout, railWidth)
+    if layout.mode ~= "sidebar" or layout.forceCollapsed then
+        return
+    end
+    if not window.sidebar then
+        return
+    end
+    railWidth = railWidth or layout.railWidth
+    if railWidth <= (layout.railCollapsedWidth :: number) then
+        -- [[Collapsed rail: icon-only rows, nothing to hold.]]
+        return
+    end
+
+    local rowWidth = railWidth - layout.rowInset * 2
+    if rowWidth <= 0 then
+        return
+    end
+
+    for _, tab in window.tabs do
+        if inCurrentRail(window, tab) then
+            local title = tab.topbarItemTitle
+            if title and tab.name then
+                local slot = rowWidth - layout.rowPadding * 2
+                    - (if tab.icon then layout.rowIconSize + layout.rowContentSpacing else 0)
+                if
+                    slot >= 24
+                    and functions.textWidth(window.theme.Font, 16, locale.resolve(tab.name)) > slot
+                then
+                    -- [[Capped: hold the label inside the row; its existing]]
+                    -- [[TextWrapped then keeps the name readable.]]
+                    title.Size = UDim2.fromOffset(slot, 16)
+                    title.AutomaticSize = Enum.AutomaticSize.Y
+                else
+                    title.Size = UDim2.fromOffset(0, 16)
+                    title.AutomaticSize = Enum.AutomaticSize.XY
+                end
+            end
+        end
+    end
+end
+
 function tabSelector.setRowCollapsed(tab, collapsed, layout)
-    if layout.mode ~= "sidebar" or not tab.topbarItem then
+    -- [[Parent check: during a layout-mode switch the previous rail's rows]]
+    -- [[are destroyed before the rebuilt ones exist, and properties must]]
+    -- [[not be written to a destroyed instance.]]
+    if layout.mode ~= "sidebar" or not tab.topbarItem or not tab.topbarItem.Parent then
         return
     end
 
@@ -3418,7 +3586,7 @@ end
 return tabSelector
 
 end)() end,
-    [17] = function()local wax,script,require=ImportGlobals(17)local ImportGlobals return (function(...)
+    [18] = function()local wax,script,require=ImportGlobals(18)local ImportGlobals return (function(...)
 local Toast = {}
 Toast.__index = Toast
 Toast.__type = "Toast"
@@ -3795,7 +3963,7 @@ end
 return Toast
 
 end)() end,
-    [18] = function()local wax,script,require=ImportGlobals(18)local ImportGlobals return (function(...)
+    [19] = function()local wax,script,require=ImportGlobals(19)local ImportGlobals return (function(...)
 local utilities = script.Parent.Parent.utilities
 local image = require(script.Parent.Parent.images.image)
 local icons = require(script.Parent.Parent.icons)
@@ -3809,7 +3977,8 @@ local windowSizing = require(utilities.windowSizing)
 local layouts = require(utilities.layouts)
 local chrome = require(script.Parent.chrome)
 local search = require(script.Parent.search)
-local sidebar = require(script.Parent.sidebar)
+local tabSelector = require(script.Parent.tabSelector)
+local profilePanel = require(script.Parent.profilePanel)
 
 local state = require(utilities.Parent.core.state)
 
@@ -3995,6 +4164,7 @@ function Window.new(props)
         dragMinimisedBar = false,
         showProfile = true,
         showFullUsername = false,
+        profileSide = "right",
         antiWindowDuplicate = true,
         layoutMode = layout.mode,
         activeSubTab = 1,
@@ -4237,7 +4407,7 @@ function Window.new(props)
 
             local initialLayout = layouts.implementation(layoutKey(self.layout))
     initialLayout.Build(self, self.layout)
-    initialLayout.ApplyWidth(self, layouts.railWidthFor(self.layout, self.size.X.Offset))
+    initialLayout.ApplyWidth(self, self:_railWidth())
 
         self.actionContainer = self:Create("Frame", {
 
@@ -4310,24 +4480,7 @@ function Window.new(props)
         linkedTab = self.rfSettings,
 
         callback = function()
-            if self._settingsMode then
-                local previousTab = self._previousTab
-                self._previousTab = nil
-                if previousTab and previousTab.window == self and previousTab.tabPage and not previousTab._isSettingsTab then
-                    previousTab:Select()
-                    return
-                end
-                for _, tab in self.tabs do
-                    if not tab._isSettingsTab and tab.window == self and tab.tabPage then
-                        tab:Select()
-                        return
-                    end
-                end
-                return
-            end
-
-            self._previousTab = self.selectedTab
-            self.rfSettings:Select()
+            self:_toggleSettingsMode()
         end,
     })
 
@@ -4349,13 +4502,9 @@ function Window.new(props)
     then
         self:_setLayoutMode(self.settings.layoutMode)
     end
-    if self.layout.mode == "sidebar" then
-        sidebar.reflowProfile(self)
-        sidebar.setSubtitle(self, self.profileText)
-    end
 
     task.defer(function()
-        if self.unloaded or state.localPlayer or not self.profile then
+        if self.unloaded or state.localPlayer or not self.profilePanel then
             return
         end
         local deadline = os.clock() + 2
@@ -4367,16 +4516,31 @@ function Window.new(props)
             end
             if state.localPlayer or os.clock() > deadline then
                 connection:Disconnect()
-                if state.localPlayer and self.profile then
-                    sidebar.refreshProfileName(self)
-                    sidebar.reflowProfile(self)
-                    sidebar.setProfileShown(self, true, sidebar.settleInfo)
+                if state.localPlayer and self.profilePanel then
+                    profilePanel.refreshName(self)
+                    profilePanel.setShown(self, true, profilePanel.settleInfo)
+                    -- [[The player may have arrived after construction, when]]
+                    -- [[the panel was still disabled and the window was not]]
+                    -- [[shifted. If the window is still anchored at the]]
+                    -- [[screen centre (the user has not dragged it), centre]]
+                    -- [[the window + panel pair now.]]
+                    if self.main.Position.X.Scale == 0.5 and self.main.Position.Y.Scale == 0.5 then
+                        self:_recenterForProfile(true)
+                    end
                 end
             end
         end)
         self:Connect(connection)
     end)
     haptic.setContainer(self.screenGui)     haptic.setEnabled(self.settings.haptics)     chrome.buildCollapsedFace(self)
+
+    profilePanel.build(self, function()
+        self:_toggleSettingsMode()
+    end)
+    profilePanel.setSubtitle(self, self.profileText)
+    if profilePanel.isEnabled(self) then
+        self.main.Position = self:_profileCenterPosition()
+    end
     self:_bindKeybind()
     self:_bindMouseOverride()
     self:_bindTopbarDrag()
@@ -4385,6 +4549,11 @@ function Window.new(props)
     self:_updateWindowTitle()
 
     self:_syncLiveAnimation()
+
+    -- [[Construction is complete: settings tab content may now be built]]
+    -- [[lazily on first open (it is skipped while the window is still]]
+    -- [[being constructed, e.g. by the first-tab auto-select).]]
+    self._constructed = true
 
     return self
 end
@@ -4452,6 +4621,8 @@ function Window:ChangeTheme(themeInput)
     end
 
     self:_syncLiveAnimation()
+    -- [[A theme can change the row title font, hence the rail width.]]
+    self:_applyContentRailWidth()
 end
 
 function Window:_refreshElementThemes()
@@ -4720,6 +4891,9 @@ function Window:Hide()
         return
     end
 
+    -- [[Cancel the one-tick-late auto-show, if it has not run yet.]]
+    self._autoShowCancelled = true
+
             if self._searching then
         search.close(self, { showTabs = false, jumpTo = self.selectedTab and self.selectedTab.tabPage })
     end
@@ -4964,6 +5138,47 @@ function Window:_clampToScreen()
     self.main.Position = self:_clampedPosition(self.main.Position)
 end
 
+-- [[The window's canonical resting position. With the profile panel]]
+-- [[enabled, the window + gap + panel are treated as one unit and that]]
+-- [[unit is centred: the window itself sits half a panel away from the]]
+-- [[screen centre, on the opposite side of the panel, so neither side of]]
+-- [[the pair looks cramped.]]
+function Window:_profileCenterPosition(): UDim2
+    local shift = profilePanel.shiftFor(self)
+    if shift <= 0 then
+        return UDim2.new(0.5, 0, 0.5, 0)
+    end
+    local left = (self.settings.profileSide or "right") == "left"
+    return UDim2.new(0.5, if left then shift else -shift, 0.5, 0)
+end
+
+function Window:_recenterForProfile(animate)
+    local target = self:_profileCenterPosition()
+    if self.hidden or self.minimised then
+        -- [[Nothing is on screen to move; park the remembered position so]]
+        -- [[the next restore lands centred for the current panel state.]]
+        self._restorePosition = target
+        return
+    end
+    if self.main.Position == target then
+        return
+    end
+    if animate and not self.animating then
+        local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+        state.tweenService:Create(self.main, tweenInfo, { Position = target }):Play()
+        state.tweenService
+            :Create(
+                self.drag.drag,
+                tweenInfo,
+                { Position = UDim2.new(target.X.Scale, target.X.Offset, target.Y.Scale, target.Y.Offset + self.size.Y.Offset / 2 + 15) }
+            )
+            :Play()
+    else
+        self.main.Position = target
+        self:_syncDragBar()
+    end
+end
+
 function Window:_applyWindowSize()
     if self.unloaded then
         return
@@ -4986,12 +5201,48 @@ function Window:_applyWindowSize()
     self.main.Size = newSize
     self:_clampToScreen()
     self:_syncDragBar()
+    -- [[A viewport change (rotation, inset, keyboard) can turn the profile]]
+    -- [[panel on or off: there may suddenly be room for it, or none.]]
+    -- [[Re-evaluate its visibility alongside the resize.]]
+    profilePanel.setShown(self, true, nil)
+    if self.main.Position.X.Scale == 0.5 and self.main.Position.Y.Scale == 0.5 then
+        -- [[Still anchored at the screen centre (the user has not dragged]]
+        -- [[it): re-apply the resting centre for the new panel state.]]
+        self:_recenterForProfile(false)
+    end
+end
+
+-- [[Effective rail width. Non-sidebar and collapsed rails keep the existing]]
+-- [[fixed behavior; the expanded responsive rail instead hugs the widest]]
+-- [[visible tab row (railContentWidth), capped by the window's available]]
+-- [[space so the elements area always keeps at least half the window.]]
+function Window:_railWidth()
+    local base = layouts.railWidthFor(self.layout, self.size.X.Offset)
+    if self.layout.mode ~= "sidebar" or self.layout.forceCollapsed then
+        return base
+    end
+    if base < (self.layout.railWidth :: number) then
+        return base
+    end
+    local content = tabSelector.railContentWidth(self, self.layout)
+    if content <= 0 then
+        return base
+    end
+    local cap = math.floor(self.size.X.Offset * 0.5)
+    return math.min(content, cap)
+end
+
+function Window:_applyContentRailWidth()
+    if self.layout.mode ~= "sidebar" or self.layout.forceCollapsed then
+        return
+    end
+    local implementation = layouts.implementation(layoutKey(self.layout))
+    implementation.ApplyWidth(self, self:_railWidth())
 end
 
 function Window:_applyRailWidth()
-    local railWidth = layouts.railWidthFor(self.layout, self.size.X.Offset)
     local implementation = layouts.implementation(layoutKey(self.layout))
-    implementation.ApplyWidth(self, railWidth)
+    implementation.ApplyWidth(self, self:_railWidth())
 
     if self._settingsLayoutActive or self.selectedTab == self.rfSettings then
         self:_applySettingsLayout(true)
@@ -5216,12 +5467,20 @@ function Window:_buildSettingsUI()
     local behavior = self:CreateTab({ name = "Behavior", icon = "shield-check", customOrder = 1003, forgetState = true, isSettingsTab = true })
     local performance = self:CreateTab({ name = "Performance", icon = "gauge", customOrder = 1004, forgetState = true, isSettingsTab = true })
     local persistence = self:CreateTab({ name = "Persistence", icon = "save", customOrder = 1005, forgetState = true, isSettingsTab = true })
-    local about = self:CreateTab({ name = "About", icon = "info", customOrder = 1000, forgetState = true, isSettingsTab = true })
+    local about = self:CreateTab({ name = "About", icon = "info", customOrder = 1006, forgetState = true, isSettingsTab = true })
     for _, tab in { appearance, behavior, performance, persistence, about } do
         tab._isSettingsTab = true
         table.insert(self._settingsTabs, tab)
     end
 
+    -- [[The settings content is built lazily: window construction only]]
+    -- [[creates the tab shells (rows + pages), and each tab's elements]]
+    -- [[are created the first time that tab is opened (see]]
+    -- [[_buildSettingsContent), so opening the window stays fast. The]]
+    -- [[builders run at most once, in the original creation order.]]
+    self._settingsContentBuilt = self._settingsContentBuilt or {}
+
+    local function buildAbout()
     about:CreateSection({ name = "Rayfield Gen2" })
     about:CreateText({
         name = "About Rayfield Gen2",
@@ -5249,7 +5508,10 @@ function Window:_buildSettingsUI()
         name = "Documentation",
         text = "https://docs.sirius.menu/rayfield-gen2",
     })
+    end
+    about._settingsContentBuilder = buildAbout
 
+    local function buildGeneral()
     self.rfSettings:CreateSection({ name = "General" })
     self.rfSettings:CreateKeybind({
         name = "Toggle Keybind", icon = constants.icons.search, value = self.settings.toggleKeybind,
@@ -5271,6 +5533,10 @@ function Window:_buildSettingsUI()
         callback = function(value) self.settings.welcomeToast = value; self:SaveSettings() end,
     })
 
+    end
+    self.rfSettings._settingsContentBuilder = buildGeneral
+
+    local function buildAppearance()
     appearance:CreateSection({ name = "Theme" })
     local themes = {
         default = "Default",
@@ -5373,29 +5639,31 @@ function Window:_buildSettingsUI()
     })
     appearance:CreateSection({ name = "Profile" })
     appearance:CreateToggle({
-        name = "Show profile", description = "Shows your account profile in the active bar layout.", value = self.settings.showProfile,
+        name = "Show profile", description = "Shows your account profile in a panel beside the window.", value = self.settings.showProfile,
         callback = function(value)
-            self.settings.showProfile = value == true
-            sidebar.reflowProfile(self); sidebar.setProfileShown(self, self.settings.showProfile, sidebar.settleInfo); self:SaveSettings()
+            profilePanel.setEnabled(self, value)
+            self:SaveSettings()
+        end,
+    })
+    appearance:CreateDropdown({
+        name = "Profile side", description = "Which side of the window the profile panel sits on. The window recentres so it and the panel stay centred together.",
+        options = { "Right", "Left" },
+        value = if (self.settings.profileSide or "right") == "left" then "Left" else "Right",
+        callback = function(choice)
+            local side = if choice == "Left" then "left" else "right"
+            if (self.settings.profileSide or "right") == side then
+                return
+            end
+            profilePanel.setSide(self, side)
+            self:SaveSettings()
         end,
     })
     appearance:CreateToggle({
-        name = "Reveal full username", description = "Shows your full Roblox username in the sidebar instead of the masked version.", value = self.settings.showFullUsername,
+        name = "Reveal full username", description = "Shows your full Roblox username in the profile panel instead of the masked version.", value = self.settings.showFullUsername,
         callback = function(value)
             self.settings.showFullUsername = value == true
-            sidebar.refreshProfileName(self); self:SaveSettings()
+            profilePanel.refreshName(self); self:SaveSettings()
         end,
-    })
-
-    behavior:CreateSection({ name = "Window behavior" })
-    behavior:CreateToggle({
-        name = "Prevent duplicate windows", description = "Prevents Astra from creating another window while this window is active.", value = self.settings.antiWindowDuplicate,
-        callback = function(value) self.settings.antiWindowDuplicate = value; self:SaveSettings() end,
-    })
-    performance:CreateSection({ name = "Performance" })
-    performance:CreateToggle({
-        name = "Haptics", description = "A subtle tap as you interact, on devices that support haptics.", value = self.settings.haptics,
-        callback = function(value) self.settings.haptics = value; haptic.setEnabled(value); self:SaveSettings() end,
     })
 
     appearance:CreateSection({ name = "Window" })
@@ -5409,43 +5677,81 @@ function Window:_buildSettingsUI()
     })
     appearance:CreateButton({
         name = "Reset Window Position", callback = function()
-            state.tweenService:Create(self.main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
-            state.tweenService:Create(self.drag.drag, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, self.size.Y.Offset / 2 + 15) }):Play()
+            self:_recenterForProfile(true)
         end,
     })
+    end
+    appearance._settingsContentBuilder = buildAppearance
 
-    if next(self.configuration) ~= nil then
-        persistence:CreateSection({ name = "Configurations" })
-        local selected = self:ListConfigs()[1]
-        local configDropdown, configName
-        local function refresh()
-            local configs = self:ListConfigs(); configDropdown:Refresh(configs)
-            if selected and not table.find(configs, selected) then selected = configs[1] end
-            if selected then configDropdown:Set(selected, true) end
-        end
-        configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = constants.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
-        configName = persistence:CreateInput({ name = "Configuration Name", description = "Name a new configuration, or leave blank to overwrite the selected one.", placeholder = "e.g. PvP Loadout", clearOnFocus = false })
-        local group = persistence:CreateGroup()
-        group:CreateButton({ name = "Save", icon = constants.icons.config, callback = function()
-            local name = configName.value; if name == "" then name = selected end
-            if not name or name == "" then self:Toast({ title = locale.resolve("Name your configuration first") }); return end
-            if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = locale.resolve("Saved configuration"), subtitle = name, icon = constants.icons.config }) else self:Toast({ title = locale.resolve("Couldn't save configuration"), subtitle = name }) end
-        end })
-        group:CreateButton({ name = "Load", callback = function()
-            if not selected or selected == "" then self:Toast({ title = locale.resolve("Pick a configuration to load") }); return end
-            if self:_applyNamedConfig(selected) then self:Toast({ title = locale.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = locale.resolve("Couldn't load configuration"), subtitle = selected }) end
-        end })
-        group:CreateButton({ name = "Delete", callback = function()
-            local name = selected
-            if not name or name == "" then self:Toast({ title = locale.resolve("Pick a configuration to delete") }); return end
-            if self:DeleteConfig(name) then refresh(); self:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name }) end
-        end })
+    local function buildBehavior()
+    behavior:CreateSection({ name = "Window behavior" })
+    behavior:CreateToggle({
+        name = "Prevent duplicate windows", description = "Prevents Astra from creating another window while this window is active.", value = self.settings.antiWindowDuplicate,
+        callback = function(value) self.settings.antiWindowDuplicate = value; self:SaveSettings() end,
+    })
+    end
+    behavior._settingsContentBuilder = buildBehavior
+
+    local function buildPerformance()
+    performance:CreateSection({ name = "Performance" })
+    performance:CreateToggle({
+        name = "Haptics", description = "A subtle tap as you interact, on devices that support haptics.", value = self.settings.haptics,
+        callback = function(value) self.settings.haptics = value; haptic.setEnabled(value); self:SaveSettings() end,
+    })
+    end
+    performance._settingsContentBuilder = buildPerformance
+
+    local function buildPersistence()
+    -- [[Built unconditionally like every other settings tab: the]]
+    -- [[configuration save/load system works without a `configuration`]]
+    -- [[prop (paths fall back to the window name), so gating the content]]
+    -- [[on it left the tab empty for windows created without one.]]
+    persistence:CreateSection({ name = "Configurations" })
+    local selected = self:ListConfigs()[1]
+    local configDropdown, configName
+    local function refresh()
+        local configs = self:ListConfigs(); configDropdown:Refresh(configs)
+        if selected and not table.find(configs, selected) then selected = configs[1] end
+        if selected then configDropdown:Set(selected, true) end
+    end
+    configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = constants.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
+    configName = persistence:CreateInput({ name = "Configuration Name", description = "Name a new configuration, or leave blank to overwrite the selected one.", placeholder = "e.g. PvP Loadout", clearOnFocus = false })
+    local group = persistence:CreateGroup()
+    group:CreateButton({ name = "Save", icon = constants.icons.config, callback = function()
+        local name = configName.value; if name == "" then name = selected end
+        if not name or name == "" then self:Toast({ title = locale.resolve("Name your configuration first") }); return end
+        if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = locale.resolve("Saved configuration"), subtitle = name, icon = constants.icons.config }) else self:Toast({ title = locale.resolve("Couldn't save configuration"), subtitle = name }) end
+    end })
+    group:CreateButton({ name = "Load", callback = function()
+        if not selected or selected == "" then self:Toast({ title = locale.resolve("Pick a configuration to load") }); return end
+        if self:_applyNamedConfig(selected) then self:Toast({ title = locale.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = locale.resolve("Couldn't load configuration"), subtitle = selected }) end
+    end })
+    group:CreateButton({ name = "Delete", callback = function()
+        local name = selected
+        if not name or name == "" then self:Toast({ title = locale.resolve("Pick a configuration to delete") }); return end
+        if self:DeleteConfig(name) then refresh(); self:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name }) end
+    end })
+    end
+    persistence._settingsContentBuilder = buildPersistence
+end
+
+function Window:_buildSettingsContent(tab)
+    -- [[Lazy settings content: a tab's elements are created the first]]
+    -- [[time it is opened, keeping window construction fast. The pcall]]
+    -- [[keeps one bad element from taking the whole window down.]]
+    if self._settingsContentBuilt[tab] or not tab._settingsContentBuilder then
+        return
+    end
+    self._settingsContentBuilt[tab] = true
+    local ok, err = pcall(tab._settingsContentBuilder)
+    if not ok then
+        self:Notify({ title = "Settings", content = "Some settings content failed to load: " .. tostring(err) })
     end
 end
 
 function Window:SetProfile(text)
     self.profileText = text
-    sidebar.setSubtitle(self, text)
+    profilePanel.setSubtitle(self, text)
 end
 
 function Window:SaveSettings()
@@ -5614,7 +5920,7 @@ function Window:_setLayoutMode(modeName)
         self.elements.Size = UDim2.new(1, 0, 1, -newLayout.chromeHeight)
         self.bottomFade.Size = UDim2.new(1, 0, newLayout.fadeSize.Y.Scale, newLayout.fadeSize.Y.Offset)
     end
-    implementation.ApplyWidth(self, layouts.railWidthFor(newLayout, self.size.X.Offset))
+    implementation.ApplyWidth(self, self:_railWidth())
     self.elementsLayout.FillDirection = newLayout.pageDirection
 
     for _, tab in self.tabs do
@@ -5657,6 +5963,31 @@ function Window:_applySettingsLayout(isSettings)
         self.selectedTab.tabPage.Size = if self.layout.mode == "sidebar" then UDim2.new(1, -35, 1, 0) else UDim2.new(1, -20, 1, 0)
         self.selectedTab.tabPage.Position = if self.layout.mode == "sidebar" then UDim2.new(0, 35, 0, 0) else UDim2.new(0, 0, 0, 0)
     end
+    -- [[The visible rail group changed: re-derive the responsive rail's]]
+    -- [[width from the tabs now shown (no-op for the other layouts).]]
+    self:_applyContentRailWidth()
+end
+
+-- [[Shared by the topbar gear action and the profile panel's gear.]]
+function Window:_toggleSettingsMode()
+    if self._settingsMode then
+        local previousTab = self._previousTab
+        self._previousTab = nil
+        if previousTab and previousTab.window == self and previousTab.tabPage and not previousTab._isSettingsTab then
+            previousTab:Select()
+            return
+        end
+        for _, tab in self.tabs do
+            if not tab._isSettingsTab and tab.window == self and tab.tabPage then
+                tab:Select()
+                return
+            end
+        end
+        return
+    end
+
+    self._previousTab = self.selectedTab
+    self.rfSettings:Select()
 end
 
 function Window:_setSettingsMode(active)
@@ -5718,8 +6049,7 @@ function Window:_fadeSurfaces(shown, tweenInfo)
         end
     end
 
-    sidebar.reflowProfile(self)
-    sidebar.setProfileShown(self, shown, tweenInfo)
+    profilePanel.setShown(self, shown, tweenInfo)
 end
 
 function Window:_fadeSelectedElementsOut()
@@ -6090,6 +6420,8 @@ function Window:SetLocale(localeId)
             instance[prop] = locale.resolve(token)
         end
     end
+    -- [[Translated row titles may measure differently.]]
+    self:_applyContentRailWidth()
 end
 
 function Window:SetTranslator(translator)
@@ -6572,7 +6904,7 @@ end
 return Window
 
 end)() end,
-    [20] = function()local wax,script,require=ImportGlobals(20)local ImportGlobals return (function(...)
+    [21] = function()local wax,script,require=ImportGlobals(21)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Button"
@@ -6839,7 +7171,7 @@ name(state)
 return state
 
 end)() end,
-    [21] = function()local wax,script,require=ImportGlobals(21)local ImportGlobals return (function(...)
+    [22] = function()local wax,script,require=ImportGlobals(22)local ImportGlobals return (function(...)
 local Changelog = {}
 Changelog.__index = Changelog
 Changelog.__type = "Changelog"
@@ -7283,7 +7615,7 @@ moveable(Changelog)
 return Changelog
 
 end)() end,
-    [22] = function()local wax,script,require=ImportGlobals(22)local ImportGlobals return (function(...)
+    [23] = function()local wax,script,require=ImportGlobals(23)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "ColorPicker"
@@ -8414,7 +8746,7 @@ name(state)
 return state
 
 end)() end,
-    [23] = function()local wax,script,require=ImportGlobals(23)local ImportGlobals return (function(...)
+    [24] = function()local wax,script,require=ImportGlobals(24)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Console"
@@ -8748,7 +9080,7 @@ Console(state)
 return state
 
 end)() end,
-    [24] = function()local wax,script,require=ImportGlobals(24)local ImportGlobals return (function(...)
+    [25] = function()local wax,script,require=ImportGlobals(25)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Descriptor"
@@ -8809,7 +9141,7 @@ end
 return state
 
 end)() end,
-    [25] = function()local wax,script,require=ImportGlobals(25)local ImportGlobals return (function(...)
+    [26] = function()local wax,script,require=ImportGlobals(26)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Divider"
@@ -8954,7 +9286,7 @@ constants(state)
 return state
 
 end)() end,
-    [26] = function()local wax,script,require=ImportGlobals(26)local ImportGlobals return (function(...)
+    [27] = function()local wax,script,require=ImportGlobals(27)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Dropdown"
@@ -10274,7 +10606,7 @@ multiSelect(state)
 return state
 
 end)() end,
-    [27] = function()local wax,script,require=ImportGlobals(27)local ImportGlobals return (function(...)
+    [28] = function()local wax,script,require=ImportGlobals(28)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Group"
@@ -10476,7 +10808,7 @@ constants(state)
 return state
 
 end)() end,
-    [28] = function()local wax,script,require=ImportGlobals(28)local ImportGlobals return (function(...)
+    [29] = function()local wax,script,require=ImportGlobals(29)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Input"
@@ -10737,7 +11069,7 @@ name(state)
 return state
 
 end)() end,
-    [29] = function()local wax,script,require=ImportGlobals(29)local ImportGlobals return (function(...)
+    [30] = function()local wax,script,require=ImportGlobals(30)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Keybind"
@@ -11199,7 +11531,7 @@ name(state)
 return state
 
 end)() end,
-    [30] = function()local wax,script,require=ImportGlobals(30)local ImportGlobals return (function(...)
+    [31] = function()local wax,script,require=ImportGlobals(31)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Progress"
@@ -11649,7 +11981,7 @@ props(state)
 return state
 
 end)() end,
-    [31] = function()local wax,script,require=ImportGlobals(31)local ImportGlobals return (function(...)
+    [32] = function()local wax,script,require=ImportGlobals(32)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Section"
@@ -11736,7 +12068,7 @@ constants(state)
 return state
 
 end)() end,
-    [32] = function()local wax,script,require=ImportGlobals(32)local ImportGlobals return (function(...)
+    [33] = function()local wax,script,require=ImportGlobals(33)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Slider"
@@ -12301,7 +12633,7 @@ flag(state)
 return state
 
 end)() end,
-    [33] = function()local wax,script,require=ImportGlobals(33)local ImportGlobals return (function(...)
+    [34] = function()local wax,script,require=ImportGlobals(34)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Statistic"
@@ -12919,7 +13251,7 @@ name(state)
 return state
 
 end)() end,
-    [34] = function()local wax,script,require=ImportGlobals(34)local ImportGlobals return (function(...)
+    [35] = function()local wax,script,require=ImportGlobals(35)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Tab"
@@ -13116,6 +13448,11 @@ function state:Select(a24)
     elseif self.window._applySettingsLayout then
         self.window:_applySettingsLayout(self == self.window.rfSettings)
     end
+    -- [[Settings tab content is created lazily (after construction):]]
+    -- [[make sure it exists before the page is shown.]]
+    if self._isSettingsTab and self.window._constructed and self.window._buildSettingsContent ~= nil then
+        self.window:_buildSettingsContent(self)
+    end
     self.window:_jumpTo(self.tabPage)
 
                     local a25 = a24 or not self.window:_interactive()
@@ -13285,6 +13622,9 @@ function state:Remove()
     if self.tabPage then
         window:DestroySubtree(self.tabPage)
     end
+    -- [[The removed row may have been the widest: re-derive the]]
+    -- [[responsive rail's width from the rows that remain (no-op elsewhere).]]
+    window:_applyContentRailWidth()
     self.topbarItem = nil
     self.tabPage = nil
     self.elements = {}
@@ -13293,7 +13633,7 @@ end
 return state
 
 end)() end,
-    [35] = function()local wax,script,require=ImportGlobals(35)local ImportGlobals return (function(...)
+    [36] = function()local wax,script,require=ImportGlobals(36)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "TabSection"
@@ -13423,7 +13763,7 @@ end
 return state
 
 end)() end,
-    [36] = function()local wax,script,require=ImportGlobals(36)local ImportGlobals return (function(...)
+    [37] = function()local wax,script,require=ImportGlobals(37)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Tag"
@@ -13587,7 +13927,7 @@ end
 return state
 
 end)() end,
-    [37] = function()local wax,script,require=ImportGlobals(37)local ImportGlobals return (function(...)
+    [38] = function()local wax,script,require=ImportGlobals(38)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Text"
@@ -13741,7 +14081,7 @@ constants(state)
 return state
 
 end)() end,
-    [38] = function()local wax,script,require=ImportGlobals(38)local ImportGlobals return (function(...)
+    [39] = function()local wax,script,require=ImportGlobals(39)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Toggle"
@@ -14227,7 +14567,7 @@ end
 return state
 
 end)() end,
-    [47] = function()local wax,script,require=ImportGlobals(47)local ImportGlobals return (function(...)
+    [48] = function()local wax,script,require=ImportGlobals(48)local ImportGlobals return (function(...)
 
 local managerModule = require(script.manager)
 local registryModule = require(script.registry)
@@ -14252,7 +14592,7 @@ end
 return settings
 
 end)() end,
-    [40] = function()local wax,script,require=ImportGlobals(40)local ImportGlobals return (function(...)
+    [41] = function()local wax,script,require=ImportGlobals(41)local ImportGlobals return (function(...)
 
 local appearance = {}
 
@@ -14275,7 +14615,7 @@ end
 return appearance
 
 end)() end,
-    [41] = function()local wax,script,require=ImportGlobals(41)local ImportGlobals return (function(...)
+    [42] = function()local wax,script,require=ImportGlobals(42)local ImportGlobals return (function(...)
 
 local behavior = {}
 
@@ -14292,7 +14632,7 @@ end
 return behavior
 
 end)() end,
-    [42] = function()local wax,script,require=ImportGlobals(42)local ImportGlobals return (function(...)
+    [43] = function()local wax,script,require=ImportGlobals(43)local ImportGlobals return (function(...)
 
 local defaults = {}
 
@@ -14322,7 +14662,7 @@ end
 return defaults
 
 end)() end,
-    [43] = function()local wax,script,require=ImportGlobals(43)local ImportGlobals return (function(...)
+    [44] = function()local wax,script,require=ImportGlobals(44)local ImportGlobals return (function(...)
 
 local registry = require(script.Parent.registry)
 local defaults = require(script.Parent.defaults)
@@ -14438,7 +14778,7 @@ end
 return SettingsManager
 
 end)() end,
-    [44] = function()local wax,script,require=ImportGlobals(44)local ImportGlobals return (function(...)
+    [45] = function()local wax,script,require=ImportGlobals(45)local ImportGlobals return (function(...)
 
 local performance = {}
 
@@ -14452,7 +14792,7 @@ end
 return performance
 
 end)() end,
-    [45] = function()local wax,script,require=ImportGlobals(45)local ImportGlobals return (function(...)
+    [46] = function()local wax,script,require=ImportGlobals(46)local ImportGlobals return (function(...)
 
 local settingsPersistence = require(script.Parent.Parent.utilities.persistenceSettings)
 local settingsCache = require(script.Parent.Parent.cache.persistenceCache)
@@ -14501,7 +14841,7 @@ end
 return persistenceWrite
 
 end)() end,
-    [46] = function()local wax,script,require=ImportGlobals(46)local ImportGlobals return (function(...)
+    [47] = function()local wax,script,require=ImportGlobals(47)local ImportGlobals return (function(...)
 
 local registry = {}
 
@@ -14547,13 +14887,19 @@ registry.definitions = {
         key = "showProfile",
         kind = "boolean",
         domain = "appearance",
-        description = "Shows the account profile in the active bar layout.",
+        description = "Shows the account profile in a panel beside the window.",
     },
     showFullUsername = {
         key = "showFullUsername",
         kind = "boolean",
         domain = "appearance",
         description = "Shows the full Roblox username instead of the masked one.",
+    },
+    profileSide = {
+        key = "profileSide",
+        kind = "enum",
+        domain = "appearance",
+        description = "Which side of the window the profile panel sits on (right or left).",
     },
     antiWindowDuplicate = {
         key = "antiWindowDuplicate",
@@ -14591,7 +14937,7 @@ end
 return registry
 
 end)() end,
-    [51] = function()local wax,script,require=ImportGlobals(51)local ImportGlobals return (function(...)
+    [52] = function()local wax,script,require=ImportGlobals(52)local ImportGlobals return (function(...)
 
 local imageCache = require(script.moduleCache)
 
@@ -14602,7 +14948,7 @@ local moduleCache = {
 return moduleCache
 
 end)() end,
-    [48] = function()local wax,script,require=ImportGlobals(48)local ImportGlobals return (function(...)
+    [49] = function()local wax,script,require=ImportGlobals(49)local ImportGlobals return (function(...)
 local filesystem = require(script.Parent.Parent.utilities.filesystem)
 local path = require(script.Parent.Parent.utilities.path)
 local variables = require(script.Parent.Parent.core.state)
@@ -14905,7 +15251,7 @@ end
 return imageCache
 
 end)() end,
-    [49] = function()local wax,script,require=ImportGlobals(49)local ImportGlobals return (function(...)
+    [50] = function()local wax,script,require=ImportGlobals(50)local ImportGlobals return (function(...)
 
 local moduleCache = {}
 
@@ -14936,7 +15282,7 @@ end
 return moduleCache
 
 end)() end,
-    [50] = function()local wax,script,require=ImportGlobals(50)local ImportGlobals return (function(...)
+    [51] = function()local wax,script,require=ImportGlobals(51)local ImportGlobals return (function(...)
 
 local persistenceCache = {}
 
@@ -14961,7 +15307,7 @@ end
 return persistenceCache
 
 end)() end,
-    [55] = function()local wax,script,require=ImportGlobals(55)local ImportGlobals return (function(...)
+    [56] = function()local wax,script,require=ImportGlobals(56)local ImportGlobals return (function(...)
 
 local textMetrics = require(script.textMetrics)
 local colors = require(script.colors)
@@ -14979,7 +15325,7 @@ functions.contrastText = colors.contrastText
 return functions
 
 end)() end,
-    [52] = function()local wax,script,require=ImportGlobals(52)local ImportGlobals return (function(...)
+    [53] = function()local wax,script,require=ImportGlobals(53)local ImportGlobals return (function(...)
 local colors = {}
 
 function colors.contrastColor(color: Color3): Color3
@@ -14999,7 +15345,7 @@ end
 return colors
 
 end)() end,
-    [53] = function()local wax,script,require=ImportGlobals(53)local ImportGlobals return (function(...)
+    [54] = function()local wax,script,require=ImportGlobals(54)local ImportGlobals return (function(...)
 local flagNames = {}
 
 local offsetBasis = 2166136261
@@ -15031,7 +15377,7 @@ end
 return flagNames
 
 end)() end,
-    [54] = function()local wax,script,require=ImportGlobals(54)local ImportGlobals return (function(...)
+    [55] = function()local wax,script,require=ImportGlobals(55)local ImportGlobals return (function(...)
 local state = require(script.Parent.Parent.core.state)
 local textService = state.textService
 
@@ -15138,7 +15484,7 @@ end
 return textMetrics
 
 end)() end,
-    [56] = function()local wax,script,require=ImportGlobals(56)local ImportGlobals return (function(...)
+    [57] = function()local wax,script,require=ImportGlobals(57)local ImportGlobals return (function(...)
 local sidebar = require(script.Parent.Parent.components.sidebar)
 
 local Sidebar = {}
@@ -15184,8 +15530,6 @@ function Sidebar.Build(window, layout)
         Parent = window.main,
     })
     buildRail(window, layout)
-    sidebar.buildProfile(window, layout)
-    sidebar.reflowProfile(window)
 end
 
 function Sidebar.ApplyWidth(window, width)
@@ -15194,13 +15538,12 @@ function Sidebar.ApplyWidth(window, width)
     window.elements.Size = UDim2.new(1, -width, 1, -layout.chromeHeight)
     window.bottomFade.Size = UDim2.new(1, -width, layout.fadeSize.Y.Scale, layout.fadeSize.Y.Offset)
     sidebar.applyRailRows(window, width, layout)
-    sidebar.reflowProfile(window)
 end
 
 return Sidebar
 
 end)() end,
-    [57] = function()local wax,script,require=ImportGlobals(57)local ImportGlobals return (function(...)
+    [58] = function()local wax,script,require=ImportGlobals(58)local ImportGlobals return (function(...)
 local sidebar = require(script.Parent.Parent.components.sidebar)
 
 local SidebarCollapsed = {}
@@ -15246,8 +15589,6 @@ function SidebarCollapsed.Build(window, layout)
         Parent = window.main,
     })
     buildRail(window, layout)
-    sidebar.buildProfile(window, layout)
-    sidebar.reflowProfile(window)
 end
 
 function SidebarCollapsed.ApplyWidth(window)
@@ -15257,14 +15598,12 @@ function SidebarCollapsed.ApplyWidth(window)
     window.elements.Size = UDim2.new(1, -width, 1, -layout.chromeHeight)
     window.bottomFade.Size = UDim2.new(1, -width, layout.fadeSize.Y.Scale, layout.fadeSize.Y.Offset)
     sidebar.applyRailRows(window, width, layout)
-    sidebar.reflowProfile(window)
 end
 
 return SidebarCollapsed
 
 end)() end,
-    [58] = function()local wax,script,require=ImportGlobals(58)local ImportGlobals return (function(...)
-local sidebar = require(script.Parent.Parent.components.sidebar)
+    [59] = function()local wax,script,require=ImportGlobals(59)local ImportGlobals return (function(...)
 local search = require(script.Parent.Parent.components.search)
 
 local Topbar = {}
@@ -15297,21 +15636,18 @@ function Topbar.Build(window, layout)
         PaddingRight = UDim.new(0, 10),
         Parent = window.tabList,
     })
-    sidebar.buildProfile(window, layout)
-    sidebar.reflowProfile(window)
 end
 
 function Topbar.ApplyWidth(window)
     search.railWidth(window, 0)
     window.elements.Size = UDim2.new(1, 0, 1, -window.layout.chromeHeight)
     window.bottomFade.Size = UDim2.new(1, 0, window.layout.fadeSize.Y.Scale, window.layout.fadeSize.Y.Offset)
-    sidebar.reflowProfile(window)
 end
 
 return Topbar
 
 end)() end,
-    [62] = function()local wax,script,require=ImportGlobals(62)local ImportGlobals return (function(...)
+    [63] = function()local wax,script,require=ImportGlobals(63)local ImportGlobals return (function(...)
 
 local image = require(script.image)
 
@@ -15326,7 +15662,7 @@ local windowIcons = {
 return windowIcons
 
 end)() end,
-    [60] = function()local wax,script,require=ImportGlobals(60)local ImportGlobals return (function(...)
+    [61] = function()local wax,script,require=ImportGlobals(61)local ImportGlobals return (function(...)
 local imageCache = require(script.Parent.Parent.cache.imageCache)
 local variables = require(script.Parent.Parent.core.state)
 
@@ -15491,7 +15827,7 @@ end
 return image
 
 end)() end,
-    [61] = function()local wax,script,require=ImportGlobals(61)local ImportGlobals return (function(...)
+    [62] = function()local wax,script,require=ImportGlobals(62)local ImportGlobals return (function(...)
 
 local windowIcons = {}
 
@@ -15555,7 +15891,7 @@ end
 return windowIcons
 
 end)() end,
-    [69] = function()local wax,script,require=ImportGlobals(69)local ImportGlobals return (function(...)
+    [70] = function()local wax,script,require=ImportGlobals(70)local ImportGlobals return (function(...)
 -- [[Icon resolver service.]]
 -- [[]]
 -- [[Public API is compatible with the previous single-module catalog:]]
@@ -15751,7 +16087,7 @@ end
 return icons
 
 end)() end,
-    [63] = function()local wax,script,require=ImportGlobals(63)local ImportGlobals return (function(...)
+    [64] = function()local wax,script,require=ImportGlobals(64)local ImportGlobals return (function(...)
 
 local feather = {
     ["activity"] = "assets/icons/feather-pack/a/featherActivity.png",
@@ -16046,7 +16382,7 @@ local feather = {
 return feather
 
 end)() end,
-    [64] = function()local wax,script,require=ImportGlobals(64)local ImportGlobals return (function(...)
+    [65] = function()local wax,script,require=ImportGlobals(65)local ImportGlobals return (function(...)
 
 local heroicons = {
     ["academic-cap"] = "assets/icons/heroicons-pack/a/heroiconsAcademicCap.png",
@@ -16702,7 +17038,7 @@ local heroicons = {
 return heroicons
 
 end)() end,
-    [65] = function()local wax,script,require=ImportGlobals(65)local ImportGlobals return (function(...)
+    [66] = function()local wax,script,require=ImportGlobals(66)local ImportGlobals return (function(...)
 
 local lucide = {
     ["a-arrow-down"] = "assets/icons/lucide-pack/a/lucideAArrowDown.png",
@@ -18486,7 +18822,7 @@ local lucide = {
 return lucide
 
 end)() end,
-    [66] = function()local wax,script,require=ImportGlobals(66)local ImportGlobals return (function(...)
+    [67] = function()local wax,script,require=ImportGlobals(67)local ImportGlobals return (function(...)
 
 local material = {
     ["ac_unit"] = "assets/icons/material-pack/white/a/materialAcUnit.png",
@@ -19627,7 +19963,7 @@ local material = {
 return material
 
 end)() end,
-    [67] = function()local wax,script,require=ImportGlobals(67)local ImportGlobals return (function(...)
+    [68] = function()local wax,script,require=ImportGlobals(68)local ImportGlobals return (function(...)
 
 local phosphor = {
     ["acorn"] = "assets/icons/phosphor-pack/a/phosphorAcorn.png",
@@ -21147,7 +21483,7 @@ local phosphor = {
 return phosphor
 
 end)() end,
-    [68] = function()local wax,script,require=ImportGlobals(68)local ImportGlobals return (function(...)
+    [69] = function()local wax,script,require=ImportGlobals(69)local ImportGlobals return (function(...)
 
 local tabler = {
     ["a-b-2"] = "assets/icons/tabler-pack/a/tablerAB2.png",
@@ -26285,7 +26621,7 @@ local tabler = {
 return tabler
 
 end)() end,
-    [80] = function()local wax,script,require=ImportGlobals(80)local ImportGlobals return (function(...)
+    [81] = function()local wax,script,require=ImportGlobals(81)local ImportGlobals return (function(...)
 -- [[Theme resolution engine (themes/init.luau).]]
 -- [[]]
 -- [[Extracted verbatim from components/window.luau so the window no longer owns]]
@@ -26391,7 +26727,7 @@ end
 return themes
 
 end)() end,
-    [70] = function()local wax,script,require=ImportGlobals(70)local ImportGlobals return (function(...)
+    [71] = function()local wax,script,require=ImportGlobals(71)local ImportGlobals return (function(...)
 return {
     -- [[Semantic palette]]
     Background = Color3.fromRGB(16, 13, 24),
@@ -26453,7 +26789,7 @@ return {
 }
 
 end)() end,
-    [71] = function()local wax,script,require=ImportGlobals(71)local ImportGlobals return (function(...)
+    [72] = function()local wax,script,require=ImportGlobals(72)local ImportGlobals return (function(...)
 return {
     -- [[Semantic palette]]
     Background = Color3.fromRGB(11, 16, 25),
@@ -26515,7 +26851,7 @@ return {
 }
 
 end)() end,
-    [72] = function()local wax,script,require=ImportGlobals(72)local ImportGlobals return (function(...)
+    [73] = function()local wax,script,require=ImportGlobals(73)local ImportGlobals return (function(...)
 local crimson = require(script.Parent.Parent.core.state)
 
 return {
@@ -26590,7 +26926,7 @@ return {
 }
 
 end)() end,
-    [73] = function()local wax,script,require=ImportGlobals(73)local ImportGlobals return (function(...)
+    [74] = function()local wax,script,require=ImportGlobals(74)local ImportGlobals return (function(...)
 local default = require(script.Parent.Parent.core.state)
 
 return {
@@ -26672,7 +27008,7 @@ return {
 }
 
 end)() end,
-    [74] = function()local wax,script,require=ImportGlobals(74)local ImportGlobals return (function(...)
+    [75] = function()local wax,script,require=ImportGlobals(75)local ImportGlobals return (function(...)
 return {
     -- [[Semantic palette]]
     Background = Color3.fromRGB(22, 18, 16),
@@ -26734,7 +27070,7 @@ return {
 }
 
 end)() end,
-    [75] = function()local wax,script,require=ImportGlobals(75)local ImportGlobals return (function(...)
+    [76] = function()local wax,script,require=ImportGlobals(76)local ImportGlobals return (function(...)
 local emerald = require(script.Parent.Parent.core.state)
 
 return {
@@ -26809,7 +27145,7 @@ return {
 }
 
 end)() end,
-    [76] = function()local wax,script,require=ImportGlobals(76)local ImportGlobals return (function(...)
+    [77] = function()local wax,script,require=ImportGlobals(77)local ImportGlobals return (function(...)
 local frost = require(script.Parent.Parent.core.state)
 
 return {
@@ -26884,7 +27220,7 @@ return {
 }
 
 end)() end,
-    [77] = function()local wax,script,require=ImportGlobals(77)local ImportGlobals return (function(...)
+    [78] = function()local wax,script,require=ImportGlobals(78)local ImportGlobals return (function(...)
 local gold = require(script.Parent.Parent.core.state)
 
 return {
@@ -26959,7 +27295,7 @@ return {
 }
 
 end)() end,
-    [78] = function()local wax,script,require=ImportGlobals(78)local ImportGlobals return (function(...)
+    [79] = function()local wax,script,require=ImportGlobals(79)local ImportGlobals return (function(...)
 local onyx = require(script.Parent.Parent.core.state)
 
 return {
@@ -27034,7 +27370,7 @@ return {
 }
 
 end)() end,
-    [79] = function()local wax,script,require=ImportGlobals(79)local ImportGlobals return (function(...)
+    [80] = function()local wax,script,require=ImportGlobals(80)local ImportGlobals return (function(...)
 return {
     -- [[Semantic palette]]
     Background = Color3.fromRGB(23, 15, 19),
@@ -27096,7 +27432,7 @@ return {
 }
 
 end)() end,
-    [81] = function()local wax,script,require=ImportGlobals(81)local ImportGlobals return (function(...)
+    [82] = function()local wax,script,require=ImportGlobals(82)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 
 local hapticService = {}
@@ -27194,7 +27530,7 @@ end
 return hapticService
 
 end)() end,
-    [82] = function()local wax,script,require=ImportGlobals(82)local ImportGlobals return (function(...)
+    [83] = function()local wax,script,require=ImportGlobals(83)local ImportGlobals return (function(...)
 local networkUtil = require(script.Parent.network)
 local logger = require(script.Parent.log)
 
@@ -27372,7 +27708,7 @@ end
 return assetResolver
 
 end)() end,
-    [83] = function()local wax,script,require=ImportGlobals(83)local ImportGlobals return (function(...)
+    [84] = function()local wax,script,require=ImportGlobals(84)local ImportGlobals return (function(...)
 local iconRegistry = require(script.Parent.Parent.images.windowIcons)
 local constants = {}
 
@@ -27423,7 +27759,7 @@ constants.displayOrder = {
 return constants
 
 end)() end,
-    [84] = function()local wax,script,require=ImportGlobals(84)local ImportGlobals return (function(...)
+    [85] = function()local wax,script,require=ImportGlobals(85)local ImportGlobals return (function(...)
 local enums = {}
 
 function enums.itemFromValue(enumType, value)
@@ -27453,7 +27789,7 @@ end
 return enums
 
 end)() end,
-    [85] = function()local wax,script,require=ImportGlobals(85)local ImportGlobals return (function(...)
+    [86] = function()local wax,script,require=ImportGlobals(86)local ImportGlobals return (function(...)
 local serviceProvider = require(script.Parent.services)
 local filesystem = {}
 
@@ -27704,7 +28040,7 @@ end
 return filesystem
 
 end)() end,
-    [86] = function()local wax,script,require=ImportGlobals(86)local ImportGlobals return (function(...)
+    [87] = function()local wax,script,require=ImportGlobals(87)local ImportGlobals return (function(...)
 local fs = require(script.Parent.filesystem)
 local pathUtil = require(script.Parent.path)
 
@@ -27753,7 +28089,7 @@ end
 return filesystemManager
 
 end)() end,
-    [87] = function()local wax,script,require=ImportGlobals(87)local ImportGlobals return (function(...)
+    [88] = function()local wax,script,require=ImportGlobals(88)local ImportGlobals return (function(...)
 local fontManager = require(script.Parent.services)
 local a2 = fontManager.getService("HttpService")
 local a3 = fontManager.getService("RunService")
@@ -28206,7 +28542,7 @@ end
 return a16
 
 end)() end,
-    [88] = function()local wax,script,require=ImportGlobals(88)local ImportGlobals return (function(...)
+    [89] = function()local wax,script,require=ImportGlobals(89)local ImportGlobals return (function(...)
 
 local functions = {}
 
@@ -28224,7 +28560,7 @@ functions.contrastText = textMetrics.contrastText
 return functions
 
 end)() end,
-    [89] = function()local wax,script,require=ImportGlobals(89)local ImportGlobals return (function(...)
+    [90] = function()local wax,script,require=ImportGlobals(90)local ImportGlobals return (function(...)
 local layouts = {}
 
 local topbarLayout = require(script.Parent.Parent.layouts.Topbar)
@@ -28265,8 +28601,6 @@ export type Layout = {
     rowPadding: number?,
     rowContentSpacing: number?,
     rowIconSize: number?,
-    footerHeight: number?,
-    avatarSize: number?,
     cardTransparency: number?,
     cardStrokeRotation: number?,
     cardStrokeTransparency: NumberSequence?,
@@ -28282,9 +28616,6 @@ layouts.top = {
 
     tabStripTop = tabStripTopOffset,
     tabStripHeight = tabStripRowHeight,
-
-    profileHeight = 48,
-    avatarSize = 34,
 
     pageDirection = Enum.FillDirection.Horizontal,
 
@@ -28315,9 +28646,6 @@ layouts.sidebar = {
     rowPadding = 10,
     rowContentSpacing = 6,
     rowIconSize = 20,
-
-    footerHeight = 60,
-    avatarSize = 34,
 
     pageDirection = Enum.FillDirection.Vertical,
 
@@ -28378,7 +28706,7 @@ end
 return layouts
 
 end)() end,
-    [90] = function()local wax,script,require=ImportGlobals(90)local ImportGlobals return (function(...)
+    [91] = function()local wax,script,require=ImportGlobals(91)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local logger = require(script.Parent.log)
 
@@ -28477,7 +28805,7 @@ end
 return locale
 
 end)() end,
-    [91] = function()local wax,script,require=ImportGlobals(91)local ImportGlobals return (function(...)
+    [92] = function()local wax,script,require=ImportGlobals(92)local ImportGlobals return (function(...)
 local function lockable<T>(element: T): T
     local target = element :: any
 
@@ -28499,7 +28827,7 @@ end
 return lockable
 
 end)() end,
-    [92] = function()local wax,script,require=ImportGlobals(92)local ImportGlobals return (function(...)
+    [93] = function()local wax,script,require=ImportGlobals(93)local ImportGlobals return (function(...)
 local log = {}
 
 type SuppressPredicate = () -> boolean
@@ -28549,7 +28877,7 @@ end
 return log
 
 end)() end,
-    [93] = function()local wax,script,require=ImportGlobals(93)local ImportGlobals return (function(...)
+    [94] = function()local wax,script,require=ImportGlobals(94)local ImportGlobals return (function(...)
 local function moveable<T>(dragState: T): T
     local target = dragState :: any
 
@@ -28585,7 +28913,7 @@ end
 return moveable
 
 end)() end,
-    [94] = function()local wax,script,require=ImportGlobals(94)local ImportGlobals return (function(...)
+    [95] = function()local wax,script,require=ImportGlobals(95)local ImportGlobals return (function(...)
 local network = {}
 network.__index = network
 
@@ -28603,7 +28931,7 @@ end
 return network
 
 end)() end,
-    [95] = function()local wax,script,require=ImportGlobals(95)local ImportGlobals return (function(...)
+    [96] = function()local wax,script,require=ImportGlobals(96)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local textService = coreState.textService
 
@@ -28916,7 +29244,7 @@ end
 return odometer
 
 end)() end,
-    [96] = function()local wax,script,require=ImportGlobals(96)local ImportGlobals return (function(...)
+    [97] = function()local wax,script,require=ImportGlobals(97)local ImportGlobals return (function(...)
 type OrderedElement = {
     main: GuiObject,
     descriptor: { main: GuiObject }?,
@@ -28932,7 +29260,7 @@ end
 return ordering
 
 end)() end,
-    [97] = function()local wax,script,require=ImportGlobals(97)local ImportGlobals return (function(...)
+    [98] = function()local wax,script,require=ImportGlobals(98)local ImportGlobals return (function(...)
 local path = {}
 
 function path.join(base: string, suffix: string?): string
@@ -28983,7 +29311,7 @@ end
 return path
 
 end)() end,
-    [98] = function()local wax,script,require=ImportGlobals(98)local ImportGlobals return (function(...)
+    [99] = function()local wax,script,require=ImportGlobals(99)local ImportGlobals return (function(...)
 local persistence = {}
 
 local configPersistence = require(script.Parent.persistenceConfig)
@@ -29002,7 +29330,7 @@ persistence.loadSettings = settingsPersistence.loadSettings
 return persistence
 
 end)() end,
-    [99] = function()local wax,script,require=ImportGlobals(99)local ImportGlobals return (function(...)
+    [100] = function()local wax,script,require=ImportGlobals(100)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local fs = require(script.Parent.filesystem)
 local logger = require(script.Parent.log)
@@ -29244,7 +29572,7 @@ end
 return persistenceConfig
 
 end)() end,
-    [100] = function()local wax,script,require=ImportGlobals(100)local ImportGlobals return (function(...)
+    [101] = function()local wax,script,require=ImportGlobals(101)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local pathUtil = require(script.Parent.path)
 
@@ -29288,7 +29616,7 @@ end
 return persistencePaths
 
 end)() end,
-    [101] = function()local wax,script,require=ImportGlobals(101)local ImportGlobals return (function(...)
+    [102] = function()local wax,script,require=ImportGlobals(102)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local fs = require(script.Parent.filesystem)
 local paths = require(script.Parent.persistencePaths)
@@ -29308,6 +29636,7 @@ type SettingsWindow = {
         haptics: boolean,
         showProfile: boolean,
         showFullUsername: boolean,
+        profileSide: string,
         antiWindowDuplicate: boolean,
         layoutMode: string,
         activeSubTab: number,
@@ -29323,7 +29652,8 @@ type DecodedSettings = {
     welcomeToast: unknown?,
         haptics: unknown?,
         showProfile: unknown?,
-        showFullUsername: unknown?,    antiWindowDuplicate: unknown?,
+        showFullUsername: unknown?,    profileSide: unknown?,
+    antiWindowDuplicate: unknown?,
     layoutMode: unknown?,
     activeSubTab: unknown?,
 }
@@ -29348,6 +29678,7 @@ function persistenceSettings.saveSettings(window: SettingsWindow): boolean
         haptics = window.settings.haptics,
         showProfile = window.settings.showProfile,
         showFullUsername = window.settings.showFullUsername,
+        profileSide = window.settings.profileSide,
         antiWindowDuplicate = window.settings.antiWindowDuplicate,
         layoutMode = window.settings.layoutMode,
         activeSubTab = window.settings.activeSubTab,
@@ -29462,6 +29793,9 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
     if type(decodedSettings.showFullUsername) == "boolean" then
         window.settings.showFullUsername = decodedSettings.showFullUsername
     end
+    if decodedSettings.profileSide == "left" or decodedSettings.profileSide == "right" then
+        window.settings.profileSide = decodedSettings.profileSide
+    end
     if type(decodedSettings.antiWindowDuplicate) == "boolean" then
         window.settings.antiWindowDuplicate = decodedSettings.antiWindowDuplicate
     end
@@ -29482,7 +29816,7 @@ end
 return persistenceSettings
 
 end)() end,
-    [102] = function()local wax,script,require=ImportGlobals(102)local ImportGlobals return (function(...)
+    [103] = function()local wax,script,require=ImportGlobals(103)local ImportGlobals return (function(...)
 local fs = require(script.Parent.filesystem)
 
 local persistenceWrite = {}
@@ -29510,7 +29844,7 @@ end
 return persistenceWrite
 
 end)() end,
-    [103] = function()local wax,script,require=ImportGlobals(103)local ImportGlobals return (function(...)
+    [104] = function()local wax,script,require=ImportGlobals(104)local ImportGlobals return (function(...)
 local services = {}
 
 function services.getService(serviceName)
@@ -29521,7 +29855,7 @@ end
 return services
 
 end)() end,
-    [104] = function()local wax,script,require=ImportGlobals(104)local ImportGlobals return (function(...)
+    [105] = function()local wax,script,require=ImportGlobals(105)local ImportGlobals return (function(...)
 local layoutMetrics = require(script.Parent.layouts)
 local coreState = require(script.Parent.Parent.core.state)
 
@@ -29731,104 +30065,105 @@ end)() end,
 
 local LineOffsets = {
     [2] = 12,
-    [3] = 168,
-    [5] = 579,
-    [6] = 614,
-    [7] = 659,
-    [8] = 565,
-    [9] = 776,
-    [10] = 886,
-    [11] = 1130,
-    [12] = 1357,
-    [13] = 1664,
-    [14] = 2382,
-    [15] = 2717,
-    [16] = 3144,
-    [17] = 3422,
-    [18] = 3799,
-    [20] = 6576,
-    [21] = 6843,
-    [22] = 7287,
-    [23] = 8418,
-    [24] = 8752,
-    [25] = 8813,
-    [26] = 8958,
-    [27] = 10278,
-    [28] = 10480,
-    [29] = 10741,
-    [30] = 11203,
-    [31] = 11653,
-    [32] = 11740,
-    [33] = 12305,
-    [34] = 12923,
-    [35] = 13297,
-    [36] = 13427,
-    [37] = 13591,
-    [38] = 13745,
-    [40] = 14256,
-    [41] = 14279,
-    [42] = 14296,
-    [43] = 14326,
-    [44] = 14442,
-    [45] = 14456,
-    [46] = 14505,
-    [47] = 14231,
-    [48] = 14606,
-    [49] = 14909,
-    [50] = 14940,
-    [51] = 14595,
-    [52] = 14983,
-    [53] = 15003,
-    [54] = 15035,
-    [55] = 14965,
-    [56] = 15142,
-    [57] = 15204,
-    [58] = 15267,
-    [60] = 15330,
-    [61] = 15495,
-    [62] = 15315,
-    [63] = 15755,
-    [64] = 16050,
-    [65] = 16706,
-    [66] = 18490,
-    [67] = 19631,
-    [68] = 21151,
-    [69] = 15559,
-    [70] = 26395,
-    [71] = 26457,
-    [72] = 26519,
-    [73] = 26594,
-    [74] = 26676,
-    [75] = 26738,
-    [76] = 26813,
-    [77] = 26888,
-    [78] = 26963,
-    [79] = 27038,
-    [80] = 26289,
-    [81] = 27100,
-    [82] = 27198,
-    [83] = 27376,
-    [84] = 27427,
-    [85] = 27457,
-    [86] = 27708,
-    [87] = 27757,
-    [88] = 28210,
-    [89] = 28228,
-    [90] = 28382,
-    [91] = 28481,
-    [92] = 28503,
-    [93] = 28553,
-    [94] = 28589,
-    [95] = 28607,
-    [96] = 28920,
-    [97] = 28936,
-    [98] = 28987,
-    [99] = 29006,
-    [100] = 29248,
-    [101] = 29292,
-    [102] = 29486,
-    [103] = 29514,
-    [104] = 29525,
+    [3] = 176,
+    [5] = 587,
+    [6] = 622,
+    [7] = 667,
+    [8] = 573,
+    [9] = 784,
+    [10] = 894,
+    [11] = 1138,
+    [12] = 1365,
+    [13] = 1672,
+    [14] = 2390,
+    [15] = 2824,
+    [16] = 3159,
+    [17] = 3220,
+    [18] = 3590,
+    [19] = 3967,
+    [21] = 6908,
+    [22] = 7175,
+    [23] = 7619,
+    [24] = 8750,
+    [25] = 9084,
+    [26] = 9145,
+    [27] = 9290,
+    [28] = 10610,
+    [29] = 10812,
+    [30] = 11073,
+    [31] = 11535,
+    [32] = 11985,
+    [33] = 12072,
+    [34] = 12637,
+    [35] = 13255,
+    [36] = 13637,
+    [37] = 13767,
+    [38] = 13931,
+    [39] = 14085,
+    [41] = 14596,
+    [42] = 14619,
+    [43] = 14636,
+    [44] = 14666,
+    [45] = 14782,
+    [46] = 14796,
+    [47] = 14845,
+    [48] = 14571,
+    [49] = 14952,
+    [50] = 15255,
+    [51] = 15286,
+    [52] = 14941,
+    [53] = 15329,
+    [54] = 15349,
+    [55] = 15381,
+    [56] = 15311,
+    [57] = 15488,
+    [58] = 15547,
+    [59] = 15607,
+    [61] = 15666,
+    [62] = 15831,
+    [63] = 15651,
+    [64] = 16091,
+    [65] = 16386,
+    [66] = 17042,
+    [67] = 18826,
+    [68] = 19967,
+    [69] = 21487,
+    [70] = 15895,
+    [71] = 26731,
+    [72] = 26793,
+    [73] = 26855,
+    [74] = 26930,
+    [75] = 27012,
+    [76] = 27074,
+    [77] = 27149,
+    [78] = 27224,
+    [79] = 27299,
+    [80] = 27374,
+    [81] = 26625,
+    [82] = 27436,
+    [83] = 27534,
+    [84] = 27712,
+    [85] = 27763,
+    [86] = 27793,
+    [87] = 28044,
+    [88] = 28093,
+    [89] = 28546,
+    [90] = 28564,
+    [91] = 28710,
+    [92] = 28809,
+    [93] = 28831,
+    [94] = 28881,
+    [95] = 28917,
+    [96] = 28935,
+    [97] = 29248,
+    [98] = 29264,
+    [99] = 29315,
+    [100] = 29334,
+    [101] = 29576,
+    [102] = 29620,
+    [103] = 29820,
+    [104] = 29848,
+    [105] = 29859,
 }
 
 -- [[Misc AOT variable imports]]
@@ -29896,7 +30231,7 @@ local ObjectTree = {
                 },
             },
             {
-                19,
+                20,
                 1,
                 {
                     "components",
@@ -29941,32 +30276,39 @@ local ObjectTree = {
                         14,
                         2,
                         {
-                            "search",
+                            "profilePanel",
                         },
                     },
                     {
                         15,
                         2,
                         {
-                            "sidebar",
+                            "search",
                         },
                     },
                     {
                         16,
                         2,
                         {
-                            "tabSelector",
+                            "sidebar",
                         },
                     },
                     {
                         17,
                         2,
                         {
-                            "toast",
+                            "tabSelector",
                         },
                     },
                     {
                         18,
+                        2,
+                        {
+                            "toast",
+                        },
+                    },
+                    {
+                        19,
                         2,
                         {
                             "window",
@@ -29975,140 +30317,140 @@ local ObjectTree = {
                 },
             },
             {
-                39,
+                40,
                 1,
                 {
                     "elements",
                 },
                 {
                     {
-                        20,
+                        21,
                         2,
                         {
                             "button",
                         },
                     },
                     {
-                        21,
+                        22,
                         2,
                         {
                             "changelog",
                         },
                     },
                     {
-                        22,
+                        23,
                         2,
                         {
                             "colorpicker",
                         },
                     },
                     {
-                        23,
+                        24,
                         2,
                         {
                             "console",
                         },
                     },
                     {
-                        24,
+                        25,
                         2,
                         {
                             "descriptor",
                         },
                     },
                     {
-                        25,
+                        26,
                         2,
                         {
                             "divider",
                         },
                     },
                     {
-                        26,
+                        27,
                         2,
                         {
                             "dropdown",
                         },
                     },
                     {
-                        27,
+                        28,
                         2,
                         {
                             "group",
                         },
                     },
                     {
-                        28,
+                        29,
                         2,
                         {
                             "input",
                         },
                     },
                     {
-                        29,
+                        30,
                         2,
                         {
                             "keybind",
                         },
                     },
                     {
-                        30,
+                        31,
                         2,
                         {
                             "progress",
                         },
                     },
                     {
-                        31,
+                        32,
                         2,
                         {
                             "section",
                         },
                     },
                     {
-                        32,
+                        33,
                         2,
                         {
                             "slider",
                         },
                     },
                     {
-                        33,
+                        34,
                         2,
                         {
                             "stat",
                         },
                     },
                     {
-                        34,
+                        35,
                         2,
                         {
                             "tab",
                         },
                     },
                     {
-                        35,
+                        36,
                         2,
                         {
                             "tabSection",
                         },
                     },
                     {
-                        36,
+                        37,
                         2,
                         {
                             "tag",
                         },
                     },
                     {
-                        37,
+                        38,
                         2,
                         {
                             "text",
                         },
                     },
                     {
-                        38,
+                        39,
                         2,
                         {
                             "toggle",
@@ -30117,56 +30459,56 @@ local ObjectTree = {
                 },
             },
             {
-                47,
+                48,
                 2,
                 {
                     "settings",
                 },
                 {
                     {
-                        40,
+                        41,
                         2,
                         {
                             "appearance",
                         },
                     },
                     {
-                        41,
+                        42,
                         2,
                         {
                             "behavior",
                         },
                     },
                     {
-                        42,
+                        43,
                         2,
                         {
                             "defaults",
                         },
                     },
                     {
-                        43,
+                        44,
                         2,
                         {
                             "manager",
                         },
                     },
                     {
-                        44,
+                        45,
                         2,
                         {
                             "performance",
                         },
                     },
                     {
-                        45,
+                        46,
                         2,
                         {
                             "persistence",
                         },
                     },
                     {
-                        46,
+                        47,
                         2,
                         {
                             "registry",
@@ -30175,28 +30517,28 @@ local ObjectTree = {
                 },
             },
             {
-                51,
+                52,
                 2,
                 {
                     "cache",
                 },
                 {
                     {
-                        48,
+                        49,
                         2,
                         {
                             "imageCache",
                         },
                     },
                     {
-                        49,
+                        50,
                         2,
                         {
                             "moduleCache",
                         },
                     },
                     {
-                        50,
+                        51,
                         2,
                         {
                             "persistenceCache",
@@ -30205,28 +30547,28 @@ local ObjectTree = {
                 },
             },
             {
-                55,
+                56,
                 2,
                 {
                     "functions",
                 },
                 {
                     {
-                        52,
+                        53,
                         2,
                         {
                             "colors",
                         },
                     },
                     {
-                        53,
+                        54,
                         2,
                         {
                             "flagNames",
                         },
                     },
                     {
-                        54,
+                        55,
                         2,
                         {
                             "textMetrics",
@@ -30235,28 +30577,28 @@ local ObjectTree = {
                 },
             },
             {
-                59,
+                60,
                 1,
                 {
                     "layouts",
                 },
                 {
                     {
-                        56,
+                        57,
                         2,
                         {
                             "Sidebar",
                         },
                     },
                     {
-                        57,
+                        58,
                         2,
                         {
                             "SidebarCollapsed",
                         },
                     },
                     {
-                        58,
+                        59,
                         2,
                         {
                             "Topbar",
@@ -30265,21 +30607,21 @@ local ObjectTree = {
                 },
             },
             {
-                62,
+                63,
                 2,
                 {
                     "images",
                 },
                 {
                     {
-                        60,
+                        61,
                         2,
                         {
                             "image",
                         },
                     },
                     {
-                        61,
+                        62,
                         2,
                         {
                             "windowIcons",
@@ -30288,49 +30630,49 @@ local ObjectTree = {
                 },
             },
             {
-                69,
+                70,
                 2,
                 {
                     "icons",
                 },
                 {
                     {
-                        63,
+                        64,
                         2,
                         {
                             "feather",
                         },
                     },
                     {
-                        64,
+                        65,
                         2,
                         {
                             "heroicons",
                         },
                     },
                     {
-                        65,
+                        66,
                         2,
                         {
                             "lucide",
                         },
                     },
                     {
-                        66,
+                        67,
                         2,
                         {
                             "material",
                         },
                     },
                     {
-                        67,
+                        68,
                         2,
                         {
                             "phosphor",
                         },
                     },
                     {
-                        68,
+                        69,
                         2,
                         {
                             "tabler",
@@ -30339,77 +30681,77 @@ local ObjectTree = {
                 },
             },
             {
-                80,
+                81,
                 2,
                 {
                     "themes",
                 },
                 {
                     {
-                        70,
+                        71,
                         2,
                         {
                             "amethyst",
                         },
                     },
                     {
-                        71,
+                        72,
                         2,
                         {
                             "cobalt",
                         },
                     },
                     {
-                        72,
+                        73,
                         2,
                         {
                             "crimson",
                         },
                     },
                     {
-                        73,
+                        74,
                         2,
                         {
                             "default",
                         },
                     },
                     {
-                        74,
+                        75,
                         2,
                         {
                             "ember",
                         },
                     },
                     {
-                        75,
+                        76,
                         2,
                         {
                             "emerald",
                         },
                     },
                     {
-                        76,
+                        77,
                         2,
                         {
                             "frost",
                         },
                     },
                     {
-                        77,
+                        78,
                         2,
                         {
                             "gold",
                         },
                     },
                     {
-                        78,
+                        79,
                         2,
                         {
                             "onyx",
                         },
                     },
                     {
-                        79,
+                        80,
                         2,
                         {
                             "rose",
@@ -30418,175 +30760,175 @@ local ObjectTree = {
                 },
             },
             {
-                105,
+                106,
                 1,
                 {
                     "utilities",
                 },
                 {
                     {
-                        81,
+                        82,
                         2,
                         {
                             "HapticEngine",
                         },
                     },
                     {
-                        82,
+                        83,
                         2,
                         {
                             "assetResolver",
                         },
                     },
                     {
-                        83,
+                        84,
                         2,
                         {
                             "constants",
                         },
                     },
                     {
-                        84,
+                        85,
                         2,
                         {
                             "enums",
                         },
                     },
                     {
-                        85,
+                        86,
                         2,
                         {
                             "filesystem",
                         },
                     },
                     {
-                        86,
+                        87,
                         2,
                         {
                             "filesystemManager",
                         },
                     },
                     {
-                        87,
+                        88,
                         2,
                         {
                             "fontManager",
                         },
                     },
                     {
-                        88,
+                        89,
                         2,
                         {
                             "functions",
                         },
                     },
                     {
-                        89,
+                        90,
                         2,
                         {
                             "layouts",
                         },
                     },
                     {
-                        90,
+                        91,
                         2,
                         {
                             "locale",
                         },
                     },
                     {
-                        91,
+                        92,
                         2,
                         {
                             "lockable",
                         },
                     },
                     {
-                        92,
+                        93,
                         2,
                         {
                             "log",
                         },
                     },
                     {
-                        93,
+                        94,
                         2,
                         {
                             "moveable",
                         },
                     },
                     {
-                        94,
+                        95,
                         2,
                         {
                             "network",
                         },
                     },
                     {
-                        95,
+                        96,
                         2,
                         {
                             "odometer",
                         },
                     },
                     {
-                        96,
+                        97,
                         2,
                         {
                             "ordering",
                         },
                     },
                     {
-                        97,
+                        98,
                         2,
                         {
                             "path",
                         },
                     },
                     {
-                        98,
+                        99,
                         2,
                         {
                             "persistence",
                         },
                     },
                     {
-                        99,
+                        100,
                         2,
                         {
                             "persistenceConfig",
                         },
                     },
                     {
-                        100,
+                        101,
                         2,
                         {
                             "persistencePaths",
                         },
                     },
                     {
-                        101,
+                        102,
                         2,
                         {
                             "persistenceSettings",
                         },
                     },
                     {
-                        102,
+                        103,
                         2,
                         {
                             "persistenceWrite",
                         },
                     },
                     {
-                        103,
+                        104,
                         2,
                         {
                             "services",
                         },
                     },
                     {
-                        104,
+                        105,
                         2,
                         {
                             "windowSizing",

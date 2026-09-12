@@ -17,6 +17,7 @@ type SettingsWindow = {
         haptics: boolean,
         showProfile: boolean,
         showFullUsername: boolean,
+        profileSide: string,
         antiWindowDuplicate: boolean,
         layoutMode: string,
         activeSubTab: number,
@@ -32,7 +33,8 @@ type DecodedSettings = {
     welcomeToast: unknown?,
         haptics: unknown?,
         showProfile: unknown?,
-        showFullUsername: unknown?,    antiWindowDuplicate: unknown?,
+        showFullUsername: unknown?,    profileSide: unknown?,
+    antiWindowDuplicate: unknown?,
     layoutMode: unknown?,
     activeSubTab: unknown?,
 }
@@ -57,6 +59,7 @@ function persistenceSettings.saveSettings(window: SettingsWindow): boolean
         haptics = window.settings.haptics,
         showProfile = window.settings.showProfile,
         showFullUsername = window.settings.showFullUsername,
+        profileSide = window.settings.profileSide,
         antiWindowDuplicate = window.settings.antiWindowDuplicate,
         layoutMode = window.settings.layoutMode,
         activeSubTab = window.settings.activeSubTab,
@@ -170,6 +173,9 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
     end
     if type(decodedSettings.showFullUsername) == "boolean" then
         window.settings.showFullUsername = decodedSettings.showFullUsername
+    end
+    if decodedSettings.profileSide == "left" or decodedSettings.profileSide == "right" then
+        window.settings.profileSide = decodedSettings.profileSide
     end
     if type(decodedSettings.antiWindowDuplicate) == "boolean" then
         window.settings.antiWindowDuplicate = decodedSettings.antiWindowDuplicate
