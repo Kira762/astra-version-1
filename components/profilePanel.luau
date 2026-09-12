@@ -111,10 +111,9 @@ function profilePanel.build(window, onOpenSettings)
         Name = "Surface",
         Size = UDim2.fromScale(1, 1),
         BorderSizePixel = 0,
-        BackgroundTransparency = 0,
-        ClipsDescendants = true,
+        BackgroundTransparency = 1,
         Parent = window.profilePanel,
-    }, { BackgroundColor3 = "WindowColor" })
+    })
 
     window:Create("UIGradient", {
         Rotation = 270,
