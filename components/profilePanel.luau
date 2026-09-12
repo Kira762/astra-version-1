@@ -17,15 +17,15 @@ local profilePanel = {}
 -- A full profile card, intentionally wide enough for the Roblox-style details
 -- layout. Every colour below is a theme binding (rather than a hard-coded
 -- colour), so ChangeTheme refreshes the card along with the rest of the UI.
-profilePanel.width = 304
+profilePanel.width = 280
 profilePanel.gap = 12
 
-local avatarSize = 82
+local avatarSize = 72
 local nameGap = 10
 local nameHeight = 24
 local subGap = 3
 local subHeight = 18
-local paddingX = 18
+local paddingX = 16
 local contentMinTop = 18
 local gearSize = 32
 local gearIconSize = 20
@@ -200,6 +200,27 @@ function profilePanel.build(window, onOpenSettings)
         }, { TextColor3 = color or "ContentColor", FontFace = "Font" })
     end
 
+    local function iconLabel(name, iconName, text, position, size, textSize, color)
+        local iconSize = 16
+        window:Create("ImageLabel", {
+            Name = name .. "Icon",
+            Image = window:ResolveIcon(iconName),
+            Position = position,
+            Size = UDim2.fromOffset(iconSize, iconSize),
+            BackgroundTransparency = 1,
+            ImageTransparency = 0.15,
+            Parent = window.profilePanelSurface,
+        }, { ImageColor3 = color or "ContentColor" })
+        return label(
+            name,
+            text,
+            UDim2.new(position.X.Scale, position.X.Offset + iconSize + 7, position.Y.Scale, position.Y.Offset - 1),
+            UDim2.new(size.X.Scale, size.X.Offset - iconSize - 7, size.Y.Scale, size.Y.Offset),
+            textSize,
+            color
+        )
+    end
+
     local function rule(y)
         window:Create("Frame", {
             Name = "Divider",
@@ -210,31 +231,41 @@ function profilePanel.build(window, onOpenSettings)
         }, { BackgroundColor3 = "ElementStroke" })
     end
 
-    rule(176)
-    label("DetailsHeading", "◈  ACCOUNT DETAILS", UDim2.fromOffset(paddingX, 190), UDim2.new(1, -paddingX * 2, 0, 20), 12, "ActionColor")
-    label("UserId", "▣  User ID", UDim2.fromOffset(paddingX, 218), UDim2.new(1, -paddingX * 2, 0, 18), 13)
-    local userId = label("UserIdValue", if player then tostring(player.UserId) else "—", UDim2.fromOffset(paddingX + 22, 237), UDim2.new(1, -paddingX * 2 - 48, 0, 20), 14, "TitlingColor")
+    rule(150)
+    iconLabel("DetailsHeading", "info", "ACCOUNT DETAILS", UDim2.fromOffset(paddingX, 163), UDim2.new(1, -paddingX * 2, 0, 18), 11, "ActionColor")
+    iconLabel("UserId", "id-card", "User ID", UDim2.fromOffset(paddingX, 190), UDim2.new(1, -paddingX * 2, 0, 18), 12)
+    local userId = label("UserIdValue", if player then tostring(player.UserId) else "-", UDim2.fromOffset(paddingX, 207), UDim2.new(1, -paddingX * 2 - 48, 0, 20), 14, "TitlingColor")
     local copy = window:Create("TextButton", {
-        Name = "CopyUserId", Text = "COPY", Position = UDim2.new(1, -paddingX - 44, 0, 238),
+        Name = "CopyUserId", Text = "COPY", Position = UDim2.new(1, -paddingX - 44, 0, 208),
         Size = UDim2.fromOffset(44, 18), BackgroundTransparency = 1, BorderSizePixel = 0,
         TextSize = 10, Parent = window.profilePanelSurface,
     }, { TextColor3 = "ActionColor", FontFace = "Font" })
     window:Connect(copy.Activated, function()
         if setclipboard and player then setclipboard(tostring(player.UserId)) end
     end)
-    label("JoinDate", "◷  Join date", UDim2.fromOffset(paddingX, 267), UDim2.new(1, -paddingX * 2, 0, 18), 13)
-    label("JoinDateValue", if player then ("Account age: " .. tostring(player.AccountAge) .. " days") else "—", UDim2.fromOffset(paddingX + 22, 286), UDim2.new(1, -paddingX * 2, 0, 20), 14, "TitlingColor")
-    label("SocialStats", "♟  Friends     —        Followers     —", UDim2.fromOffset(paddingX, 320), UDim2.new(1, -paddingX * 2, 0, 22), 13, "PlaceholderColor")
-    rule(354)
-    label("GameHeading", "▣  CURRENT GAME", UDim2.fromOffset(paddingX, 368), UDim2.new(1, -paddingX * 2, 0, 20), 12, "ActionColor")
+    iconLabel("JoinDate", "calendar-days", "Join date", UDim2.fromOffset(paddingX, 238), UDim2.new(1, -paddingX * 2, 0, 18), 12)
+    label("JoinDateValue", if player then ("Account age: " .. tostring(player.AccountAge) .. " days") else "-", UDim2.fromOffset(paddingX, 255), UDim2.new(1, -paddingX * 2, 0, 20), 14, "TitlingColor")
+    iconLabel("SocialStats", "users-round", "Friends     -        Followers     -", UDim2.fromOffset(paddingX, 286), UDim2.new(1, -paddingX * 2, 0, 20), 12, "PlaceholderColor")
+    rule(318)
+    iconLabel("GameHeading", "gamepad-2", "CURRENT GAME", UDim2.fromOffset(paddingX, 331), UDim2.new(1, -paddingX * 2, 0, 18), 11, "ActionColor")
     local gameCard = window:Create("Frame", {
-        Name = "CurrentGame", Position = UDim2.fromOffset(paddingX, 396), Size = UDim2.new(1, -paddingX * 2, 0, 82),
+        Name = "CurrentGame", Position = UDim2.fromOffset(paddingX, 356), Size = UDim2.new(1, -paddingX * 2, 0, 52),
         BorderSizePixel = 0, Parent = window.profilePanelSurface,
     }, { BackgroundColor3 = "ContentColor" })
     window:Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = gameCard })
-    label("GameName", game.Name, UDim2.fromOffset(paddingX + 12, 407), UDim2.new(1, -paddingX * 2 - 24, 0, 20), 14, "TitlingColor")
-    label("GameBy", "by Astra player  •  Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 12, 430), UDim2.new(1, -paddingX * 2 - 24, 0, 18), 11)
-    label("PlayingTime", "◷  Playing now", UDim2.fromOffset(paddingX + 12, 452), UDim2.new(1, -paddingX * 2 - 24, 0, 18), 11, "ActionColor")
+    local gameThumbnail = window:Create("ImageLabel", {
+        Name = "GameThumbnail",
+        Image = "",
+        Position = UDim2.fromOffset(paddingX + 8, 362),
+        Size = UDim2.fromOffset(40, 40),
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        Parent = window.profilePanelSurface,
+    })
+    window:Create("UICorner", { CornerRadius = UDim.new(0, 7), Parent = gameThumbnail })
+    image.assign(gameThumbnail, "Image", `rbxthumb://type=GameIcon&id={game.PlaceId}&w=150&h=150`)
+    label("GameName", game.Name, UDim2.fromOffset(paddingX + 58, 363), UDim2.new(1, -paddingX * 2 - 70, 0, 18), 13, "TitlingColor")
+    label("GameBy", "Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 58, 384), UDim2.new(1, -paddingX * 2 - 70, 0, 16), 10)
 
     label("PremiumBadge", "PREMIUM", UDim2.new(0.5, -42, 0, contentMinTop + avatarSize + nameGap + nameHeight + subGap + subHeight + 6), UDim2.fromOffset(84, 18), 10, "AccentColor")
 
