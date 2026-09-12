@@ -88,8 +88,10 @@ Method map (names preserved through minification). Settings-related:
   (`Tab:Select`, after construction), so `CreateWindow` stays fast.
   Appearance hosts theme picker + Bar Layout picker (both
   popup-confirmed), the profile toggles (Show profile, Profile side
-  Right/Left, Reveal profile details) and window toggles, Reset Window
-  Position;
+  Right/Left, Reveal profile details — refused with a "Show profile is
+  required" notification while Show profile is off, and switched off with
+  the card when Show profile goes off) and window toggles, Reset Window
+  Position (recentres the window + card pair);
   Persistence always hosts saved-config Save/Load/Delete (independent of
   the `configuration` prop — paths fall back to the window name, and the
   dropdown shows its "No saved configurations" placeholder when none
@@ -118,9 +120,13 @@ Public surface:
 Internal: `_reveal*`/`_fadeSurfaces`/`_firstShow`/`_quickRestore` (reveal
 engine), `_bindTopbarDrag`/`_bindKeybind`/`_bindMouseOverride`,
 `_applyWindowSize`/`_applyRailWidth`/`_clampToScreen`/`_watchViewport`,
-`_profileCenterPosition`/`_recenterForProfile` (window + profile-panel
-recentering), `_setLayoutMode`, `_toggleSettingsMode` (topbar gear + profile
-panel gear), `_registerControl`/`_unregisterControl`/`_persist`,
+`_clampedPosition` (keep-on-screen clamp — measures the window + profile-card
+pair through `profilePanel.pairHalfSize`, so neither half can be dragged off
+the edge), `_profileCenterPosition`/`_recenterForProfile` (window + profile-panel
+recentering; re-derived by `_firstShow` and `_quickRestore` while the window is
+still at its anchored resting spot, and by `ToggleMinimise`'s expand, which
+re-clamps for the card that comes back), `_setLayoutMode`, `_toggleSettingsMode`
+(topbar gear + profile panel gear), `_registerControl`/`_unregisterControl`/`_persist`,
 `_runGuarded`, `_setElementLocked`/`_buildLockScrim`, `_updateWindowTitle`.
 
 ### `components/sidebar.luau`
@@ -152,17 +158,33 @@ game name and Place ID), and a bottom-pinned settings gear:
 - `setShown(window, shown, info)` — effective = requested AND enabled AND
   window visible (not hidden/minimised); fades avatar/name/subtitle/gear/
   stroke; idempotent (skips instances already at target).
-- `isEnabled` / `shiftFor` — content-enabled check (`showProfile` on,
-  player known, and the screen has horizontal room for window + gap +
-  panel plus vertical room for the card's height — a space check, so
-  landscape phones count) and the off-centre shift
+- `isEnabled` / `isShown` / `shiftFor` — content-enabled check
+  (`showProfile` on, player known, and the screen has horizontal room for
+  window + gap + panel plus vertical room for the card's height — a space
+  check, so landscape phones count), the same plus the window's own
+  visibility (what the on-screen clamp asks: a minimised capsule is not
+  shoved around by a card that is not there), and the off-centre shift
   `((280 + 12) / 2 = 146px)`, 0 while the panel is off.
+- `pairHalfSize(window, width?, height?)` — how far the window + card pair
+  reaches left, right and up/down from the window's centre: the card adds
+  `width + gap` to its own side and, at 500px, can out-tall a short window.
+  Plain window halves while the card is not shown. `Window:_clampedPosition`
+  and the topbar drag both clamp with it, so "Keep window on screen" keeps
+  the card on screen too.
 - `setEnabled`, `setSide` — settings drivers (both recenter the window).
   `setEnabled` also raises a notification when the card is switched on but
   `hasRoom` fails, so an active toggle on a cramped viewport explains
-  itself instead of showing nothing.
+  itself instead of showing nothing; switching the card *off* clears the
+  reveal toggle with it (and says so), returning `revealCleared` so the
+  settings UI can roll its switch back.
 - `revealEnabled(window)` — the "Reveal profile details" toggle, still
   persisted under the legacy `showFullUsername` key.
+- `revealAllowed` / `setReveal` / `syncReveal` — that toggle's dependency on
+  `showProfile`: it unmasks values that live on the card, so `setReveal`
+  refuses the on state while the card is off (setting stays off, card stays
+  masked, "Show profile is required" notification, `false` returned so the
+  caller rolls its switch back), and `syncReveal` normalises settings that
+  arrive from disk with reveal = on and the card off (`Window:LoadSettings`).
 - `applyIdentity(window)` — writes every identifying value on the card
   from the local player and that toggle: display name (headline) and
   @username (subtitle) through `sidebar.maskUsername`, user ID and place
@@ -176,9 +198,16 @@ game name and Place ID), and a bottom-pinned settings gear:
 
 The window rests off-centre so window + gap + panel are centred as one unit
 (`Window:_profileCenterPosition` / `Window:_recenterForProfile`): with the
-panel on the right the window sits 52px left of screen centre, and
-vice-versa. The panel hides when the screen lacks room for the pair
-(portrait phones) and with hide/minimise/close.
+panel on the right the window sits 146px left of screen centre, and
+vice-versa. The resting centre is re-derived whenever the pair's state can
+have changed while nothing was on screen to move — `_firstShow` (a player
+turning up between the build and the first show), `_quickRestore` (a recenter
+that ran while hidden only parks `_restorePosition`) and `_applyWindowSize`
+(viewport changes) — but only while the window is still at its anchored
+`0.5/0.5` spot, so a position the user dragged to is never overridden
+(Reset Window Position recentres the pair on purpose). The panel hides when
+the screen lacks room for the pair (portrait phones) and with
+hide/minimise/close.
 
 ### `components/drag.luau`
 - `utility` — `core.state` alias. Locals `a1..a8` — drag input state (start pos, delta thresholds, RenderStepped connection).
@@ -259,7 +288,9 @@ Per-element specifics:
   entry per setting. Keys: `toggleKeybind` (keybind/behavior),
   `mouseOverride` (boolean/behavior), `keepOnScreen` (boolean/appearance),
   `welcomeToast` (boolean/behavior), `haptics` (boolean/performance),
-  `showProfile` (boolean/appearance), `showFullUsername` (boolean/appearance),
+  `showProfile` (boolean/appearance), `showFullUsername` (boolean/appearance —
+  documented as requiring `showProfile`, the rule `profilePanel.setReveal`
+  enforces),
   `antiWindowDuplicate` (boolean/behavior), `layoutMode` (enum/appearance),
   `activeSubTab` (enum/appearance — persisted, retained for compatibility
   with the pre-rebuild sub-tab UI). Lookup: `registry.definition(key)`,

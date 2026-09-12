@@ -324,11 +324,20 @@ The settings tabs are:
 | Tab | Contents |
 |---|---|
 | **General** | Toggle keybind (show/hide), unlock-cursor toggle, welcome toast toggle. |
-| **Appearance** | Theme dropdown + Apply (popup confirm), Bar Layout dropdown (Default Topbar / Sidebar / Collapsed Sidebar), Show profile / Profile side / Reveal profile details (unmasks the display name, username, user ID and place ID on the profile card), Keep window on screen, Draggable capsule, Reset Window Position. |
+| **Appearance** | Theme dropdown + Apply (popup confirm), Bar Layout dropdown (Default Topbar / Sidebar / Collapsed Sidebar), Show profile / Profile side / Reveal profile details (unmasks the display name, username, user ID and place ID on the profile card, and only works while **Show profile** is on — flipping it on with the card off raises a "Show profile is required" notification and leaves it off, and hiding the card switches it off with it), Keep window on screen (keeps the window **and** its card in view), Draggable capsule, Reset Window Position. |
 | **Behavior** | Prevent duplicate windows. |
 | **Performance** | Haptics. |
 | **Persistence** | Saved-configurations dropdown + name input + Save/Load/Delete. Only present when `configuration` was passed to `CreateWindow`. |
 | **About** | Library info and links. |
+
+The window and its profile card are centred as one unit: with the card on, the
+window rests half a card (146px) off the screen centre on the opposite side of
+it, so window + 12px gap + card line up in the middle together. That resting
+centre is re-derived on the first show, on every hide/show restore and whenever
+the card's state changes (toggle, side, viewport, a player turning up late), and
+"Keep window on screen" clamps the pair rather than the window alone, so a drag
+can push neither of them off the edge. A position you dragged to is respected —
+auto-centring never overrides it; **Reset Window Position** recentres the pair.
 
 There is no sub-tab API: these tabs are built by the window itself
 (`Window:_buildSettingsUI`), not by user code.

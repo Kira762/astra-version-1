@@ -49,7 +49,10 @@ registry.definitions = {
         key = "showFullUsername",
         kind = "boolean",
         domain = "appearance",
-        description = "Reveals the display name, username, user ID and place ID on the profile card instead of the masked versions.",
+        -- [[Depends on showProfile: it unmasks values that live on the]]
+        -- [[profile card, so it can only be on while the card is. The rule]]
+        -- [[is enforced by profilePanel.revealAllowed/setReveal.]]
+        description = "Reveals the display name, username, user ID and place ID on the profile card instead of the masked versions. Requires showProfile to be on.",
     },
     profileSide = {
         key = "profileSide",

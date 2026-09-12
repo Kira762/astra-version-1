@@ -2510,11 +2510,89 @@ function profilePanel.shiftFor(window)
     return (profilePanel.width + profilePanel.gap) / 2
 end
 
+-- [[Is the card on screen right now? `isEnabled` answers "should its]]
+-- [[content exist" (setting + player + room); this adds the window's own]]
+-- [[visibility, which is what the on-screen clamp cares about — a]]
+-- [[minimised capsule must not be shoved around by a card that is not]]
+-- [[there.]]
+function profilePanel.isShown(window)
+    local panel = window.profilePanel
+    return panel ~= nil and panel.Visible == true
+end
+
+-- [[Half-extents of the window + card pair, measured from the window's]]
+-- [[centre: how far the pair reaches left, right and up/down. The card]]
+-- [[widens one side by its width + gap and, at 500px tall, can out-tall a]]
+-- [[short window — so a clamp that only knew the window's own half size let]]
+-- [[the card hang off the edge while the window itself stayed "on screen".]]
+-- [[Returns the plain window halves while the card is not shown. `width` /]]
+-- [[`height` override the window size for callers mid-animation (the drag]]
+-- [[path measures the frame, which is smaller while minimised).]]
+function profilePanel.pairHalfSize(window, width, height)
+    local size = window.size
+    local halfW = (width or size.X.Offset) / 2
+    local halfH = (height or size.Y.Offset) / 2
+    if not profilePanel.isShown(window) then
+        return halfW, halfW, halfH
+    end
+    local extra = profilePanel.width + profilePanel.gap
+    local left = (window.settings.profileSide or "right") == "left"
+    local pairHalfH = math.max(halfH, profilePanel.height / 2)
+    if left then
+        return halfW + extra, halfW, pairHalfH
+    end
+    return halfW, halfW + extra, pairHalfH
+end
+
 -- [[The "Reveal profile details" toggle (persisted under the legacy]]
 -- [[`showFullUsername` key). Off = every identifying value on the card is]]
 -- [[masked; on = display name, username, user ID and place ID show in full.]]
 function profilePanel.revealEnabled(window)
     return window.settings.showFullUsername == true
+end
+
+-- [[The reveal toggle's prerequisite: it unmasks values that live ON the]]
+-- [[card, so it is only meaningful while "Show profile" is on. Leaving it]]
+-- [[active with the card off would silently unmask identity data the moment]]
+-- [[the card came back, so the dependency is enforced rather than implied.]]
+function profilePanel.revealAllowed(window)
+    return window.settings.showProfile == true
+end
+
+-- [[Driver for the "Reveal profile details" toggle. Refuses the on state]]
+-- [[while "Show profile" is off: the setting stays off, the card stays]]
+-- [[masked, and a notification says what is required first. Returns whether]]
+-- [[the requested value was accepted, so the caller can roll its own switch]]
+-- [[back to match.]]
+function profilePanel.setReveal(window, enabled)
+    local want = enabled == true
+    if want and not profilePanel.revealAllowed(window) then
+        window.settings.showFullUsername = false
+        profilePanel.applyIdentity(window)
+        window:Notify({
+            title = locale.resolve("Show profile is required"),
+            content = locale.resolve(
+                "\"Reveal profile details\" unmasks the display name, username, user ID and place ID on the profile card, so it needs that card to be showing. Turn on \"Show profile\" first — until then this stays off."
+            ),
+        })
+        return false
+    end
+    window.settings.showFullUsername = want
+    profilePanel.applyIdentity(window)
+    return true
+end
+
+-- [[Dependency normalisation for settings that arrive from somewhere other]]
+-- [[than the toggle: a config saved before the rule existed (or edited by]]
+-- [[hand) can carry reveal = on with the card off. Returns true when]]
+-- [[something had to be corrected, so callers can resync a switch.]]
+function profilePanel.syncReveal(window)
+    if window.settings.showFullUsername ~= true or profilePanel.revealAllowed(window) then
+        return false
+    end
+    window.settings.showFullUsername = false
+    profilePanel.applyIdentity(window)
+    return true
 end
 
 -- [[Write every identity field on the card from the current player and the]]
@@ -3061,8 +3139,29 @@ end
 
 function profilePanel.setEnabled(window, enabled)
     window.settings.showProfile = enabled == true
+
+    -- [[The reveal toggle depends on the card, so switching the card off]]
+    -- [[switches the reveal off with it: it can never sit active while]]
+    -- [[there is nothing on screen to reveal. The caller (the settings UI)]]
+    -- [[rolls its own switch back from the return value.]]
+    local revealCleared = false
+    if not window.settings.showProfile and window.settings.showFullUsername then
+        window.settings.showFullUsername = false
+        revealCleared = true
+    end
+    profilePanel.applyIdentity(window)
+
     profilePanel.setShown(window, window.settings.showProfile, settleTween)
     window:_recenterForProfile(window.settings.showProfile)
+
+    if revealCleared then
+        window:Notify({
+            title = locale.resolve("Reveal profile details"),
+            content = locale.resolve(
+                "Turned off with the profile card: it unmasks the values on that card, so it needs \"Show profile\" to be on."
+            ),
+        })
+    end
 
     -- [[The toggle is only half the story: the card also needs a player and]]
     -- [[room on screen (280px beside the window, 500px of height). A missing]]
@@ -3077,6 +3176,8 @@ function profilePanel.setEnabled(window, enabled)
             ),
         })
     end
+
+    return revealCleared
 end
 
 function profilePanel.setSide(window, side)
@@ -5305,6 +5406,14 @@ function Window:ToggleMinimise()
         state.tweenService:Create(self.main, expandTween, { Size = self.size }):Play()
         self:_fadeSurfaces(true, surfaceTween)	chrome.setCollapsedShown(self, false, surfaceTween)
 
+        -- [[The card comes back with the expanded window and the pair has]]
+        -- [[to fit: the capsule's own clamp only knew the capsule, so one]]
+        -- [[dragged into a corner used to expand with the window — or its]]
+        -- [[card — hanging off the edge. Re-clamp now the panel is shown]]
+        -- [[again (a no-op while the pair already fits, and while the card]]
+        -- [[is off).]]
+        self:_clampToScreen()
+
         state.tweenService
             :Create(self.drag.drag, expandTween, {
                 Position = UDim2.new(
@@ -5410,10 +5519,15 @@ function Window:_clampedPosition(position: UDim2): UDim2
     end
 
     local screenSize = self.screenGui.AbsoluteSize
-    local halfW, halfH = self.size.X.Offset / 2, self.size.Y.Offset / 2
+    -- [[The window and its profile card travel as one unit, so the clamp]]
+    -- [[keeps the *pair* in view: the card adds its width + gap to one]]
+    -- [[side and, being taller than a short window, raises the vertical]]
+    -- [[half-extent too. Clamping the window alone let the card be dragged]]
+    -- [[off the edge while "keep window on screen" was still satisfied.]]
+    local halfLeft, halfRight, halfTop = profilePanel.pairHalfSize(self)
     local margin = 8
-        local x = math.clamp(position.X.Offset, halfW + margin, math.max(halfW + margin, screenSize.X - halfW - margin))
-    local y = math.clamp(position.Y.Offset, halfH + margin, math.max(halfH + margin, screenSize.Y - halfH - margin))
+        local x = math.clamp(position.X.Offset, halfLeft + margin, math.max(halfLeft + margin, screenSize.X - halfRight - margin))
+    local y = math.clamp(position.Y.Offset, halfTop + margin, math.max(halfTop + margin, screenSize.Y - halfTop - margin))
     if x == position.X.Offset and y == position.Y.Offset then
         return position
     end
@@ -5640,9 +5754,13 @@ function Window:_bindTopbarDrag()
             local mainSize = self.main.AbsoluteSize
             local screenSize = self.screenGui.AbsoluteSize
             local margin = 8
-            local halfW, halfH = mainSize.X / 2, mainSize.Y / 2
-            x = math.clamp(x, halfW + margin, math.max(halfW + margin, screenSize.X - halfW - margin))
-            y = math.clamp(y, halfH + margin, math.max(halfH + margin, screenSize.Y - halfH - margin))
+            -- [[Clamp the window + profile card pair rather than the window]]
+            -- [[alone, so a drag cannot leave the card hanging off the]]
+            -- [[screen. The frame's own size is passed in: mid-minimise it]]
+            -- [[is shorter than window.size.]]
+            local halfLeft, halfRight, halfTop = profilePanel.pairHalfSize(self, mainSize.X, mainSize.Y)
+            x = math.clamp(x, halfLeft + margin, math.max(halfLeft + margin, screenSize.X - halfRight - margin))
+            y = math.clamp(y, halfTop + margin, math.max(halfTop + margin, screenSize.Y - halfTop - margin))
         end
 
         return UDim2.fromOffset(x, y)
@@ -5924,10 +6042,20 @@ function Window:_buildSettingsUI()
         end,
     })
     appearance:CreateSection({ name = "Profile" })
+    -- [[Forward declaration: the "Show profile" callback rolls the reveal]]
+    -- [[switch back when the card goes away, and that switch is created]]
+    -- [[after this one.]]
+    local revealToggle
     appearance:CreateToggle({
-        name = "Show profile", description = "Shows your account profile in a panel beside the window.", value = self.settings.showProfile,
+        name = "Show profile", description = "Shows your account profile in a panel beside the window. The window and the card recentre together, and \"Reveal profile details\" needs this on.", value = self.settings.showProfile,
         callback = function(value)
-            profilePanel.setEnabled(self, value)
+            local revealCleared = profilePanel.setEnabled(self, value)
+            if revealCleared and revealToggle then
+                -- [[Silent: setEnabled already cleared the setting and said]]
+                -- [[why, this only rolls the switch back so the row tells]]
+                -- [[the truth.]]
+                revealToggle:Set(false, true)
+            end
             self:SaveSettings()
         end,
     })
@@ -5944,11 +6072,18 @@ function Window:_buildSettingsUI()
             self:SaveSettings()
         end,
     })
-    appearance:CreateToggle({
-        name = "Reveal profile details", description = "Reveals your display name, username, user ID and place ID on the profile card. Off keeps all four masked.", value = self.settings.showFullUsername,
+    revealToggle = appearance:CreateToggle({
+        name = "Reveal profile details", description = "Reveals your display name, username, user ID and place ID on the profile card. Off keeps all four masked. Needs \"Show profile\" to be on.", value = self.settings.showFullUsername,
         callback = function(value)
-            self.settings.showFullUsername = value == true
-            profilePanel.applyIdentity(self); self:SaveSettings()
+            -- [[The card carries the values this unmasks, so the switch is]]
+            -- [[refused while "Show profile" is off: setReveal keeps the]]
+            -- [[setting off, re-masks the card and raises the notification]]
+            -- [[that says what is required. Rolling the switch back is]]
+            -- [[silent because the work is already done.]]
+            if not profilePanel.setReveal(self, value) and revealToggle then
+                revealToggle:Set(false, true)
+            end
+            self:SaveSettings()
         end,
     })
 
@@ -6045,7 +6180,14 @@ function Window:SaveSettings()
 end
 
 function Window:LoadSettings()
-    return persistence.loadSettings(self)
+    local loaded = persistence.loadSettings(self)
+    -- [["Reveal profile details" depends on "Show profile", and a settings]]
+    -- [[file written before that rule (or edited by hand) can carry reveal]]
+    -- [[= on with the card off. Normalise the pair on the way in, so the]]
+    -- [[card never unmasks identity data while it is hidden and the toggle]]
+    -- [[is built showing the truth.]]
+    profilePanel.syncReveal(self)
+    return loaded
 end
 
 function Window:_roundCorners(frame, corners)
@@ -6442,7 +6584,16 @@ function Window:Show()
 end
 
 function Window:_quickRestore()
-    local targetPos = self:_clampedPosition(self._restorePosition or UDim2.new(0.5, 0, 0.5, 0))
+    local restore = self._restorePosition
+    if not restore or (restore.X.Scale == 0.5 and restore.Y.Scale == 0.5) then
+        -- [[Never dragged — or parked by a recenter that ran while the]]
+        -- [[window was hidden: come back to the pair's resting centre for]]
+        -- [[the panel state as it is *now* (the player, the viewport or the]]
+        -- [[setting may have changed since that position was recorded), so]]
+        -- [[the window and its card land centred together.]]
+        restore = self:_profileCenterPosition()
+    end
+    local targetPos = self:_clampedPosition(restore)
     self._restorePosition = targetPos
     local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
@@ -6464,6 +6615,12 @@ function Window:_quickRestore()
     -- [[Restore the settings/normal rail split; the loop above shows all tabs.]]
     self:_applySettingsLayout(self._settingsMode)
     self:_fadeSurfaces(true)
+
+    -- [[The card is back on screen with this restore, and the pair — not]]
+    -- [[the window alone — has to fit: re-clamp now that pairHalfSize can]]
+    -- [[see it (above, the panel was still hidden from the Hide).]]
+    targetPos = self:_clampedPosition(targetPos)
+    self._restorePosition = targetPos
 
     if self.topbarIcon then
         self.topbarIcon.ImageTransparency = 0
@@ -6504,6 +6661,18 @@ function Window:_firstShow()
     self.main.Visible = true
     self.main.ClipsDescendants = true
     self.main.BackgroundTransparency = 1
+
+    if self.main.Position.X.Scale == 0.5 and self.main.Position.Y.Scale == 0.5 then
+        -- [[Still at the anchored resting spot (the user has not dragged]]
+        -- [[it), so centre the window + profile card pair for the panel]]
+        -- [[state as it is *now*. Between building the frame and this first]]
+        -- [[show the local player can turn up, the viewport can settle or]]
+        -- [["Show profile" can arrive from disk — any of which moves the]]
+        -- [[pair's centre — and a recenter that ran while the window was]]
+        -- [[still hidden only parked the remembered position.]]
+        self:_recenterForProfile(false)
+    end
+
     local openingSize = UDim2.new(
         self.size.X.Scale * 0.88,
         math.floor(self.size.X.Offset * 0.88),
@@ -15179,7 +15348,10 @@ registry.definitions = {
         key = "showFullUsername",
         kind = "boolean",
         domain = "appearance",
-        description = "Reveals the display name, username, user ID and place ID on the profile card instead of the masked versions.",
+        -- [[Depends on showProfile: it unmasks values that live on the]]
+        -- [[profile card, so it can only be on while the card is. The rule]]
+        -- [[is enforced by profilePanel.revealAllowed/setReveal.]]
+        description = "Reveals the display name, username, user ID and place ID on the profile card instead of the masked versions. Requires showProfile to be on.",
     },
     profileSide = {
         key = "profileSide",
@@ -30362,94 +30534,94 @@ local LineOffsets = {
     [12] = 1365,
     [13] = 1672,
     [14] = 2390,
-    [15] = 3105,
-    [16] = 3440,
-    [17] = 3501,
-    [18] = 3871,
-    [19] = 4248,
-    [21] = 7194,
-    [22] = 7461,
-    [23] = 7905,
-    [24] = 9036,
-    [25] = 9370,
-    [26] = 9431,
-    [27] = 9576,
-    [28] = 10896,
-    [29] = 11098,
-    [30] = 11359,
-    [31] = 11821,
-    [32] = 12271,
-    [33] = 12358,
-    [34] = 12923,
-    [35] = 13541,
-    [36] = 13923,
-    [37] = 14053,
-    [38] = 14217,
-    [39] = 14371,
-    [41] = 14882,
-    [42] = 14905,
-    [43] = 14922,
-    [44] = 14952,
-    [45] = 15068,
-    [46] = 15082,
-    [47] = 15131,
-    [48] = 14857,
-    [49] = 15238,
-    [50] = 15541,
-    [51] = 15572,
-    [52] = 15227,
-    [53] = 15615,
-    [54] = 15635,
-    [55] = 15667,
-    [56] = 15597,
-    [57] = 15774,
-    [58] = 15833,
-    [59] = 15893,
-    [61] = 15952,
-    [62] = 16117,
-    [63] = 15937,
-    [64] = 16377,
-    [65] = 16672,
-    [66] = 17328,
-    [67] = 19112,
-    [68] = 20253,
-    [69] = 21773,
-    [70] = 16181,
-    [71] = 27017,
-    [72] = 27079,
-    [73] = 27141,
-    [74] = 27216,
-    [75] = 27298,
-    [76] = 27360,
-    [77] = 27435,
-    [78] = 27510,
-    [79] = 27585,
-    [80] = 27660,
-    [81] = 26911,
-    [82] = 27722,
-    [83] = 27820,
-    [84] = 27998,
-    [85] = 28049,
-    [86] = 28079,
-    [87] = 28330,
-    [88] = 28379,
-    [89] = 28832,
-    [90] = 28850,
-    [91] = 28996,
-    [92] = 29095,
-    [93] = 29117,
-    [94] = 29167,
-    [95] = 29203,
-    [96] = 29221,
-    [97] = 29534,
-    [98] = 29550,
-    [99] = 29601,
-    [100] = 29620,
-    [101] = 29862,
-    [102] = 29906,
-    [103] = 30106,
-    [104] = 30134,
-    [105] = 30145,
+    [15] = 3206,
+    [16] = 3541,
+    [17] = 3602,
+    [18] = 3972,
+    [19] = 4349,
+    [21] = 7363,
+    [22] = 7630,
+    [23] = 8074,
+    [24] = 9205,
+    [25] = 9539,
+    [26] = 9600,
+    [27] = 9745,
+    [28] = 11065,
+    [29] = 11267,
+    [30] = 11528,
+    [31] = 11990,
+    [32] = 12440,
+    [33] = 12527,
+    [34] = 13092,
+    [35] = 13710,
+    [36] = 14092,
+    [37] = 14222,
+    [38] = 14386,
+    [39] = 14540,
+    [41] = 15051,
+    [42] = 15074,
+    [43] = 15091,
+    [44] = 15121,
+    [45] = 15237,
+    [46] = 15251,
+    [47] = 15300,
+    [48] = 15026,
+    [49] = 15410,
+    [50] = 15713,
+    [51] = 15744,
+    [52] = 15399,
+    [53] = 15787,
+    [54] = 15807,
+    [55] = 15839,
+    [56] = 15769,
+    [57] = 15946,
+    [58] = 16005,
+    [59] = 16065,
+    [61] = 16124,
+    [62] = 16289,
+    [63] = 16109,
+    [64] = 16549,
+    [65] = 16844,
+    [66] = 17500,
+    [67] = 19284,
+    [68] = 20425,
+    [69] = 21945,
+    [70] = 16353,
+    [71] = 27189,
+    [72] = 27251,
+    [73] = 27313,
+    [74] = 27388,
+    [75] = 27470,
+    [76] = 27532,
+    [77] = 27607,
+    [78] = 27682,
+    [79] = 27757,
+    [80] = 27832,
+    [81] = 27083,
+    [82] = 27894,
+    [83] = 27992,
+    [84] = 28170,
+    [85] = 28221,
+    [86] = 28251,
+    [87] = 28502,
+    [88] = 28551,
+    [89] = 29004,
+    [90] = 29022,
+    [91] = 29168,
+    [92] = 29267,
+    [93] = 29289,
+    [94] = 29339,
+    [95] = 29375,
+    [96] = 29393,
+    [97] = 29706,
+    [98] = 29722,
+    [99] = 29773,
+    [100] = 29792,
+    [101] = 30034,
+    [102] = 30078,
+    [103] = 30278,
+    [104] = 30306,
+    [105] = 30317,
 }
 
 -- [[Misc AOT variable imports]]

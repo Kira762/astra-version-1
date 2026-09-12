@@ -17,7 +17,12 @@
 --        RenderStepped waiter and left the panel invisible even though
 --        "Show profile" was on,
 --   * P6 the card also needs room on screen: turning it on in a viewport too
---        small for it keeps it hidden but says why (notification).
+--        small for it keeps it hidden but says why (notification),
+--   * P7 "Reveal profile details" depends on "Show profile": flipping it on
+--        while the card is off is refused (the setting stays off, the switch
+--        rolls back and a notification says what is required), it works once
+--        the card is on, and hiding the card takes an active reveal off with
+--        it.
 
 local function expect(cond, message)
 	if not cond then
@@ -169,5 +174,75 @@ expect(
 TestViewport.set(1920, 1080)
 TestPump(0.4)
 eq(lateWindow.profilePanel.Visible, true, "P6 the card comes back once the screen has room")
+
+-- P7: "Reveal profile details" only means something while the card is on
+-- screen, so the switch is refused without it -- and turning the card off
+-- takes an active reveal off with it.
+local function notificationTexts(targetWindow)
+	local texts = {}
+	local holder = targetWindow.notifications
+	if not holder then
+		return texts
+	end
+	for _, child in holder:GetChildren() do
+		for _, descendant in child:GetDescendants() do
+			if descendant.ClassName == "TextLabel" and descendant.Text ~= "" then
+				table.insert(texts, descendant.Text)
+			end
+		end
+	end
+	return texts
+end
+
+local function hasNotification(targetWindow, needle)
+	for _, text in notificationTexts(targetWindow) do
+		if text:find(needle, 1, true) then
+			return true
+		end
+	end
+	return false
+end
+
+eq(lateWindow.settings.showProfile, true, "P7 the card is back on after P6")
+eq(lateWindow.settings.showFullUsername, false, "P7 P6 hiding the card already cleared the reveal")
+eq(lateReveal.value, false, "P7 and rolled the reveal switch back with it")
+
+showProfileToggle:Set(false)
+TestPump(0.2)
+eq(lateWindow.profilePanel.Visible, false, "P7 the card is hidden for the dependency check")
+expect(
+	not hasNotification(lateWindow, "Show profile is required"),
+	"P7 no dependency notification has been raised yet"
+)
+lateReveal:Set(true)
+TestPump(0.2)
+eq(lateWindow.settings.showFullUsername, false, "P7 the refused reveal leaves the setting off")
+eq(lateReveal.value, false, "P7 the refused reveal rolls its switch back")
+eq(lateWindow.profileUserIdValue.Text, MASKED_ID, "P7 the refused reveal leaves the user ID masked")
+eq(lateWindow.profilePlaceId.Text, "Place ID: " .. MASKED_ID, "P7 the refused reveal leaves the place ID masked")
+expect(
+	hasNotification(lateWindow, "Show profile is required"),
+	"P7 the refused reveal says that Show profile is required"
+)
+
+-- With the card back on, the same switch is accepted.
+showProfileToggle:Set(true)
+TestPump(0.2)
+lateReveal:Set(true)
+TestPump(0.2)
+eq(lateWindow.settings.showFullUsername, true, "P7 the reveal sticks once Show profile is on")
+eq(lateReveal.value, true, "P7 and its switch stays on")
+eq(lateWindow.profileUserIdValue.Text, tostring(USER_ID), "P7 the card reveals the user ID")
+
+-- Hiding the card again takes the active reveal off with it, so the reveal
+-- can never sit on while there is nothing on screen to reveal.
+showProfileToggle:Set(false)
+TestPump(0.2)
+eq(lateWindow.settings.showFullUsername, false, "P7 hiding the card clears the reveal")
+eq(lateReveal.value, false, "P7 hiding the card rolls the reveal switch back")
+expect(
+	hasNotification(lateWindow, "Turned off with the profile card"),
+	"P7 clearing the reveal explains itself"
+)
 
 print("PROFILE REVEAL: all assertions passed")

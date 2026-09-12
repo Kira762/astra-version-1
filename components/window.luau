@@ -1058,6 +1058,14 @@ function Window:ToggleMinimise()
         state.tweenService:Create(self.main, expandTween, { Size = self.size }):Play()
         self:_fadeSurfaces(true, surfaceTween)	chrome.setCollapsedShown(self, false, surfaceTween)
 
+        -- [[The card comes back with the expanded window and the pair has]]
+        -- [[to fit: the capsule's own clamp only knew the capsule, so one]]
+        -- [[dragged into a corner used to expand with the window — or its]]
+        -- [[card — hanging off the edge. Re-clamp now the panel is shown]]
+        -- [[again (a no-op while the pair already fits, and while the card]]
+        -- [[is off).]]
+        self:_clampToScreen()
+
         state.tweenService
             :Create(self.drag.drag, expandTween, {
                 Position = UDim2.new(
@@ -1163,10 +1171,15 @@ function Window:_clampedPosition(position: UDim2): UDim2
     end
 
     local screenSize = self.screenGui.AbsoluteSize
-    local halfW, halfH = self.size.X.Offset / 2, self.size.Y.Offset / 2
+    -- [[The window and its profile card travel as one unit, so the clamp]]
+    -- [[keeps the *pair* in view: the card adds its width + gap to one]]
+    -- [[side and, being taller than a short window, raises the vertical]]
+    -- [[half-extent too. Clamping the window alone let the card be dragged]]
+    -- [[off the edge while "keep window on screen" was still satisfied.]]
+    local halfLeft, halfRight, halfTop = profilePanel.pairHalfSize(self)
     local margin = 8
-        local x = math.clamp(position.X.Offset, halfW + margin, math.max(halfW + margin, screenSize.X - halfW - margin))
-    local y = math.clamp(position.Y.Offset, halfH + margin, math.max(halfH + margin, screenSize.Y - halfH - margin))
+        local x = math.clamp(position.X.Offset, halfLeft + margin, math.max(halfLeft + margin, screenSize.X - halfRight - margin))
+    local y = math.clamp(position.Y.Offset, halfTop + margin, math.max(halfTop + margin, screenSize.Y - halfTop - margin))
     if x == position.X.Offset and y == position.Y.Offset then
         return position
     end
@@ -1393,9 +1406,13 @@ function Window:_bindTopbarDrag()
             local mainSize = self.main.AbsoluteSize
             local screenSize = self.screenGui.AbsoluteSize
             local margin = 8
-            local halfW, halfH = mainSize.X / 2, mainSize.Y / 2
-            x = math.clamp(x, halfW + margin, math.max(halfW + margin, screenSize.X - halfW - margin))
-            y = math.clamp(y, halfH + margin, math.max(halfH + margin, screenSize.Y - halfH - margin))
+            -- [[Clamp the window + profile card pair rather than the window]]
+            -- [[alone, so a drag cannot leave the card hanging off the]]
+            -- [[screen. The frame's own size is passed in: mid-minimise it]]
+            -- [[is shorter than window.size.]]
+            local halfLeft, halfRight, halfTop = profilePanel.pairHalfSize(self, mainSize.X, mainSize.Y)
+            x = math.clamp(x, halfLeft + margin, math.max(halfLeft + margin, screenSize.X - halfRight - margin))
+            y = math.clamp(y, halfTop + margin, math.max(halfTop + margin, screenSize.Y - halfTop - margin))
         end
 
         return UDim2.fromOffset(x, y)
@@ -1677,10 +1694,20 @@ function Window:_buildSettingsUI()
         end,
     })
     appearance:CreateSection({ name = "Profile" })
+    -- [[Forward declaration: the "Show profile" callback rolls the reveal]]
+    -- [[switch back when the card goes away, and that switch is created]]
+    -- [[after this one.]]
+    local revealToggle
     appearance:CreateToggle({
-        name = "Show profile", description = "Shows your account profile in a panel beside the window.", value = self.settings.showProfile,
+        name = "Show profile", description = "Shows your account profile in a panel beside the window. The window and the card recentre together, and \"Reveal profile details\" needs this on.", value = self.settings.showProfile,
         callback = function(value)
-            profilePanel.setEnabled(self, value)
+            local revealCleared = profilePanel.setEnabled(self, value)
+            if revealCleared and revealToggle then
+                -- [[Silent: setEnabled already cleared the setting and said]]
+                -- [[why, this only rolls the switch back so the row tells]]
+                -- [[the truth.]]
+                revealToggle:Set(false, true)
+            end
             self:SaveSettings()
         end,
     })
@@ -1697,11 +1724,18 @@ function Window:_buildSettingsUI()
             self:SaveSettings()
         end,
     })
-    appearance:CreateToggle({
-        name = "Reveal profile details", description = "Reveals your display name, username, user ID and place ID on the profile card. Off keeps all four masked.", value = self.settings.showFullUsername,
+    revealToggle = appearance:CreateToggle({
+        name = "Reveal profile details", description = "Reveals your display name, username, user ID and place ID on the profile card. Off keeps all four masked. Needs \"Show profile\" to be on.", value = self.settings.showFullUsername,
         callback = function(value)
-            self.settings.showFullUsername = value == true
-            profilePanel.applyIdentity(self); self:SaveSettings()
+            -- [[The card carries the values this unmasks, so the switch is]]
+            -- [[refused while "Show profile" is off: setReveal keeps the]]
+            -- [[setting off, re-masks the card and raises the notification]]
+            -- [[that says what is required. Rolling the switch back is]]
+            -- [[silent because the work is already done.]]
+            if not profilePanel.setReveal(self, value) and revealToggle then
+                revealToggle:Set(false, true)
+            end
+            self:SaveSettings()
         end,
     })
 
@@ -1798,7 +1832,14 @@ function Window:SaveSettings()
 end
 
 function Window:LoadSettings()
-    return persistence.loadSettings(self)
+    local loaded = persistence.loadSettings(self)
+    -- [["Reveal profile details" depends on "Show profile", and a settings]]
+    -- [[file written before that rule (or edited by hand) can carry reveal]]
+    -- [[= on with the card off. Normalise the pair on the way in, so the]]
+    -- [[card never unmasks identity data while it is hidden and the toggle]]
+    -- [[is built showing the truth.]]
+    profilePanel.syncReveal(self)
+    return loaded
 end
 
 function Window:_roundCorners(frame, corners)
@@ -2195,7 +2236,16 @@ function Window:Show()
 end
 
 function Window:_quickRestore()
-    local targetPos = self:_clampedPosition(self._restorePosition or UDim2.new(0.5, 0, 0.5, 0))
+    local restore = self._restorePosition
+    if not restore or (restore.X.Scale == 0.5 and restore.Y.Scale == 0.5) then
+        -- [[Never dragged — or parked by a recenter that ran while the]]
+        -- [[window was hidden: come back to the pair's resting centre for]]
+        -- [[the panel state as it is *now* (the player, the viewport or the]]
+        -- [[setting may have changed since that position was recorded), so]]
+        -- [[the window and its card land centred together.]]
+        restore = self:_profileCenterPosition()
+    end
+    local targetPos = self:_clampedPosition(restore)
     self._restorePosition = targetPos
     local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
@@ -2217,6 +2267,12 @@ function Window:_quickRestore()
     -- [[Restore the settings/normal rail split; the loop above shows all tabs.]]
     self:_applySettingsLayout(self._settingsMode)
     self:_fadeSurfaces(true)
+
+    -- [[The card is back on screen with this restore, and the pair — not]]
+    -- [[the window alone — has to fit: re-clamp now that pairHalfSize can]]
+    -- [[see it (above, the panel was still hidden from the Hide).]]
+    targetPos = self:_clampedPosition(targetPos)
+    self._restorePosition = targetPos
 
     if self.topbarIcon then
         self.topbarIcon.ImageTransparency = 0
@@ -2257,6 +2313,18 @@ function Window:_firstShow()
     self.main.Visible = true
     self.main.ClipsDescendants = true
     self.main.BackgroundTransparency = 1
+
+    if self.main.Position.X.Scale == 0.5 and self.main.Position.Y.Scale == 0.5 then
+        -- [[Still at the anchored resting spot (the user has not dragged]]
+        -- [[it), so centre the window + profile card pair for the panel]]
+        -- [[state as it is *now*. Between building the frame and this first]]
+        -- [[show the local player can turn up, the viewport can settle or]]
+        -- [["Show profile" can arrive from disk — any of which moves the]]
+        -- [[pair's centre — and a recenter that ran while the window was]]
+        -- [[still hidden only parked the remembered position.]]
+        self:_recenterForProfile(false)
+    end
+
     local openingSize = UDim2.new(
         self.size.X.Scale * 0.88,
         math.floor(self.size.X.Offset * 0.88),

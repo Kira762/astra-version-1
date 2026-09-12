@@ -2,6 +2,74 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-12 — Window + profile card centre as one unit, and "Reveal profile details" now requires "Show profile"
+
+- **The window and its profile card are auto-centred together, and both are
+  kept in view.** The pair was already meant to rest centred (window + 12px
+  gap + card, so the window sits 146px off the screen centre), but three
+  paths showed it un-centred or let the card hang off the screen:
+  - `_firstShow` showed the frame wherever the build had left it. A window
+    built before `Players.LocalPlayer` exists is built with the card
+    disabled, so it rests at the plain centre; when the player turns up
+    before the deferred first show, the card appears and nothing re-centred
+    it (the late-player waiter bails because the player is already there,
+    and a recenter that runs while the window is hidden only parks
+    `_restorePosition`). The first show now re-derives the resting centre
+    while the frame is still at its anchored `0.5/0.5` spot.
+  - `_quickRestore` fell back to `UDim2.new(0.5, 0, 0.5, 0)` and trusted a
+    `_restorePosition` recorded before the panel state changed. An anchored
+    restore is now re-derived from `_profileCenterPosition()`, and the
+    restore re-clamps after `_fadeSurfaces` brings the card back.
+  - "Keep window on screen" clamped the window alone, so a drag — or a
+    capsule dragged into a corner and expanded — could leave the card off
+    the edge while the window itself stayed legal. The clamp, and the topbar
+    drag that shares its math, now measure the pair through the new
+    `profilePanel.pairHalfSize(window, width?, height?)`: the card's side
+    gains `280 + 12`px and the vertical half-extent becomes
+    `max(windowHeight / 2, 250)`, because the 500px card out-talls a short
+    window. `pairHalfSize` asks the new `profilePanel.isShown(window)`
+    (enabled *and* the window visible), so a minimised capsule is not shoved
+    around by a card that is not there, and `ToggleMinimise`'s expand
+    re-clamps once the card is visible again.
+  A position the user dragged to is still respected — the re-centring only
+  fires while the frame is at its anchored resting spot — and
+  **Reset Window Position** remains the explicit way back to the centre.
+- **"Reveal profile details" is refused while "Show profile" is off.** The
+  toggle unmasks the display name, username, user ID and place ID *on the
+  card*, so with the card off it was an active switch over nothing, and it
+  would silently unmask identity data the moment the card came back.
+  `profilePanel.setReveal(window, enabled)` is now the single driver:
+  flipping the toggle on without the card keeps `showFullUsername` off,
+  re-masks the card, raises a **"Show profile is required"** notification
+  explaining the dependency, and returns `false` so the settings row rolls
+  its switch back (silently — the work is already done). The switch is only
+  accepted once "Show profile" is on.
+- **The dependency holds in both directions and across saves.** Turning
+  "Show profile" off switches an active reveal off with it
+  (`profilePanel.setEnabled` clears it, says why in a notification and
+  returns `revealCleared` so the row rolls back), and `Window:LoadSettings`
+  runs the new `profilePanel.syncReveal(window)` so a settings file written
+  before this rule — or edited by hand — cannot come back with reveal = on
+  and the card off. `profilePanel.revealAllowed(window)` is the predicate
+  both paths share, and `settings/registry.luau` records the dependency on
+  the `showFullUsername` definition. Both rows' descriptions in
+  Settings → Appearance now state it.
+- **Verification:** new runtime suite `scripts/profile_centering_test.sh`
+  (+ `profile_centering_test.luau`, C1–C6) covers the pair's resting centre
+  (both edges symmetric about the screen centre, card flush with the window
+  and vertically centred on it), the late-player first show, hide/show round
+  trips including a dragged position being left alone, the pair-aware clamp
+  with the card on either side, the card-off fallback to the plain window
+  clamp, and the expand re-clamp. `scripts/profile_reveal_test.luau` gains P7
+  for the refused / accepted / cleared reveal dependency and its
+  notifications. Each was checked against a deliberately broken build (the
+  first-show recenter removed, the clamp reverted to the window's own
+  halves, the expand re-clamp removed, `revealAllowed` stubbed to `true`) to
+  confirm the assertions actually fail. `smoke_test_bundle.sh`,
+  `sidebar_tab_sizing_test.sh`, `check_requires.py` and
+  `check_instance_fields.py` all pass under the Luau CLI 0.738, and the
+  bundle is regenerated (100 modules).
+
 ## 2026-09-12 — Profile card: fixed the card that never appeared + one reveal toggle for every identity field
 
 - **Fixed: the profile card stayed invisible even with "Show profile" on.**
