@@ -449,16 +449,23 @@ TestPump(0.2)
 eqUDim2(main.Position, 0.5, -PANEL_SHIFT, 0.5, 0, "T15 showing the panel shifts the window again")
 eq(window.profilePanel.Visible, true, "T15 panel visible again")
 
--- Mobile (touch-only, phone-sized) hides the panel and applies the fixed
--- mobile window size; the desktop viewport restores both.
+-- The panel is gated by horizontal room, not by device type: a portrait
+-- phone (window + gap + panel would not fit) hides it and uses the fixed
+-- mobile window size; a wide landscape phone (plenty of room) still shows
+-- the panel and recentres the window; the desktop viewport restores both.
 local inputService = game:GetService("UserInputService")
 inputService.TouchEnabled = true
 inputService.KeyboardEnabled = false
 TestViewport.set(360, 390)
 TestPump(0.4)
-eq(window.profilePanel.Visible, false, "T15 phone viewport hides the panel")
+eq(window.profilePanel.Visible, false, "T15 portrait phone has no room for the panel")
 eq(main.Size.X.Offset, 560, "T15 phone viewport uses the fixed mobile window width")
 eq(main.Size.Y.Offset, 380, "T15 phone viewport uses the fixed mobile window height")
+eqUDim2(main.Position, 0.5, 0, 0.5, 0, "T15 portrait phone window sits centred (no shift)")
+TestViewport.set(1320, 600)
+TestPump(0.4)
+eq(window.profilePanel.Visible, true, "T15 wide landscape phone has room, panel shows")
+eqUDim2(main.Position, 0.5, -PANEL_SHIFT, 0.5, 0, "T15 landscape phone window recentres for the panel")
 TestViewport.set(1920, 1080)
 TestPump(0.4)
 inputService.TouchEnabled = false

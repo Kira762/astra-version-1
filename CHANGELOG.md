@@ -33,16 +33,19 @@ All notable changes to Astra v1. Dates use 2026.
   profile strip, and the old `reflowProfile` mis-detection on
   content-sized rails disappears with the code.
 - **Scope:** profile placement/presentation only — no new public API, no
-  animation-system changes. Phone viewports (the existing mobile tier) hide
-  the panel; it hides with hide/minimise/close.
+  animation-system changes. The panel hides whenever the screen lacks
+  horizontal room for window + gap + panel (e.g. a portrait phone) and
+  shows again when there is room (wide phones in landscape included); it
+  hides with hide/minimise/close.
 - **Verification:** the sizing suite's new T15 section asserts the panel
   geometry (sibling of the frame, ±52px window shift, flush panel edge,
   full window height), name masking, `SetProfile` subtitle, rail footer
-  release, live recentering on side flips and show/hide toggles, and
-  mobile hide/restore. A behavior probe covers the gear → settings round
-  trip, hide/restore, and minimise/restore. The harness stubs gained
-  Roblox-faithful name-based child indexing and default instance Names.
-  Bundle regenerated (100 modules).
+  release, live recentering on side flips and show/hide toggles, and the
+  room-based visibility (portrait phone hidden, wide landscape phone
+  shown + recentred, desktop restored). A behavior probe covers the gear
+  → settings round trip, hide/restore, and minimise/restore. The harness
+  stubs gained Roblox-faithful name-based child indexing and default
+  instance Names. Bundle regenerated (100 modules).
 
 ## 2026-09-12 — Faster window startup: lazy settings content + deferred auto-show
 

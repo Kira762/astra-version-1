@@ -1235,10 +1235,15 @@ function Window:_applyWindowSize()
     self.main.Size = newSize
     self:_clampToScreen()
     self:_syncDragBar()
-    -- [[A viewport change can switch the device between the desktop and]]
-    -- [[mobile tiers; the profile panel only exists on desktop, so its]]
-    -- [[visibility is re-evaluated alongside the resize.]]
+    -- [[A viewport change (rotation, inset, keyboard) can turn the profile]]
+    -- [[panel on or off: there may suddenly be room for it, or none.]]
+    -- [[Re-evaluate its visibility alongside the resize.]]
     profilePanel.setShown(self, true, nil)
+    if self.main.Position.X.Scale == 0.5 and self.main.Position.Y.Scale == 0.5 then
+        -- [[Still anchored at the screen centre (the user has not dragged]]
+        -- [[it): re-apply the resting centre for the new panel state.]]
+        self:_recenterForProfile(false)
+    end
 end
 
 -- [[Effective rail width. Non-sidebar and collapsed rails keep the existing]]

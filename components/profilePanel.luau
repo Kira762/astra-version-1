@@ -5,7 +5,6 @@ local functions = require(script.Parent.Parent.functions)
 local locale = require(utilities.locale)
 local log = require(utilities.log)
 local constants = require(utilities.constants)
-local windowSizing = require(utilities.windowSizing)
 local sidebar = require(script.Parent.sidebar)
 
 local profilePanel = {}
@@ -51,19 +50,29 @@ local avatarGenerations = setmetatable({}, { __mode = "k" })
 
 local avatarReady = setmetatable({}, { __mode = "k" })
 
-local function isMobileViewport()
+-- [[The panel needs horizontal room: window + gap + panel must fit on the]]
+-- [[screen (the pair is centred, so both edges keep a small margin). This]]
+-- [[is a space check, not a device check: a portrait phone has no room and]]
+-- [[hides the panel, while a landscape phone (and every desktop) usually]]
+-- [[has room and shows it.]]
+local edgeMargin = 8
+
+local function hasRoom(window)
     local camera = state.workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize
-    return viewport ~= nil and windowSizing.isMobileViewport(viewport)
+    if not viewport then
+        return true
+    end
+    return viewport.X >= window.size.X.Offset + profilePanel.gap + profilePanel.width + edgeMargin * 2
 end
 
 -- [[The panel is "enabled" when its content should exist at all: the user]]
--- [[toggled it on, the player is known, and the device is desktop-sized.]]
--- [[Window visibility (hidden/minimised) layers on top in setShown.]]
+-- [[toggled it on, the player is known, and the screen has room. Window]]
+-- [[visibility (hidden/minimised) layers on top in setShown.]]
 function profilePanel.isEnabled(window)
     return window.settings.showProfile
         and state.localPlayer ~= nil
-        and not isMobileViewport()
+        and hasRoom(window)
 end
 
 -- [[How far the window rests off the screen centre so that the]]

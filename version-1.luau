@@ -2394,7 +2394,6 @@ local functions = require(script.Parent.Parent.functions)
 local locale = require(utilities.locale)
 local log = require(utilities.log)
 local constants = require(utilities.constants)
-local windowSizing = require(utilities.windowSizing)
 local sidebar = require(script.Parent.sidebar)
 
 local profilePanel = {}
@@ -2440,19 +2439,29 @@ local avatarGenerations = setmetatable({}, { __mode = "k" })
 
 local avatarReady = setmetatable({}, { __mode = "k" })
 
-local function isMobileViewport()
+-- [[The panel needs horizontal room: window + gap + panel must fit on the]]
+-- [[screen (the pair is centred, so both edges keep a small margin). This]]
+-- [[is a space check, not a device check: a portrait phone has no room and]]
+-- [[hides the panel, while a landscape phone (and every desktop) usually]]
+-- [[has room and shows it.]]
+local edgeMargin = 8
+
+local function hasRoom(window)
     local camera = state.workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize
-    return viewport ~= nil and windowSizing.isMobileViewport(viewport)
+    if not viewport then
+        return true
+    end
+    return viewport.X >= window.size.X.Offset + profilePanel.gap + profilePanel.width + edgeMargin * 2
 end
 
 -- [[The panel is "enabled" when its content should exist at all: the user]]
--- [[toggled it on, the player is known, and the device is desktop-sized.]]
--- [[Window visibility (hidden/minimised) layers on top in setShown.]]
+-- [[toggled it on, the player is known, and the screen has room. Window]]
+-- [[visibility (hidden/minimised) layers on top in setShown.]]
 function profilePanel.isEnabled(window)
     return window.settings.showProfile
         and state.localPlayer ~= nil
-        and not isMobileViewport()
+        and hasRoom(window)
 end
 
 -- [[How far the window rests off the screen centre so that the]]
@@ -5192,10 +5201,15 @@ function Window:_applyWindowSize()
     self.main.Size = newSize
     self:_clampToScreen()
     self:_syncDragBar()
-    -- [[A viewport change can switch the device between the desktop and]]
-    -- [[mobile tiers; the profile panel only exists on desktop, so its]]
-    -- [[visibility is re-evaluated alongside the resize.]]
+    -- [[A viewport change (rotation, inset, keyboard) can turn the profile]]
+    -- [[panel on or off: there may suddenly be room for it, or none.]]
+    -- [[Re-evaluate its visibility alongside the resize.]]
     profilePanel.setShown(self, true, nil)
+    if self.main.Position.X.Scale == 0.5 and self.main.Position.Y.Scale == 0.5 then
+        -- [[Still anchored at the screen centre (the user has not dragged]]
+        -- [[it): re-apply the resting centre for the new panel state.]]
+        self:_recenterForProfile(false)
+    end
 end
 
 -- [[Effective rail width. Non-sidebar and collapsed rails keep the existing]]
@@ -30062,94 +30076,94 @@ local LineOffsets = {
     [12] = 1365,
     [13] = 1672,
     [14] = 2390,
-    [15] = 2815,
-    [16] = 3150,
-    [17] = 3211,
-    [18] = 3581,
-    [19] = 3958,
-    [21] = 6894,
-    [22] = 7161,
-    [23] = 7605,
-    [24] = 8736,
-    [25] = 9070,
-    [26] = 9131,
-    [27] = 9276,
-    [28] = 10596,
-    [29] = 10798,
-    [30] = 11059,
-    [31] = 11521,
-    [32] = 11971,
-    [33] = 12058,
-    [34] = 12623,
-    [35] = 13241,
-    [36] = 13623,
-    [37] = 13753,
-    [38] = 13917,
-    [39] = 14071,
-    [41] = 14582,
-    [42] = 14605,
-    [43] = 14622,
-    [44] = 14652,
-    [45] = 14768,
-    [46] = 14782,
-    [47] = 14831,
-    [48] = 14557,
-    [49] = 14938,
-    [50] = 15241,
-    [51] = 15272,
-    [52] = 14927,
-    [53] = 15315,
-    [54] = 15335,
-    [55] = 15367,
-    [56] = 15297,
-    [57] = 15474,
-    [58] = 15533,
-    [59] = 15593,
-    [61] = 15652,
-    [62] = 15817,
-    [63] = 15637,
-    [64] = 16077,
-    [65] = 16372,
-    [66] = 17028,
-    [67] = 18812,
-    [68] = 19953,
-    [69] = 21473,
-    [70] = 15881,
-    [71] = 26717,
-    [72] = 26779,
-    [73] = 26841,
-    [74] = 26916,
-    [75] = 26998,
-    [76] = 27060,
-    [77] = 27135,
-    [78] = 27210,
-    [79] = 27285,
-    [80] = 27360,
-    [81] = 26611,
-    [82] = 27422,
-    [83] = 27520,
-    [84] = 27698,
-    [85] = 27749,
-    [86] = 27779,
-    [87] = 28030,
-    [88] = 28079,
-    [89] = 28532,
-    [90] = 28550,
-    [91] = 28696,
-    [92] = 28795,
-    [93] = 28817,
-    [94] = 28867,
-    [95] = 28903,
-    [96] = 28921,
-    [97] = 29234,
-    [98] = 29250,
-    [99] = 29301,
-    [100] = 29320,
-    [101] = 29562,
-    [102] = 29606,
-    [103] = 29806,
-    [104] = 29834,
-    [105] = 29845,
+    [15] = 2824,
+    [16] = 3159,
+    [17] = 3220,
+    [18] = 3590,
+    [19] = 3967,
+    [21] = 6908,
+    [22] = 7175,
+    [23] = 7619,
+    [24] = 8750,
+    [25] = 9084,
+    [26] = 9145,
+    [27] = 9290,
+    [28] = 10610,
+    [29] = 10812,
+    [30] = 11073,
+    [31] = 11535,
+    [32] = 11985,
+    [33] = 12072,
+    [34] = 12637,
+    [35] = 13255,
+    [36] = 13637,
+    [37] = 13767,
+    [38] = 13931,
+    [39] = 14085,
+    [41] = 14596,
+    [42] = 14619,
+    [43] = 14636,
+    [44] = 14666,
+    [45] = 14782,
+    [46] = 14796,
+    [47] = 14845,
+    [48] = 14571,
+    [49] = 14952,
+    [50] = 15255,
+    [51] = 15286,
+    [52] = 14941,
+    [53] = 15329,
+    [54] = 15349,
+    [55] = 15381,
+    [56] = 15311,
+    [57] = 15488,
+    [58] = 15547,
+    [59] = 15607,
+    [61] = 15666,
+    [62] = 15831,
+    [63] = 15651,
+    [64] = 16091,
+    [65] = 16386,
+    [66] = 17042,
+    [67] = 18826,
+    [68] = 19967,
+    [69] = 21487,
+    [70] = 15895,
+    [71] = 26731,
+    [72] = 26793,
+    [73] = 26855,
+    [74] = 26930,
+    [75] = 27012,
+    [76] = 27074,
+    [77] = 27149,
+    [78] = 27224,
+    [79] = 27299,
+    [80] = 27374,
+    [81] = 26625,
+    [82] = 27436,
+    [83] = 27534,
+    [84] = 27712,
+    [85] = 27763,
+    [86] = 27793,
+    [87] = 28044,
+    [88] = 28093,
+    [89] = 28546,
+    [90] = 28564,
+    [91] = 28710,
+    [92] = 28809,
+    [93] = 28831,
+    [94] = 28881,
+    [95] = 28917,
+    [96] = 28935,
+    [97] = 29248,
+    [98] = 29264,
+    [99] = 29315,
+    [100] = 29334,
+    [101] = 29576,
+    [102] = 29620,
+    [103] = 29820,
+    [104] = 29848,
+    [105] = 29859,
 }
 
 -- [[Misc AOT variable imports]]

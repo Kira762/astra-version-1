@@ -147,8 +147,9 @@ The profile panel — a 96px companion card floating beside the window frame
   window visible (not hidden/minimised); fades avatar/name/subtitle/gear/
   stroke; idempotent (skips instances already at target).
 - `isEnabled` / `shiftFor` — content-enabled check (`showProfile` on,
-  player known, desktop viewport) and the off-centre shift
-  `((96 + 8) / 2 = 52px)`, 0 while the panel is off.
+  player known, and the screen has horizontal room for window + gap +
+  panel — a space check, so landscape phones count) and the off-centre
+  shift `((96 + 8) / 2 = 52px)`, 0 while the panel is off.
 - `setEnabled`, `setSide` — settings drivers (both recenter the window).
 - `setSubtitle` (from `Window:SetProfile`), `refreshName` (masked vs
   `showFullUsername`).
@@ -156,7 +157,8 @@ The profile panel — a 96px companion card floating beside the window frame
 The window rests off-centre so window + gap + panel are centred as one unit
 (`Window:_profileCenterPosition` / `Window:_recenterForProfile`): with the
 panel on the right the window sits 52px left of screen centre, and
-vice-versa. The panel hides on phone viewports and with hide/minimise/close.
+vice-versa. The panel hides when the screen lacks room for the pair
+(portrait phones) and with hide/minimise/close.
 
 ### `components/drag.luau`
 - `utility` — `core.state` alias. Locals `a1..a8` — drag input state (start pos, delta thresholds, RenderStepped connection).
