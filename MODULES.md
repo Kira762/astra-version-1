@@ -88,7 +88,7 @@ Method map (names preserved through minification). Settings-related:
   (`Tab:Select`, after construction), so `CreateWindow` stays fast.
   Appearance hosts theme picker + Bar Layout picker (both
   popup-confirmed), the profile toggles (Show profile, Profile side
-  Right/Left, Reveal full username) and window toggles, Reset Window
+  Right/Left, Reveal profile details) and window toggles, Reset Window
   Position;
   Persistence always hosts saved-config Save/Load/Delete (independent of
   the `configuration` prop — paths fall back to the window name, and the
@@ -158,8 +158,21 @@ game name and Place ID), and a bottom-pinned settings gear:
   landscape phones count) and the off-centre shift
   `((280 + 12) / 2 = 146px)`, 0 while the panel is off.
 - `setEnabled`, `setSide` — settings drivers (both recenter the window).
-- `setSubtitle` (from `Window:SetProfile`), `refreshName` (masked vs
-  `showFullUsername`).
+  `setEnabled` also raises a notification when the card is switched on but
+  `hasRoom` fails, so an active toggle on a cramped viewport explains
+  itself instead of showing nothing.
+- `revealEnabled(window)` — the "Reveal profile details" toggle, still
+  persisted under the legacy `showFullUsername` key.
+- `applyIdentity(window)` — writes every identifying value on the card
+  from the local player and that toggle: display name (headline) and
+  @username (subtitle) through `sidebar.maskUsername`, user ID and place
+  ID as a fixed `••••••` block, plus the COPY action (hidden while the
+  user ID is masked, and it refuses to copy a masked value). An explicit
+  `Window:SetProfile` subtitle is developer copy, so the toggle leaves it
+  alone. Nil-safe on both the instances and the player; runs at the end
+  of `build`, so the card never shows an unmasked value first.
+- `setSubtitle` (from `Window:SetProfile`) and `refreshName` (kept as an
+  alias) both route into `applyIdentity`.
 
 The window rests off-centre so window + gap + panel are centred as one unit
 (`Window:_profileCenterPosition` / `Window:_recenterForProfile`): with the

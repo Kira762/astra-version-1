@@ -70,6 +70,11 @@ local hoverTween = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirect
 
 local fallbackUri = "rbxassetid://0"
 
+-- [[Placeholder shown in place of a numeric identifier while the reveal]]
+-- [[toggle is off: a fixed-width block, so neither the value nor its]]
+-- [[length leaks. Names keep the sidebar mask ("Tes****") instead.]]
+local maskedId = "••••••"
+
 profilePanel.settleInfo = settleTween
 
 local buildGeneration = 0
@@ -114,6 +119,76 @@ function profilePanel.shiftFor(window)
         return 0
     end
     return (profilePanel.width + profilePanel.gap) / 2
+end
+
+-- [[The "Reveal profile details" toggle (persisted under the legacy]]
+-- [[`showFullUsername` key). Off = every identifying value on the card is]]
+-- [[masked; on = display name, username, user ID and place ID show in full.]]
+function profilePanel.revealEnabled(window)
+    return window.settings.showFullUsername == true
+end
+
+-- [[Write every identity field on the card from the current player and the]]
+-- [[reveal toggle: display name (headline), @username (subtitle), user ID]]
+-- [[(with its COPY action) and place ID (current-game card). Called at the]]
+-- [[end of the build, by the toggle, and whenever the local player turns up]]
+-- [[after construction — it is nil-safe on both the instances and the]]
+-- [[player, so a missing player leaves placeholders rather than erroring.]]
+function profilePanel.applyIdentity(window)
+    local player = state.localPlayer
+    local reveal = profilePanel.revealEnabled(window)
+
+    local username = ""
+    local displayName = ""
+    if player then
+        username = tostring(player.Name or "")
+        displayName = tostring(player.DisplayName or "")
+        if displayName == "" then
+            displayName = username
+        end
+    end
+
+    local name = window.profileName
+    if name then
+        name.Text = if displayName == "" then ""
+            elseif reveal then displayName
+            else sidebar.maskUsername(displayName)
+    end
+
+    local subtitle = window.profileSubtitle
+    if subtitle then
+        -- [[An explicit Window:SetProfile text wins over the generated]]
+        -- [[@username: it is the developer's own copy, not identity data,]]
+        -- [[so the reveal toggle leaves it untouched.]]
+        local custom = window.profileText
+        local text = if type(custom) == "string" and custom ~= "" then locale.resolve(custom) else nil
+        if text == nil and username ~= "" then
+            text = "@" .. (if reveal then username else sidebar.maskUsername(username))
+        end
+        subtitle.Text = text or ""
+        subtitle.Visible = subtitle.Text ~= ""
+    end
+
+    local userId = window.profileUserIdValue
+    if userId then
+        local id = if player then tostring(player.UserId or "") else ""
+        userId.Text = if id == "" then "-" elseif reveal then id else maskedId
+    end
+
+    local copy = window.profileCopyUserId
+    if copy then
+        copy.Visible = reveal and player ~= nil
+    end
+
+    local placeId = window.profilePlaceId
+    if placeId then
+        local id = tostring(game.PlaceId or "")
+        if id == "" or id == "0" then
+            placeId.Text = "Place ID: -"
+        else
+            placeId.Text = "Place ID: " .. (if reveal then id else maskedId)
+        end
+    end
 end
 
 function profilePanel.build(window, onOpenSettings)
@@ -191,9 +266,11 @@ function profilePanel.build(window, onOpenSettings)
     }, { BackgroundColor3 = "Success" })
     window:Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = onlineDot })
 
+    -- [[The headline text is filled by applyIdentity at the end of the]]
+    -- [[build, so it never flashes an unmasked display name first.]]
     window.profileName = window:Create("TextLabel", {
         Name = "Name",
-        Text = if player then player.DisplayName else "",
+        Text = "",
         Size = UDim2.new(1, -paddingX * 2, 0, nameHeight),
         Position = UDim2.new(0, paddingX, 0, nameTop),
         BackgroundTransparency = 1,
@@ -286,15 +363,15 @@ function profilePanel.build(window, onOpenSettings)
     iconLabel("DetailsHeading", "info", "ACCOUNT DETAILS", detailsHeadingTop, 18, 11, "ActionColor")
 
     iconLabel("UserId", "id-card", "User ID", userIdLabelTop, 18, 12)
-    label(
+    window.profileUserIdValue = label(
         "UserIdValue",
-        if player then tostring(player.UserId) else "-",
+        "-",
         UDim2.fromOffset(paddingX + indent, userIdValueTop),
         UDim2.new(1, -paddingX * 2 - indent - 48, 0, 20),
         14,
         "TitlingColor"
     )
-    local copy = window:Create("TextButton", {
+    window.profileCopyUserId = window:Create("TextButton", {
         Name = "CopyUserId",
         Text = "COPY",
         Position = UDim2.new(1, -paddingX - 44, 0, userIdValueTop + 1),
@@ -304,8 +381,17 @@ function profilePanel.build(window, onOpenSettings)
         TextSize = 10,
         Parent = window.profilePanelSurface,
     }, { TextColor3 = "ActionColor", FontFace = "Font" })
-    window:Connect(copy.Activated, function()
-        if setclipboard and player then setclipboard(tostring(player.UserId)) end
+    window:Connect(window.profileCopyUserId.Activated, function()
+        -- [[The action only exists while the ID is revealed: with the]]
+        -- [[detail hidden there is nothing meaningful to copy, and the]]
+        -- [[button is hidden too (applyIdentity).]]
+        if not profilePanel.revealEnabled(window) then
+            return
+        end
+        local current = state.localPlayer
+        if setclipboard and current then
+            setclipboard(tostring(current.UserId))
+        end
     end)
 
     iconLabel("JoinDate", "calendar-days", "Join date", joinLabelTop, 18, 12)
@@ -351,8 +437,14 @@ function profilePanel.build(window, onOpenSettings)
     window:Create("UICorner", { CornerRadius = UDim.new(0, 7), Parent = gameThumbnail })
     image.assign(gameThumbnail, "Image", `rbxthumb://type=GameIcon&id={game.PlaceId}&w=150&h=150`)
 
-    label("GameName", game.Name, UDim2.fromOffset(paddingX + 56, gameCardTop + 10), UDim2.new(1, -paddingX * 2 - 64, 0, 18), 13, "TitlingColor")
-    label("GameBy", "Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 56, gameCardTop + 30), UDim2.new(1, -paddingX * 2 - 64, 0, 16), 10)
+    label("GameName", tostring(game.Name or ""), UDim2.fromOffset(paddingX + 56, gameCardTop + 10), UDim2.new(1, -paddingX * 2 - 64, 0, 18), 13, "TitlingColor")
+    window.profilePlaceId = label(
+        "GameBy",
+        "Place ID: -",
+        UDim2.fromOffset(paddingX + 56, gameCardTop + 30),
+        UDim2.new(1, -paddingX * 2 - 64, 0, 16),
+        10
+    )
 
     -- ===== settings gear, pinned to the card's bottom edge =====
 
@@ -485,6 +577,7 @@ function profilePanel.build(window, onOpenSettings)
         end
     end
 
+    profilePanel.applyIdentity(window)
     profilePanel.layout(window)
     return window.profilePanel
 end
@@ -581,6 +674,20 @@ function profilePanel.setEnabled(window, enabled)
     window.settings.showProfile = enabled == true
     profilePanel.setShown(window, window.settings.showProfile, settleTween)
     window:_recenterForProfile(window.settings.showProfile)
+
+    -- [[The toggle is only half the story: the card also needs a player and]]
+    -- [[room on screen (280px beside the window, 500px of height). A missing]]
+    -- [[player resolves itself through the late-player waiter in Window.new,]]
+    -- [[but a small viewport would otherwise leave the user looking at an]]
+    -- [[active toggle and no card — so say why.]]
+    if window.settings.showProfile and state.localPlayer and not hasRoom(window) then
+        window:Notify({
+            title = locale.resolve("Profile card"),
+            content = locale.resolve(
+                "This screen has no room for the profile card, so it stays hidden. It needs 280px beside the window and 500px of height — enlarge the window or rotate the device and it appears."
+            ),
+        })
+    end
 end
 
 function profilePanel.setSide(window, side)
@@ -590,24 +697,16 @@ function profilePanel.setSide(window, side)
 end
 
 function profilePanel.setSubtitle(window, text)
-    local subtitle = window.profileSubtitle
-    if not subtitle then
-        return
-    end
-
-    local resolved = if type(text) == "string" and text ~= "" then locale.resolve(text) else nil
-    local username = if state.localPlayer then "@" .. state.localPlayer.Name else ""
-    subtitle.Text = resolved or username
-    subtitle.Visible = subtitle.Text ~= ""
+    -- [[The custom subtitle (if any) is kept on the window so applyIdentity]]
+    -- [[can prefer it over the generated @username on every refresh.]]
+    window.profileText = text
+    profilePanel.applyIdentity(window)
 end
 
+-- [[Kept as an alias: the reveal toggle no longer drives the name alone, so]]
+-- [[refreshing the name refreshes the whole identity block.]]
 function profilePanel.refreshName(window)
-    local name = window.profileName
-    if not name or not state.localPlayer then
-        return
-    end
-    local fullName = state.localPlayer.Name
-    name.Text = if window.settings.showFullUsername then fullName else sidebar.mask_username(fullName)
+    profilePanel.applyIdentity(window)
 end
 
 return profilePanel

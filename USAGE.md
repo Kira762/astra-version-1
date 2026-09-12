@@ -128,13 +128,13 @@ Titles, tags, themes, and every window method.
 
 Additional runtime helpers (used by the library internals, safe for extensions):
 `window:Create(className, props, themeBindings?)` (instance factory with theme
-and locale binding), `window:Connect(instance, event, fn)` /
-`window:ConnectFor(instance, event, fn)` / `window:Disconnect(connection)` /
+and locale binding), `window:Connect(signal, fn)` /
+`window:ConnectFor(element, signal, fn)` / `window:Disconnect(connection)` /
 `window:DisconnectMany(list)`, `window:DestroySubtree(instance)` /
 `window:DestroySubtrees(list)`, `window:CreateGlow(parent, color, blurRadius, transparency)`,
 `window:CreateHoverOverlay(parent)`, `window:StyleElementBody(frame)` /
 `window:StyleElementPanel(frame)`, `window:SaveSettings()` /
-`window:LoadSettings()`, `window:SetProfile(text)`.
+`window:LoadSettings()`, `window:SetProfile(text)` (sets the profile card's subtitle; pass `nil` to fall back to the `@username` line).
 
 Popup options: `options = { { text = "Cancel" }, { text = "Confirm", style = "primary" | "danger" | "neutral", callback = fn } }`.
 Popup props: `title`, `subtitle`, `icon`, `content`, `boxes`, `options`, `dismissable`.
@@ -324,7 +324,7 @@ The settings tabs are:
 | Tab | Contents |
 |---|---|
 | **General** | Toggle keybind (show/hide), unlock-cursor toggle, welcome toast toggle. |
-| **Appearance** | Theme dropdown + Apply (popup confirm), Bar Layout dropdown (Default Topbar / Sidebar / Collapsed Sidebar), Show profile / Reveal full username, Keep window on screen, Draggable capsule, Reset Window Position. |
+| **Appearance** | Theme dropdown + Apply (popup confirm), Bar Layout dropdown (Default Topbar / Sidebar / Collapsed Sidebar), Show profile / Profile side / Reveal profile details (unmasks the display name, username, user ID and place ID on the profile card), Keep window on screen, Draggable capsule, Reset Window Position. |
 | **Behavior** | Prevent duplicate windows. |
 | **Performance** | Haptics. |
 | **Persistence** | Saved-configurations dropdown + name input + Save/Load/Delete. Only present when `configuration` was passed to `CreateWindow`. |

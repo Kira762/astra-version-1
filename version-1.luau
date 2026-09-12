@@ -2459,6 +2459,11 @@ local hoverTween = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirect
 
 local fallbackUri = "rbxassetid://0"
 
+-- [[Placeholder shown in place of a numeric identifier while the reveal]]
+-- [[toggle is off: a fixed-width block, so neither the value nor its]]
+-- [[length leaks. Names keep the sidebar mask ("Tes****") instead.]]
+local maskedId = "••••••"
+
 profilePanel.settleInfo = settleTween
 
 local buildGeneration = 0
@@ -2503,6 +2508,76 @@ function profilePanel.shiftFor(window)
         return 0
     end
     return (profilePanel.width + profilePanel.gap) / 2
+end
+
+-- [[The "Reveal profile details" toggle (persisted under the legacy]]
+-- [[`showFullUsername` key). Off = every identifying value on the card is]]
+-- [[masked; on = display name, username, user ID and place ID show in full.]]
+function profilePanel.revealEnabled(window)
+    return window.settings.showFullUsername == true
+end
+
+-- [[Write every identity field on the card from the current player and the]]
+-- [[reveal toggle: display name (headline), @username (subtitle), user ID]]
+-- [[(with its COPY action) and place ID (current-game card). Called at the]]
+-- [[end of the build, by the toggle, and whenever the local player turns up]]
+-- [[after construction — it is nil-safe on both the instances and the]]
+-- [[player, so a missing player leaves placeholders rather than erroring.]]
+function profilePanel.applyIdentity(window)
+    local player = state.localPlayer
+    local reveal = profilePanel.revealEnabled(window)
+
+    local username = ""
+    local displayName = ""
+    if player then
+        username = tostring(player.Name or "")
+        displayName = tostring(player.DisplayName or "")
+        if displayName == "" then
+            displayName = username
+        end
+    end
+
+    local name = window.profileName
+    if name then
+        name.Text = if displayName == "" then ""
+            elseif reveal then displayName
+            else sidebar.maskUsername(displayName)
+    end
+
+    local subtitle = window.profileSubtitle
+    if subtitle then
+        -- [[An explicit Window:SetProfile text wins over the generated]]
+        -- [[@username: it is the developer's own copy, not identity data,]]
+        -- [[so the reveal toggle leaves it untouched.]]
+        local custom = window.profileText
+        local text = if type(custom) == "string" and custom ~= "" then locale.resolve(custom) else nil
+        if text == nil and username ~= "" then
+            text = "@" .. (if reveal then username else sidebar.maskUsername(username))
+        end
+        subtitle.Text = text or ""
+        subtitle.Visible = subtitle.Text ~= ""
+    end
+
+    local userId = window.profileUserIdValue
+    if userId then
+        local id = if player then tostring(player.UserId or "") else ""
+        userId.Text = if id == "" then "-" elseif reveal then id else maskedId
+    end
+
+    local copy = window.profileCopyUserId
+    if copy then
+        copy.Visible = reveal and player ~= nil
+    end
+
+    local placeId = window.profilePlaceId
+    if placeId then
+        local id = tostring(game.PlaceId or "")
+        if id == "" or id == "0" then
+            placeId.Text = "Place ID: -"
+        else
+            placeId.Text = "Place ID: " .. (if reveal then id else maskedId)
+        end
+    end
 end
 
 function profilePanel.build(window, onOpenSettings)
@@ -2580,9 +2655,11 @@ function profilePanel.build(window, onOpenSettings)
     }, { BackgroundColor3 = "Success" })
     window:Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = onlineDot })
 
+    -- [[The headline text is filled by applyIdentity at the end of the]]
+    -- [[build, so it never flashes an unmasked display name first.]]
     window.profileName = window:Create("TextLabel", {
         Name = "Name",
-        Text = if player then player.DisplayName else "",
+        Text = "",
         Size = UDim2.new(1, -paddingX * 2, 0, nameHeight),
         Position = UDim2.new(0, paddingX, 0, nameTop),
         BackgroundTransparency = 1,
@@ -2675,15 +2752,15 @@ function profilePanel.build(window, onOpenSettings)
     iconLabel("DetailsHeading", "info", "ACCOUNT DETAILS", detailsHeadingTop, 18, 11, "ActionColor")
 
     iconLabel("UserId", "id-card", "User ID", userIdLabelTop, 18, 12)
-    label(
+    window.profileUserIdValue = label(
         "UserIdValue",
-        if player then tostring(player.UserId) else "-",
+        "-",
         UDim2.fromOffset(paddingX + indent, userIdValueTop),
         UDim2.new(1, -paddingX * 2 - indent - 48, 0, 20),
         14,
         "TitlingColor"
     )
-    local copy = window:Create("TextButton", {
+    window.profileCopyUserId = window:Create("TextButton", {
         Name = "CopyUserId",
         Text = "COPY",
         Position = UDim2.new(1, -paddingX - 44, 0, userIdValueTop + 1),
@@ -2693,8 +2770,17 @@ function profilePanel.build(window, onOpenSettings)
         TextSize = 10,
         Parent = window.profilePanelSurface,
     }, { TextColor3 = "ActionColor", FontFace = "Font" })
-    window:Connect(copy.Activated, function()
-        if setclipboard and player then setclipboard(tostring(player.UserId)) end
+    window:Connect(window.profileCopyUserId.Activated, function()
+        -- [[The action only exists while the ID is revealed: with the]]
+        -- [[detail hidden there is nothing meaningful to copy, and the]]
+        -- [[button is hidden too (applyIdentity).]]
+        if not profilePanel.revealEnabled(window) then
+            return
+        end
+        local current = state.localPlayer
+        if setclipboard and current then
+            setclipboard(tostring(current.UserId))
+        end
     end)
 
     iconLabel("JoinDate", "calendar-days", "Join date", joinLabelTop, 18, 12)
@@ -2740,8 +2826,14 @@ function profilePanel.build(window, onOpenSettings)
     window:Create("UICorner", { CornerRadius = UDim.new(0, 7), Parent = gameThumbnail })
     image.assign(gameThumbnail, "Image", `rbxthumb://type=GameIcon&id={game.PlaceId}&w=150&h=150`)
 
-    label("GameName", game.Name, UDim2.fromOffset(paddingX + 56, gameCardTop + 10), UDim2.new(1, -paddingX * 2 - 64, 0, 18), 13, "TitlingColor")
-    label("GameBy", "Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 56, gameCardTop + 30), UDim2.new(1, -paddingX * 2 - 64, 0, 16), 10)
+    label("GameName", tostring(game.Name or ""), UDim2.fromOffset(paddingX + 56, gameCardTop + 10), UDim2.new(1, -paddingX * 2 - 64, 0, 18), 13, "TitlingColor")
+    window.profilePlaceId = label(
+        "GameBy",
+        "Place ID: -",
+        UDim2.fromOffset(paddingX + 56, gameCardTop + 30),
+        UDim2.new(1, -paddingX * 2 - 64, 0, 16),
+        10
+    )
 
     -- ===== settings gear, pinned to the card's bottom edge =====
 
@@ -2874,6 +2966,7 @@ function profilePanel.build(window, onOpenSettings)
         end
     end
 
+    profilePanel.applyIdentity(window)
     profilePanel.layout(window)
     return window.profilePanel
 end
@@ -2970,6 +3063,20 @@ function profilePanel.setEnabled(window, enabled)
     window.settings.showProfile = enabled == true
     profilePanel.setShown(window, window.settings.showProfile, settleTween)
     window:_recenterForProfile(window.settings.showProfile)
+
+    -- [[The toggle is only half the story: the card also needs a player and]]
+    -- [[room on screen (280px beside the window, 500px of height). A missing]]
+    -- [[player resolves itself through the late-player waiter in Window.new,]]
+    -- [[but a small viewport would otherwise leave the user looking at an]]
+    -- [[active toggle and no card — so say why.]]
+    if window.settings.showProfile and state.localPlayer and not hasRoom(window) then
+        window:Notify({
+            title = locale.resolve("Profile card"),
+            content = locale.resolve(
+                "This screen has no room for the profile card, so it stays hidden. It needs 280px beside the window and 500px of height — enlarge the window or rotate the device and it appears."
+            ),
+        })
+    end
 end
 
 function profilePanel.setSide(window, side)
@@ -2979,24 +3086,16 @@ function profilePanel.setSide(window, side)
 end
 
 function profilePanel.setSubtitle(window, text)
-    local subtitle = window.profileSubtitle
-    if not subtitle then
-        return
-    end
-
-    local resolved = if type(text) == "string" and text ~= "" then locale.resolve(text) else nil
-    local username = if state.localPlayer then "@" .. state.localPlayer.Name else ""
-    subtitle.Text = resolved or username
-    subtitle.Visible = subtitle.Text ~= ""
+    -- [[The custom subtitle (if any) is kept on the window so applyIdentity]]
+    -- [[can prefer it over the generated @username on every refresh.]]
+    window.profileText = text
+    profilePanel.applyIdentity(window)
 end
 
+-- [[Kept as an alias: the reveal toggle no longer drives the name alone, so]]
+-- [[refreshing the name refreshes the whole identity block.]]
 function profilePanel.refreshName(window)
-    local name = window.profileName
-    if not name or not state.localPlayer then
-        return
-    end
-    local fullName = state.localPlayer.Name
-    name.Text = if window.settings.showFullUsername then fullName else sidebar.mask_username(fullName)
+    profilePanel.applyIdentity(window)
 end
 
 return profilePanel
@@ -4699,7 +4798,7 @@ function Window.new(props)
             if state.localPlayer or os.clock() > deadline then
                 connection:Disconnect()
                 if state.localPlayer and self.profilePanel then
-                    profilePanel.refreshName(self)
+                    profilePanel.applyIdentity(self)
                     profilePanel.setShown(self, true, profilePanel.settleInfo)
                     -- [[The player may have arrived after construction, when]]
                     -- [[the panel was still disabled and the window was not]]
@@ -4712,7 +4811,12 @@ function Window.new(props)
                 end
             end
         end)
-        self:Connect(connection)
+        -- [[The connection already exists here, so it is adopted into the]]
+        -- [[window's list directly: Window:Connect takes a *signal* and calls]]
+        -- [[:Connect on it, which threw on a connection object and killed this]]
+        -- [[waiter — the profile card then stayed hidden even with "Show]]
+        -- [[profile" on.]]
+        table.insert(self.connections, connection)
     end)
     haptic.setContainer(self.screenGui)     haptic.setEnabled(self.settings.haptics)     chrome.buildCollapsedFace(self)
 
@@ -5841,10 +5945,10 @@ function Window:_buildSettingsUI()
         end,
     })
     appearance:CreateToggle({
-        name = "Reveal full username", description = "Shows your full Roblox username in the profile panel instead of the masked version.", value = self.settings.showFullUsername,
+        name = "Reveal profile details", description = "Reveals your display name, username, user ID and place ID on the profile card. Off keeps all four masked.", value = self.settings.showFullUsername,
         callback = function(value)
             self.settings.showFullUsername = value == true
-            profilePanel.refreshName(self); self:SaveSettings()
+            profilePanel.applyIdentity(self); self:SaveSettings()
         end,
     })
 
@@ -15075,7 +15179,7 @@ registry.definitions = {
         key = "showFullUsername",
         kind = "boolean",
         domain = "appearance",
-        description = "Shows the full Roblox username instead of the masked one.",
+        description = "Reveals the display name, username, user ID and place ID on the profile card instead of the masked versions.",
     },
     profileSide = {
         key = "profileSide",
@@ -30258,94 +30362,94 @@ local LineOffsets = {
     [12] = 1365,
     [13] = 1672,
     [14] = 2390,
-    [15] = 3006,
-    [16] = 3341,
-    [17] = 3402,
-    [18] = 3772,
-    [19] = 4149,
-    [21] = 7090,
-    [22] = 7357,
-    [23] = 7801,
-    [24] = 8932,
-    [25] = 9266,
-    [26] = 9327,
-    [27] = 9472,
-    [28] = 10792,
-    [29] = 10994,
-    [30] = 11255,
-    [31] = 11717,
-    [32] = 12167,
-    [33] = 12254,
-    [34] = 12819,
-    [35] = 13437,
-    [36] = 13819,
-    [37] = 13949,
-    [38] = 14113,
-    [39] = 14267,
-    [41] = 14778,
-    [42] = 14801,
-    [43] = 14818,
-    [44] = 14848,
-    [45] = 14964,
-    [46] = 14978,
-    [47] = 15027,
-    [48] = 14753,
-    [49] = 15134,
-    [50] = 15437,
-    [51] = 15468,
-    [52] = 15123,
-    [53] = 15511,
-    [54] = 15531,
-    [55] = 15563,
-    [56] = 15493,
-    [57] = 15670,
-    [58] = 15729,
-    [59] = 15789,
-    [61] = 15848,
-    [62] = 16013,
-    [63] = 15833,
-    [64] = 16273,
-    [65] = 16568,
-    [66] = 17224,
-    [67] = 19008,
-    [68] = 20149,
-    [69] = 21669,
-    [70] = 16077,
-    [71] = 26913,
-    [72] = 26975,
-    [73] = 27037,
-    [74] = 27112,
-    [75] = 27194,
-    [76] = 27256,
-    [77] = 27331,
-    [78] = 27406,
-    [79] = 27481,
-    [80] = 27556,
-    [81] = 26807,
-    [82] = 27618,
-    [83] = 27716,
-    [84] = 27894,
-    [85] = 27945,
-    [86] = 27975,
-    [87] = 28226,
-    [88] = 28275,
-    [89] = 28728,
-    [90] = 28746,
-    [91] = 28892,
-    [92] = 28991,
-    [93] = 29013,
-    [94] = 29063,
-    [95] = 29099,
-    [96] = 29117,
-    [97] = 29430,
-    [98] = 29446,
-    [99] = 29497,
-    [100] = 29516,
-    [101] = 29758,
-    [102] = 29802,
-    [103] = 30002,
-    [104] = 30030,
-    [105] = 30041,
+    [15] = 3105,
+    [16] = 3440,
+    [17] = 3501,
+    [18] = 3871,
+    [19] = 4248,
+    [21] = 7194,
+    [22] = 7461,
+    [23] = 7905,
+    [24] = 9036,
+    [25] = 9370,
+    [26] = 9431,
+    [27] = 9576,
+    [28] = 10896,
+    [29] = 11098,
+    [30] = 11359,
+    [31] = 11821,
+    [32] = 12271,
+    [33] = 12358,
+    [34] = 12923,
+    [35] = 13541,
+    [36] = 13923,
+    [37] = 14053,
+    [38] = 14217,
+    [39] = 14371,
+    [41] = 14882,
+    [42] = 14905,
+    [43] = 14922,
+    [44] = 14952,
+    [45] = 15068,
+    [46] = 15082,
+    [47] = 15131,
+    [48] = 14857,
+    [49] = 15238,
+    [50] = 15541,
+    [51] = 15572,
+    [52] = 15227,
+    [53] = 15615,
+    [54] = 15635,
+    [55] = 15667,
+    [56] = 15597,
+    [57] = 15774,
+    [58] = 15833,
+    [59] = 15893,
+    [61] = 15952,
+    [62] = 16117,
+    [63] = 15937,
+    [64] = 16377,
+    [65] = 16672,
+    [66] = 17328,
+    [67] = 19112,
+    [68] = 20253,
+    [69] = 21773,
+    [70] = 16181,
+    [71] = 27017,
+    [72] = 27079,
+    [73] = 27141,
+    [74] = 27216,
+    [75] = 27298,
+    [76] = 27360,
+    [77] = 27435,
+    [78] = 27510,
+    [79] = 27585,
+    [80] = 27660,
+    [81] = 26911,
+    [82] = 27722,
+    [83] = 27820,
+    [84] = 27998,
+    [85] = 28049,
+    [86] = 28079,
+    [87] = 28330,
+    [88] = 28379,
+    [89] = 28832,
+    [90] = 28850,
+    [91] = 28996,
+    [92] = 29095,
+    [93] = 29117,
+    [94] = 29167,
+    [95] = 29203,
+    [96] = 29221,
+    [97] = 29534,
+    [98] = 29550,
+    [99] = 29601,
+    [100] = 29620,
+    [101] = 29862,
+    [102] = 29906,
+    [103] = 30106,
+    [104] = 30134,
+    [105] = 30145,
 }
 
 -- [[Misc AOT variable imports]]
