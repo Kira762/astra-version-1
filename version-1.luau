@@ -2406,15 +2406,15 @@ local profilePanel = {}
 -- A full profile card, intentionally wide enough for the Roblox-style details
 -- layout. Every colour below is a theme binding (rather than a hard-coded
 -- colour), so ChangeTheme refreshes the card along with the rest of the UI.
-profilePanel.width = 304
+profilePanel.width = 280
 profilePanel.gap = 12
 
-local avatarSize = 82
+local avatarSize = 72
 local nameGap = 10
 local nameHeight = 24
 local subGap = 3
 local subHeight = 18
-local paddingX = 18
+local paddingX = 16
 local contentMinTop = 18
 local gearSize = 32
 local gearIconSize = 20
@@ -2500,9 +2500,10 @@ function profilePanel.build(window, onOpenSettings)
         Name = "Surface",
         Size = UDim2.fromScale(1, 1),
         BorderSizePixel = 0,
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 0,
+        ClipsDescendants = true,
         Parent = window.profilePanel,
-    })
+    }, { BackgroundColor3 = "WindowColor" })
 
     window:Create("UIGradient", {
         Rotation = 270,
@@ -2589,6 +2590,27 @@ function profilePanel.build(window, onOpenSettings)
         }, { TextColor3 = color or "ContentColor", FontFace = "Font" })
     end
 
+    local function iconLabel(name, iconName, text, position, size, textSize, color)
+        local iconSize = 16
+        window:Create("ImageLabel", {
+            Name = name .. "Icon",
+            Image = window:ResolveIcon(iconName),
+            Position = position,
+            Size = UDim2.fromOffset(iconSize, iconSize),
+            BackgroundTransparency = 1,
+            ImageTransparency = 0.15,
+            Parent = window.profilePanelSurface,
+        }, { ImageColor3 = color or "ContentColor" })
+        return label(
+            name,
+            text,
+            UDim2.new(position.X.Scale, position.X.Offset + iconSize + 7, position.Y.Scale, position.Y.Offset - 1),
+            UDim2.new(size.X.Scale, size.X.Offset - iconSize - 7, size.Y.Scale, size.Y.Offset),
+            textSize,
+            color
+        )
+    end
+
     local function rule(y)
         window:Create("Frame", {
             Name = "Divider",
@@ -2599,31 +2621,41 @@ function profilePanel.build(window, onOpenSettings)
         }, { BackgroundColor3 = "ElementStroke" })
     end
 
-    rule(176)
-    label("DetailsHeading", "◈  ACCOUNT DETAILS", UDim2.fromOffset(paddingX, 190), UDim2.new(1, -paddingX * 2, 0, 20), 12, "ActionColor")
-    label("UserId", "▣  User ID", UDim2.fromOffset(paddingX, 218), UDim2.new(1, -paddingX * 2, 0, 18), 13)
-    local userId = label("UserIdValue", if player then tostring(player.UserId) else "—", UDim2.fromOffset(paddingX + 22, 237), UDim2.new(1, -paddingX * 2 - 48, 0, 20), 14, "TitlingColor")
+    rule(150)
+    iconLabel("DetailsHeading", "info", "ACCOUNT DETAILS", UDim2.fromOffset(paddingX, 163), UDim2.new(1, -paddingX * 2, 0, 18), 11, "ActionColor")
+    iconLabel("UserId", "id-card", "User ID", UDim2.fromOffset(paddingX, 190), UDim2.new(1, -paddingX * 2, 0, 18), 12)
+    local userId = label("UserIdValue", if player then tostring(player.UserId) else "-", UDim2.fromOffset(paddingX, 207), UDim2.new(1, -paddingX * 2 - 48, 0, 20), 14, "TitlingColor")
     local copy = window:Create("TextButton", {
-        Name = "CopyUserId", Text = "COPY", Position = UDim2.new(1, -paddingX - 44, 0, 238),
+        Name = "CopyUserId", Text = "COPY", Position = UDim2.new(1, -paddingX - 44, 0, 208),
         Size = UDim2.fromOffset(44, 18), BackgroundTransparency = 1, BorderSizePixel = 0,
         TextSize = 10, Parent = window.profilePanelSurface,
     }, { TextColor3 = "ActionColor", FontFace = "Font" })
     window:Connect(copy.Activated, function()
         if setclipboard and player then setclipboard(tostring(player.UserId)) end
     end)
-    label("JoinDate", "◷  Join date", UDim2.fromOffset(paddingX, 267), UDim2.new(1, -paddingX * 2, 0, 18), 13)
-    label("JoinDateValue", if player then ("Account age: " .. tostring(player.AccountAge) .. " days") else "—", UDim2.fromOffset(paddingX + 22, 286), UDim2.new(1, -paddingX * 2, 0, 20), 14, "TitlingColor")
-    label("SocialStats", "♟  Friends     —        Followers     —", UDim2.fromOffset(paddingX, 320), UDim2.new(1, -paddingX * 2, 0, 22), 13, "PlaceholderColor")
-    rule(354)
-    label("GameHeading", "▣  CURRENT GAME", UDim2.fromOffset(paddingX, 368), UDim2.new(1, -paddingX * 2, 0, 20), 12, "ActionColor")
+    iconLabel("JoinDate", "calendar-days", "Join date", UDim2.fromOffset(paddingX, 238), UDim2.new(1, -paddingX * 2, 0, 18), 12)
+    label("JoinDateValue", if player then ("Account age: " .. tostring(player.AccountAge) .. " days") else "-", UDim2.fromOffset(paddingX, 255), UDim2.new(1, -paddingX * 2, 0, 20), 14, "TitlingColor")
+    iconLabel("SocialStats", "users-round", "Friends     -        Followers     -", UDim2.fromOffset(paddingX, 286), UDim2.new(1, -paddingX * 2, 0, 20), 12, "PlaceholderColor")
+    rule(318)
+    iconLabel("GameHeading", "gamepad-2", "CURRENT GAME", UDim2.fromOffset(paddingX, 331), UDim2.new(1, -paddingX * 2, 0, 18), 11, "ActionColor")
     local gameCard = window:Create("Frame", {
-        Name = "CurrentGame", Position = UDim2.fromOffset(paddingX, 396), Size = UDim2.new(1, -paddingX * 2, 0, 82),
+        Name = "CurrentGame", Position = UDim2.fromOffset(paddingX, 356), Size = UDim2.new(1, -paddingX * 2, 0, 52),
         BorderSizePixel = 0, Parent = window.profilePanelSurface,
     }, { BackgroundColor3 = "ContentColor" })
     window:Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = gameCard })
-    label("GameName", game.Name, UDim2.fromOffset(paddingX + 12, 407), UDim2.new(1, -paddingX * 2 - 24, 0, 20), 14, "TitlingColor")
-    label("GameBy", "by Astra player  •  Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 12, 430), UDim2.new(1, -paddingX * 2 - 24, 0, 18), 11)
-    label("PlayingTime", "◷  Playing now", UDim2.fromOffset(paddingX + 12, 452), UDim2.new(1, -paddingX * 2 - 24, 0, 18), 11, "ActionColor")
+    local gameThumbnail = window:Create("ImageLabel", {
+        Name = "GameThumbnail",
+        Image = "",
+        Position = UDim2.fromOffset(paddingX + 8, 362),
+        Size = UDim2.fromOffset(40, 40),
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        Parent = window.profilePanelSurface,
+    })
+    window:Create("UICorner", { CornerRadius = UDim.new(0, 7), Parent = gameThumbnail })
+    image.assign(gameThumbnail, "Image", `rbxthumb://type=GameIcon&id={game.PlaceId}&w=150&h=150`)
+    label("GameName", game.Name, UDim2.fromOffset(paddingX + 58, 363), UDim2.new(1, -paddingX * 2 - 70, 0, 18), 13, "TitlingColor")
+    label("GameBy", "Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 58, 384), UDim2.new(1, -paddingX * 2 - 70, 0, 16), 10)
 
     label("PremiumBadge", "PREMIUM", UDim2.new(0.5, -42, 0, contentMinTop + avatarSize + nameGap + nameHeight + subGap + subHeight + 6), UDim2.fromOffset(84, 18), 10, "AccentColor")
 
@@ -30139,94 +30171,94 @@ local LineOffsets = {
     [12] = 1365,
     [13] = 1672,
     [14] = 2390,
-    [15] = 2887,
-    [16] = 3222,
-    [17] = 3283,
-    [18] = 3653,
-    [19] = 4030,
-    [21] = 6971,
-    [22] = 7238,
-    [23] = 7682,
-    [24] = 8813,
-    [25] = 9147,
-    [26] = 9208,
-    [27] = 9353,
-    [28] = 10673,
-    [29] = 10875,
-    [30] = 11136,
-    [31] = 11598,
-    [32] = 12048,
-    [33] = 12135,
-    [34] = 12700,
-    [35] = 13318,
-    [36] = 13700,
-    [37] = 13830,
-    [38] = 13994,
-    [39] = 14148,
-    [41] = 14659,
-    [42] = 14682,
-    [43] = 14699,
-    [44] = 14729,
-    [45] = 14845,
-    [46] = 14859,
-    [47] = 14908,
-    [48] = 14634,
-    [49] = 15015,
-    [50] = 15318,
-    [51] = 15349,
-    [52] = 15004,
-    [53] = 15392,
-    [54] = 15412,
-    [55] = 15444,
-    [56] = 15374,
-    [57] = 15551,
-    [58] = 15610,
-    [59] = 15670,
-    [61] = 15729,
-    [62] = 15894,
-    [63] = 15714,
-    [64] = 16154,
-    [65] = 16449,
-    [66] = 17105,
-    [67] = 18889,
-    [68] = 20030,
-    [69] = 21550,
-    [70] = 15958,
-    [71] = 26794,
-    [72] = 26856,
-    [73] = 26918,
-    [74] = 26993,
-    [75] = 27075,
-    [76] = 27137,
-    [77] = 27212,
-    [78] = 27287,
-    [79] = 27362,
-    [80] = 27437,
-    [81] = 26688,
-    [82] = 27499,
-    [83] = 27597,
-    [84] = 27775,
-    [85] = 27826,
-    [86] = 27856,
-    [87] = 28107,
-    [88] = 28156,
-    [89] = 28609,
-    [90] = 28627,
-    [91] = 28773,
-    [92] = 28872,
-    [93] = 28894,
-    [94] = 28944,
-    [95] = 28980,
-    [96] = 28998,
-    [97] = 29311,
-    [98] = 29327,
-    [99] = 29378,
-    [100] = 29397,
-    [101] = 29639,
-    [102] = 29683,
-    [103] = 29883,
-    [104] = 29911,
-    [105] = 29922,
+    [15] = 2919,
+    [16] = 3254,
+    [17] = 3315,
+    [18] = 3685,
+    [19] = 4062,
+    [21] = 7003,
+    [22] = 7270,
+    [23] = 7714,
+    [24] = 8845,
+    [25] = 9179,
+    [26] = 9240,
+    [27] = 9385,
+    [28] = 10705,
+    [29] = 10907,
+    [30] = 11168,
+    [31] = 11630,
+    [32] = 12080,
+    [33] = 12167,
+    [34] = 12732,
+    [35] = 13350,
+    [36] = 13732,
+    [37] = 13862,
+    [38] = 14026,
+    [39] = 14180,
+    [41] = 14691,
+    [42] = 14714,
+    [43] = 14731,
+    [44] = 14761,
+    [45] = 14877,
+    [46] = 14891,
+    [47] = 14940,
+    [48] = 14666,
+    [49] = 15047,
+    [50] = 15350,
+    [51] = 15381,
+    [52] = 15036,
+    [53] = 15424,
+    [54] = 15444,
+    [55] = 15476,
+    [56] = 15406,
+    [57] = 15583,
+    [58] = 15642,
+    [59] = 15702,
+    [61] = 15761,
+    [62] = 15926,
+    [63] = 15746,
+    [64] = 16186,
+    [65] = 16481,
+    [66] = 17137,
+    [67] = 18921,
+    [68] = 20062,
+    [69] = 21582,
+    [70] = 15990,
+    [71] = 26826,
+    [72] = 26888,
+    [73] = 26950,
+    [74] = 27025,
+    [75] = 27107,
+    [76] = 27169,
+    [77] = 27244,
+    [78] = 27319,
+    [79] = 27394,
+    [80] = 27469,
+    [81] = 26720,
+    [82] = 27531,
+    [83] = 27629,
+    [84] = 27807,
+    [85] = 27858,
+    [86] = 27888,
+    [87] = 28139,
+    [88] = 28188,
+    [89] = 28641,
+    [90] = 28659,
+    [91] = 28805,
+    [92] = 28904,
+    [93] = 28926,
+    [94] = 28976,
+    [95] = 29012,
+    [96] = 29030,
+    [97] = 29343,
+    [98] = 29359,
+    [99] = 29410,
+    [100] = 29429,
+    [101] = 29671,
+    [102] = 29715,
+    [103] = 29915,
+    [104] = 29943,
+    [105] = 29954,
 }
 
 -- [[Misc AOT variable imports]]
