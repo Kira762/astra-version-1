@@ -44,7 +44,7 @@ local profiles = {
 		defaultSize = Vector2.new(600, 420),
 		minSize = Vector2.new(500, 330),
 		maxSize = Vector2.new(720, 480),
-		mobileSize = Vector2.new(316, 318),
+		mobileSize = Vector2.new(560, 380),
 		maxOccupancyX = 0.88,
 		topbarClearance = 36,
 		marginFloorX = 20,
@@ -57,7 +57,7 @@ local profiles = {
 		defaultSize = Vector2.new(600, 420),
 		minSize = Vector2.new(540, 360),
 		maxSize = Vector2.new(760, 500),
-		mobileSize = Vector2.new(331, 280),
+		mobileSize = Vector2.new(560, 380),
 		maxOccupancyX = 0.92,
 		maxOccupancyY = 0.84,
 		marginFloorX = 20,
@@ -187,10 +187,11 @@ function breakpoints.fit(viewport: Vector2?, modeOrProfile: layouts.Mode?): UDim
 	return fitViewport(fitProfile, viewport)
 end
 
--- [[UIScale helper: same physical perception mobile vs desktop. Kept for both]]
--- [[paths - the fixed mobile window still scales with the device viewport.]]
+-- [[UIScale helper: desktop remains responsive, while the fixed mobile window]]
+-- [[keeps its requested dimensions instead of being reduced by device scale.]]
 function breakpoints.scaleForViewport(scaleViewport: Vector2?): number
 	if not scaleViewport or scaleViewport.X < minTrackedViewport then return 1 end
+	if math.min(scaleViewport.X, scaleViewport.Y) < mobileBreakpoint then return 1 end
 	-- [[390 -> 0.92, 768 -> 0.98, 1280 -> 1.04, 1920 -> 1.12, 2560 -> 1.18 (clamped)]]
 	local s = 0.88 + (scaleViewport.X / 2200) * 0.32
 	-- [[y also matters on portrait phones: don't let tall narrow screens over-scale]]

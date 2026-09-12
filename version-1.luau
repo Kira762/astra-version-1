@@ -4011,14 +4011,6 @@ function Window.new(props)
 
         Parent = state.guiContainer,
     })
-        -- [[UIScale keeps desktop/mobile at the same perceived size: desktop is]]
-        -- [[responsive (tiered occupancy), mobile uses its fixed windowSizing profile.]]
-        self.uiScale = self:Create("UIScale", {
-                Scale = windowSizing.scaleForViewport(state.workspace.CurrentCamera and state.workspace.CurrentCamera.ViewportSize),
-                Parent = self.screenGui,
-        })
-
-
         self.main = self:Create("Frame", {
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         Name = self.name,
@@ -4976,24 +4968,18 @@ function Window:_applyWindowSize()
     if self.unloaded then
         return
     end
-    local vp = state.workspace.CurrentCamera and state.workspace.CurrentCamera.ViewportSize or nil
     -- [[Desktop/PC: newSize tracks the viewport (responsive, min/max protected).]]
     -- [[Mobile: windowSizing.fit returns the fixed mobile profile on every call, so]]
     -- [[viewport changes (rotation, keyboard, inset) never resize the window here.]]
     local newSize = computeSize(self.layout.mode)
-    local newScale = windowSizing.scaleForViewport(vp)
     local sizeChanged = newSize ~= self.size
-    local scaleChanged = self.uiScale and self.uiScale.Scale ~= newScale
     self.size = newSize
-    if self.uiScale and scaleChanged then
-        self.uiScale.Scale = newScale
-    end
     self:_applyRailWidth()
     if self.hidden or self.minimised or self.animating or self._revealing then
-        self._pendingResize = self._pendingResize or sizeChanged or (scaleChanged or false)
+        self._pendingResize = self._pendingResize or sizeChanged
         return
     end
-    if not sizeChanged and not self._pendingResize and not scaleChanged then
+    if not sizeChanged and not self._pendingResize then
         return
     end
     self._pendingResize = false
@@ -29582,7 +29568,7 @@ local profiles = {
 		defaultSize = Vector2.new(600, 420),
 		minSize = Vector2.new(500, 330),
 		maxSize = Vector2.new(720, 480),
-		mobileSize = Vector2.new(316, 318),
+		mobileSize = Vector2.new(560, 380),
 		maxOccupancyX = 0.88,
 		topbarClearance = 36,
 		marginFloorX = 20,
@@ -29595,7 +29581,7 @@ local profiles = {
 		defaultSize = Vector2.new(600, 420),
 		minSize = Vector2.new(540, 360),
 		maxSize = Vector2.new(760, 500),
-		mobileSize = Vector2.new(331, 280),
+		mobileSize = Vector2.new(560, 380),
 		maxOccupancyX = 0.92,
 		maxOccupancyY = 0.84,
 		marginFloorX = 20,
@@ -29725,10 +29711,11 @@ function breakpoints.fit(viewport: Vector2?, modeOrProfile: layouts.Mode?): UDim
 	return fitViewport(fitProfile, viewport)
 end
 
--- [[UIScale helper: same physical perception mobile vs desktop. Kept for both]]
--- [[paths - the fixed mobile window still scales with the device viewport.]]
+-- [[UIScale helper: desktop remains responsive, while the fixed mobile window]]
+-- [[keeps its requested dimensions instead of being reduced by device scale.]]
 function breakpoints.scaleForViewport(scaleViewport: Vector2?): number
 	if not scaleViewport or scaleViewport.X < minTrackedViewport then return 1 end
+	if math.min(scaleViewport.X, scaleViewport.Y) < mobileBreakpoint then return 1 end
 	-- [[390 -> 0.92, 768 -> 0.98, 1280 -> 1.04, 1920 -> 1.12, 2560 -> 1.18 (clamped)]]
 	local s = 0.88 + (scaleViewport.X / 2200) * 0.32
 	-- [[y also matters on portrait phones: don't let tall narrow screens over-scale]]
@@ -29759,89 +29746,89 @@ local LineOffsets = {
     [16] = 3144,
     [17] = 3422,
     [18] = 3799,
-    [20] = 6590,
-    [21] = 6857,
-    [22] = 7301,
-    [23] = 8432,
-    [24] = 8766,
-    [25] = 8827,
-    [26] = 8972,
-    [27] = 10292,
-    [28] = 10494,
-    [29] = 10755,
-    [30] = 11217,
-    [31] = 11667,
-    [32] = 11754,
-    [33] = 12319,
-    [34] = 12937,
-    [35] = 13311,
-    [36] = 13441,
-    [37] = 13605,
-    [38] = 13759,
-    [40] = 14270,
-    [41] = 14293,
-    [42] = 14310,
-    [43] = 14340,
-    [44] = 14456,
-    [45] = 14470,
-    [46] = 14519,
-    [47] = 14245,
-    [48] = 14620,
-    [49] = 14923,
-    [50] = 14954,
-    [51] = 14609,
-    [52] = 14997,
-    [53] = 15017,
-    [54] = 15049,
-    [55] = 14979,
-    [56] = 15156,
-    [57] = 15218,
-    [58] = 15281,
-    [60] = 15344,
-    [61] = 15509,
-    [62] = 15329,
-    [63] = 15769,
-    [64] = 16064,
-    [65] = 16720,
-    [66] = 18504,
-    [67] = 19645,
-    [68] = 21165,
-    [69] = 15573,
-    [70] = 26409,
-    [71] = 26471,
-    [72] = 26533,
-    [73] = 26608,
-    [74] = 26690,
-    [75] = 26752,
-    [76] = 26827,
-    [77] = 26902,
-    [78] = 26977,
-    [79] = 27052,
-    [80] = 26303,
-    [81] = 27114,
-    [82] = 27212,
-    [83] = 27390,
-    [84] = 27441,
-    [85] = 27471,
-    [86] = 27722,
-    [87] = 27771,
-    [88] = 28224,
-    [89] = 28242,
-    [90] = 28396,
-    [91] = 28495,
-    [92] = 28517,
-    [93] = 28567,
-    [94] = 28603,
-    [95] = 28621,
-    [96] = 28934,
-    [97] = 28950,
-    [98] = 29001,
-    [99] = 29020,
-    [100] = 29262,
-    [101] = 29306,
-    [102] = 29500,
-    [103] = 29528,
-    [104] = 29539,
+    [20] = 6576,
+    [21] = 6843,
+    [22] = 7287,
+    [23] = 8418,
+    [24] = 8752,
+    [25] = 8813,
+    [26] = 8958,
+    [27] = 10278,
+    [28] = 10480,
+    [29] = 10741,
+    [30] = 11203,
+    [31] = 11653,
+    [32] = 11740,
+    [33] = 12305,
+    [34] = 12923,
+    [35] = 13297,
+    [36] = 13427,
+    [37] = 13591,
+    [38] = 13745,
+    [40] = 14256,
+    [41] = 14279,
+    [42] = 14296,
+    [43] = 14326,
+    [44] = 14442,
+    [45] = 14456,
+    [46] = 14505,
+    [47] = 14231,
+    [48] = 14606,
+    [49] = 14909,
+    [50] = 14940,
+    [51] = 14595,
+    [52] = 14983,
+    [53] = 15003,
+    [54] = 15035,
+    [55] = 14965,
+    [56] = 15142,
+    [57] = 15204,
+    [58] = 15267,
+    [60] = 15330,
+    [61] = 15495,
+    [62] = 15315,
+    [63] = 15755,
+    [64] = 16050,
+    [65] = 16706,
+    [66] = 18490,
+    [67] = 19631,
+    [68] = 21151,
+    [69] = 15559,
+    [70] = 26395,
+    [71] = 26457,
+    [72] = 26519,
+    [73] = 26594,
+    [74] = 26676,
+    [75] = 26738,
+    [76] = 26813,
+    [77] = 26888,
+    [78] = 26963,
+    [79] = 27038,
+    [80] = 26289,
+    [81] = 27100,
+    [82] = 27198,
+    [83] = 27376,
+    [84] = 27427,
+    [85] = 27457,
+    [86] = 27708,
+    [87] = 27757,
+    [88] = 28210,
+    [89] = 28228,
+    [90] = 28382,
+    [91] = 28481,
+    [92] = 28503,
+    [93] = 28553,
+    [94] = 28589,
+    [95] = 28607,
+    [96] = 28920,
+    [97] = 28936,
+    [98] = 28987,
+    [99] = 29006,
+    [100] = 29248,
+    [101] = 29292,
+    [102] = 29486,
+    [103] = 29514,
+    [104] = 29525,
 }
 
 -- [[Misc AOT variable imports]]
