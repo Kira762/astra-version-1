@@ -11,8 +11,8 @@ local windowSizing = require(utilities.windowSizing)
 local layouts = require(utilities.layouts)
 local chrome = require(script.Parent.chrome)
 local search = require(script.Parent.search)
-local sidebar = require(script.Parent.sidebar)
 local tabSelector = require(script.Parent.tabSelector)
+local profilePanel = require(script.Parent.profilePanel)
 
 local state = require(utilities.Parent.core.state)
 
@@ -198,6 +198,7 @@ function Window.new(props)
         dragMinimisedBar = false,
         showProfile = true,
         showFullUsername = false,
+        profileSide = "right",
         antiWindowDuplicate = true,
         layoutMode = layout.mode,
         activeSubTab = 1,
@@ -513,24 +514,7 @@ function Window.new(props)
         linkedTab = self.rfSettings,
 
         callback = function()
-            if self._settingsMode then
-                local previousTab = self._previousTab
-                self._previousTab = nil
-                if previousTab and previousTab.window == self and previousTab.tabPage and not previousTab._isSettingsTab then
-                    previousTab:Select()
-                    return
-                end
-                for _, tab in self.tabs do
-                    if not tab._isSettingsTab and tab.window == self and tab.tabPage then
-                        tab:Select()
-                        return
-                    end
-                end
-                return
-            end
-
-            self._previousTab = self.selectedTab
-            self.rfSettings:Select()
+            self:_toggleSettingsMode()
         end,
     })
 
@@ -552,13 +536,9 @@ function Window.new(props)
     then
         self:_setLayoutMode(self.settings.layoutMode)
     end
-    if self.layout.mode == "sidebar" then
-        sidebar.reflowProfile(self)
-        sidebar.setSubtitle(self, self.profileText)
-    end
 
     task.defer(function()
-        if self.unloaded or state.localPlayer or not self.profile then
+        if self.unloaded or state.localPlayer or not self.profilePanel then
             return
         end
         local deadline = os.clock() + 2
@@ -570,16 +550,31 @@ function Window.new(props)
             end
             if state.localPlayer or os.clock() > deadline then
                 connection:Disconnect()
-                if state.localPlayer and self.profile then
-                    sidebar.refreshProfileName(self)
-                    sidebar.reflowProfile(self)
-                    sidebar.setProfileShown(self, true, sidebar.settleInfo)
+                if state.localPlayer and self.profilePanel then
+                    profilePanel.refreshName(self)
+                    profilePanel.setShown(self, true, profilePanel.settleInfo)
+                    -- [[The player may have arrived after construction, when]]
+                    -- [[the panel was still disabled and the window was not]]
+                    -- [[shifted. If the window is still anchored at the]]
+                    -- [[screen centre (the user has not dragged it), centre]]
+                    -- [[the window + panel pair now.]]
+                    if self.main.Position.X.Scale == 0.5 and self.main.Position.Y.Scale == 0.5 then
+                        self:_recenterForProfile(true)
+                    end
                 end
             end
         end)
         self:Connect(connection)
     end)
     haptic.setContainer(self.screenGui)     haptic.setEnabled(self.settings.haptics)     chrome.buildCollapsedFace(self)
+
+    profilePanel.build(self, function()
+        self:_toggleSettingsMode()
+    end)
+    profilePanel.setSubtitle(self, self.profileText)
+    if profilePanel.isEnabled(self) then
+        self.main.Position = self:_profileCenterPosition()
+    end
     self:_bindKeybind()
     self:_bindMouseOverride()
     self:_bindTopbarDrag()
@@ -1177,6 +1172,47 @@ function Window:_clampToScreen()
     self.main.Position = self:_clampedPosition(self.main.Position)
 end
 
+-- [[The window's canonical resting position. With the profile panel]]
+-- [[enabled, the window + gap + panel are treated as one unit and that]]
+-- [[unit is centred: the window itself sits half a panel away from the]]
+-- [[screen centre, on the opposite side of the panel, so neither side of]]
+-- [[the pair looks cramped.]]
+function Window:_profileCenterPosition(): UDim2
+    local shift = profilePanel.shiftFor(self)
+    if shift <= 0 then
+        return UDim2.new(0.5, 0, 0.5, 0)
+    end
+    local left = (self.settings.profileSide or "right") == "left"
+    return UDim2.new(0.5, if left then shift else -shift, 0.5, 0)
+end
+
+function Window:_recenterForProfile(animate)
+    local target = self:_profileCenterPosition()
+    if self.hidden or self.minimised then
+        -- [[Nothing is on screen to move; park the remembered position so]]
+        -- [[the next restore lands centred for the current panel state.]]
+        self._restorePosition = target
+        return
+    end
+    if self.main.Position == target then
+        return
+    end
+    if animate and not self.animating then
+        local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+        state.tweenService:Create(self.main, tweenInfo, { Position = target }):Play()
+        state.tweenService
+            :Create(
+                self.drag.drag,
+                tweenInfo,
+                { Position = UDim2.new(target.X.Scale, target.X.Offset, target.Y.Scale, target.Y.Offset + self.size.Y.Offset / 2 + 15) }
+            )
+            :Play()
+    else
+        self.main.Position = target
+        self:_syncDragBar()
+    end
+end
+
 function Window:_applyWindowSize()
     if self.unloaded then
         return
@@ -1199,6 +1235,10 @@ function Window:_applyWindowSize()
     self.main.Size = newSize
     self:_clampToScreen()
     self:_syncDragBar()
+    -- [[A viewport change can switch the device between the desktop and]]
+    -- [[mobile tiers; the profile panel only exists on desktop, so its]]
+    -- [[visibility is re-evaluated alongside the resize.]]
+    profilePanel.setShown(self, true, nil)
 end
 
 -- [[Effective rail width. Non-sidebar and collapsed rails keep the existing]]
@@ -1628,17 +1668,30 @@ function Window:_buildSettingsUI()
     })
     appearance:CreateSection({ name = "Profile" })
     appearance:CreateToggle({
-        name = "Show profile", description = "Shows your account profile in the active bar layout.", value = self.settings.showProfile,
+        name = "Show profile", description = "Shows your account profile in a panel beside the window.", value = self.settings.showProfile,
         callback = function(value)
-            self.settings.showProfile = value == true
-            sidebar.reflowProfile(self); sidebar.setProfileShown(self, self.settings.showProfile, sidebar.settleInfo); self:SaveSettings()
+            profilePanel.setEnabled(self, value)
+            self:SaveSettings()
+        end,
+    })
+    appearance:CreateDropdown({
+        name = "Profile side", description = "Which side of the window the profile panel sits on. The window recentres so it and the panel stay centred together.",
+        options = { "Right", "Left" },
+        value = if (self.settings.profileSide or "right") == "left" then "Left" else "Right",
+        callback = function(choice)
+            local side = if choice == "Left" then "left" else "right"
+            if (self.settings.profileSide or "right") == side then
+                return
+            end
+            profilePanel.setSide(self, side)
+            self:SaveSettings()
         end,
     })
     appearance:CreateToggle({
-        name = "Reveal full username", description = "Shows your full Roblox username in the sidebar instead of the masked version.", value = self.settings.showFullUsername,
+        name = "Reveal full username", description = "Shows your full Roblox username in the profile panel instead of the masked version.", value = self.settings.showFullUsername,
         callback = function(value)
             self.settings.showFullUsername = value == true
-            sidebar.refreshProfileName(self); self:SaveSettings()
+            profilePanel.refreshName(self); self:SaveSettings()
         end,
     })
 
@@ -1653,8 +1706,7 @@ function Window:_buildSettingsUI()
     })
     appearance:CreateButton({
         name = "Reset Window Position", callback = function()
-            state.tweenService:Create(self.main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
-            state.tweenService:Create(self.drag.drag, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0.5, self.size.Y.Offset / 2 + 15) }):Play()
+            self:_recenterForProfile(true)
         end,
     })
     end
@@ -1728,7 +1780,7 @@ end
 
 function Window:SetProfile(text)
     self.profileText = text
-    sidebar.setSubtitle(self, text)
+    profilePanel.setSubtitle(self, text)
 end
 
 function Window:SaveSettings()
@@ -1945,6 +1997,28 @@ function Window:_applySettingsLayout(isSettings)
     self:_applyContentRailWidth()
 end
 
+-- [[Shared by the topbar gear action and the profile panel's gear.]]
+function Window:_toggleSettingsMode()
+    if self._settingsMode then
+        local previousTab = self._previousTab
+        self._previousTab = nil
+        if previousTab and previousTab.window == self and previousTab.tabPage and not previousTab._isSettingsTab then
+            previousTab:Select()
+            return
+        end
+        for _, tab in self.tabs do
+            if not tab._isSettingsTab and tab.window == self and tab.tabPage then
+                tab:Select()
+                return
+            end
+        end
+        return
+    end
+
+    self._previousTab = self.selectedTab
+    self.rfSettings:Select()
+end
+
 function Window:_setSettingsMode(active)
     active = active == true
     self._settingsMode = active
@@ -2004,8 +2078,7 @@ function Window:_fadeSurfaces(shown, tweenInfo)
         end
     end
 
-    sidebar.reflowProfile(self)
-    sidebar.setProfileShown(self, shown, tweenInfo)
+    profilePanel.setShown(self, shown, tweenInfo)
 end
 
 function Window:_fadeSelectedElementsOut()

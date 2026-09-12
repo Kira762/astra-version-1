@@ -363,7 +363,8 @@ end
 
 local function newInstance(className)
 	local instance = {
-		__props = { ClassName = className },
+		-- [[Roblox defaults a new instance's Name to its class name.]]
+		__props = { ClassName = className, Name = className },
 		__children = {},
 		__signals = {},
 		__propSignals = {},
@@ -388,15 +389,26 @@ local function newInstance(className)
 			if key == "AbsolutePosition" then
 				return absolutePosition(self)
 			end
-			if SIGNAL_NAMES[key] then
-				local signals = rawget(self, "__signals")
-				if not signals[key] then
-					signals[key] = newSignal()
-				end
-				return signals[key]
+		if SIGNAL_NAMES[key] then
+			local signals = rawget(self, "__signals")
+			if not signals[key] then
+				signals[key] = newSignal()
 			end
-			return nil
-		end,
+			return signals[key]
+		end
+		-- [[Roblox semantics: instance.ChildName finds a child by Name.]]
+		local children = rawget(self, "__children")
+		if children then
+			for i = 1, #children do
+				local child = children[i]
+				local childProps = rawget(child, "__props")
+				if childProps and childProps.Name == key then
+					return child
+				end
+			end
+		end
+		return nil
+	end,
 		__newindex = function(self, key, value)
 			if rawget(self, "__destroyed") then
 				error("The property '" .. tostring(key) .. "' cannot be assigned to because the instance has been destroyed.", 2)

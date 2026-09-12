@@ -1,4 +1,3 @@
-local sidebar = require(script.Parent.Parent.components.sidebar)
 local search = require(script.Parent.Parent.components.search)
 
 local Topbar = {}
@@ -31,15 +30,12 @@ function Topbar.Build(window, layout)
         PaddingRight = UDim.new(0, 10),
         Parent = window.tabList,
     })
-    sidebar.buildProfile(window, layout)
-    sidebar.reflowProfile(window)
 end
 
 function Topbar.ApplyWidth(window)
     search.railWidth(window, 0)
     window.elements.Size = UDim2.new(1, 0, 1, -window.layout.chromeHeight)
     window.bottomFade.Size = UDim2.new(1, 0, window.layout.fadeSize.Y.Scale, window.layout.fadeSize.Y.Offset)
-    sidebar.reflowProfile(window)
 end
 
 return Topbar

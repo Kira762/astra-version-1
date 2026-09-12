@@ -43,13 +43,19 @@ registry.definitions = {
         key = "showProfile",
         kind = "boolean",
         domain = "appearance",
-        description = "Shows the account profile in the active bar layout.",
+        description = "Shows the account profile in a panel beside the window.",
     },
     showFullUsername = {
         key = "showFullUsername",
         kind = "boolean",
         domain = "appearance",
         description = "Shows the full Roblox username instead of the masked one.",
+    },
+    profileSide = {
+        key = "profileSide",
+        kind = "enum",
+        domain = "appearance",
+        description = "Which side of the window the profile panel sits on (right or left).",
     },
     antiWindowDuplicate = {
         key = "antiWindowDuplicate",

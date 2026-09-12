@@ -2,6 +2,48 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-12 — Profile system: the profile panel beside the window
+
+- **The profile now lives in a panel beside the window, not inside it.**
+  New `components/profilePanel.luau` builds a 96px-wide companion card as a
+  sibling of the window frame (same ScreenGui): 48px circular avatar
+  (theme plate fallback + the existing `images.image.avatar` loading with a
+  generation guard), 16px name (masked as before, or full via "Reveal full
+  username"), optional 14px subtitle (`Window:SetProfile` keeps its
+  signature), and a bottom-pinned settings gear that opens the settings
+  screen (same behavior as the topbar gear, via a shared
+  `Window:_toggleSettingsMode`). The panel wears the window's surface
+  treatment (WindowColor gradient, corner roundness, SurfaceStroke stroke,
+  ShadowColor shadow), has a subtle hover pill on the gear, and follows
+  the window on drags/restores/resizes through Position/Size
+  property-change signals — no per-frame loop.
+- **The window recentres so the pair is even.** Window + 8px gap + panel are
+  centred on screen as one unit: at rest the window sits 52px —
+  (96+8)/2 — off the screen centre, on the opposite side of the panel, so
+  neither side looks cramped. Applied on first show, by "Reset Window
+  Position", and live (animated) when the panel is toggled or re-sided;
+  while the window is hidden the remembered restore position is updated
+  instead so the next restore lands centred.
+- **New "Profile side" option (Right / Left)** in the Appearance settings,
+  persisted with the existing `showProfile` / `showFullUsername` settings
+  (`settings.profileSide`, default `"right"`).
+- **The in-window profile variants are retired** (sidebar footer, topbar
+  strip, collapsed avatar-only). The responsive rail no longer reserves its
+  60px profile footer (tabs get that space back), the topbar loses its 48px
+  profile strip, and the old `reflowProfile` mis-detection on
+  content-sized rails disappears with the code.
+- **Scope:** profile placement/presentation only — no new public API, no
+  animation-system changes. Phone viewports (the existing mobile tier) hide
+  the panel; it hides with hide/minimise/close.
+- **Verification:** the sizing suite's new T15 section asserts the panel
+  geometry (sibling of the frame, ±52px window shift, flush panel edge,
+  full window height), name masking, `SetProfile` subtitle, rail footer
+  release, live recentering on side flips and show/hide toggles, and
+  mobile hide/restore. A behavior probe covers the gear → settings round
+  trip, hide/restore, and minimise/restore. The harness stubs gained
+  Roblox-faithful name-based child indexing and default instance Names.
+  Bundle regenerated (100 modules).
+
 ## 2026-09-12 — Faster window startup: lazy settings content + deferred auto-show
 
 - **Settings tab content is now built lazily.** `CreateWindow` previously

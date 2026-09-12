@@ -87,14 +87,17 @@ Method map (names preserved through minification). Settings-related:
   `Window:_buildSettingsContent(tab)` runs it on the tab's first open
   (`Tab:Select`, after construction), so `CreateWindow` stays fast.
   Appearance hosts theme picker + Bar Layout picker (both
-  popup-confirmed), profile and window toggles, Reset Window Position;
+  popup-confirmed), the profile toggles (Show profile, Profile side
+  Right/Left, Reveal full username) and window toggles, Reset Window
+  Position;
   Persistence always hosts saved-config Save/Load/Delete (independent of
   the `configuration` prop — paths fall back to the window name, and the
   dropdown shows its "No saved configurations" placeholder when none
   exist).
 - `settingsAction` (topbar gear, `linkedTab = rfSettings`) — toggles
-  settings mode: `_setSettingsMode(true)` shows only settings tabs and
-  remembers the previous tab; a second click restores it.
+  settings mode via `_toggleSettingsMode` (shared with the profile
+  panel's gear): entering shows only settings tabs and remembers the
+  previous tab; a second click restores it.
 - `_applySettingsLayout(active)` — reflows rail/elements for settings mode.
 - `SaveSettings` / `LoadSettings` — per-window settings persistence via
   `utilities.persistence` (settings JSON, includes `activeSubTab` round-trip).
@@ -115,15 +118,45 @@ Public surface:
 Internal: `_reveal*`/`_fadeSurfaces`/`_firstShow`/`_quickRestore` (reveal
 engine), `_bindTopbarDrag`/`_bindKeybind`/`_bindMouseOverride`,
 `_applyWindowSize`/`_applyRailWidth`/`_clampToScreen`/`_watchViewport`,
-`_setLayoutMode`, `_registerControl`/`_unregisterControl`/`_persist`,
+`_profileCenterPosition`/`_recenterForProfile` (window + profile-panel
+recentering), `_setLayoutMode`, `_toggleSettingsMode` (topbar gear + profile
+panel gear), `_registerControl`/`_unregisterControl`/`_persist`,
 `_runGuarded`, `_setElementLocked`/`_buildLockScrim`, `_updateWindowTitle`.
 
 ### `components/sidebar.luau`
-Profile/avatar machinery:
-- `avatarGenerations`, `avatarReady` — weak-keyed side tables (generation guard, reveal state). No custom Instance fields.
-- `setProfileShown(window, shown, info)` — tweens avatar/name/subtitle; nil-safe; themed plate fallback when the image never resolved.
-- `buildProfile` — three unified branches (sidebar footer / topbar right-anchored / collapsed avatar-only).
-- `reflowProfile`, `applyWidth` — layout responders per layout mode.
+Tab-rail reflow (the profile system moved to `components/profilePanel.luau`):
+- `maskUsername(name)` — shared masking helper (first 3 chars + `****`), used by the profile panel.
+- `buildTabRail` — rail ScrollingFrame + UIPadding + UIListLayout (the layout implementations build their own rails).
+- `applyRailRows(window, width, layout)` — rows collapse only at the icon-only width (the responsive rail is often narrower than the old 219px fixed rail); ends with `tabSelector.relayoutSidebarRows`.
+
+### `components/profilePanel.luau`
+The profile panel — a 96px companion card floating beside the window frame
+(a sibling in the same ScreenGui), replacing the in-window profile:
+- `build(window, onOpenSettings)` — surface with the window's treatment
+  (WindowColor gradient, `CornerRoundness` corners, SurfaceStroke stroke,
+  ShadowColor glow); 48px circular avatar (ContentColor plate fallback,
+  `images.image.avatar` with a generation guard); centered 16px name /
+  14px subtitle (truncated at end); bottom-pinned settings gear sharing
+  `Window:_toggleSettingsMode` (hover pill + stroke hover, pcalled).
+  Mirrors `main`'s Position/Size through property-change signals, so it
+  follows drags/restores/resizes without a per-frame loop.
+- `layout(window)` — places the panel on the selected side
+  (`settings.profileSide`, default `"right"`) flush with the window edge
+  (8px gap), spanning the full window height, content vertically centred.
+- `setShown(window, shown, info)` — effective = requested AND enabled AND
+  window visible (not hidden/minimised); fades avatar/name/subtitle/gear/
+  stroke; idempotent (skips instances already at target).
+- `isEnabled` / `shiftFor` — content-enabled check (`showProfile` on,
+  player known, desktop viewport) and the off-centre shift
+  `((96 + 8) / 2 = 52px)`, 0 while the panel is off.
+- `setEnabled`, `setSide` — settings drivers (both recenter the window).
+- `setSubtitle` (from `Window:SetProfile`), `refreshName` (masked vs
+  `showFullUsername`).
+
+The window rests off-centre so window + gap + panel are centred as one unit
+(`Window:_profileCenterPosition` / `Window:_recenterForProfile`): with the
+panel on the right the window sits 52px left of screen centre, and
+vice-versa. The panel hides on phone viewports and with hide/minimise/close.
 
 ### `components/drag.luau`
 - `utility` — `core.state` alias. Locals `a1..a8` — drag input state (start pos, delta thresholds, RenderStepped connection).
@@ -158,12 +191,11 @@ Fuzzy search overlay: locals for candidate list, scoring weights, debounce conne
 ## layouts/
 
 One module per bar-layout mode, each with `Build(window, layout)` (creates the
-tab strip, rail chrome, and profile for that mode) and `ApplyWidth(window)`
-(reflow):
+tab strip and rail chrome) and `ApplyWidth(window)` (reflow):
 
-- `Topbar.luau` — mode `top`: horizontal tab strip in the topbar + right-anchored profile.
-- `Sidebar.luau` — mode `sidebar` (responsive): vertical tab rail + sidebar profile.
-- `SidebarCollapsed.luau` — mode `collapsedSidebar`: compact rail, avatar-only profile.
+- `Topbar.luau` — mode `top`: horizontal tab strip in the topbar.
+- `Sidebar.luau` — mode `sidebar` (responsive): vertical tab rail.
+- `SidebarCollapsed.luau` — mode `collapsedSidebar`: compact rail.
 
 `utilities/layouts.luau` holds the per-mode metric tables and dispatches
 (`layouts.get(mode)`, `layouts.implementation(mode)`,

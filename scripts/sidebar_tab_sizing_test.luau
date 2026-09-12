@@ -29,6 +29,35 @@ local function eq(actual, wanted, message)
 	end
 end
 
+local function eqVector2(actual, x, y, message)
+	if actual.X ~= x or actual.Y ~= y then
+		error(
+			"SMOKE FAIL: " .. message .. " (got " .. tostring(actual.X) .. ", " .. tostring(actual.Y) .. ", want " .. tostring(x) .. ", " .. tostring(y) .. ")",
+			0
+		)
+	end
+end
+
+-- [[The stub's UDim2s are plain tables, so compare component-wise.]]
+local function eqUDim2(actual, sx, so, sy, yo, message)
+	if actual.X.Scale ~= sx or actual.X.Offset ~= so or actual.Y.Scale ~= sy or actual.Y.Offset ~= yo then
+		error(
+			"SMOKE FAIL: " .. message
+				.. " (got "
+				.. tostring(actual.X.Scale) .. ", "
+				.. tostring(actual.X.Offset) .. " / "
+				.. tostring(actual.Y.Scale) .. ", "
+				.. tostring(actual.Y.Offset)
+				.. ", want "
+				.. tostring(sx) .. ", "
+				.. tostring(so) .. " / "
+				.. tostring(sy) .. ", "
+				.. tostring(yo) .. ")",
+			0
+		)
+	end
+end
+
 -- Layout constants (utilities/layouts.luau, mode "sidebar")
 local RAIL_COLLAPSED = 64
 local ROW_INSET2 = 30 -- rowInset * 2
@@ -266,12 +295,12 @@ expect(
 
 -- T9d: every settings tab opens with its full content on its own page.
 local expectedSettingsContent = {
-	General = 4,
-	Appearance = 12,
-	Behavior = 2,
-	Performance = 2,
-	Persistence = 4,
-	About = 9,
+    General = 4,
+    Appearance = 13,
+    Behavior = 2,
+    Performance = 2,
+    Persistence = 4,
+    About = 9,
 }
 for name, wanted in expectedSettingsContent do
 	for _, tab in window._settingsTabs do
@@ -334,5 +363,108 @@ switched = window:_setLayoutMode("sidebar")
 expect(switched == true, "T14 layout switch back to the responsive sidebar")
 TestPump(1.0)
 assertGroupSized(shortRail, "T14 responsive sidebar rail is name-sized again")
+
+-- T15: the profile panel beside the window (it replaces the in-window
+-- profile). The window + gap + panel rest centred on screen as one unit:
+-- the window itself sits half a panel away from the screen centre, on the
+-- opposite side of the panel.
+local PANEL_W = 96
+local PANEL_GAP = 8
+local PANEL_SHIFT = (PANEL_W + PANEL_GAP) / 2
+local main = window.main
+local halfW = main.Size.X.Offset / 2
+local halfH = main.Size.Y.Offset / 2
+
+expect(window.profilePanel ~= nil, "T15 the profile panel exists beside the window")
+eq(window.profilePanel.Visible, true, "T15 panel is visible while the window is shown")
+expect(window.profilePanel.Parent == window.screenGui, "T15 panel is a sibling of the window frame")
+
+eqUDim2(main.Position, 0.5, -PANEL_SHIFT, 0.5, 0, "T15 window shifted away from the default right-side panel")
+eq(main.Size.X.Offset, 600, "T15 desktop window width at the 1920x1080 viewport")
+eq(main.Size.Y.Offset, 420, "T15 desktop window height at the 1920x1080 viewport")
+
+eqVector2(window.profilePanel.AnchorPoint, 0, 0, "T15 right-side panel anchors at its left edge")
+eqUDim2(
+	window.profilePanel.Position,
+	0.5,
+	main.Position.X.Offset + halfW + PANEL_GAP,
+	0.5,
+	-halfH,
+	"T15 panel flush with the window's right edge"
+)
+eq(window.profilePanel.Size.X.Offset, PANEL_W, "T15 panel width")
+eq(window.profilePanel.Size.Y.Offset, main.Size.Y.Offset, "T15 panel spans the full window height")
+
+eq(window.profileName.Text, "Tes****", "T15 username masked by default")
+expect(window.profileAvatar ~= nil, "T15 avatar exists")
+expect(window.profileGear ~= nil, "T15 settings gear exists")
+window:SetProfile("Panel subtitle")
+TestPump(0.1)
+eq(window.profileSubtitle.Text, "Panel subtitle", "T15 SetProfile drives the panel subtitle")
+eq(window.profileSubtitle.Visible, true, "T15 subtitle visible once set")
+
+eqUDim2(window.tabList.Size, 1, 0, 1, 0, "T15 the rail no longer reserves in-window profile footer space")
+
+local appearanceTab, sideDropdown, showProfileToggle
+for _, tab in window._settingsTabs do
+    if tab.name == "Appearance" then
+        appearanceTab = tab
+    end
+end
+expect(appearanceTab ~= nil, "T15 the Appearance settings tab exists")
+for _, el in appearanceTab.elements do
+    if el.name == "Profile side" then
+        sideDropdown = el
+    elseif el.name == "Show profile" then
+        showProfileToggle = el
+    end
+end
+expect(sideDropdown ~= nil, "T15 the Profile side option exists")
+expect(showProfileToggle ~= nil, "T15 the Show profile toggle exists")
+
+-- Flipping the side moves the panel and shifts the window the other way.
+sideDropdown:Set("Left")
+TestPump(0.2)
+eqUDim2(main.Position, 0.5, PANEL_SHIFT, 0.5, 0, "T15 left-side panel shifts the window right")
+eqVector2(window.profilePanel.AnchorPoint, 1, 0, "T15 left-side panel anchors at its right edge")
+eqUDim2(
+	window.profilePanel.Position,
+	0.5,
+	main.Position.X.Offset - halfW - PANEL_GAP,
+	0.5,
+	-halfH,
+	"T15 panel flush with the window's left edge"
+)
+sideDropdown:Set("Right")
+TestPump(0.2)
+eqUDim2(main.Position, 0.5, -PANEL_SHIFT, 0.5, 0, "T15 back to the right side re-centres the window")
+
+-- Toggling the panel off re-centres the window on its own.
+showProfileToggle:Set(false)
+TestPump(0.2)
+eqUDim2(main.Position, 0.5, 0, 0.5, 0, "T15 hiding the panel re-centres the window")
+eq(window.profilePanel.Visible, false, "T15 panel hidden with the toggle")
+showProfileToggle:Set(true)
+TestPump(0.2)
+eqUDim2(main.Position, 0.5, -PANEL_SHIFT, 0.5, 0, "T15 showing the panel shifts the window again")
+eq(window.profilePanel.Visible, true, "T15 panel visible again")
+
+-- Mobile (touch-only, phone-sized) hides the panel and applies the fixed
+-- mobile window size; the desktop viewport restores both.
+local inputService = game:GetService("UserInputService")
+inputService.TouchEnabled = true
+inputService.KeyboardEnabled = false
+TestViewport.set(360, 390)
+TestPump(0.4)
+eq(window.profilePanel.Visible, false, "T15 phone viewport hides the panel")
+eq(main.Size.X.Offset, 560, "T15 phone viewport uses the fixed mobile window width")
+eq(main.Size.Y.Offset, 380, "T15 phone viewport uses the fixed mobile window height")
+TestViewport.set(1920, 1080)
+TestPump(0.4)
+inputService.TouchEnabled = false
+inputService.KeyboardEnabled = true
+eq(window.profilePanel.Visible, true, "T15 desktop viewport restores the panel")
+eq(main.Size.X.Offset, 600, "T15 desktop window width restored")
+eq(main.Size.Y.Offset, 420, "T15 desktop window height restored")
 
 print("SIDEBAR TAB SIZING: all assertions passed")
