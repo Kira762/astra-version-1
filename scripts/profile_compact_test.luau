@@ -1,10 +1,10 @@
--- ===== compact profile card (240x420) assertions =====
+-- ===== compact profile card (260x420) assertions =====
 -- [[Runs the real Astra bundle (loaded as global `Astra` above) against the]]
 -- [[mini Roblox environment from sidebar_sizing_stubs.luau.]]
 --
 -- Expected behavior under test:
---   * D1 the card is exactly 240 wide x 420 high — the default window's
---        height — with the 12px gap preserved,
+--   * D1 the card is exactly 260 wide x 420 high at default — the default window's
+--        height — with the 12px gap preserved, and height matches window height,
 --   * D2 the card sits on the selected side (right by default, left when
 --        switched) flush with the window edge and vertically centred on it,
 --   * D3 every profile field still exists on the compact card,
@@ -20,8 +20,8 @@
 --   * D7 a stale saved configuration (reveal on, card off) is normalised by
 --        Window:LoadSettings so the reveal can never come back active,
 --   * D8 viewport changes recompute the whole layout: the window resizes,
---        the card keeps its size and stays attached and centred, and a
---        viewport too small for the pair hides the card again.
+--        the card height matches window height (never greater), stays attached
+--        and centred, and a viewport too small for the pair hides the card again.
 
 local function expect(cond, message)
 	if not cond then
@@ -44,33 +44,26 @@ local function eqUDim2(actual, sx, so, sy, yo, message)
 		error(
 			"COMPACT FAIL: " .. message
 				.. " (got "
-				.. tostring(actual.X.Scale)
-				.. ", "
-				.. tostring(actual.X.Offset)
-				.. " / "
-				.. tostring(actual.Y.Scale)
-				.. ", "
+				.. tostring(actual.X.Scale) .. ", "
+				.. tostring(actual.X.Offset) .. " / "
+				.. tostring(actual.Y.Scale) .. ", "
 				.. tostring(actual.Y.Offset)
 				.. ", want "
-				.. tostring(sx)
-				.. ", "
-				.. tostring(so)
-				.. " / "
-				.. tostring(sy)
-				.. ", "
-				.. tostring(yo)
-				.. ")",
+				.. tostring(sx) .. ", "
+				.. tostring(so) .. " / "
+				.. tostring(sy) .. ", "
+				.. tostring(yo) .. ")",
 			0
 		)
 	end
 end
 
 -- Card geometry (components/profilePanel.luau): the compact card is exactly
--- the default window's height (420px) and 240px wide.
-local PANEL_W = 240
+-- the default window's height (420px) and 260px wide.
+local PANEL_W = 260
 local PANEL_GAP = 12
 local PANEL_H = 420
-local PANEL_SHIFT = (PANEL_W + PANEL_GAP) / 2 -- 126: the window's off-centre rest
+local PANEL_SHIFT = (PANEL_W + PANEL_GAP) / 2 -- 136: the window's off-centre rest
 
 local MASKED_ID = "••••••"
 local USER_ID = 42
@@ -84,6 +77,7 @@ player.DisplayName = "Test User"
 player.UserId = USER_ID
 game.PlaceId = PLACE_ID
 game.Name = "Test Place"
+game.GameId = 123456
 
 local function findSettingsElement(targetWindow, tabName, elementName)
 	for _, tab in targetWindow._settingsTabs do
@@ -156,14 +150,15 @@ local function edges(targetWindow)
 	local windowRight = windowLeft + main.Size.X.Offset
 	local windowBottom = windowTop + main.Size.Y.Offset
 	local leftSide = (targetWindow.settings.profileSide or "right") == "left"
-	local cardLeft = if leftSide then windowLeft - PANEL_GAP - PANEL_W else windowRight + PANEL_GAP
+	local panelW = targetWindow.profilePanel.Size.X.Offset
+	local cardLeft = if leftSide then windowLeft - PANEL_GAP - panelW else windowRight + PANEL_GAP
 	return {
 		windowLeft = windowLeft,
 		windowRight = windowRight,
 		windowTop = windowTop,
 		windowBottom = windowBottom,
 		cardLeft = cardLeft,
-		cardRight = cardLeft + PANEL_W,
+		cardRight = cardLeft + panelW,
 	}
 end
 
@@ -185,12 +180,12 @@ local main = window.main
 local panel = window.profilePanel
 
 -- ===== D1: exact dimensions =====
-
 eq(main.Size.X.Offset, 600, "D1 the default window is 600px wide")
 eq(main.Size.Y.Offset, 420, "D1 the default window is 420px high")
-eq(panel.Size.X.Offset, PANEL_W, "D1 the card is exactly 240px wide")
-eq(panel.Size.Y.Offset, PANEL_H, "D1 the card is exactly 420px high")
+eq(panel.Size.X.Offset, PANEL_W, "D1 the card is exactly 260px wide")
+eq(panel.Size.Y.Offset, PANEL_H, "D1 the card is exactly 420px high at default")
 eq(PANEL_H, main.Size.Y.Offset, "D1 the card is exactly as tall as the default window")
+eq(panel.Size.Y.Offset, main.Size.Y.Offset, "D1 card height matches window height")
 eq(panel.Visible, true, "D1 the card shows with 'Show profile' on")
 
 -- ===== D2: placement on the selected side =====
@@ -375,8 +370,10 @@ eq(window.profilePanel.Visible, true, "D8 the card is shown before the viewport 
 TestViewport.set(900, 500)
 TestPump(0.5)
 eq(window.profilePanel.Visible, true, "D8 the card is still shown at the smaller viewport")
-eq(panel.Size.X.Offset, PANEL_W, "D8 the card keeps its 240px width")
-eq(panel.Size.Y.Offset, PANEL_H, "D8 the card keeps its 420px height")
+eq(panel.Size.X.Offset, PANEL_W, "D8 the card keeps its 260px width")
+-- [[At responsive size, card height must match window height and never exceed it.]]
+eq(panel.Size.Y.Offset, main.Size.Y.Offset, "D8 the card height matches window height at responsive size")
+expect(panel.Size.Y.Offset <= main.Size.Y.Offset, "D8 card height <= window height")
 eq(main.Size.X.Offset, 608, "D8 the window resized responsively (width)")
 eq(main.Size.Y.Offset, 410, "D8 the window resized responsively (height)")
 eqUDim2(main.Position, 0.5, -PANEL_SHIFT, 0.5, 0, "D8 the pair stays centred after the resize")
@@ -385,7 +382,7 @@ eqUDim2(
 	0.5,
 	main.Position.X.Offset + main.Size.X.Offset / 2 + PANEL_GAP,
 	0.5,
-	-PANEL_H / 2,
+	-panel.Size.Y.Offset / 2,
 	"D8 the card stays attached to the resized window, centred on its centre"
 )
 assertNoOverlap(window, "D8 right-side")
@@ -404,5 +401,12 @@ TestPump(0.5)
 eq(window.profilePanel.Visible, true, "D8 the card comes back once the screen has room")
 eqUDim2(main.Position, 0.5, -PANEL_SHIFT, 0.5, 0, "D8 and the pair recentres")
 assertNoOverlap(window, "D8 right-side")
+
+-- ===== D9: thumbnail uses GameId for official endpoint, PlaceId for display =====
+eq(game.PlaceId, PLACE_ID, "D9 PlaceId preserved")
+eq(game.GameId, 123456, "D9 GameId available for official thumbnail")
+-- [[Thumbnail should not throw and game card remains visible even if HTTP unavailable.]]
+expect(findChild(panel, "CurrentGame") ~= nil, "D9 game card still visible after thumbnail logic")
+expect(findChild(findChild(panel, "CurrentGame"), "GameThumbnail") ~= nil, "D9 thumbnail ImageLabel exists")
 
 print("PROFILE COMPACT: all assertions passed")

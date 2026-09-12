@@ -55,11 +55,11 @@ local function eqUDim2(actual, sx, so, sy, yo, message)
 end
 
 -- Card geometry (components/profilePanel.luau): the compact card is exactly
--- the default window's height (420px) and 240px wide.
-local PANEL_W = 240
+-- the default window's height (420px) and 260px wide, gap 12.
+local PANEL_W = 260
 local PANEL_GAP = 12
 local PANEL_H = 420
-local PANEL_SHIFT = (PANEL_W + PANEL_GAP) / 2 -- 126: the window's off-centre rest
+local PANEL_SHIFT = (PANEL_W + PANEL_GAP) / 2 -- 136: the window's off-centre rest
 local EDGE_MARGIN = 8 -- the keep-on-screen margin
 
 local state = Astra.Core.state
@@ -100,7 +100,10 @@ local panel = window.profilePanel
 expect(panel ~= nil, "C1 the profile card exists beside the window")
 eq(panel.Visible, true, "C1 the card is shown ('Show profile' defaults to on)")
 eq(panel.Size.X.Offset, PANEL_W, "C1 card width")
-eq(panel.Size.Y.Offset, PANEL_H, "C1 card height")
+-- [[At default window height 420, card height must be exactly 420.]]
+eq(panel.Size.Y.Offset, PANEL_H, "C1 card height at default")
+eq(window.size.Y.Offset, PANEL_H, "C1 window height is default 420")
+eq(panel.Size.Y.Offset, window.size.Y.Offset, "C1 card height matches window height")
 
 local halfW = window.size.X.Offset / 2
 local halfH = window.size.Y.Offset / 2
@@ -108,13 +111,10 @@ local halfH = window.size.Y.Offset / 2
 -- [[one card-half (PANEL_SHIFT) off the screen centre, which is exactly what]]
 -- [[makes the two edges symmetric.]]
 local pairHalfW = (window.size.X.Offset + PANEL_GAP + PANEL_W) / 2
--- [[From the *window's* centre, which is what the clamp works in: the side]]
--- [[without the card keeps the plain window half, the side with it adds the]]
--- [[gap + card. Vertically the card out-talls a short window.]]
+-- [[Card height equals window height, so vertical half is window half.]]
 local clampNear = halfW
 local clampFar = halfW + PANEL_GAP + PANEL_W
-local pairHalfH = math.max(halfH, PANEL_H / 2)
-
+local pairHalfH = halfH
 eqUDim2(main.Position, 0.5, -PANEL_SHIFT, 0.5, 0, "C1 the window rests half a card left of the screen centre")
 
 local windowLeft = centreX - PANEL_SHIFT - halfW
@@ -135,6 +135,9 @@ eqUDim2(
 )
 local cardTop = centreY - PANEL_H / 2
 expect(cardTop >= 0 and cardTop + PANEL_H <= viewport.Y, "C1 the centred card is fully on screen vertically")
+-- [[Top and bottom align with window at default 420 height.]]
+eq(panel.Position.Y.Offset, -PANEL_H / 2, "C1 card top aligns with window top at default")
+eq(panel.Size.Y.Offset, PANEL_H, "C1 card bottom aligns with window bottom at default (height 420)")
 
 -- ===== C2: the first show centres the pair for a player that turned up late =====
 
@@ -199,12 +202,12 @@ eq(
 eq(
 	clamped.Y.Offset,
 	viewport.Y - pairHalfH - EDGE_MARGIN,
-	"C4 dragging down stops when the card (taller than the window) reaches the edge"
+	"C4 dragging down stops when the pair reaches the edge"
 )
 
 local clampedOrigin = lateWindow:_clampedPosition(UDim2.fromOffset(0, 0))
 eq(clampedOrigin.X.Offset, clampNear + EDGE_MARGIN, "C4 the window's own left edge still limits the left side")
-eq(clampedOrigin.Y.Offset, pairHalfH + EDGE_MARGIN, "C4 the card's height limits the top")
+eq(clampedOrigin.Y.Offset, pairHalfH + EDGE_MARGIN, "C4 the card's height limits the top (same as window)")
 
 -- Flipping the card to the left mirrors both the resting centre and the clamp.
 local sideDropdown = findSettingsElement(lateWindow, "Appearance", "Profile side")
@@ -265,5 +268,15 @@ eq(
 	viewport.X - clampFar - EDGE_MARGIN,
 	"C6 expanding pulls the pair back into view instead of leaving the card off screen"
 )
+
+-- ===== Additional: height matches window at responsive sizes =====
+TestViewport.set(900, 500)
+TestPump(0.5)
+local responsiveH = lateWindow.size.Y.Offset
+eq(lateWindow.profilePanel.Size.Y.Offset, responsiveH, "Responsive: card height equals window height")
+expect(lateWindow.profilePanel.Size.Y.Offset <= responsiveH, "Responsive: card height <= window height")
+TestViewport.set(1920, 1080)
+TestPump(0.5)
+eq(lateWindow.profilePanel.Size.Y.Offset, lateWindow.size.Y.Offset, "Back to default: card height equals window height again")
 
 print("PROFILE CENTRING: all assertions passed")

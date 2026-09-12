@@ -368,9 +368,9 @@ assertGroupSized(shortRail, "T14 responsive sidebar rail is name-sized again")
 -- profile). The window + gap + panel rest centred on screen as one unit:
 -- the window itself sits half a panel away from the screen centre, on the
 -- opposite side of the panel.
-local PANEL_W = 240
+local PANEL_W = 260
 local PANEL_GAP = 12
-local PANEL_H = 420 -- profilePanel.height: the card hugs its stacked content
+local PANEL_H = 420 -- profilePanel.height: at default window height, matches window
 local PANEL_SHIFT = (PANEL_W + PANEL_GAP) / 2
 local main = window.main
 local halfW = main.Size.X.Offset / 2
