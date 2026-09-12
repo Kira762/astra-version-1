@@ -15,48 +15,53 @@ local profilePanel = {}
 -- [[on screen as a single unit, so the window sits half a panel]]
 -- [[(width + gap) away from the screen centre, on the opposite side]]
 -- [[of the panel.]]
--- A full profile card, intentionally wide enough for the Roblox-style details
--- layout. Content stacks top-to-bottom in one flow — avatar, name, username,
--- premium badge, account details, current game, settings gear — so nothing
--- ever overlaps no matter how tall the window is. Every colour below is a
--- theme binding (rather than a hard-coded colour), so ChangeTheme refreshes
--- the card along with the rest of the UI.
-profilePanel.width = 280
+-- A compact profile card: slim enough to sit beside the window without
+-- stealing its scale, and exactly the default window's 420px tall, so the
+-- pair reads as one centred unit. Content stacks top-to-bottom in one flow —
+-- avatar, name, username, premium badge, account details, current game,
+-- settings gear — so nothing ever overlaps no matter how tall the window is.
+-- Every colour below is a theme binding (rather than a hard-coded colour), so
+-- ChangeTheme refreshes the card along with the rest of the UI.
+profilePanel.width = 240
 profilePanel.gap = 12
 
-local avatarSize = 72
-local paddingX = 16
-local topPad = 16
+local avatarSize = 56
+local paddingX = 12
+local topPad = 12
 local iconSize = 16
 local indent = iconSize + 7 -- value text aligns under the label text, past its icon
 
 -- [[Vertical flow (y offsets from the panel top). Kept as explicit steps so]]
--- [[the stack reads like the design mock, top to bottom.]]
-local avatarTop = topPad -- 16..88
-local nameTop = avatarTop + avatarSize + 8 -- 96..118
-local nameHeight = 22
-local subtitleTop = nameTop + nameHeight + 3 -- 121..137
-local subtitleHeight = 16
-local badgeTop = subtitleTop + subtitleHeight + 6 -- 143..159
-local badgeHeight = 16
-local rule1Top = badgeTop + badgeHeight + 12 -- 171
-local detailsHeadingTop = rule1Top + 12 -- 183..201
-local userIdLabelTop = detailsHeadingTop + 26 -- 209..227
-local userIdValueTop = userIdLabelTop + 19 -- 228..248
-local joinLabelTop = userIdValueTop + 28 -- 256..274
-local joinValueTop = joinLabelTop + 19 -- 275..295
-local friendsTop = joinValueTop + 28 -- 303..321
-local followersTop = friendsTop + 18 -- 321..339
-local rule2Top = followersTop + 30 -- 351
-local gameHeadingTop = rule2Top + 12 -- 363..381
-local gameCardTop = gameHeadingTop + 26 -- 389..445
-local gameCardHeight = 56
+-- [[the stack reads like the design mock, top to bottom. Every row of the]]
+-- [[old layout is still here — only the gaps between them tightened, so the]]
+-- [[whole stack fits the 240x420 card.]]
+local avatarTop = topPad -- 12..68
+local nameTop = avatarTop + avatarSize + 8 -- 76..94
+local nameHeight = 18
+local subtitleTop = nameTop + nameHeight + 2 -- 96..110
+local subtitleHeight = 14
+local badgeTop = subtitleTop + subtitleHeight + 4 -- 114..128
+local badgeHeight = 14
+local rule1Top = badgeTop + badgeHeight + 10 -- 138
+local detailsHeadingTop = rule1Top + 10 -- 148..166
+local userIdLabelTop = detailsHeadingTop + 26 -- 174..190
+local userIdValueTop = userIdLabelTop + 16 -- 190..206
+local joinLabelTop = userIdValueTop + 16 + 6 -- 212..228
+local joinValueTop = joinLabelTop + 16 -- 228..244
+local friendsTop = joinValueTop + 16 + 6 -- 250..266
+local followersTop = friendsTop + 16 -- 266..280
+local rule2Top = followersTop + 14 + 8 -- 288 (14 = the followers row height)
+local gameHeadingTop = rule2Top + 8 -- 296..314
+local gameCardTop = gameHeadingTop + 18 + 6 -- 320..368 (18 = the heading height)
+local gameCardHeight = 48
 local gearSize = 32
 local gearIconSize = 20
-local gearBottomMargin = 12
+local gearSpacing = 12
+local gearBottomMargin = 8
 
--- [[The card hugs its content: last row + breathing room + the gear zone.]]
-profilePanel.height = gameCardTop + gameCardHeight + 11 + gearSize + gearBottomMargin -- 500
+-- [[The card hugs its content: last row + breathing room + the gear zone,]]
+-- [[totalled to the 420px that matches the default window height.]]
+profilePanel.height = gameCardTop + gameCardHeight + gearSpacing + gearSize + gearBottomMargin -- 420
 
 local nameTransparency = 0
 local subtitleTransparency = 0.7
@@ -133,7 +138,7 @@ end
 
 -- [[Half-extents of the window + card pair, measured from the window's]]
 -- [[centre: how far the pair reaches left, right and up/down. The card]]
--- [[widens one side by its width + gap and, at 500px tall, can out-tall a]]
+-- [[widens one side by its width + gap and, at 420px tall, can out-tall a]]
 -- [[short window — so a clamp that only knew the window's own half size let]]
 -- [[the card hang off the edge while the window itself stayed "on screen".]]
 -- [[Returns the plain window halves while the card is not shown. `width` /]]
@@ -183,7 +188,7 @@ function profilePanel.setReveal(window, enabled)
         window:Notify({
             title = locale.resolve("Show profile is required"),
             content = locale.resolve(
-                "\"Reveal profile details\" unmasks the display name, username, user ID and place ID on the profile card, so it needs that card to be showing. Turn on \"Show profile\" first — until then this stays off."
+                "Turn on \"Show profile\" first. Profile details can only be revealed while the profile card is visible."
             ),
         })
         return false
@@ -440,20 +445,20 @@ function profilePanel.build(window, onOpenSettings)
     rule(rule1Top)
     iconLabel("DetailsHeading", "info", "ACCOUNT DETAILS", detailsHeadingTop, 18, 11, "ActionColor")
 
-    iconLabel("UserId", "id-card", "User ID", userIdLabelTop, 18, 12)
+    iconLabel("UserId", "id-card", "User ID", userIdLabelTop, 16, 12)
     window.profileUserIdValue = label(
         "UserIdValue",
         "-",
         UDim2.fromOffset(paddingX + indent, userIdValueTop),
-        UDim2.new(1, -paddingX * 2 - indent - 48, 0, 20),
-        14,
+        UDim2.new(1, -paddingX * 2 - indent - 48, 0, 16),
+        13,
         "TitlingColor"
     )
     window.profileCopyUserId = window:Create("TextButton", {
         Name = "CopyUserId",
         Text = "COPY",
-        Position = UDim2.new(1, -paddingX - 44, 0, userIdValueTop + 1),
-        Size = UDim2.fromOffset(44, 18),
+        Position = UDim2.new(1, -paddingX - 44, 0, userIdValueTop),
+        Size = UDim2.fromOffset(44, 16),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         TextSize = 10,
@@ -472,18 +477,18 @@ function profilePanel.build(window, onOpenSettings)
         end
     end)
 
-    iconLabel("JoinDate", "calendar-days", "Join date", joinLabelTop, 18, 12)
+    iconLabel("JoinDate", "calendar-days", "Join date", joinLabelTop, 16, 12)
     label(
         "JoinDateValue",
         if player then ("Account age: " .. tostring(player.AccountAge) .. " days") else "-",
         UDim2.fromOffset(paddingX + indent, joinValueTop),
-        UDim2.new(1, -paddingX * 2 - indent, 0, 20),
-        14,
+        UDim2.new(1, -paddingX * 2 - indent, 0, 16),
+        13,
         "TitlingColor"
     )
 
-    iconLabel("Friends", "users-round", "Friends  -", friendsTop, 18, 12, "PlaceholderColor")
-    label("Followers", "Followers  -", UDim2.fromOffset(paddingX + indent, followersTop), UDim2.new(1, -paddingX * 2 - indent, 0, 18), 12, "PlaceholderColor")
+    iconLabel("Friends", "users-round", "Friends  -", friendsTop, 16, 12, "PlaceholderColor")
+    label("Followers", "Followers  -", UDim2.fromOffset(paddingX + indent, followersTop), UDim2.new(1, -paddingX * 2 - indent, 0, 14), 12, "PlaceholderColor")
 
     rule(rule2Top)
     iconLabel("GameHeading", "gamepad-2", "CURRENT GAME", gameHeadingTop, 18, 11, "ActionColor")
@@ -507,20 +512,20 @@ function profilePanel.build(window, onOpenSettings)
         Name = "GameThumbnail",
         Image = "",
         Position = UDim2.fromOffset(8, 8),
-        Size = UDim2.fromOffset(40, 40),
+        Size = UDim2.fromOffset(32, 32),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         Parent = gameCard,
     })
-    window:Create("UICorner", { CornerRadius = UDim.new(0, 7), Parent = gameThumbnail })
+    window:Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = gameThumbnail })
     image.assign(gameThumbnail, "Image", `rbxthumb://type=GameIcon&id={game.PlaceId}&w=150&h=150`)
 
-    label("GameName", tostring(game.Name or ""), UDim2.fromOffset(paddingX + 56, gameCardTop + 10), UDim2.new(1, -paddingX * 2 - 64, 0, 18), 13, "TitlingColor")
+    label("GameName", tostring(game.Name or ""), UDim2.fromOffset(paddingX + 48, gameCardTop + 10), UDim2.new(1, -paddingX * 2 - 56, 0, 16), 13, "TitlingColor")
     window.profilePlaceId = label(
         "GameBy",
         "Place ID: -",
-        UDim2.fromOffset(paddingX + 56, gameCardTop + 30),
-        UDim2.new(1, -paddingX * 2 - 64, 0, 16),
+        UDim2.fromOffset(paddingX + 48, gameCardTop + 28),
+        UDim2.new(1, -paddingX * 2 - 56, 0, 16),
         10
     )
 
@@ -775,7 +780,7 @@ function profilePanel.setEnabled(window, enabled)
     end
 
     -- [[The toggle is only half the story: the card also needs a player and]]
-    -- [[room on screen (280px beside the window, 500px of height). A missing]]
+    -- [[room on screen (240px beside the window, 420px of height). A missing]]
     -- [[player resolves itself through the late-player waiter in Window.new,]]
     -- [[but a small viewport would otherwise leave the user looking at an]]
     -- [[active toggle and no card — so say why.]]
@@ -783,7 +788,7 @@ function profilePanel.setEnabled(window, enabled)
         window:Notify({
             title = locale.resolve("Profile card"),
             content = locale.resolve(
-                "This screen has no room for the profile card, so it stays hidden. It needs 280px beside the window and 500px of height — enlarge the window or rotate the device and it appears."
+                "This screen has no room for the profile card, so it stays hidden. It needs 240px beside the window and 420px of height — enlarge the window or rotate the device and it appears."
             ),
         })
     end

@@ -54,11 +54,12 @@ local function eqUDim2(actual, sx, so, sy, yo, message)
 	end
 end
 
--- Card geometry (components/profilePanel.luau).
-local PANEL_W = 280
+-- Card geometry (components/profilePanel.luau): the compact card is exactly
+-- the default window's height (420px) and 240px wide.
+local PANEL_W = 240
 local PANEL_GAP = 12
-local PANEL_H = 500
-local PANEL_SHIFT = (PANEL_W + PANEL_GAP) / 2 -- 146: the window's off-centre rest
+local PANEL_H = 420
+local PANEL_SHIFT = (PANEL_W + PANEL_GAP) / 2 -- 126: the window's off-centre rest
 local EDGE_MARGIN = 8 -- the keep-on-screen margin
 
 local state = Astra.Core.state

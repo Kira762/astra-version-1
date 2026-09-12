@@ -136,10 +136,11 @@ Tab-rail reflow (the profile system moved to `components/profilePanel.luau`):
 - `applyRailRows(window, width, layout)` — rows collapse only at the icon-only width (the responsive rail is often narrower than the old 219px fixed rail); ends with `tabSelector.relayoutSidebarRows`.
 
 ### `components/profilePanel.luau`
-The profile panel — a 280x500 companion card floating beside the window
-frame (a sibling in the same ScreenGui), replacing the in-window profile.
-Content stacks top-to-bottom in one flow, matching the design mock: 72px
-avatar with presence dot, centred display name / @username subtitle,
+The profile panel — a compact 240x420 companion card floating beside the
+window frame (a sibling in the same ScreenGui), exactly the default
+window's height, replacing the in-window profile. Content stacks
+top-to-bottom in one flow, matching the design mock: 56px avatar with
+presence dot, centred display name / @username subtitle,
 PREMIUM badge, an ACCOUNT DETAILS stack (User ID with a COPY action on the
 value row, Join date with account age, Friends / Followers rows), a
 CURRENT GAME card (dark `CardSurface` plate with the game icon thumbnail,
@@ -164,10 +165,10 @@ game name and Place ID), and a bottom-pinned settings gear:
   check, so landscape phones count), the same plus the window's own
   visibility (what the on-screen clamp asks: a minimised capsule is not
   shoved around by a card that is not there), and the off-centre shift
-  `((280 + 12) / 2 = 146px)`, 0 while the panel is off.
+  `((240 + 12) / 2 = 126px)`, 0 while the panel is off.
 - `pairHalfSize(window, width?, height?)` — how far the window + card pair
   reaches left, right and up/down from the window's centre: the card adds
-  `width + gap` to its own side and, at 500px, can out-tall a short window.
+  `width + gap` to its own side and, at 420px, can out-tall a short window.
   Plain window halves while the card is not shown. `Window:_clampedPosition`
   and the topbar drag both clamp with it, so "Keep window on screen" keeps
   the card on screen too.
@@ -198,7 +199,7 @@ game name and Place ID), and a bottom-pinned settings gear:
 
 The window rests off-centre so window + gap + panel are centred as one unit
 (`Window:_profileCenterPosition` / `Window:_recenterForProfile`): with the
-panel on the right the window sits 146px left of screen centre, and
+panel on the right the window sits 126px left of screen centre, and
 vice-versa. The resting centre is re-derived whenever the pair's state can
 have changed while nothing was on screen to move — `_firstShow` (a player
 turning up between the build and the first show), `_quickRestore` (a recenter

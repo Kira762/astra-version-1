@@ -2,6 +2,44 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-12 — Compact profile card: exactly the window's height (240x420)
+
+- **The profile card is now 240px wide x 420px high** — slimmer, and exactly
+  the default window's height, so the window + 12px gap + card pair reads as
+  one centred unit. No information was removed: the avatar, display name,
+  username, PREMIUM badge, user ID + COPY, join date / account age, friends,
+  followers, current game (icon, name, place ID) and the settings gear all
+  remain. The interior is compacted instead — 12px horizontal padding (was
+  16), a 56px avatar (was 72), tightened gaps between every row, a 48px game
+  card (was 56, with a 32px thumbnail), reduced bottom spacing, and 13px
+  value text so nothing wraps, overlaps or clips in the narrower card.
+- **All dependent geometry follows the constants**: the room check
+  (`hasRoom`), the pair clamp (`pairHalfSize`), the off-centre rest
+  (`shiftFor` is now `(240 + 12) / 2 = 126px`), the side placement in
+  `layout`, the recenter paths and the cramped-viewport notification
+  (now "240px beside the window and 420px of height") — everything reads
+  `profilePanel.width` / `profilePanel.height`, so the 240/12/420 dimensions
+  apply to centring, screen bounds, visibility and the saved-settings
+  normalisation alike.
+- **Toggle behaviour is unchanged and re-verified**: "Show profile" shows
+  the card on the selected side and centres the pair as one group, hiding it
+  recentres the window alone; "Reveal profile details" is still refused
+  while "Show profile" is off (setting off, switch rolled back, "Show
+  profile is required" notification), and turning "Show profile" off — or
+  loading a stale configuration — clears an active reveal and re-masks the
+  display name, username, user ID and place ID.
+- **Verification:** new runtime suite `scripts/profile_compact_test.sh`
+  (+ `profile_compact_test.luau`, D1–D8) covers the exact 240x420
+  dimensions, the preserved 12px gap, right- and left-side placement,
+  field completeness, no clipping/overlap, the "Show profile" show/centre/
+  hide/recentre cycle from a dragged position, the full reveal dependency
+  (refusal + notification, auto-clear + remasking), stale saved
+  configuration normalisation through `Window:LoadSettings`, and viewport
+  changes (responsive window resize, card stays attached and centred,
+  portrait viewports hide the card). `profile_centering_test` and
+  `sidebar_tab_sizing_test` now assert the 240/420 geometry;
+  `profile_reveal_test` and the smoke test are unchanged and still pass.
+
 ## 2026-09-12 — Window + profile card centre as one unit, and "Reveal profile details" now requires "Show profile"
 
 - **The window and its profile card are auto-centred together, and both are
