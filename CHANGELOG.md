@@ -2,6 +2,31 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-12 — Settings screen: rail order and empty Persistence tab
+
+- **Opening Settings now highlights the first rail row.** The rail rows
+  (and the content pages) are ordered by each tab's `customOrder`, but
+  the About tab was created with `customOrder = 1000` — lower than
+  General's `1001` — so About sorted to the top and the gear action
+  (which always opens General) highlighted the **second** row. About now
+  uses `1006`, after Persistence, so the rail reads General, Appearance,
+  Behavior, Performance, Persistence, About.
+- **The Persistence tab is no longer empty.** Its content (Configurations
+  section, Saved Configurations dropdown, name input, Save/Load/Delete
+  group) was gated behind `next(self.configuration) ~= nil`, which is only
+  true when the window is created with a `configuration`
+  prop (autoSave/autoLoad/fileName). Windows created without it — including
+  the example client — got a blank tab. The content is now built like every
+  other settings tab; config save/load already works without the prop
+  (paths fall back to the window name), and the dropdown shows its
+  "No saved configurations" placeholder when there is nothing saved.
+- **Verification:** `scripts/sidebar_tab_sizing_test.sh` now asserts the
+  settings rail order (General first, About last), that opening settings
+  via the gear path selects General and shows General's page in the
+  content area, and that the Persistence tab builds its content for a
+  window created without a `configuration` prop. The test fails against
+  the pre-change tree. Bundle regenerated (99 modules).
+
 ## 2026-09-12 — Responsive sidebar rail follows the longest tab name
 
 - **The responsive sidebar (`Sidebar (Responsive)` bar layout) now sizes its

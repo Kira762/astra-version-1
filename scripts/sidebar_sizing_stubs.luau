@@ -336,8 +336,29 @@ function instanceMethods:GetPropertyChangedSignal(propName)
 	return cache[propName]
 end
 
-function instanceMethods:JumpTo(_)
-	-- [[UIPageLayout navigation: nothing to do in the harness.]]
+function instanceMethods:JumpTo(page)
+	-- [[Emulates UIPageLayout: the page must be a visible sibling of the]]
+	-- [[layout (a GuiObject child of the layout's parent). Anything else]]
+	-- [[throws, like the real layout.]]
+	local parent = self.Parent
+	if parent == nil then
+		return
+	end
+	local managed = false
+	for _, child in parent:GetChildren() do
+		if child == page and child.__props.Visible ~= false then
+			managed = true
+		end
+	end
+	if not managed then
+		error(
+			"UIPageLayout:JumpTo: page is not a visible sibling managed by the layout: " .. tostring(page and page.Name),
+			0
+		)
+	end
+	self.__currentPage = page
+	self.__jumps = self.__jumps or {}
+	table.insert(self.__jumps, page.Name or "?")
 end
 
 local function newInstance(className)

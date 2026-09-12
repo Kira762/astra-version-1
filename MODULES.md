@@ -80,10 +80,14 @@ built-in "General" settings tab), `_settingsTabs` (settings-tab list),
 Method map (names preserved through minification). Settings-related:
 - `_buildSettingsUI` — builds the six built-in settings tabs (General via
   `rfSettings`, plus Appearance, Behavior, Performance, Persistence, About;
-  all `isSettingsTab`, `forgetState`). Appearance hosts theme picker +
+  all `isSettingsTab`, `forgetState`). Rail/page order follows
+  `customOrder` (General 1001 first, About 1006 last) so opening settings
+  highlights the first rail row. Appearance hosts theme picker +
   Bar Layout picker (both popup-confirmed), profile and window toggles,
-  Reset Window Position; Persistence hosts saved-config Save/Load/Delete and
-  only appears when `configuration` was passed.
+  Reset Window Position; Persistence always hosts saved-config
+  Save/Load/Delete (independent of the `configuration` prop — paths fall
+  back to the window name, and the dropdown shows its
+  "No saved configurations" placeholder when none exist).
 - `settingsAction` (topbar gear, `linkedTab = rfSettings`) — toggles
   settings mode: `_setSettingsMode(true)` shows only settings tabs and
   remembers the previous tab; a second click restores it.

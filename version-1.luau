@@ -5342,7 +5342,7 @@ function Window:_buildSettingsUI()
     local behavior = self:CreateTab({ name = "Behavior", icon = "shield-check", customOrder = 1003, forgetState = true, isSettingsTab = true })
     local performance = self:CreateTab({ name = "Performance", icon = "gauge", customOrder = 1004, forgetState = true, isSettingsTab = true })
     local persistence = self:CreateTab({ name = "Persistence", icon = "save", customOrder = 1005, forgetState = true, isSettingsTab = true })
-    local about = self:CreateTab({ name = "About", icon = "info", customOrder = 1000, forgetState = true, isSettingsTab = true })
+    local about = self:CreateTab({ name = "About", icon = "info", customOrder = 1006, forgetState = true, isSettingsTab = true })
     for _, tab in { appearance, behavior, performance, persistence, about } do
         tab._isSettingsTab = true
         table.insert(self._settingsTabs, tab)
@@ -5540,33 +5540,35 @@ function Window:_buildSettingsUI()
         end,
     })
 
-    if next(self.configuration) ~= nil then
-        persistence:CreateSection({ name = "Configurations" })
-        local selected = self:ListConfigs()[1]
-        local configDropdown, configName
-        local function refresh()
-            local configs = self:ListConfigs(); configDropdown:Refresh(configs)
-            if selected and not table.find(configs, selected) then selected = configs[1] end
-            if selected then configDropdown:Set(selected, true) end
-        end
-        configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = constants.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
-        configName = persistence:CreateInput({ name = "Configuration Name", description = "Name a new configuration, or leave blank to overwrite the selected one.", placeholder = "e.g. PvP Loadout", clearOnFocus = false })
-        local group = persistence:CreateGroup()
-        group:CreateButton({ name = "Save", icon = constants.icons.config, callback = function()
-            local name = configName.value; if name == "" then name = selected end
-            if not name or name == "" then self:Toast({ title = locale.resolve("Name your configuration first") }); return end
-            if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = locale.resolve("Saved configuration"), subtitle = name, icon = constants.icons.config }) else self:Toast({ title = locale.resolve("Couldn't save configuration"), subtitle = name }) end
-        end })
-        group:CreateButton({ name = "Load", callback = function()
-            if not selected or selected == "" then self:Toast({ title = locale.resolve("Pick a configuration to load") }); return end
-            if self:_applyNamedConfig(selected) then self:Toast({ title = locale.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = locale.resolve("Couldn't load configuration"), subtitle = selected }) end
-        end })
-        group:CreateButton({ name = "Delete", callback = function()
-            local name = selected
-            if not name or name == "" then self:Toast({ title = locale.resolve("Pick a configuration to delete") }); return end
-            if self:DeleteConfig(name) then refresh(); self:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name }) end
-        end })
+    -- [[Built unconditionally like every other settings tab: the]]
+    -- [[configuration save/load system works without a `configuration`]]
+    -- [[prop (paths fall back to the window name), so gating the content]]
+    -- [[on it left the tab empty for windows created without one.]]
+    persistence:CreateSection({ name = "Configurations" })
+    local selected = self:ListConfigs()[1]
+    local configDropdown, configName
+    local function refresh()
+        local configs = self:ListConfigs(); configDropdown:Refresh(configs)
+        if selected and not table.find(configs, selected) then selected = configs[1] end
+        if selected then configDropdown:Set(selected, true) end
     end
+    configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = constants.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
+    configName = persistence:CreateInput({ name = "Configuration Name", description = "Name a new configuration, or leave blank to overwrite the selected one.", placeholder = "e.g. PvP Loadout", clearOnFocus = false })
+    local group = persistence:CreateGroup()
+    group:CreateButton({ name = "Save", icon = constants.icons.config, callback = function()
+        local name = configName.value; if name == "" then name = selected end
+        if not name or name == "" then self:Toast({ title = locale.resolve("Name your configuration first") }); return end
+        if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = locale.resolve("Saved configuration"), subtitle = name, icon = constants.icons.config }) else self:Toast({ title = locale.resolve("Couldn't save configuration"), subtitle = name }) end
+    end })
+    group:CreateButton({ name = "Load", callback = function()
+        if not selected or selected == "" then self:Toast({ title = locale.resolve("Pick a configuration to load") }); return end
+        if self:_applyNamedConfig(selected) then self:Toast({ title = locale.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = locale.resolve("Couldn't load configuration"), subtitle = selected }) end
+    end })
+    group:CreateButton({ name = "Delete", callback = function()
+        local name = selected
+        if not name or name == "" then self:Toast({ title = locale.resolve("Pick a configuration to delete") }); return end
+        if self:DeleteConfig(name) then refresh(); self:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name }) end
+    end })
 end
 
 function Window:SetProfile(text)
@@ -29880,89 +29882,89 @@ local LineOffsets = {
     [16] = 3148,
     [17] = 3518,
     [18] = 3895,
-    [20] = 6707,
-    [21] = 6974,
-    [22] = 7418,
-    [23] = 8549,
-    [24] = 8883,
-    [25] = 8944,
-    [26] = 9089,
-    [27] = 10409,
-    [28] = 10611,
-    [29] = 10872,
-    [30] = 11334,
-    [31] = 11784,
-    [32] = 11871,
-    [33] = 12436,
-    [34] = 13054,
-    [35] = 13431,
-    [36] = 13561,
-    [37] = 13725,
-    [38] = 13879,
-    [40] = 14390,
-    [41] = 14413,
-    [42] = 14430,
-    [43] = 14460,
-    [44] = 14576,
-    [45] = 14590,
-    [46] = 14639,
-    [47] = 14365,
-    [48] = 14740,
-    [49] = 15043,
-    [50] = 15074,
-    [51] = 14729,
-    [52] = 15117,
-    [53] = 15137,
-    [54] = 15169,
-    [55] = 15099,
-    [56] = 15276,
-    [57] = 15338,
-    [58] = 15401,
-    [60] = 15464,
-    [61] = 15629,
-    [62] = 15449,
-    [63] = 15889,
-    [64] = 16184,
-    [65] = 16840,
-    [66] = 18624,
-    [67] = 19765,
-    [68] = 21285,
-    [69] = 15693,
-    [70] = 26529,
-    [71] = 26591,
-    [72] = 26653,
-    [73] = 26728,
-    [74] = 26810,
-    [75] = 26872,
-    [76] = 26947,
-    [77] = 27022,
-    [78] = 27097,
-    [79] = 27172,
-    [80] = 26423,
-    [81] = 27234,
-    [82] = 27332,
-    [83] = 27510,
-    [84] = 27561,
-    [85] = 27591,
-    [86] = 27842,
-    [87] = 27891,
-    [88] = 28344,
-    [89] = 28362,
-    [90] = 28516,
-    [91] = 28615,
-    [92] = 28637,
-    [93] = 28687,
-    [94] = 28723,
-    [95] = 28741,
-    [96] = 29054,
-    [97] = 29070,
-    [98] = 29121,
-    [99] = 29140,
-    [100] = 29382,
-    [101] = 29426,
-    [102] = 29620,
-    [103] = 29648,
-    [104] = 29659,
+    [20] = 6709,
+    [21] = 6976,
+    [22] = 7420,
+    [23] = 8551,
+    [24] = 8885,
+    [25] = 8946,
+    [26] = 9091,
+    [27] = 10411,
+    [28] = 10613,
+    [29] = 10874,
+    [30] = 11336,
+    [31] = 11786,
+    [32] = 11873,
+    [33] = 12438,
+    [34] = 13056,
+    [35] = 13433,
+    [36] = 13563,
+    [37] = 13727,
+    [38] = 13881,
+    [40] = 14392,
+    [41] = 14415,
+    [42] = 14432,
+    [43] = 14462,
+    [44] = 14578,
+    [45] = 14592,
+    [46] = 14641,
+    [47] = 14367,
+    [48] = 14742,
+    [49] = 15045,
+    [50] = 15076,
+    [51] = 14731,
+    [52] = 15119,
+    [53] = 15139,
+    [54] = 15171,
+    [55] = 15101,
+    [56] = 15278,
+    [57] = 15340,
+    [58] = 15403,
+    [60] = 15466,
+    [61] = 15631,
+    [62] = 15451,
+    [63] = 15891,
+    [64] = 16186,
+    [65] = 16842,
+    [66] = 18626,
+    [67] = 19767,
+    [68] = 21287,
+    [69] = 15695,
+    [70] = 26531,
+    [71] = 26593,
+    [72] = 26655,
+    [73] = 26730,
+    [74] = 26812,
+    [75] = 26874,
+    [76] = 26949,
+    [77] = 27024,
+    [78] = 27099,
+    [79] = 27174,
+    [80] = 26425,
+    [81] = 27236,
+    [82] = 27334,
+    [83] = 27512,
+    [84] = 27563,
+    [85] = 27593,
+    [86] = 27844,
+    [87] = 27893,
+    [88] = 28346,
+    [89] = 28364,
+    [90] = 28518,
+    [91] = 28617,
+    [92] = 28639,
+    [93] = 28689,
+    [94] = 28725,
+    [95] = 28743,
+    [96] = 29056,
+    [97] = 29072,
+    [98] = 29123,
+    [99] = 29142,
+    [100] = 29384,
+    [101] = 29428,
+    [102] = 29622,
+    [103] = 29650,
+    [104] = 29661,
 }
 
 -- [[Misc AOT variable imports]]

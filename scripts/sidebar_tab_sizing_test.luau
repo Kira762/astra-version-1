@@ -191,6 +191,40 @@ end
 switched = window:_setLayoutMode("sidebar")
 expect(switched == true, "T9 layout switch back to the responsive sidebar")
 TestPump(1.0)
+
+-- T9a: the settings rail order - General must be the first row (the tab the
+-- gear action opens), About the last; the old About customOrder (1000)
+-- sorted it before General, so opening settings highlighted the SECOND row.
+do
+	local rows = {}
+	for _, tab in window._settingsTabs do
+		if tab.topbarItem then
+			table.insert(rows, { order = tab.topbarItem.LayoutOrder, name = tab.name })
+		end
+	end
+	table.sort(rows, function(a, b)
+		return a.order < b.order
+	end)
+	local names = { rows[1] and rows[1].name, rows[2] and rows[2].name, rows[3] and rows[3].name, rows[4] and rows[4].name, rows[5] and rows[5].name, rows[6] and rows[6].name }
+	if #rows ~= 6 or names[1] ~= "General" or names[2] ~= "Appearance" or names[3] ~= "Behavior" or names[4] ~= "Performance" or names[5] ~= "Persistence" or names[6] ~= "About" then
+		error("SMOKE FAIL: T9a settings rail order (got " .. table.concat(names, ", ") .. ")", 0)
+	end
+end
+
+-- T9b: the Persistence tab must have content even when the window was
+-- created without a `configuration` prop (no saved configs anywhere).
+local persistenceTab
+for _, tab in window._settingsTabs do
+	if tab.name == "Persistence" then
+		persistenceTab = tab
+	end
+end
+expect(persistenceTab ~= nil, "T9b the Persistence settings tab exists")
+expect(
+	#persistenceTab.elements >= 4,
+	"T9b Persistence tab builds its content without a configuration prop (got " .. tostring(#persistenceTab.elements) .. " elements)"
+)
+
 window.rfSettings:Select()
 TestPump(0.2)
 local settingsRail = math.max(
@@ -202,6 +236,20 @@ local settingsRail = math.max(
 	naturalRail("About", true)
 )
 assertGroupSized(settingsRail, "T9 settings-mode rail group uses its own longest name")
+
+-- T9c: opening settings via the gear path lands on the FIRST settings tab
+-- (General), and the page the content area shows is General's page.
+window.selectedTab = t1
+window._previousTab = t1
+window._settingsMode = false
+window.rfSettings:Select()
+TestPump(0.2)
+eq(window.selectedTab, window.rfSettings, "T9c opening settings selects General")
+local currentPage = window.elementsLayout.__currentPage
+expect(
+	currentPage == window.rfSettings.tabPage,
+	"T9c the content area shows General's page when settings opens"
+)
 t1:Select()
 TestPump(0.2)
 assertGroupSized(shortRail, "T9 leaving settings restores the normal group width")

@@ -1448,7 +1448,7 @@ function Window:_buildSettingsUI()
     local behavior = self:CreateTab({ name = "Behavior", icon = "shield-check", customOrder = 1003, forgetState = true, isSettingsTab = true })
     local performance = self:CreateTab({ name = "Performance", icon = "gauge", customOrder = 1004, forgetState = true, isSettingsTab = true })
     local persistence = self:CreateTab({ name = "Persistence", icon = "save", customOrder = 1005, forgetState = true, isSettingsTab = true })
-    local about = self:CreateTab({ name = "About", icon = "info", customOrder = 1000, forgetState = true, isSettingsTab = true })
+    local about = self:CreateTab({ name = "About", icon = "info", customOrder = 1006, forgetState = true, isSettingsTab = true })
     for _, tab in { appearance, behavior, performance, persistence, about } do
         tab._isSettingsTab = true
         table.insert(self._settingsTabs, tab)
@@ -1646,33 +1646,35 @@ function Window:_buildSettingsUI()
         end,
     })
 
-    if next(self.configuration) ~= nil then
-        persistence:CreateSection({ name = "Configurations" })
-        local selected = self:ListConfigs()[1]
-        local configDropdown, configName
-        local function refresh()
-            local configs = self:ListConfigs(); configDropdown:Refresh(configs)
-            if selected and not table.find(configs, selected) then selected = configs[1] end
-            if selected then configDropdown:Set(selected, true) end
-        end
-        configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = constants.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
-        configName = persistence:CreateInput({ name = "Configuration Name", description = "Name a new configuration, or leave blank to overwrite the selected one.", placeholder = "e.g. PvP Loadout", clearOnFocus = false })
-        local group = persistence:CreateGroup()
-        group:CreateButton({ name = "Save", icon = constants.icons.config, callback = function()
-            local name = configName.value; if name == "" then name = selected end
-            if not name or name == "" then self:Toast({ title = locale.resolve("Name your configuration first") }); return end
-            if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = locale.resolve("Saved configuration"), subtitle = name, icon = constants.icons.config }) else self:Toast({ title = locale.resolve("Couldn't save configuration"), subtitle = name }) end
-        end })
-        group:CreateButton({ name = "Load", callback = function()
-            if not selected or selected == "" then self:Toast({ title = locale.resolve("Pick a configuration to load") }); return end
-            if self:_applyNamedConfig(selected) then self:Toast({ title = locale.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = locale.resolve("Couldn't load configuration"), subtitle = selected }) end
-        end })
-        group:CreateButton({ name = "Delete", callback = function()
-            local name = selected
-            if not name or name == "" then self:Toast({ title = locale.resolve("Pick a configuration to delete") }); return end
-            if self:DeleteConfig(name) then refresh(); self:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name }) end
-        end })
+    -- [[Built unconditionally like every other settings tab: the]]
+    -- [[configuration save/load system works without a `configuration`]]
+    -- [[prop (paths fall back to the window name), so gating the content]]
+    -- [[on it left the tab empty for windows created without one.]]
+    persistence:CreateSection({ name = "Configurations" })
+    local selected = self:ListConfigs()[1]
+    local configDropdown, configName
+    local function refresh()
+        local configs = self:ListConfigs(); configDropdown:Refresh(configs)
+        if selected and not table.find(configs, selected) then selected = configs[1] end
+        if selected then configDropdown:Set(selected, true) end
     end
+    configDropdown = persistence:CreateDropdown({ name = "Saved Configurations", icon = constants.icons.config, options = self:ListConfigs(), value = selected, placeholder = "No saved configurations", callback = function(value) selected = value end })
+    configName = persistence:CreateInput({ name = "Configuration Name", description = "Name a new configuration, or leave blank to overwrite the selected one.", placeholder = "e.g. PvP Loadout", clearOnFocus = false })
+    local group = persistence:CreateGroup()
+    group:CreateButton({ name = "Save", icon = constants.icons.config, callback = function()
+        local name = configName.value; if name == "" then name = selected end
+        if not name or name == "" then self:Toast({ title = locale.resolve("Name your configuration first") }); return end
+        if self:Save(name) then configName:Set(""); selected = name; refresh(); self:Toast({ title = locale.resolve("Saved configuration"), subtitle = name, icon = constants.icons.config }) else self:Toast({ title = locale.resolve("Couldn't save configuration"), subtitle = name }) end
+    end })
+    group:CreateButton({ name = "Load", callback = function()
+        if not selected or selected == "" then self:Toast({ title = locale.resolve("Pick a configuration to load") }); return end
+        if self:_applyNamedConfig(selected) then self:Toast({ title = locale.resolve("Loaded configuration"), subtitle = selected }) else self:Toast({ title = locale.resolve("Couldn't load configuration"), subtitle = selected }) end
+    end })
+    group:CreateButton({ name = "Delete", callback = function()
+        local name = selected
+        if not name or name == "" then self:Toast({ title = locale.resolve("Pick a configuration to delete") }); return end
+        if self:DeleteConfig(name) then refresh(); self:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name }) else self:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name }) end
+    end })
 end
 
 function Window:SetProfile(text)
