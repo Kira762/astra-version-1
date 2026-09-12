@@ -7,22 +7,28 @@
 --        plate/stroke/corner tokens, one uppercase section label per section
 --        (ACCOUNT, CURRENT GAME, SERVER, USER SESSION) and a rounded dark
 --        container per section holding compact label/value rows,
---   * E2 the header is pinned: avatar, name, subtitle, premium pill and gear
---        sit outside the scrolling details region, which scrolls vertically
+--   * E2 the header is pinned: avatar, name, subtitle and the tier pill sit
+--        outside the scrolling details region, which scrolls vertically
 --        only, keeps bottom padding on its canvas and shows its scrollbar only
 --        when the sections are taller than the window allows,
 --   * E3 the SERVER and USER SESSION values come from the live environment
---        (Players:GetPlayers()/MaxPlayers, Workspace.DistributedGameTime,
---        DataModel.JobId, the client's own clock) and fall back to "—" when a
---        source is unavailable - never to an invented number,
+--        (Players:GetPlayers()/MaxPlayers, DataModel.JobId, the client's own
+--        clock) and fall back to "—" when a source is unavailable - never to
+--        an invented number,
 --   * E4 the license/whitelist rows are host-owned (Window:SetProfile) and
 --        read "—" until the host supplies real data,
 --   * E5 long values truncate with an ellipsis and reveal the full text in the
 --        themed hover tooltip; short values do not raise a tooltip,
 --   * E6 a missing local player leaves neutral placeholders instead of
 --        identity data or fabricated values,
---   * E7 the premium pill is real data (MembershipType), rides the handle row
---        next to the subtitle and disappears for a free account.
+--   * E7 the tier pill always states a real tier: PREMIUM / FREEMIUM from the
+--        platform membership, or the host's own word from Window:SetProfile;
+--        it rides the handle row next to the subtitle,
+--   * E8 the copy actions write through the executor's clipboard (setclipboard)
+--        and answer with a green check that returns to the copy icon,
+--   * E9 the game name follows the official two-step API (place id ->
+--        universe id -> the games list's "name") whenever the executor
+--        exposes a request function, replacing the DataModel's place title.
 
 local function expect(cond, message)
 	if not cond then
@@ -100,36 +106,60 @@ end
 expect(surfaceCornerInstance ~= nil, "E1 the surface carries its UICorner")
 eq(tostring(surfaceCornerInstance.CornerRadius.Offset), tostring(theme.CornerRoundness.Offset), "E1 the card reuses the window's corner radius")
 
+-- [[Every section plate is styled exactly like a window element body:]]
+-- [[Window:StyleElementBody's gradient, corner and stroke, at the theme's]]
+-- [[own transparencies - so the card's containers and the window's elements]]
+-- [[are visually the same object.]]
 local accountCard = findChild(panel, "AccountCard")
 expect(accountCard ~= nil, "E1 the account container exists")
-eq(tostring(accountCard.BackgroundColor3.R), tostring(theme.CardSurface.R), "E1 the containers use the themed card surface")
 local cardCorner = nil
 local cardStroke = nil
+local cardGradient = nil
 for _, child in accountCard:GetChildren() do
 	if child.ClassName == "UICorner" then
 		cardCorner = child
 	elseif child.ClassName == "UIStroke" then
 		cardStroke = child
+	elseif child.ClassName == "UIGradient" then
+		cardGradient = child
 	end
 end
-expect(cardCorner ~= nil and cardStroke ~= nil, "E1 the containers carry a corner and a hairline stroke")
+expect(cardGradient ~= nil, "E1 the containers carry the element gradient")
+eq(tostring(cardGradient.Color.Keypoints[1].Value.R), tostring(theme.ElementGradient.Keypoints[1].Value.R),
+	"E1 the container gradient is the theme's ElementGradient")
+expect(cardCorner ~= nil and cardStroke ~= nil, "E1 the containers carry a corner and a stroke")
 eq(tostring(cardCorner.CornerRadius.Offset), tostring(theme.ElementCornerRadius.Offset), "E1 containers use the element corner radius")
 eq(tostring(cardStroke.Color.R), tostring(theme.ElementStroke.R), "E1 containers use the themed element stroke")
+eq(tostring(cardStroke.Transparency), tostring(theme.ElementStrokeTransparency),
+	"E1 the container stroke shows at the element stroke transparency")
 
-for _, sectionLabel in { "ACCOUNT", "CURRENT GAME", "SERVER", "USER SESSION" } do
-	expect(findChild(panel, sectionLabel) ~= nil, "E1 the " .. sectionLabel .. " section label exists")
+-- [[Headings reuse the Section element's own look: ContentColor icon and]]
+-- [[15px ContentColor title at the section transparencies.]]
+for _, sectionLabel in { "Account", "Current Game", "Server", "User Session" } do
+	local label = findChild(panel, sectionLabel)
+	expect(label ~= nil, "E1 the " .. sectionLabel .. " section label exists")
+	eq(tostring(label.TextColor3.R), tostring(theme.ContentColor.R), "E1 headings use the section title colour")
+	eq(label.TextSize, 15, "E1 headings use the section title size")
+	local icon = findChild(panel, sectionLabel .. "Icon")
+	expect(icon ~= nil, "E1 the " .. sectionLabel .. " heading carries an icon")
+	eq(tostring(icon.ImageColor3.R), tostring(theme.ContentColor.R), "E1 heading icons use the section icon colour")
 end
 for _, container in { "AccountCard", "CurrentGame", "ServerCard", "SessionCard" } do
 	expect(findChild(panel, container) ~= nil, "E1 the " .. container .. " container exists")
 end
 
--- [[Rows are compact label/value pairs: the label is muted, the value uses the
--- [[bright titling colour, and both truncate rather than overflow.]]
+-- [[Rows are compact label/value pairs in the window's element colours: the
+-- [[label is a muted ContentColor line (the window's secondary-text
+-- [[treatment), the value a full-strength ContentColor line, and both
+-- [[truncate rather than overflow.]]
 local userIdLabel = findChild(panel, "UserIdLabel")
 local userIdValue = window.profileUserIdValue
 expect(userIdLabel ~= nil and userIdValue ~= nil, "E1 the user ID row exists")
-eq(tostring(userIdLabel.TextColor3.R), tostring(theme.PlaceholderColor.R), "E1 row labels use the muted placeholder colour")
-eq(tostring(userIdValue.TextColor3.R), tostring(theme.TitlingColor.R), "E1 row values use the titling colour")
+eq(tostring(userIdLabel.TextColor3.R), tostring(theme.ContentColor.R), "E1 row labels use the element text colour")
+eq(tostring(userIdValue.TextColor3.R), tostring(theme.ContentColor.R), "E1 row values use the element text colour")
+local userIdIcon = findChild(panel, "UserIdIcon")
+expect(userIdIcon ~= nil, "E1 the user ID row carries an icon")
+eq(tostring(userIdIcon.ImageColor3.R), tostring(theme.ContentColor.R), "E1 row icons use the element icon colour")
 eq(userIdValue.TextTruncate, Enum.TextTruncate.AtEnd, "E1 long values truncate with an ellipsis")
 eq(userIdLabel.TextXAlignment, Enum.TextXAlignment.Left, "E1 labels are left aligned")
 eq(userIdValue.TextXAlignment, Enum.TextXAlignment.Right, "E1 values are right aligned")
@@ -143,9 +173,10 @@ expect(details.ClassName == "ScrollingFrame", "E2 the details region is a Scroll
 eq(details.ScrollingDirection, Enum.ScrollingDirection.Y, "E2 the details region scrolls vertically only")
 expect(isDescendantOf(content, details), "E2 the sections live inside the scroller")
 
-for _, headerPart in { window.profileAvatar, window.profileName, window.profileSubtitle, window.profilePremium, window.profileGear } do
+for _, headerPart in { window.profileAvatar, window.profileName, window.profileSubtitle, window.profilePremium } do
 	expect(not isDescendantOf(headerPart, details), "E2 the header stays pinned above the scroller")
 end
+expect(window.profileGear == nil, "E2 the card no longer carries a settings gear")
 expect(isDescendantOf(window.profileSessionValue, details), "E2 the session row scrolls with the details")
 
 -- [[The canvas keeps the bottom padding, so the last row is never flush against
@@ -178,15 +209,12 @@ expect(details.ScrollBarThickness > 0, "E2 the scrollbar comes back when the car
 
 -- ===== E3: live server + session values =====
 
-local workspace = state.workspace
 local players = game:GetService("Players")
 expect(players ~= nil, "E3 the stub exposes the Players service")
 
-workspace.DistributedGameTime = 9240 -- 2h 34m of server uptime
 players.MaxPlayers = 50
 TestPump(1.2)
 eq(window.profilePlayersValue.Text, "1 / 50", "E3 the players row shows current players / max players")
-eq(window.profileUptimeValue.Text, "2h 34m", "E3 the uptime row formats the server's own clock")
 expect(
 	window.profileSessionValue.Text:match("^%d+[smhd]") ~= nil
 		or window.profileSessionValue.Text:match("^%d+d %d+h$") ~= nil,
@@ -197,16 +225,13 @@ eq(window.profileServerIdValue.Text, "••••••", "E3 the server ID is 
 -- [[A missing source is a neutral placeholder, not a zero.]]
 players.MaxPlayers = nil
 players.GetPlayers = nil
-workspace.DistributedGameTime = nil
 TestPump(1.2)
 eq(window.profilePlayersValue.Text, DASH, "E3 an unavailable player source reads as the neutral placeholder")
-eq(window.profileUptimeValue.Text, DASH, "E3 an unavailable uptime source reads as the neutral placeholder")
 
 players.MaxPlayers = 50
 players.GetPlayers = function()
 	return { player }
 end
-workspace.DistributedGameTime = 9240
 TestPump(1.2)
 eq(window.profilePlayersValue.Text, "1 / 50", "E3 the rows recover as soon as the source answers again")
 
@@ -230,30 +255,73 @@ TestPump(0.2)
 eq(window.profileKeyValue.Text, DASH, "E4 an empty payload clears the key row")
 eq(window.profileWhitelistValue.Text, DASH, "E4 an empty payload clears the whitelist row")
 
--- ===== E7: the premium pill is real, and rides the handle row =====
+-- ===== E7: the tier pill always states a real tier =====
 
 local premium = window.profilePremium
-expect(premium ~= nil, "E7 the premium pill exists")
+expect(premium ~= nil, "E7 the tier pill exists")
 local player = state.localPlayer
 local membership = player.MembershipType
-eq(premium.Visible, true, "E7 a paid membership shows the pill")
+eq(premium.Visible, true, "E7 the pill is shown")
+eq(window.profileTierLabel.Text, "PREMIUM", "E7 a paid membership reads PREMIUM")
 eq(premium.Position.Y.Offset, window.profileSubtitle.Position.Y.Offset - 0.5,
 	"E7 the pill rides the @username row, matching the design")
 expect(premium.Position.X.Offset > window.profileSubtitle.Position.X.Offset,
 	"E7 the pill sits after the handle text")
-expect(premium.Position.X.Offset + premium.Size.X.Offset <= panel.Size.X.Offset - window.profileGear.Size.X.Offset,
-	"E7 the pill never runs into the settings gear")
+expect(premium.Position.X.Offset + premium.Size.X.Offset <= panel.Size.X.Offset - 8,
+	"E7 the pill never runs out of the card")
 expect(isDescendantOf(premium, window.profilePanelSurface), "E7 the pill lives in the pinned header")
 
--- [[A free account is not decorated: the pill goes away again.]] 
+-- [[A free account is labelled rather than decorated: the pill switches to]]
+-- [[FREEMIUM instead of disappearing.]]
 player.MembershipType = Enum.MembershipType.None
 window:SetProfile({ subtitle = "Still here" })
 TestPump(0.2)
-eq(premium.Visible, false, "E7 a free account shows no premium pill")
+eq(premium.Visible, true, "E7 the pill stays for a free account")
+eq(window.profileTierLabel.Text, "FREEMIUM", "E7 a free account reads FREEMIUM")
+
+-- [[The host's own tier word wins, uppercased on the card.]]
+window:SetProfile({ tier = "vip" })
+TestPump(0.2)
+eq(window.profileTierLabel.Text, "VIP", "E7 a host tier overrides the platform tier")
 player.MembershipType = membership
 window:SetProfile({})
 TestPump(0.2)
-eq(premium.Visible, true, "E7 the pill returns on the next refresh")
+eq(window.profileTierLabel.Text, "PREMIUM", "E7 clearing the payload restores the platform tier")
+
+-- ===== E8: copy actions use the executor clipboard and flash a green check =====
+
+local copied = {}
+setclipboard = function(text)
+	table.insert(copied, text)
+	return true
+end
+
+window.settings.showFullUsername = true
+window:SetProfile({})
+TestPump(0.2)
+
+local userIdEntry = window.profileCopyButtons.UserId
+expect(userIdEntry ~= nil, "E8 the user ID copy action is registered")
+eq(userIdEntry.button.Visible, true, "E8 the copy button shows once the value is revealed")
+userIdEntry.button.Activated:Fire()
+TestPump(0.1)
+eq(copied[1], tostring(player.UserId), "E8 the copy wrote the user ID through setclipboard")
+eq(userIdEntry.icon.Image, window:ResolveIcon("check"), "E8 a successful copy swaps in the check icon")
+eq(tostring(userIdEntry.icon.ImageColor3.R), tostring(theme.Success.R), "E8 the check reads in the success green")
+eq(tostring(userIdEntry.icon.ImageColor3.G), tostring(theme.Success.G), "E8 the check reads in the success green")
+
+TestPump(1.4)
+eq(userIdEntry.icon.Image, window:ResolveIcon("copy"), "E8 the copy icon returns after the flash")
+eq(tostring(userIdEntry.icon.ImageColor3.R), tostring(theme.ActionColor.R), "E8 and so does its colour")
+
+-- [[Every identifier row carries its own copy action.]]
+for _, name in { "PlaceId", "ServerId", "Key" } do
+	expect(window.profileCopyButtons[name] ~= nil, "E8 the " .. name .. " row carries a copy action")
+end
+window.settings.showFullUsername = false
+window:SetProfile({})
+TestPump(0.2)
+eq(userIdEntry.button.Visible, false, "E8 masking the card hides the copy buttons again")
 
 -- ===== E5: truncation + hover tooltip =====
 
@@ -272,7 +340,7 @@ expect(not longWindow.profileTooltip.Visible, "E5 the tooltip starts hidden")
 longGameName.MouseEnter:Fire()
 TestPump(0.1)
 expect(longWindow.profileTooltip.Visible, "E5 hovering a truncated value raises the tooltip")
-eq(longWindow.profileTooltip.tipLabel.Text, longName, "E5 the tooltip shows the full value")
+eq(longWindow.profileTooltipLabel.Text, longName, "E5 the tooltip shows the full value")
 longGameName.MouseLeave:Fire()
 TestPump(0.4)
 expect(not longWindow.profileTooltip.Visible, "E5 the tooltip hides again on mouse leave")
@@ -300,5 +368,46 @@ TestPump(0.6)
 eq(absentWindow.profileUserIdValue.Text, "••••••", "E6 the real identity lands (masked) once the player is known")
 absentWindow:Unload()
 TestPump(0.2)
+
+-- ===== E9: the official two-step game-name flow =====
+
+-- [[With the executor's request function stubbed, the card must follow the]]
+-- [[documented flow - place id -> universe id -> the games list's "name" -]]
+-- [[and prefer that answer over the DataModel's own place title.]]
+local requestedUrls = {}
+request = function(opts)
+	table.insert(requestedUrls, tostring(opts.Url))
+	if opts.Url:find("/universes/v1/places/", 1, true) then
+		return { StatusCode = 200, Body = '{"universeId":459933}' }
+	end
+	if opts.Url:find("/v1/games?universeIds=", 1, true) then
+		return { StatusCode = 200, Body = '{"data":[{"id":459933,"name":"Blox Fruits"}]}' }
+	end
+	return { StatusCode = 404, Body = "" }
+end
+
+game.GameId = nil -- force the official place -> universe lookup
+game.Name = "Some Place Title"
+local nameWindow = Astra:CreateWindow({ name = "Profile Details Test (game name)" })
+TestPump(1.0)
+local nameGameName = findChild(nameWindow.profilePanel, "GameName")
+expect(nameGameName ~= nil, "E9 the game name row exists")
+eq(nameGameName.Text, "Blox Fruits", "E9 the official game name replaces the DataModel's place title")
+local sawUniverseStep, sawGamesStep = false, false
+for _, url in requestedUrls do
+	if url:find("/universes/v1/places/2753915549/universe", 1, true) then
+		sawUniverseStep = true
+	end
+	if url:find("/v1/games?universeIds=459933", 1, true) then
+		sawGamesStep = true
+	end
+end
+expect(sawUniverseStep, "E9 step 1 hits the universes endpoint with the place id")
+expect(sawGamesStep, "E9 step 2 hits the games endpoint with the universe id")
+nameWindow:Unload()
+TestPump(0.2)
+request = nil
+game.GameId = 123456
+game.Name = "Test Place"
 
 print("PROFILE DETAILS: all assertions passed")

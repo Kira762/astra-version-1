@@ -17,7 +17,6 @@ game.JobId = "d2f4a1b9-8c3e-4a71-9b2f-5c1e7a8d9f01"
 local window = Astra:CreateWindow({ name = "Preview" })
 TestPump(0.6)
 window:SetProfile({ key = "ASTRA-PREMIUM-LICENSE", whitelist = { status = "Active", daysLeft = 14 } })
-state.workspace.DistributedGameTime = 9240
 game:GetService("Players").MaxPlayers = 50
 TestPump(1.2)
 

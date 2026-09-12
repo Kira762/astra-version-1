@@ -97,9 +97,10 @@ Method map (names preserved through minification). Settings-related:
   dropdown shows its "No saved configurations" placeholder when none
   exist).
 - `settingsAction` (topbar gear, `linkedTab = rfSettings`) — toggles
-  settings mode via `_toggleSettingsMode` (shared with the profile
-  panel's gear): entering shows only settings tabs and remembers the
-  previous tab; a second click restores it.
+  settings mode via `_toggleSettingsMode`: entering shows only settings
+  tabs and remembers the previous tab; a second click restores it. The
+  profile card no longer carries its own gear, so the topbar action is the
+  single settings entry point.
 - `_applySettingsLayout(active)` — reflows rail/elements for settings mode.
 - `SaveSettings` / `LoadSettings` — per-window settings persistence via
   `utilities.persistence` (settings JSON, includes `activeSubTab` round-trip).
@@ -126,7 +127,7 @@ the edge), `_profileCenterPosition`/`_recenterForProfile` (window + profile-pane
 recentering; re-derived by `_firstShow` and `_quickRestore` while the window is
 still at its anchored resting spot, and by `ToggleMinimise`'s expand, which
 re-clamps for the card that comes back), `_setLayoutMode`, `_toggleSettingsMode`
-(topbar gear + profile panel gear), `_registerControl`/`_unregisterControl`/`_persist`,
+(topbar gear), `_registerControl`/`_unregisterControl`/`_persist`,
 `_runGuarded`, `_setElementLocked`/`_buildLockScrim`, `_updateWindowTitle`.
 
 ### `components/sidebar.luau`
@@ -145,25 +146,30 @@ a separate card, and it matches the design mock's structure:
 
 - **Pinned header** — 48px avatar with a presence dot and hairline ring,
   left-aligned display name (`TitlingColor`, 15px) over the `@username`
-  subtitle (12px, `ContentColor`), the PREMIUM pill when the platform
-  reports a paid `MembershipType` (it rides the handle row and drops below
-  the name only when it does not fit), and the settings gear. A 1px
-  divider closes the header.
-- **Scrolling details** — `ACCOUNT`, `CURRENT GAME`, `SERVER` and
-  `USER SESSION` headings (muted, 10px, icon + label) over rounded
-  `CardSurface` plates: User ID (with its COPY action), Join date, Account
-  age, Friends and Followers, Key and Whitelist; the game thumbnail, name
-  and Place ID; Players, Server ID and Server uptime; and the session
-  timer. Only this region scrolls — the header never moves, the card never
-  grows past the window's height, and the 6px themed scrollbar appears
-  only once the content is taller than the region.
+  subtitle (12px, `TitlingColor` at the window's 0.7 secondary
+  transparency) and the tier pill (PREMIUM / FREEMIUM from
+  `MembershipType`, or the host's own word; it rides the handle row and
+  drops below the name only when it does not fit). A 1px divider closes
+  the header. The card carries no settings gear — the window's topbar gear
+  is the only settings entry point.
+- **Scrolling details** — `Account`, `Current Game`, `Server` and
+  `User Session` headings styled exactly like the window's Section element
+  (16px `ContentColor` icon at 0.65, 15px `ContentColor` title at 0.6)
+  over plates styled exactly like the window's element bodies
+  (`Window:StyleElementBody`: `ElementGradient` over a white body at
+  `ElementTransparency`, `ElementCornerRadius`, `ElementStroke` at
+  `ElementStrokeTransparency`): User ID (COPY), Join date, Account age,
+  Key (COPY) and Whitelist; the game thumbnail, the official game name and
+  Place ID (COPY); Players and Server ID (COPY); and the session timer.
+  Row icons/labels/values reuse the element row colours (`ContentColor`,
+  muted labels at 0.45). Only this region scrolls — the header never
+  moves, the card never grows past the window's height, and the 6px themed
+  scrollbar appears only once the content is taller than the region.
 
-- `build(window, onOpenSettings)` — builds the surface, header, detail
-  cards and tooltip; avatar with a generation guard via
-  `images.image.avatar`; text truncated at end; the gear shares
-  `Window:_toggleSettingsMode` (hover pill + stroke hover, pcalled).
-  Mirrors `main`'s Position through property-change signals, so it follows
-  drags/restores/resizes without a per-frame loop.
+- `build(window)` — builds the surface, header, detail cards and tooltip;
+  avatar with a generation guard via `images.image.avatar`; text truncated
+  at end. Mirrors `main`'s Position through property-change signals, so it
+  follows drags/restores/resizes without a per-frame loop.
 - `layout(window)` — places the fixed-size card on the selected side
   (`settings.profileSide`, default `"right"`) flush with the window edge
   (12px gap), vertically centred on the window's centre; re-flows the
@@ -172,13 +178,12 @@ a separate card, and it matches the design mock's structure:
   window.
 - `setShown(window, shown, info)` — effective = requested AND enabled AND
   window visible (not hidden/minimised); fades every registered target
-  (panel pieces, text, gear, premium pill); idempotent (skips instances
-  already at target).
+  (panel pieces, text, tier pill); idempotent (skips instances already at
+  target).
 - `applyLive(window)` — the 1s Heartbeat tick while the card is shown:
-  player count (`#Players:GetPlayers()` / `MaxPlayers`), server uptime
-  (`workspace.DistributedGameTime`), session time (`os.clock()` since the
-  panel loaded) and the whitelist countdown. The connection is stored once
-  in `window.profileRefreshConnection`.
+  player count (`#Players:GetPlayers()` / `MaxPlayers`), session time
+  (`os.clock()` since the panel loaded) and the whitelist countdown. The
+  connection is stored once in `window.profileRefreshConnection`.
 - `isEnabled` / `isShown` / `shiftFor` — content-enabled check
   (`showProfile` on, player known, and the screen has horizontal room for
   window + gap + panel plus vertical room for the card's height — a space
@@ -209,23 +214,42 @@ a separate card, and it matches the design mock's structure:
 - `applyIdentity(window)` — writes every identifying value on the card
   from the local player and that toggle: display name (headline) and
   @username (subtitle) through `sidebar.maskUsername`, user ID, place ID
-  and server ID as a fixed `••••••` block, plus the COPY action (hidden
-  while the user ID is masked, and it refuses to copy a masked value). An
-  explicit `Window:SetProfile` subtitle is developer copy, so the toggle
-  leaves it alone. Nil-safe on both the instances and the player; runs at
-  the end of `build`, so the card never shows an unmasked value first.
-- `applyCounts` / `applyLicense` — the live rows: players, uptime, session,
-  key and whitelist. Astra ships no key store of its own, so the key and
-  whitelist come from what the host handed to `Window:SetProfile` and read
-  `—` when nothing was supplied. `applyLicense` takes
-  `{ key, whitelist = { status, daysLeft | expiresAt } }` (`␣` the host's
-  table, copied, never mutated): the whitelist row shows `14 days left`,
-  `1 day left`, `Expired`, a non-"Active" status spelled out, or the
-  placeholder.
+  and server ID as a fixed `••••••` block, and drives the COPY buttons
+  (registered in `window.profileCopyButtons`, each hidden while its value
+  is masked, and each refuses to copy a masked value). An explicit
+  `Window:SetProfile` subtitle is developer copy, so the toggle leaves it
+  alone. Nil-safe on both the instances and the player; runs at the end of
+  `build`, so the card never shows an unmasked value first.
+- `applyLicense` — the host-owned key and whitelist rows. Astra ships no
+  key store of its own, so the key and whitelist come from what the host
+  handed to `Window:SetProfile` and read `—` when nothing was supplied.
+  `applyLicense` takes `{ key, tier, whitelist = { status, daysLeft |
+  expiresAt } }` (the host's table, copied, never mutated): the whitelist
+  row shows `14 days left`, `1 day left`, `Expired`, a non-"Active" status
+  spelled out, or the placeholder.
+- `tierText` / `applyTier` — the header tier pill. A host `tier` (uppercased)
+  wins; otherwise `MembershipType` decides PREMIUM vs FREEMIUM, so the pill
+  always states a real tier. PREMIUM keeps the accent crown; any other tier
+  reads in the muted placeholder colour with a `badge-check` icon, and the
+  pill width is re-measured from its own label.
+- `flashCopied(window, name)` — copy feedback: the row's copy icon becomes a
+  green (`Success`) check for ~1.2s and then returns to the copy icon; a
+  repeat click restarts the window and a rebuilt card is ignored. The copy
+  itself goes through the executor's clipboard entry point (`setclipboard`
+  and the common aliases), so a missing/failing function means no feedback
+  rather than a false success.
+- `fetchUniverseId` / `resolveUniverseId` / `fetchGameName` — the official
+  two-step game-name flow: `apis.roblox.com/universes/v1/places/{PlaceId}/
+  universe` converts the place to its universe, then
+  `games.roblox.com/v1/games?universeIds={UniverseId}` answers the game
+  detail list whose matching entry's `name` is the game name. Cached per
+  place and queued while in flight; `resolveUniverseId` prefers
+  `DataModel.GameId` and also feeds the thumbnail fetch, and the label keeps
+  `DataModel.Name` until the platform answers.
 - `setProfile` / `setSubtitle` / `refreshName` — `Window:SetProfile`
   accepts a string or `nil` (legacy: swaps only the subtitle line and
-  leaves the host's key/whitelist rows alone), or a table
-  (`{ subtitle, key, whitelist }`; omitted fields clear their rows).
+  leaves the host's key/tier/whitelist rows alone), or a table
+  (`{ subtitle, key, tier, whitelist }`; omitted fields clear their rows).
   `refreshName` is kept as an alias for `applyIdentity`.
 - `showTooltip` / `hideTooltip` — the card's own hover-help for values
   that do not fit their row (measured with `functions.textWidth`), shown
