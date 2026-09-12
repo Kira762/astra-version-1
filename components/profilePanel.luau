@@ -121,11 +121,89 @@ function profilePanel.shiftFor(window)
     return (profilePanel.width + profilePanel.gap) / 2
 end
 
+-- [[Is the card on screen right now? `isEnabled` answers "should its]]
+-- [[content exist" (setting + player + room); this adds the window's own]]
+-- [[visibility, which is what the on-screen clamp cares about — a]]
+-- [[minimised capsule must not be shoved around by a card that is not]]
+-- [[there.]]
+function profilePanel.isShown(window)
+    local panel = window.profilePanel
+    return panel ~= nil and panel.Visible == true
+end
+
+-- [[Half-extents of the window + card pair, measured from the window's]]
+-- [[centre: how far the pair reaches left, right and up/down. The card]]
+-- [[widens one side by its width + gap and, at 500px tall, can out-tall a]]
+-- [[short window — so a clamp that only knew the window's own half size let]]
+-- [[the card hang off the edge while the window itself stayed "on screen".]]
+-- [[Returns the plain window halves while the card is not shown. `width` /]]
+-- [[`height` override the window size for callers mid-animation (the drag]]
+-- [[path measures the frame, which is smaller while minimised).]]
+function profilePanel.pairHalfSize(window, width, height)
+    local size = window.size
+    local halfW = (width or size.X.Offset) / 2
+    local halfH = (height or size.Y.Offset) / 2
+    if not profilePanel.isShown(window) then
+        return halfW, halfW, halfH
+    end
+    local extra = profilePanel.width + profilePanel.gap
+    local left = (window.settings.profileSide or "right") == "left"
+    local pairHalfH = math.max(halfH, profilePanel.height / 2)
+    if left then
+        return halfW + extra, halfW, pairHalfH
+    end
+    return halfW, halfW + extra, pairHalfH
+end
+
 -- [[The "Reveal profile details" toggle (persisted under the legacy]]
 -- [[`showFullUsername` key). Off = every identifying value on the card is]]
 -- [[masked; on = display name, username, user ID and place ID show in full.]]
 function profilePanel.revealEnabled(window)
     return window.settings.showFullUsername == true
+end
+
+-- [[The reveal toggle's prerequisite: it unmasks values that live ON the]]
+-- [[card, so it is only meaningful while "Show profile" is on. Leaving it]]
+-- [[active with the card off would silently unmask identity data the moment]]
+-- [[the card came back, so the dependency is enforced rather than implied.]]
+function profilePanel.revealAllowed(window)
+    return window.settings.showProfile == true
+end
+
+-- [[Driver for the "Reveal profile details" toggle. Refuses the on state]]
+-- [[while "Show profile" is off: the setting stays off, the card stays]]
+-- [[masked, and a notification says what is required first. Returns whether]]
+-- [[the requested value was accepted, so the caller can roll its own switch]]
+-- [[back to match.]]
+function profilePanel.setReveal(window, enabled)
+    local want = enabled == true
+    if want and not profilePanel.revealAllowed(window) then
+        window.settings.showFullUsername = false
+        profilePanel.applyIdentity(window)
+        window:Notify({
+            title = locale.resolve("Show profile is required"),
+            content = locale.resolve(
+                "\"Reveal profile details\" unmasks the display name, username, user ID and place ID on the profile card, so it needs that card to be showing. Turn on \"Show profile\" first — until then this stays off."
+            ),
+        })
+        return false
+    end
+    window.settings.showFullUsername = want
+    profilePanel.applyIdentity(window)
+    return true
+end
+
+-- [[Dependency normalisation for settings that arrive from somewhere other]]
+-- [[than the toggle: a config saved before the rule existed (or edited by]]
+-- [[hand) can carry reveal = on with the card off. Returns true when]]
+-- [[something had to be corrected, so callers can resync a switch.]]
+function profilePanel.syncReveal(window)
+    if window.settings.showFullUsername ~= true or profilePanel.revealAllowed(window) then
+        return false
+    end
+    window.settings.showFullUsername = false
+    profilePanel.applyIdentity(window)
+    return true
 end
 
 -- [[Write every identity field on the card from the current player and the]]
@@ -672,8 +750,29 @@ end
 
 function profilePanel.setEnabled(window, enabled)
     window.settings.showProfile = enabled == true
+
+    -- [[The reveal toggle depends on the card, so switching the card off]]
+    -- [[switches the reveal off with it: it can never sit active while]]
+    -- [[there is nothing on screen to reveal. The caller (the settings UI)]]
+    -- [[rolls its own switch back from the return value.]]
+    local revealCleared = false
+    if not window.settings.showProfile and window.settings.showFullUsername then
+        window.settings.showFullUsername = false
+        revealCleared = true
+    end
+    profilePanel.applyIdentity(window)
+
     profilePanel.setShown(window, window.settings.showProfile, settleTween)
     window:_recenterForProfile(window.settings.showProfile)
+
+    if revealCleared then
+        window:Notify({
+            title = locale.resolve("Reveal profile details"),
+            content = locale.resolve(
+                "Turned off with the profile card: it unmasks the values on that card, so it needs \"Show profile\" to be on."
+            ),
+        })
+    end
 
     -- [[The toggle is only half the story: the card also needs a player and]]
     -- [[room on screen (280px beside the window, 500px of height). A missing]]
@@ -688,6 +787,8 @@ function profilePanel.setEnabled(window, enabled)
             ),
         })
     end
+
+    return revealCleared
 end
 
 function profilePanel.setSide(window, side)
