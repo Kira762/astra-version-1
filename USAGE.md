@@ -330,9 +330,10 @@ The settings tabs are:
 | **Persistence** | Saved-configurations dropdown + name input + Save/Load/Delete. Only present when `configuration` was passed to `CreateWindow`. |
 | **About** | Library info and links. |
 
-The window and its profile card are centred as one unit: with the card on, the
-window rests half a card (146px) off the screen centre on the opposite side of
-it, so window + 12px gap + card line up in the middle together. That resting
+The window and its profile card (a compact 240x420 card — the default
+window's height) are centred as one unit: with the card on, the window rests
+half a card (126px) off the screen centre on the opposite side of it, so
+window + 12px gap + card line up in the middle together. That resting
 centre is re-derived on the first show, on every hide/show restore and whenever
 the card's state changes (toggle, side, viewport, a player turning up late), and
 "Keep window on screen" clamps the pair rather than the window alone, so a drag
