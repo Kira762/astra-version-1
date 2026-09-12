@@ -3444,7 +3444,7 @@ end
 -- [[`detailsY` is the row's offset from the top of the card's content.]]
 function profilePanel.showTooltip(window, text, contentY: number)
     local tip = window.profileTooltip
-    if not tip or not tip.tipLabel then
+    if not tip or not window.profileTooltipLabel then
         return
     end
     local details = window.profileDetails
@@ -3460,11 +3460,11 @@ function profilePanel.showTooltip(window, text, contentY: number)
     local cardH = currentCardHeight(window)
     local y = headerHeight + dividerHeight + (contentY - scrollY) - tooltipHeight - 6
     y = math.clamp(y, 4, math.max(4, cardH - tooltipHeight - 4))
-    setText(tip.tipLabel, text)
+    setText(window.profileTooltipLabel, text)
     tip.Position = UDim2.fromOffset(paddingX + cardPaddingX, y)
     tip.Visible = true
     state.tweenService:Create(tip, hoverTween, { BackgroundTransparency = 0 }):Play()
-    state.tweenService:Create(tip.tipLabel, hoverTween, { TextTransparency = 0 }):Play()
+    state.tweenService:Create(window.profileTooltipLabel, hoverTween, { TextTransparency = 0 }):Play()
 end
 
 function profilePanel.hideTooltip(window)
@@ -3473,8 +3473,8 @@ function profilePanel.hideTooltip(window)
         return
     end
     state.tweenService:Create(tip, hoverTween, { BackgroundTransparency = 1 }):Play()
-    if tip.tipLabel then
-        state.tweenService:Create(tip.tipLabel, hoverTween, { TextTransparency = 1 }):Play()
+    if window.profileTooltipLabel then
+        state.tweenService:Create(window.profileTooltipLabel, hoverTween, { TextTransparency = 1 }):Play()
     end
     task.delay(hoverTween.Time, function()
         if tip.Parent and tip.BackgroundTransparency >= 1 then
@@ -3970,7 +3970,7 @@ function profilePanel.build(window, onOpenSettings)
         PaddingBottom = UDim.new(0, 4),
         Parent = tooltip,
     })
-    tooltip.tipLabel = window:Create("TextLabel", {
+    window.profileTooltipLabel = window:Create("TextLabel", {
         Name = "Label",
         Text = "",
         Size = UDim2.fromScale(1, 1),
