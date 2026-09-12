@@ -253,8 +253,19 @@ function profilePanel.build(window, onOpenSettings)
         BorderSizePixel = 0, Parent = window.profilePanelSurface,
     }, { BackgroundColor3 = "ContentColor" })
     window:Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = gameCard })
-    label("GameName", game.Name, UDim2.fromOffset(paddingX + 12, 364), UDim2.new(1, -paddingX * 2 - 24, 0, 18), 13, "TitlingColor")
-    label("GameBy", "Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 12, 384), UDim2.new(1, -paddingX * 2 - 24, 0, 16), 10)
+    local gameThumbnail = window:Create("ImageLabel", {
+        Name = "GameThumbnail",
+        Image = "",
+        Position = UDim2.fromOffset(paddingX + 8, 362),
+        Size = UDim2.fromOffset(40, 40),
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        Parent = window.profilePanelSurface,
+    })
+    window:Create("UICorner", { CornerRadius = UDim.new(0, 7), Parent = gameThumbnail })
+    image.assign(gameThumbnail, "Image", `rbxthumb://type=GameIcon&id={game.PlaceId}&w=150&h=150`)
+    label("GameName", game.Name, UDim2.fromOffset(paddingX + 58, 363), UDim2.new(1, -paddingX * 2 - 70, 0, 18), 13, "TitlingColor")
+    label("GameBy", "Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 58, 384), UDim2.new(1, -paddingX * 2 - 70, 0, 16), 10)
 
     label("PremiumBadge", "PREMIUM", UDim2.new(0.5, -42, 0, contentMinTop + avatarSize + nameGap + nameHeight + subGap + subHeight + 6), UDim2.fromOffset(84, 18), 10, "AccentColor")
 
