@@ -123,15 +123,21 @@ Profile/avatar machinery:
 ### `components/action.luau`, `chrome.luau`, `tabSelector.luau`
 Small window-furniture classes; top-level `utility` require + constructor locals for created frames/buttons.
 
-`tabSelector.relayoutSidebarRows(window, layout, railWidth)` — responsive
-sidebar row sizing: the longest row in the current rail group (tabs or
-settings tabs per `_settingsMode`) sets the shared row width
-(`functions.textWidth` of the title + icon/spacing/paddings), capped at the
-rail's available width so long names wrap in place and the rail itself never
-grows. Called from `sidebar.applyRailRows` (rail width changes),
-`Window:_applySettingsLayout` (visible rail group changes), `Tab:Remove`,
-`Window:SetLocale` and `Window:ChangeTheme`. No-op for the topbar and
-collapsed-sidebar layouts.
+`tabSelector.railContentWidth(window, layout)` — natural rail width for the
+responsive sidebar: the widest row in the current rail group (tabs or
+settings tabs per `_settingsMode`), measured with `functions.textWidth`
+(title + icon/spacing/paddings) plus row insets; 0 when the group is empty.
+`Window:_railWidth` uses it to size the rail itself
+(`min(content, floor(windowWidth / 2))` for the expanded responsive rail;
+fixed widths elsewhere), and `tabSelector.relayoutSidebarRows` constrains an
+overlong title to the row's remaining slot so its existing `TextWrapped`
+wraps it in place. Re-derived from `sidebar.applyRailRows` (rail width
+changes), `Window:_applyContentRailWidth` (layout/settings/locale/theme
+changes, tab removal), `Tab:Remove`, `Window:SetLocale` and
+`Window:ChangeTheme`. No-op for the topbar and collapsed-sidebar layouts.
+`applyRailRows` treats the rail as collapsed only at the icon-only width
+(`railCollapsedWidth`), so a content-sized rail narrower than the old fixed
+219px still shows titles.
 
 ### `components/notification.luau`, `toast.luau`, `popup.luau`
 Overlay queues: `a1..a4` — container frame, TweenInfo presets, queue table, active-instance guard.

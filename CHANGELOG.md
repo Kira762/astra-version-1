@@ -2,43 +2,52 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
-## 2026-09-12 — Responsive sidebar tab sizing: rows follow the longest tab name
+## 2026-09-12 — Responsive sidebar rail follows the longest tab name
 
 - **The responsive sidebar (`Sidebar (Responsive)` bar layout) now sizes its
-  tab rows from the tab names.** The longest visible row in the current rail
+  rail from the tab names.** The longest visible row in the current rail
   group (tabs or settings tabs, whichever mode the rail shows) determines the
   group's natural width via the existing `functions.textWidth` measurement of
-  the row title (icon + spacing + paddings included); every row in that rail
-  shares that width, so short names expand to match the longest one.
-- **The rail's available width is the cap, not a constant.** Row width is
-  `min(longest natural width, rail width - row insets)` — there is no new
-  fixed pixel value. When a very long name would exceed the available rail
-  space, the rows hold the available width and the title label is constrained
-  to the remaining slot, where its existing `TextWrapped` keeps the name
-  readable. The rail itself never grows (or shrinks) because of tab names —
-  the responsive rail widths (`railWidthFor`: expanded / collapsed under
-  `railCollapseBelow`) and the collapse-to-icon-only behavior are unchanged.
-- **Sizing is re-derived whenever the visible rail group or its inputs
+  the row title (icon + spacing + paddings + row insets included). The rail
+  itself takes that width, and the rows keep their original full-rail,
+  side-aligned size (`scale 1, offset -rowInset*2`) — so every tab in the
+  rail is exactly as wide as the longest one, with no floating/centered rows.
+- **The window's available space is the cap, not a constant.** Rail width is
+  `min(longest natural width, floor(window width / 2))` — no new fixed pixel
+  value, and the elements area always keeps at least half of the window.
+  The existing `Sidebar.ApplyWidth` already gives the elements area
+  `(1, -railWidth, ...)`, so it automatically takes back whatever space the
+  rail frees. When a very long name would exceed the cap, the rows hold the
+  available width and that title label is constrained to the remaining slot,
+  where its existing `TextWrapped` keeps the name readable.
+- **Narrow windows are unchanged:** below `railCollapseBelow` the rail still
+  collapses to the icon-only width (`railCollapsedWidth`), and the rail is
+  considered collapsed only while it is at that icon-only width (a
+  content-sized rail below the old fixed 219px still shows titles).
+- **The width is re-derived whenever the visible rail group or its inputs
   change:** tab create/remove, layout-mode switch, settings-mode toggle,
-  viewport/rail width changes (`applyRailRows`), locale changes (translated
-  titles measure differently) and theme changes (title font).
-- **Scope:** only the responsive sidebar path
-  (`components/tabSelector.luau` `relayoutSidebarRows` + hook points in
-  `components/sidebar.luau`, `components/window.luau`, `elements/tab.luau`).
-  The topbar layout's per-pill `AutomaticSize.X` sizing, the collapsed
-  sidebar's icon-only rows, all tab styles, animations, selection and
-  scrolling behavior are untouched. `setRowCollapsed` additionally skips
-  rows whose rail was already destroyed mid-layout-switch (a destroyed
-  instance must not have properties written to it) and restores the row's
-  full-rail width when the rail collapses.
+  viewport/rail width changes, locale changes (translated titles measure
+  differently) and theme changes (title font).
+- **Scope:** only the responsive sidebar path (`Window:_railWidth` /
+  `Window:_applyContentRailWidth` in `components/window.luau`,
+  `tabSelector.railContentWidth` + label wrap in
+  `components/tabSelector.luau`, the collapsed check in
+  `components/sidebar.luau`, and a re-derive hook in
+  `elements/tab.luau`). The topbar layout's per-pill `AutomaticSize.X`
+  sizing, the collapsed sidebar's fixed icon-only rail, all tab styles,
+  animations, selection and scrolling behavior are untouched.
+  `setRowCollapsed` additionally skips rows whose rail was already destroyed
+  mid-layout-switch (a destroyed instance must not have properties written
+  to it).
 - **Verification:** new `scripts/sidebar_tab_sizing_test.sh` (Luau CLI
   harness with a mini Roblox environment, `sidebar_sizing_stubs.luau`)
   exercises the real bundle: identical short names, short/long mixes, one
-  very long name (cap + wrapped title), multiple long names, narrow/wide
-  window (collapse/expand round-trip), settings-mode rail, icon-less and
-  `neglectSelector` tabs, locale changes, and confirms the topbar layout
-  keeps its existing per-pill sizing. The test fails against the pre-change
-  tree (negative control). Bundle regenerated (99 modules).
+  very long name (cap + wrapped title + elements keep half the window),
+  multiple long names, narrow/wide window (collapse/expand round-trip),
+  settings-mode rail, icon-less and `neglectSelector` tabs, locale changes,
+  and confirms the topbar and collapsed-sidebar layouts keep their existing
+  sizing. The test fails against the pre-change tree (negative control).
+  Bundle regenerated (99 modules).
 
 ## 2026-09-11 — Window sizing: 600x420 default, fixed mobile profile
 

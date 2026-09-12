@@ -2986,7 +2986,10 @@ end
 
 function sidebar.applyRailRows(window, width, layout)
     search.railWidth(window, width)
-    local isCollapsed = width < (layout.railWidth :: number)
+    -- [[The rail is collapsed only when it is at the icon-only width. The]]
+    -- [[responsive rail otherwise hugs the widest tab name, which is often]]
+    -- [[narrower than the fixed 219px rail the layout used to have.]]
+    local isCollapsed = width <= (layout.railCollapsedWidth :: number)
     for _, tab in window.tabs do
         if not tab.neglectSelector then
             tabSelector.setRowCollapsed(tab, isCollapsed, layout)
@@ -3367,10 +3370,12 @@ function tabSelector.build(tab, layoutMode)
     end
 end
 
--- [[Responsive sidebar row sizing: the tab names drive the row group's]]
--- [[natural width. The longest visible row sets it, every row in the rail]]
--- [[shares that width, and the rail's available width is the cap, so a long]]
--- [[name never overflows a row and never enlarges the rail itself.]]
+-- [[Responsive sidebar sizing: the tab names drive the rail's width. The]]
+-- [[longest visible row sets the rail's natural width, so every row (which]]
+-- [[stays full-rail, as before) shares the width of the longest tab, and]]
+-- [[the elements area takes back whatever the rail frees up. The window's]]
+-- [[available space is the cap, so a long name wraps in place instead of]]
+-- [[swallowing the content area.]]
 
 local function inCurrentRail(window, tab)
     -- [[Parent guards out rows destroyed mid-layout-switch: their parent]]
@@ -3396,6 +3401,23 @@ local function rowNaturalWidth(tab, window, layout)
     return width
 end
 
+-- [[The rail width at which the widest row in the current rail group fits]]
+-- [[exactly (row insets included). 0 when the group is empty.]]
+function tabSelector.railContentWidth(window, layout)
+    local maxRow = 0
+    for _, tab in window.tabs do
+        if inCurrentRail(window, tab) then
+            maxRow = math.max(maxRow, rowNaturalWidth(tab, window, layout))
+        end
+    end
+    if maxRow <= 0 then
+        return 0
+    end
+    return maxRow + layout.rowInset * 2
+end
+
+-- [[Rows stay full-rail; this only holds a title inside its row when the]]
+-- [[rail's available width capped below the name's natural width.]]
 function tabSelector.relayoutSidebarRows(window, layout, railWidth)
     if layout.mode ~= "sidebar" or layout.forceCollapsed then
         return
@@ -3404,32 +3426,21 @@ function tabSelector.relayoutSidebarRows(window, layout, railWidth)
         return
     end
     railWidth = railWidth or layout.railWidth
-    if railWidth < (layout.railWidth :: number) then
-        -- [[Collapsed rail: rows are icon-only and keep the full-rail width.]]
+    if railWidth <= (layout.railCollapsedWidth :: number) then
+        -- [[Collapsed rail: icon-only rows, nothing to hold.]]
         return
     end
 
-    local available = railWidth - layout.rowInset * 2
-    if available <= 0 then
+    local rowWidth = railWidth - layout.rowInset * 2
+    if rowWidth <= 0 then
         return
     end
 
-    local required = 0
     for _, tab in window.tabs do
         if inCurrentRail(window, tab) then
-            required = math.max(required, rowNaturalWidth(tab, window, layout))
-        end
-    end
-
-    local width = if required > 0 then math.floor(math.min(required, available)) else available
-
-    for _, tab in window.tabs do
-        if inCurrentRail(window, tab) then
-            tab.topbarItem.Size = UDim2.new(0, width, 0, layout.rowHeight)
-
             local title = tab.topbarItemTitle
-            if title then
-                local slot = width - layout.rowPadding * 2
+            if title and tab.name then
+                local slot = rowWidth - layout.rowPadding * 2
                     - (if tab.icon then layout.rowIconSize + layout.rowContentSpacing else 0)
                 if
                     slot >= 24
@@ -3454,13 +3465,6 @@ function tabSelector.setRowCollapsed(tab, collapsed, layout)
     -- [[not be written to a destroyed instance.]]
     if layout.mode ~= "sidebar" or not tab.topbarItem or not tab.topbarItem.Parent then
         return
-    end
-
-    if collapsed then
-        -- [[Icon-only rail: drop the name-driven width so the row tracks the]]
-        -- [[collapsed rail again (the expanded width is re-applied by]]
-        -- [[relayoutSidebarRows whenever the rail is expanded).]]
-        tab.topbarItem.Size = UDim2.new(1, -layout.rowInset * 2, 0, layout.rowHeight)
     end
 
     if tab.topbarItemTitle then
@@ -4330,7 +4334,7 @@ function Window.new(props)
 
             local initialLayout = layouts.implementation(layoutKey(self.layout))
     initialLayout.Build(self, self.layout)
-    initialLayout.ApplyWidth(self, layouts.railWidthFor(self.layout, self.size.X.Offset))
+    initialLayout.ApplyWidth(self, self:_railWidth())
 
         self.actionContainer = self:Create("Frame", {
 
@@ -4545,8 +4549,8 @@ function Window:ChangeTheme(themeInput)
     end
 
     self:_syncLiveAnimation()
-    -- [[A theme can change the row title font.]]
-    tabSelector.relayoutSidebarRows(self, self.layout, layouts.railWidthFor(self.layout, self.size.X.Offset))
+    -- [[A theme can change the row title font, hence the rail width.]]
+    self:_applyContentRailWidth()
 end
 
 function Window:_refreshElementThemes()
@@ -5083,10 +5087,37 @@ function Window:_applyWindowSize()
     self:_syncDragBar()
 end
 
-function Window:_applyRailWidth()
-    local railWidth = layouts.railWidthFor(self.layout, self.size.X.Offset)
+-- [[Effective rail width. Non-sidebar and collapsed rails keep the existing]]
+-- [[fixed behavior; the expanded responsive rail instead hugs the widest]]
+-- [[visible tab row (railContentWidth), capped by the window's available]]
+-- [[space so the elements area always keeps at least half the window.]]
+function Window:_railWidth()
+    local base = layouts.railWidthFor(self.layout, self.size.X.Offset)
+    if self.layout.mode ~= "sidebar" or self.layout.forceCollapsed then
+        return base
+    end
+    if base < (self.layout.railWidth :: number) then
+        return base
+    end
+    local content = tabSelector.railContentWidth(self, self.layout)
+    if content <= 0 then
+        return base
+    end
+    local cap = math.floor(self.size.X.Offset * 0.5)
+    return math.min(content, cap)
+end
+
+function Window:_applyContentRailWidth()
+    if self.layout.mode ~= "sidebar" or self.layout.forceCollapsed then
+        return
+    end
     local implementation = layouts.implementation(layoutKey(self.layout))
-    implementation.ApplyWidth(self, railWidth)
+    implementation.ApplyWidth(self, self:_railWidth())
+end
+
+function Window:_applyRailWidth()
+    local implementation = layouts.implementation(layoutKey(self.layout))
+    implementation.ApplyWidth(self, self:_railWidth())
 
     if self._settingsLayoutActive or self.selectedTab == self.rfSettings then
         self:_applySettingsLayout(true)
@@ -5709,7 +5740,7 @@ function Window:_setLayoutMode(modeName)
         self.elements.Size = UDim2.new(1, 0, 1, -newLayout.chromeHeight)
         self.bottomFade.Size = UDim2.new(1, 0, newLayout.fadeSize.Y.Scale, newLayout.fadeSize.Y.Offset)
     end
-    implementation.ApplyWidth(self, layouts.railWidthFor(newLayout, self.size.X.Offset))
+    implementation.ApplyWidth(self, self:_railWidth())
     self.elementsLayout.FillDirection = newLayout.pageDirection
 
     for _, tab in self.tabs do
@@ -5752,9 +5783,9 @@ function Window:_applySettingsLayout(isSettings)
         self.selectedTab.tabPage.Size = if self.layout.mode == "sidebar" then UDim2.new(1, -35, 1, 0) else UDim2.new(1, -20, 1, 0)
         self.selectedTab.tabPage.Position = if self.layout.mode == "sidebar" then UDim2.new(0, 35, 0, 0) else UDim2.new(0, 0, 0, 0)
     end
-    -- [[The visible rail group changed: re-derive the responsive sidebar's]]
-    -- [[row width from the tabs now shown (no-op for the other layouts).]]
-    tabSelector.relayoutSidebarRows(self, self.layout, layouts.railWidthFor(self.layout, self.size.X.Offset))
+    -- [[The visible rail group changed: re-derive the responsive rail's]]
+    -- [[width from the tabs now shown (no-op for the other layouts).]]
+    self:_applyContentRailWidth()
 end
 
 function Window:_setSettingsMode(active)
@@ -6189,7 +6220,7 @@ function Window:SetLocale(localeId)
         end
     end
     -- [[Translated row titles may measure differently.]]
-    tabSelector.relayoutSidebarRows(self, self.layout, layouts.railWidthFor(self.layout, self.size.X.Offset))
+    self:_applyContentRailWidth()
 end
 
 function Window:SetTranslator(translator)
@@ -13032,7 +13063,6 @@ local props = require(constants.HapticEngine)
 local name = require(script.Parent.Parent.components.search)
 local icon = require(script.Parent.Parent.components.tabSelector)
 local flagNames = require(script.Parent.Parent.functions.flagNames)
-local layouts = require(script.Parent.Parent.utilities.layouts)
 
 local function customOrder(window, forgetState)
     for _, element in forgetState do
@@ -13386,9 +13416,9 @@ function state:Remove()
     if self.tabPage then
         window:DestroySubtree(self.tabPage)
     end
-    -- [[The removed row may have been the widest: re-derive the responsive]]
-    -- [[sidebar's row width from the rows that remain (no-op elsewhere).]]
-    icon.relayoutSidebarRows(window, window.layout, layouts.railWidthFor(window.layout, window.size.X.Offset))
+    -- [[The removed row may have been the widest: re-derive the]]
+    -- [[responsive rail's width from the rows that remain (no-op elsewhere).]]
+    window:_applyContentRailWidth()
     self.topbarItem = nil
     self.tabPage = nil
     self.elements = {}
@@ -29847,92 +29877,92 @@ local LineOffsets = {
     [13] = 1664,
     [14] = 2382,
     [15] = 2717,
-    [16] = 3145,
-    [17] = 3514,
-    [18] = 3891,
-    [20] = 6676,
-    [21] = 6943,
-    [22] = 7387,
-    [23] = 8518,
-    [24] = 8852,
-    [25] = 8913,
-    [26] = 9058,
-    [27] = 10378,
-    [28] = 10580,
-    [29] = 10841,
-    [30] = 11303,
-    [31] = 11753,
-    [32] = 11840,
-    [33] = 12405,
-    [34] = 13023,
-    [35] = 13401,
-    [36] = 13531,
-    [37] = 13695,
-    [38] = 13849,
-    [40] = 14360,
-    [41] = 14383,
-    [42] = 14400,
-    [43] = 14430,
-    [44] = 14546,
-    [45] = 14560,
-    [46] = 14609,
-    [47] = 14335,
-    [48] = 14710,
-    [49] = 15013,
-    [50] = 15044,
-    [51] = 14699,
-    [52] = 15087,
-    [53] = 15107,
-    [54] = 15139,
-    [55] = 15069,
-    [56] = 15246,
-    [57] = 15308,
-    [58] = 15371,
-    [60] = 15434,
-    [61] = 15599,
-    [62] = 15419,
-    [63] = 15859,
-    [64] = 16154,
-    [65] = 16810,
-    [66] = 18594,
-    [67] = 19735,
-    [68] = 21255,
-    [69] = 15663,
-    [70] = 26499,
-    [71] = 26561,
-    [72] = 26623,
-    [73] = 26698,
-    [74] = 26780,
-    [75] = 26842,
-    [76] = 26917,
-    [77] = 26992,
-    [78] = 27067,
-    [79] = 27142,
-    [80] = 26393,
-    [81] = 27204,
-    [82] = 27302,
-    [83] = 27480,
-    [84] = 27531,
-    [85] = 27561,
-    [86] = 27812,
-    [87] = 27861,
-    [88] = 28314,
-    [89] = 28332,
-    [90] = 28486,
-    [91] = 28585,
-    [92] = 28607,
-    [93] = 28657,
-    [94] = 28693,
-    [95] = 28711,
-    [96] = 29024,
-    [97] = 29040,
-    [98] = 29091,
-    [99] = 29110,
-    [100] = 29352,
-    [101] = 29396,
-    [102] = 29590,
-    [103] = 29618,
-    [104] = 29629,
+    [16] = 3148,
+    [17] = 3518,
+    [18] = 3895,
+    [20] = 6707,
+    [21] = 6974,
+    [22] = 7418,
+    [23] = 8549,
+    [24] = 8883,
+    [25] = 8944,
+    [26] = 9089,
+    [27] = 10409,
+    [28] = 10611,
+    [29] = 10872,
+    [30] = 11334,
+    [31] = 11784,
+    [32] = 11871,
+    [33] = 12436,
+    [34] = 13054,
+    [35] = 13431,
+    [36] = 13561,
+    [37] = 13725,
+    [38] = 13879,
+    [40] = 14390,
+    [41] = 14413,
+    [42] = 14430,
+    [43] = 14460,
+    [44] = 14576,
+    [45] = 14590,
+    [46] = 14639,
+    [47] = 14365,
+    [48] = 14740,
+    [49] = 15043,
+    [50] = 15074,
+    [51] = 14729,
+    [52] = 15117,
+    [53] = 15137,
+    [54] = 15169,
+    [55] = 15099,
+    [56] = 15276,
+    [57] = 15338,
+    [58] = 15401,
+    [60] = 15464,
+    [61] = 15629,
+    [62] = 15449,
+    [63] = 15889,
+    [64] = 16184,
+    [65] = 16840,
+    [66] = 18624,
+    [67] = 19765,
+    [68] = 21285,
+    [69] = 15693,
+    [70] = 26529,
+    [71] = 26591,
+    [72] = 26653,
+    [73] = 26728,
+    [74] = 26810,
+    [75] = 26872,
+    [76] = 26947,
+    [77] = 27022,
+    [78] = 27097,
+    [79] = 27172,
+    [80] = 26423,
+    [81] = 27234,
+    [82] = 27332,
+    [83] = 27510,
+    [84] = 27561,
+    [85] = 27591,
+    [86] = 27842,
+    [87] = 27891,
+    [88] = 28344,
+    [89] = 28362,
+    [90] = 28516,
+    [91] = 28615,
+    [92] = 28637,
+    [93] = 28687,
+    [94] = 28723,
+    [95] = 28741,
+    [96] = 29054,
+    [97] = 29070,
+    [98] = 29121,
+    [99] = 29140,
+    [100] = 29382,
+    [101] = 29426,
+    [102] = 29620,
+    [103] = 29648,
+    [104] = 29659,
 }
 
 -- [[Misc AOT variable imports]]

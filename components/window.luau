@@ -440,7 +440,7 @@ function Window.new(props)
 
             local initialLayout = layouts.implementation(layoutKey(self.layout))
     initialLayout.Build(self, self.layout)
-    initialLayout.ApplyWidth(self, layouts.railWidthFor(self.layout, self.size.X.Offset))
+    initialLayout.ApplyWidth(self, self:_railWidth())
 
         self.actionContainer = self:Create("Frame", {
 
@@ -655,8 +655,8 @@ function Window:ChangeTheme(themeInput)
     end
 
     self:_syncLiveAnimation()
-    -- [[A theme can change the row title font.]]
-    tabSelector.relayoutSidebarRows(self, self.layout, layouts.railWidthFor(self.layout, self.size.X.Offset))
+    -- [[A theme can change the row title font, hence the rail width.]]
+    self:_applyContentRailWidth()
 end
 
 function Window:_refreshElementThemes()
@@ -1193,10 +1193,37 @@ function Window:_applyWindowSize()
     self:_syncDragBar()
 end
 
-function Window:_applyRailWidth()
-    local railWidth = layouts.railWidthFor(self.layout, self.size.X.Offset)
+-- [[Effective rail width. Non-sidebar and collapsed rails keep the existing]]
+-- [[fixed behavior; the expanded responsive rail instead hugs the widest]]
+-- [[visible tab row (railContentWidth), capped by the window's available]]
+-- [[space so the elements area always keeps at least half the window.]]
+function Window:_railWidth()
+    local base = layouts.railWidthFor(self.layout, self.size.X.Offset)
+    if self.layout.mode ~= "sidebar" or self.layout.forceCollapsed then
+        return base
+    end
+    if base < (self.layout.railWidth :: number) then
+        return base
+    end
+    local content = tabSelector.railContentWidth(self, self.layout)
+    if content <= 0 then
+        return base
+    end
+    local cap = math.floor(self.size.X.Offset * 0.5)
+    return math.min(content, cap)
+end
+
+function Window:_applyContentRailWidth()
+    if self.layout.mode ~= "sidebar" or self.layout.forceCollapsed then
+        return
+    end
     local implementation = layouts.implementation(layoutKey(self.layout))
-    implementation.ApplyWidth(self, railWidth)
+    implementation.ApplyWidth(self, self:_railWidth())
+end
+
+function Window:_applyRailWidth()
+    local implementation = layouts.implementation(layoutKey(self.layout))
+    implementation.ApplyWidth(self, self:_railWidth())
 
     if self._settingsLayoutActive or self.selectedTab == self.rfSettings then
         self:_applySettingsLayout(true)
@@ -1819,7 +1846,7 @@ function Window:_setLayoutMode(modeName)
         self.elements.Size = UDim2.new(1, 0, 1, -newLayout.chromeHeight)
         self.bottomFade.Size = UDim2.new(1, 0, newLayout.fadeSize.Y.Scale, newLayout.fadeSize.Y.Offset)
     end
-    implementation.ApplyWidth(self, layouts.railWidthFor(newLayout, self.size.X.Offset))
+    implementation.ApplyWidth(self, self:_railWidth())
     self.elementsLayout.FillDirection = newLayout.pageDirection
 
     for _, tab in self.tabs do
@@ -1862,9 +1889,9 @@ function Window:_applySettingsLayout(isSettings)
         self.selectedTab.tabPage.Size = if self.layout.mode == "sidebar" then UDim2.new(1, -35, 1, 0) else UDim2.new(1, -20, 1, 0)
         self.selectedTab.tabPage.Position = if self.layout.mode == "sidebar" then UDim2.new(0, 35, 0, 0) else UDim2.new(0, 0, 0, 0)
     end
-    -- [[The visible rail group changed: re-derive the responsive sidebar's]]
-    -- [[row width from the tabs now shown (no-op for the other layouts).]]
-    tabSelector.relayoutSidebarRows(self, self.layout, layouts.railWidthFor(self.layout, self.size.X.Offset))
+    -- [[The visible rail group changed: re-derive the responsive rail's]]
+    -- [[width from the tabs now shown (no-op for the other layouts).]]
+    self:_applyContentRailWidth()
 end
 
 function Window:_setSettingsMode(active)
@@ -2299,7 +2326,7 @@ function Window:SetLocale(localeId)
         end
     end
     -- [[Translated row titles may measure differently.]]
-    tabSelector.relayoutSidebarRows(self, self.layout, layouts.railWidthFor(self.layout, self.size.X.Offset))
+    self:_applyContentRailWidth()
 end
 
 function Window:SetTranslator(translator)

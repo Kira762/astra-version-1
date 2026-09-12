@@ -10,7 +10,6 @@ local props = require(constants.HapticEngine)
 local name = require(script.Parent.Parent.components.search)
 local icon = require(script.Parent.Parent.components.tabSelector)
 local flagNames = require(script.Parent.Parent.functions.flagNames)
-local layouts = require(script.Parent.Parent.utilities.layouts)
 
 local function customOrder(window, forgetState)
     for _, element in forgetState do
@@ -364,9 +363,9 @@ function state:Remove()
     if self.tabPage then
         window:DestroySubtree(self.tabPage)
     end
-    -- [[The removed row may have been the widest: re-derive the responsive]]
-    -- [[sidebar's row width from the rows that remain (no-op elsewhere).]]
-    icon.relayoutSidebarRows(window, window.layout, layouts.railWidthFor(window.layout, window.size.X.Offset))
+    -- [[The removed row may have been the widest: re-derive the]]
+    -- [[responsive rail's width from the rows that remain (no-op elsewhere).]]
+    window:_applyContentRailWidth()
     self.topbarItem = nil
     self.tabPage = nil
     self.elements = {}

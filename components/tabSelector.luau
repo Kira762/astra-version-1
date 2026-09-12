@@ -223,10 +223,12 @@ function tabSelector.build(tab, layoutMode)
     end
 end
 
--- [[Responsive sidebar row sizing: the tab names drive the row group's]]
--- [[natural width. The longest visible row sets it, every row in the rail]]
--- [[shares that width, and the rail's available width is the cap, so a long]]
--- [[name never overflows a row and never enlarges the rail itself.]]
+-- [[Responsive sidebar sizing: the tab names drive the rail's width. The]]
+-- [[longest visible row sets the rail's natural width, so every row (which]]
+-- [[stays full-rail, as before) shares the width of the longest tab, and]]
+-- [[the elements area takes back whatever the rail frees up. The window's]]
+-- [[available space is the cap, so a long name wraps in place instead of]]
+-- [[swallowing the content area.]]
 
 local function inCurrentRail(window, tab)
     -- [[Parent guards out rows destroyed mid-layout-switch: their parent]]
@@ -252,6 +254,23 @@ local function rowNaturalWidth(tab, window, layout)
     return width
 end
 
+-- [[The rail width at which the widest row in the current rail group fits]]
+-- [[exactly (row insets included). 0 when the group is empty.]]
+function tabSelector.railContentWidth(window, layout)
+    local maxRow = 0
+    for _, tab in window.tabs do
+        if inCurrentRail(window, tab) then
+            maxRow = math.max(maxRow, rowNaturalWidth(tab, window, layout))
+        end
+    end
+    if maxRow <= 0 then
+        return 0
+    end
+    return maxRow + layout.rowInset * 2
+end
+
+-- [[Rows stay full-rail; this only holds a title inside its row when the]]
+-- [[rail's available width capped below the name's natural width.]]
 function tabSelector.relayoutSidebarRows(window, layout, railWidth)
     if layout.mode ~= "sidebar" or layout.forceCollapsed then
         return
@@ -260,32 +279,21 @@ function tabSelector.relayoutSidebarRows(window, layout, railWidth)
         return
     end
     railWidth = railWidth or layout.railWidth
-    if railWidth < (layout.railWidth :: number) then
-        -- [[Collapsed rail: rows are icon-only and keep the full-rail width.]]
+    if railWidth <= (layout.railCollapsedWidth :: number) then
+        -- [[Collapsed rail: icon-only rows, nothing to hold.]]
         return
     end
 
-    local available = railWidth - layout.rowInset * 2
-    if available <= 0 then
+    local rowWidth = railWidth - layout.rowInset * 2
+    if rowWidth <= 0 then
         return
     end
 
-    local required = 0
     for _, tab in window.tabs do
         if inCurrentRail(window, tab) then
-            required = math.max(required, rowNaturalWidth(tab, window, layout))
-        end
-    end
-
-    local width = if required > 0 then math.floor(math.min(required, available)) else available
-
-    for _, tab in window.tabs do
-        if inCurrentRail(window, tab) then
-            tab.topbarItem.Size = UDim2.new(0, width, 0, layout.rowHeight)
-
             local title = tab.topbarItemTitle
-            if title then
-                local slot = width - layout.rowPadding * 2
+            if title and tab.name then
+                local slot = rowWidth - layout.rowPadding * 2
                     - (if tab.icon then layout.rowIconSize + layout.rowContentSpacing else 0)
                 if
                     slot >= 24
@@ -310,13 +318,6 @@ function tabSelector.setRowCollapsed(tab, collapsed, layout)
     -- [[not be written to a destroyed instance.]]
     if layout.mode ~= "sidebar" or not tab.topbarItem or not tab.topbarItem.Parent then
         return
-    end
-
-    if collapsed then
-        -- [[Icon-only rail: drop the name-driven width so the row tracks the]]
-        -- [[collapsed rail again (the expanded width is re-applied by]]
-        -- [[relayoutSidebarRows whenever the rail is expanded).]]
-        tab.topbarItem.Size = UDim2.new(1, -layout.rowInset * 2, 0, layout.rowHeight)
     end
 
     if tab.topbarItemTitle then
