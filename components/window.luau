@@ -551,7 +551,7 @@ function Window.new(props)
             if state.localPlayer or os.clock() > deadline then
                 connection:Disconnect()
                 if state.localPlayer and self.profilePanel then
-                    profilePanel.refreshName(self)
+                    profilePanel.applyIdentity(self)
                     profilePanel.setShown(self, true, profilePanel.settleInfo)
                     -- [[The player may have arrived after construction, when]]
                     -- [[the panel was still disabled and the window was not]]
@@ -564,7 +564,12 @@ function Window.new(props)
                 end
             end
         end)
-        self:Connect(connection)
+        -- [[The connection already exists here, so it is adopted into the]]
+        -- [[window's list directly: Window:Connect takes a *signal* and calls]]
+        -- [[:Connect on it, which threw on a connection object and killed this]]
+        -- [[waiter — the profile card then stayed hidden even with "Show]]
+        -- [[profile" on.]]
+        table.insert(self.connections, connection)
     end)
     haptic.setContainer(self.screenGui)     haptic.setEnabled(self.settings.haptics)     chrome.buildCollapsedFace(self)
 
@@ -1693,10 +1698,10 @@ function Window:_buildSettingsUI()
         end,
     })
     appearance:CreateToggle({
-        name = "Reveal full username", description = "Shows your full Roblox username in the profile panel instead of the masked version.", value = self.settings.showFullUsername,
+        name = "Reveal profile details", description = "Reveals your display name, username, user ID and place ID on the profile card. Off keeps all four masked.", value = self.settings.showFullUsername,
         callback = function(value)
             self.settings.showFullUsername = value == true
-            profilePanel.refreshName(self); self:SaveSettings()
+            profilePanel.applyIdentity(self); self:SaveSettings()
         end,
     })
 

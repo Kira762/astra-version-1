@@ -49,7 +49,7 @@ registry.definitions = {
         key = "showFullUsername",
         kind = "boolean",
         domain = "appearance",
-        description = "Shows the full Roblox username instead of the masked one.",
+        description = "Reveals the display name, username, user ID and place ID on the profile card instead of the masked versions.",
     },
     profileSide = {
         key = "profileSide",

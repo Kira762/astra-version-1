@@ -2,6 +2,64 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-12 — Profile card: fixed the card that never appeared + one reveal toggle for every identity field
+
+- **Fixed: the profile card stayed invisible even with "Show profile" on.**
+  A window built before `Players.LocalPlayer` exists parks a RenderStepped
+  waiter that fills the card in and fades it up when the player turns up.
+  That waiter died twice over: it was registered with
+  `self:Connect(connection)` — `Window:Connect` takes a *signal* and calls
+  `:Connect` on it, so passing an existing connection threw
+  (`attempt to call missing method 'Connect' of table`) — and, inside the
+  callback, `profilePanel.refreshName` called `sidebar.mask_username`,
+  which does not exist (the helper is `sidebar.maskUsername`), throwing
+  `attempt to call a nil value` on every frame before `setShown` ran. Both
+  are gone: the connection is adopted into `self.connections` directly and
+  the mask call is fixed.
+- **Changed: "Reveal full username" is now "Reveal profile details" and
+  drives all four identifying values on the card** — display name
+  (headline), `@username` (subtitle), user ID (ACCOUNT DETAILS) and place
+  ID (CURRENT GAME). Off masks everything: names through the existing
+  `sidebar.maskUsername` (`Tes****`), the two IDs as a fixed-width
+  `••••••` block so neither value nor length leaks. The persisted key
+  stays `showFullUsername`, so saved settings keep working; only the label,
+  the description and the registry wording changed.
+- **New `profilePanel.applyIdentity(window)`** is the single writer for
+  those fields (plus `profilePanel.revealEnabled(window)`), called at the
+  end of `build`, by the toggle and by the late-player waiter.
+  `refreshName` is kept as an alias and `setSubtitle` routes through it, so
+  no public signature changed. New instance handles:
+  `window.profileUserIdValue`, `window.profileCopyUserId`,
+  `window.profilePlaceId`.
+- **Fixed: the card used to show the display name unmasked.** `build` wrote
+  `player.DisplayName` straight into the headline and nothing masked it
+  unless the late-player waiter happened to run, while the user ID and
+  place ID were baked in at full length regardless of the toggle. The
+  headline is now created empty and filled by `applyIdentity`, so the first
+  frame already respects the setting.
+- **The user ID's COPY action follows the reveal state:** hidden while the
+  ID is masked, and the callback refuses to copy a masked value (it reads
+  `state.localPlayer` at click time rather than the player captured at
+  build). An explicit `Window:SetProfile` subtitle is developer copy, not
+  identity data, so the toggle leaves it alone; `SetProfile(nil)` restores
+  the generated `@username` line.
+- **"Show profile" now explains itself when the card cannot fit.** The card
+  is gated on screen room (280px beside the window, 500px of height) as
+  well as on the toggle, so a cramped viewport used to leave an active
+  toggle and no card. `profilePanel.setEnabled` raises a notification with
+  the reason when the player is known but `hasRoom` fails (a missing player
+  is still handled silently by the late-player waiter).
+- **Verification:** new runtime suite `scripts/profile_reveal_test.sh`
+  (+ `profile_reveal_test.luau`) covers the masked default, the toggle
+  revealing/re-masking all four fields, custom-subtitle precedence, the
+  late-player regression (card appears once the player turns up) and the
+  no-room notification. Ran green
+  under a locally built Luau CLI 0.738 — the earlier entries could not run
+  the runtime suites at all; `smoke_test_bundle.sh`,
+  `sidebar_tab_sizing_test.sh` (T15 extended to the masked subtitle),
+  `check_requires.py` and `check_instance_fields.py` all pass, and the
+  bundle is regenerated (100 modules).
+
 ## 2026-09-12 — Profile panel: fixed card layout per the design mock
 
 - **The panel is now a content-sized card (280x500) instead of a full-window-height

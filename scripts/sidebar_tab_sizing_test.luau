@@ -396,7 +396,8 @@ eqUDim2(
 eq(window.profilePanel.Size.X.Offset, PANEL_W, "T15 panel width")
 eq(window.profilePanel.Size.Y.Offset, PANEL_H, "T15 panel uses its intrinsic content height")
 
-eq(window.profileName.Text, "Tes****", "T15 username masked by default")
+eq(window.profileName.Text, "Tes****", "T15 display name masked by default")
+eq(window.profileSubtitle.Text, "@Tes****", "T15 username masked by default")
 expect(window.profileAvatar ~= nil, "T15 avatar exists")
 expect(window.profileGear ~= nil, "T15 settings gear exists")
 window:SetProfile("Panel subtitle")
