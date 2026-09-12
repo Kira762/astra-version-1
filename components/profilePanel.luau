@@ -200,6 +200,27 @@ function profilePanel.build(window, onOpenSettings)
         }, { TextColor3 = color or "ContentColor", FontFace = "Font" })
     end
 
+    local function iconLabel(name, iconName, text, position, size, textSize, color)
+        local iconSize = 16
+        window:Create("ImageLabel", {
+            Name = name .. "Icon",
+            Image = window:ResolveIcon(iconName),
+            Position = position,
+            Size = UDim2.fromOffset(iconSize, iconSize),
+            BackgroundTransparency = 1,
+            ImageTransparency = 0.15,
+            Parent = window.profilePanelSurface,
+        }, { ImageColor3 = color or "ContentColor" })
+        return label(
+            name,
+            text,
+            UDim2.new(position.X.Scale, position.X.Offset + iconSize + 7, position.Y.Scale, position.Y.Offset - 1),
+            UDim2.new(size.X.Scale, size.X.Offset - iconSize - 7, size.Y.Scale, size.Y.Offset),
+            textSize,
+            color
+        )
+    end
+
     local function rule(y)
         window:Create("Frame", {
             Name = "Divider",
@@ -211,8 +232,8 @@ function profilePanel.build(window, onOpenSettings)
     end
 
     rule(150)
-    label("DetailsHeading", "ACCOUNT DETAILS", UDim2.fromOffset(paddingX, 163), UDim2.new(1, -paddingX * 2, 0, 18), 11, "ActionColor")
-    label("UserId", "User ID", UDim2.fromOffset(paddingX, 190), UDim2.new(1, -paddingX * 2, 0, 18), 12)
+    iconLabel("DetailsHeading", "info", "ACCOUNT DETAILS", UDim2.fromOffset(paddingX, 163), UDim2.new(1, -paddingX * 2, 0, 18), 11, "ActionColor")
+    iconLabel("UserId", "id-card", "User ID", UDim2.fromOffset(paddingX, 190), UDim2.new(1, -paddingX * 2, 0, 18), 12)
     local userId = label("UserIdValue", if player then tostring(player.UserId) else "-", UDim2.fromOffset(paddingX, 207), UDim2.new(1, -paddingX * 2 - 48, 0, 20), 14, "TitlingColor")
     local copy = window:Create("TextButton", {
         Name = "CopyUserId", Text = "COPY", Position = UDim2.new(1, -paddingX - 44, 0, 208),
@@ -222,11 +243,11 @@ function profilePanel.build(window, onOpenSettings)
     window:Connect(copy.Activated, function()
         if setclipboard and player then setclipboard(tostring(player.UserId)) end
     end)
-    label("JoinDate", "Join date", UDim2.fromOffset(paddingX, 238), UDim2.new(1, -paddingX * 2, 0, 18), 12)
+    iconLabel("JoinDate", "calendar-days", "Join date", UDim2.fromOffset(paddingX, 238), UDim2.new(1, -paddingX * 2, 0, 18), 12)
     label("JoinDateValue", if player then ("Account age: " .. tostring(player.AccountAge) .. " days") else "-", UDim2.fromOffset(paddingX, 255), UDim2.new(1, -paddingX * 2, 0, 20), 14, "TitlingColor")
-    label("SocialStats", "Friends     -        Followers     -", UDim2.fromOffset(paddingX, 286), UDim2.new(1, -paddingX * 2, 0, 20), 12, "PlaceholderColor")
+    iconLabel("SocialStats", "users-round", "Friends     -        Followers     -", UDim2.fromOffset(paddingX, 286), UDim2.new(1, -paddingX * 2, 0, 20), 12, "PlaceholderColor")
     rule(318)
-    label("GameHeading", "CURRENT GAME", UDim2.fromOffset(paddingX, 331), UDim2.new(1, -paddingX * 2, 0, 18), 11, "ActionColor")
+    iconLabel("GameHeading", "gamepad-2", "CURRENT GAME", UDim2.fromOffset(paddingX, 331), UDim2.new(1, -paddingX * 2, 0, 18), 11, "ActionColor")
     local gameCard = window:Create("Frame", {
         Name = "CurrentGame", Position = UDim2.fromOffset(paddingX, 356), Size = UDim2.new(1, -paddingX * 2, 0, 52),
         BorderSizePixel = 0, Parent = window.profilePanelSurface,
