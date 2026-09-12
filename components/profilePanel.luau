@@ -14,16 +14,19 @@ local profilePanel = {}
 -- [[window and the panel are centred on screen as a single unit, so]]
 -- [[the window sits half a panel (width + gap) away from the screen]]
 -- [[centre, on the opposite side of the panel.]]
-profilePanel.width = 96
-profilePanel.gap = 8
+-- A full profile card, intentionally wide enough for the Roblox-style details
+-- layout. Every colour below is a theme binding (rather than a hard-coded
+-- colour), so ChangeTheme refreshes the card along with the rest of the UI.
+profilePanel.width = 304
+profilePanel.gap = 12
 
-local avatarSize = 48
-local nameGap = 6
-local nameHeight = 18
-local subGap = 2
-local subHeight = 14
-local paddingX = 8
-local contentMinTop = 14
+local avatarSize = 82
+local nameGap = 10
+local nameHeight = 24
+local subGap = 3
+local subHeight = 18
+local paddingX = 18
+local contentMinTop = 18
 local gearSize = 32
 local gearIconSize = 20
 local gearBottomMargin = 12
@@ -144,10 +147,16 @@ function profilePanel.build(window, onOpenSettings)
         CornerRadius = UDim.new(1, 0),
         Parent = window.profileAvatar,
     })
+    local onlineDot = window:Create("Frame", {
+        Name = "Online", AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, avatarSize / 2 - 4, 0, contentMinTop + avatarSize - 4),
+        Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0, Parent = window.profilePanelSurface,
+    }, { BackgroundColor3 = "Success" })
+    window:Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = onlineDot })
 
     window.profileName = window:Create("TextLabel", {
         Name = "Name",
-        Text = if player then sidebar.maskUsername(player.Name) else "",
+        Text = if player then player.DisplayName else "",
         Size = UDim2.new(1, -paddingX * 2, 0, nameHeight),
         Position = UDim2.new(0, paddingX, 0, contentMinTop + avatarSize + nameGap),
         BackgroundTransparency = 1,
@@ -175,6 +184,59 @@ function profilePanel.build(window, onOpenSettings)
         TextTransparency = 1,
         Parent = window.profilePanelSurface,
     }, { TextColor3 = "TitlingColor", FontFace = "Font" })
+
+    local function label(name, text, position, size, textSize, color)
+        return window:Create("TextLabel", {
+            Name = name,
+            Text = text,
+            Position = position,
+            Size = size,
+            BackgroundTransparency = 1,
+            TextSize = textSize or 13,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Center,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            Parent = window.profilePanelSurface,
+        }, { TextColor3 = color or "ContentColor", FontFace = "Font" })
+    end
+
+    local function rule(y)
+        window:Create("Frame", {
+            Name = "Divider",
+            Position = UDim2.new(0, paddingX, 0, y),
+            Size = UDim2.new(1, -paddingX * 2, 0, 1),
+            BorderSizePixel = 0,
+            Parent = window.profilePanelSurface,
+        }, { BackgroundColor3 = "ElementStroke" })
+    end
+
+    rule(176)
+    label("DetailsHeading", "◈  ACCOUNT DETAILS", UDim2.fromOffset(paddingX, 190), UDim2.new(1, -paddingX * 2, 0, 20), 12, "ActionColor")
+    label("UserId", "▣  User ID", UDim2.fromOffset(paddingX, 218), UDim2.new(1, -paddingX * 2, 0, 18), 13)
+    local userId = label("UserIdValue", if player then tostring(player.UserId) else "—", UDim2.fromOffset(paddingX + 22, 237), UDim2.new(1, -paddingX * 2 - 48, 0, 20), 14, "TitlingColor")
+    local copy = window:Create("TextButton", {
+        Name = "CopyUserId", Text = "COPY", Position = UDim2.new(1, -paddingX - 44, 0, 238),
+        Size = UDim2.fromOffset(44, 18), BackgroundTransparency = 1, BorderSizePixel = 0,
+        TextSize = 10, Parent = window.profilePanelSurface,
+    }, { TextColor3 = "ActionColor", FontFace = "Font" })
+    window:Connect(copy.Activated, function()
+        if setclipboard and player then setclipboard(tostring(player.UserId)) end
+    end)
+    label("JoinDate", "◷  Join date", UDim2.fromOffset(paddingX, 267), UDim2.new(1, -paddingX * 2, 0, 18), 13)
+    label("JoinDateValue", if player then ("Account age: " .. tostring(player.AccountAge) .. " days") else "—", UDim2.fromOffset(paddingX + 22, 286), UDim2.new(1, -paddingX * 2, 0, 20), 14, "TitlingColor")
+    label("SocialStats", "♟  Friends     —        Followers     —", UDim2.fromOffset(paddingX, 320), UDim2.new(1, -paddingX * 2, 0, 22), 13, "PlaceholderColor")
+    rule(354)
+    label("GameHeading", "▣  CURRENT GAME", UDim2.fromOffset(paddingX, 368), UDim2.new(1, -paddingX * 2, 0, 20), 12, "ActionColor")
+    local gameCard = window:Create("Frame", {
+        Name = "CurrentGame", Position = UDim2.fromOffset(paddingX, 396), Size = UDim2.new(1, -paddingX * 2, 0, 82),
+        BorderSizePixel = 0, Parent = window.profilePanelSurface,
+    }, { BackgroundColor3 = "ContentColor" })
+    window:Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = gameCard })
+    label("GameName", game.Name, UDim2.fromOffset(paddingX + 12, 407), UDim2.new(1, -paddingX * 2 - 24, 0, 20), 14, "TitlingColor")
+    label("GameBy", "by Astra player  •  Place ID: " .. tostring(game.PlaceId), UDim2.fromOffset(paddingX + 12, 430), UDim2.new(1, -paddingX * 2 - 24, 0, 18), 11)
+    label("PlayingTime", "◷  Playing now", UDim2.fromOffset(paddingX + 12, 452), UDim2.new(1, -paddingX * 2 - 24, 0, 18), 11, "ActionColor")
+
+    label("PremiumBadge", "PREMIUM", UDim2.new(0.5, -42, 0, contentMinTop + avatarSize + nameGap + nameHeight + subGap + subHeight + 6), UDim2.fromOffset(84, 18), 10, "AccentColor")
 
     window.profileGear = window:Create("TextButton", {
         Name = "OpenSettings",
@@ -415,8 +477,9 @@ function profilePanel.setSubtitle(window, text)
     end
 
     local resolved = if type(text) == "string" and text ~= "" then locale.resolve(text) else nil
-    subtitle.Text = resolved or ""
-    subtitle.Visible = resolved ~= nil
+    local username = if state.localPlayer then "@" .. state.localPlayer.Name else ""
+    subtitle.Text = resolved or username
+    subtitle.Visible = subtitle.Text ~= ""
 end
 
 function profilePanel.refreshName(window)
