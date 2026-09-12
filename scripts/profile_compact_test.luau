@@ -78,6 +78,7 @@ player.UserId = USER_ID
 game.PlaceId = PLACE_ID
 game.Name = "Test Place"
 game.GameId = 123456
+game.JobId = "astra-compact-server"
 
 local function findSettingsElement(targetWindow, tabName, elementName)
 	for _, tab in targetWindow._settingsTabs do
@@ -137,7 +138,8 @@ local function assertMasked(targetWindow, message)
 	eq(targetWindow.profileSubtitle.Text, "@Tes****", message .. ": username masked")
 	eq(targetWindow.profileUserIdValue.Text, MASKED_ID, message .. ": user ID masked")
 	eq(targetWindow.profileCopyUserId.Visible, false, message .. ": COPY hidden while the user ID is masked")
-	eq(targetWindow.profilePlaceId.Text, "Place ID: " .. MASKED_ID, message .. ": place ID masked")
+	eq(targetWindow.profilePlaceId.Text, MASKED_ID, message .. ": place ID masked")
+	eq(targetWindow.profileServerIdValue.Text, MASKED_ID, message .. ": server ID masked")
 end
 
 -- Absolute on-screen edges of the window and the card, from their UDim2s
@@ -239,14 +241,32 @@ expect(gameCard ~= nil, "D3 the current game card exists")
 expect(findChild(gameCard, "GameThumbnail") ~= nil, "D3 the game thumbnail exists")
 expect(findChild(panel, "GameName") ~= nil, "D3 the game name exists")
 expect(window.profilePlaceId ~= nil, "D3 the place ID exists")
+expect(findChild(panel, "ACCOUNT") ~= nil, "D3 the ACCOUNT section label exists")
+expect(findChild(panel, "AccountCard") ~= nil, "D3 the account container exists")
+expect(findChild(panel, "CURRENT GAME") ~= nil, "D3 the CURRENT GAME section label exists")
+expect(findChild(panel, "SERVER") ~= nil, "D3 the SERVER section label exists")
+expect(findChild(panel, "ServerCard") ~= nil, "D3 the server container exists")
+expect(findChild(panel, "USER SESSION") ~= nil, "D3 the USER SESSION section label exists")
+expect(findChild(panel, "SessionCard") ~= nil, "D3 the session container exists")
+expect(findChild(panel, "KeyValue") ~= nil, "D3 the license key row exists")
+expect(findChild(panel, "WhitelistValue") ~= nil, "D3 the whitelist row exists")
+expect(findChild(panel, "PlayersValue") ~= nil, "D3 the players row exists")
+expect(findChild(panel, "UptimeValue") ~= nil, "D3 the server uptime row exists")
+expect(findChild(panel, "ServerIdValue") ~= nil, "D3 the server ID row exists")
+expect(findChild(panel, "SessionValue") ~= nil, "D3 the time-in-server row exists")
 expect(window.profileGear ~= nil, "D3 the settings gear exists")
 expect(window.profileGearIcon ~= nil, "D3 the settings gear icon exists")
 eq(findChild(panel, "GameName").Text, "Test Place", "D3 the game name carries the live game data")
-eq(window.profilePlaceId.Text, "Place ID: " .. MASKED_ID, "D3 the place ID carries the live place data (masked)")
+eq(window.profilePlaceId.Text, MASKED_ID, "D3 the place ID carries the live place data (masked)")
 
 -- ===== D4: no clipping, no overlap =====
 
 local function assertFits(inst, parentW, parentH, path)
+	-- [[Children of a ScrollingFrame are the scroll canvas: they may extend
+	-- [[past the frame vertically (that is what scrolling is for). Everything
+	-- [[else - including every horizontal edge - must stay inside its parent,
+	-- [[so nothing spills out of the card or forces sideways scrolling.]]
+	local relaxedVertically = inst.ClassName == "ScrollingFrame"
 	for _, child in inst:GetChildren() do
 		if child:IsA("GuiObject") then
 			local w = child.Size.X.Scale * parentW + child.Size.X.Offset
@@ -256,11 +276,15 @@ local function assertFits(inst, parentW, parentH, path)
 			local x0 = child.Position.X.Scale * parentW + child.Position.X.Offset - ax * w
 			local y0 = child.Position.Y.Scale * parentH + child.Position.Y.Offset - ay * h
 			expect(
-				x0 >= -1e-3 and y0 >= -1e-3 and x0 + w <= parentW + 1e-3 and y0 + h <= parentH + 1e-3,
+				x0 >= -1e-3 and x0 + w <= parentW + 1e-3,
 				"D4 " .. path .. "." .. child.Name .. " (" .. tostring(x0) .. ".." .. tostring(x0 + w) .. " x "
-					.. tostring(y0)
-					.. ".."
-					.. tostring(y0 + h)
+					.. tostring(y0) .. ".." .. tostring(y0 + h)
+					.. ") fits horizontally inside its " .. parentW .. "x" .. parentH .. " parent"
+			)
+			expect(
+				relaxedVertically or (y0 >= -1e-3 and y0 + h <= parentH + 1e-3),
+				"D4 " .. path .. "." .. child.Name .. " (" .. tostring(x0) .. ".." .. tostring(x0 + w) .. " x "
+					.. tostring(y0) .. ".." .. tostring(y0 + h)
 					.. ") fits inside its " .. parentW .. "x" .. parentH .. " parent"
 			)
 			assertFits(child, w, h, path .. "." .. child.Name)
@@ -329,7 +353,10 @@ eq(revealToggle.value, true, "D6 and its switch stays on")
 eq(window.profileName.Text, "Test User", "D6 the card reveals the display name")
 eq(window.profileSubtitle.Text, "@TestUser", "D6 the card reveals the username")
 eq(window.profileUserIdValue.Text, tostring(USER_ID), "D6 the card reveals the user ID")
-eq(window.profilePlaceId.Text, "Place ID: " .. tostring(PLACE_ID), "D6 the card reveals the place ID")
+eq(window.profilePlaceId.Text, tostring(PLACE_ID), "D6 the card reveals the place ID")
+eq(window.profileServerIdValue.Text, "astra-compact-server", "D6 the card reveals the server ID")
+eq(window.profileKeyValue.Text, "—", "D6 no license key is invented when none was supplied")
+eq(window.profileWhitelistValue.Text, "—", "D6 no whitelist status is invented when none was supplied")
 
 -- Hiding the card takes the active reveal off with it and re-masks everything.
 showProfileToggle:Set(false)

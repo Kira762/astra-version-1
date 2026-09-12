@@ -1727,7 +1727,7 @@ function Window:_buildSettingsUI()
         end,
     })
     revealToggle = appearance:CreateToggle({
-        name = "Reveal profile details", description = "Reveals your display name, username, user ID and place ID on the profile card. Off keeps all four masked. Needs \"Show profile\" to be on.", value = self.settings.showFullUsername,
+        name = "Reveal profile details", description = "Reveals your display name, username, user ID, place ID, server ID and license key on the profile card. Off keeps them all masked. Needs \"Show profile\" to be on.", value = self.settings.showFullUsername,
         callback = function(value)
             -- [[The card carries the values this unmasks, so the switch is]]
             -- [[refused while "Show profile" is off: setReveal keeps the]]
@@ -1824,9 +1824,16 @@ function Window:_buildSettingsContent(tab)
     end
 end
 
-function Window:SetProfile(text)
-    self.profileText = text
-    profilePanel.setSubtitle(self, text)
+-- [[Profile card content owned by the host. Accepts either the legacy
+-- [[subtitle string (nil clears it and falls back to the @username line) or a
+-- [[table carrying the card's host-supplied rows:
+-- [[  window:SetProfile({ subtitle = "…", key = "…", whitelist = { status = "Active", daysLeft = 14 } })
+-- [[Anything not supplied reads "—" on the card; Astra holds no key or
+-- [[whitelist store of its own.]]
+function Window:SetProfile(profile)
+    local data = profilePanel.setProfile(self, profile)
+    self.profileText = data and data.subtitle or nil
+    return self.profileText
 end
 
 function Window:SaveSettings()

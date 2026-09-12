@@ -134,7 +134,17 @@ and locale binding), `window:Connect(signal, fn)` /
 `window:DestroySubtrees(list)`, `window:CreateGlow(parent, color, blurRadius, transparency)`,
 `window:CreateHoverOverlay(parent)`, `window:StyleElementBody(frame)` /
 `window:StyleElementPanel(frame)`, `window:SaveSettings()` /
-`window:LoadSettings()`, `window:SetProfile(text)` (sets the profile card's subtitle; pass `nil` to fall back to the `@username` line).
+`window:LoadSettings()`, `window:SetProfile(profile)` — fills the profile card from real data with nothing invented: pass a string (or `nil`) to set/replace just the subtitle line (legacy behaviour: `nil` falls back to the `@username` line and leaves the host's key/whitelist rows alone), or a table for the whole payload:
+
+```lua
+window:SetProfile({
+    subtitle = "Beta tester",              -- optional, replaces the @username line
+    key = "ASTRA-XXXX-XXXX",               -- optional, masked until "Reveal profile details"
+    whitelist = { status = "Active", daysLeft = 14 },  -- or expiresAt = os.time() + n
+})
+```
+
+Fields you leave out read `—` on the card, and the whole row set stays masked until the window's **Reveal profile details** setting is on (the panel's own values always come from the player and the running server — never from this table).
 
 Popup options: `options = { { text = "Cancel" }, { text = "Confirm", style = "primary" | "danger" | "neutral", callback = fn } }`.
 Popup props: `title`, `subtitle`, `icon`, `content`, `boxes`, `options`, `dismissable`.
@@ -324,15 +334,20 @@ The settings tabs are:
 | Tab | Contents |
 |---|---|
 | **General** | Toggle keybind (show/hide), unlock-cursor toggle, welcome toast toggle. |
-| **Appearance** | Theme dropdown + Apply (popup confirm), Bar Layout dropdown (Default Topbar / Sidebar / Collapsed Sidebar), Show profile / Profile side / Reveal profile details (unmasks the display name, username, user ID and place ID on the profile card, and only works while **Show profile** is on — flipping it on with the card off raises a "Show profile is required" notification and leaves it off, and hiding the card switches it off with it), Keep window on screen (keeps the window **and** its card in view), Draggable capsule, Reset Window Position. |
+| **Appearance** | Theme dropdown + Apply (popup confirm), Bar Layout dropdown (Default Topbar / Sidebar / Collapsed Sidebar), Show profile / Profile side / Reveal profile details (unmasks the display name, username, user ID, place ID, server ID and license key on the profile card, and only works while **Show profile** is on — flipping it on with the card off raises a "Show profile is required" notification and leaves it off, and hiding the card switches it off with it), Keep window on screen (keeps the window **and** its card in view), Draggable capsule, Reset Window Position. |
 | **Behavior** | Prevent duplicate windows. |
 | **Performance** | Haptics. |
 | **Persistence** | Saved-configurations dropdown + name input + Save/Load/Delete. Only present when `configuration` was passed to `CreateWindow`. |
 | **About** | Library info and links. |
 
-The window and its profile card (a compact 240x420 card — the default
+The card's layout (masked and revealed) is checked into
+`assets/profile-panel-preview.png` / `assets/profile-panel-preview-revealed.png`;
+`sh scripts/profile_panel_preview.sh` re-renders them offline from the real
+panel code whenever the card changes.
+
+The window and its profile card (a compact 260x420 card — the default
 window's height) are centred as one unit: with the card on, the window rests
-half a card (126px) off the screen centre on the opposite side of it, so
+half a card (136px) off the screen centre on the opposite side of it, so
 window + 12px gap + card line up in the middle together. That resting
 centre is re-derived on the first show, on every hide/show restore and whenever
 the card's state changes (toggle, side, viewport, a player turning up late), and

@@ -105,10 +105,15 @@ Enum = setmetatable({}, {
 		local cat = enumCategories[category]
 		if not cat then
 			cat = setmetatable({}, {
+				-- [[An Enum category is an Enum, not a table: typeof() below reads
+				-- [[this marker so the library sees the engine's answer.]]
+				__type = "Enum",
 				__index = function(self, item)
 					local entry = rawget(self, item)
 					if not entry then
-						entry = { Name = tostring(item), Category = tostring(category) }
+						entry = setmetatable({ Name = tostring(item), Category = tostring(category) }, {
+							__type = "EnumItem",
+						})
 						rawset(self, item, entry)
 					end
 					return entry
@@ -119,6 +124,21 @@ Enum = setmetatable({}, {
 		return cat
 	end,
 })
+
+-- [[The standalone Luau CLI has no Roblox datatypes, so teach typeof() about
+-- [[the EnumItem marker the table above carries - the same answer the engine
+-- [[gives, which is what the library's EnumItem checks expect.]]
+local rawTypeof = typeof
+function typeof(value)
+	if type(value) == "table" then
+		local mt = getmetatable(value)
+		local marker = mt and rawget(mt, "__type")
+		if marker == "EnumItem" or marker == "Enum" then
+			return marker
+		end
+	end
+	return rawTypeof(value)
+end
 
 -- ===== signals =====
 
@@ -752,11 +772,21 @@ local localPlayer = {
 	Name = "TestUser",
 	UserId = 42,
 	DisplayName = "TestUser",
+	-- [[Membership: the profile card's premium pill reads this. Premium by
+	-- [[default so the pill's layout is testable; tests set it to None to
+	-- [[check it disappears again.]]
+	MembershipType = Enum.MembershipType.Premium,
 	PlayerGui = newInstance("ScreenGui"),
 }
 
 services.Players = {
 	LocalPlayer = localPlayer,
+	-- [[Player capacity/roster: the profile card reads these for its SERVER
+	-- [[section. Tests overwrite them to exercise the "no data" placeholders.]]
+	MaxPlayers = 50,
+	GetPlayers = function()
+		return { localPlayer }
+	end,
 }
 
 services.LocalizationService = {}

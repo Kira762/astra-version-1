@@ -53,6 +53,7 @@ player.DisplayName = "Test User"
 player.UserId = USER_ID
 game.PlaceId = PLACE_ID
 game.Name = "Test Place"
+game.JobId = "astra-reveal-server"
 
 local window = Astra:CreateWindow({ name = "Profile Reveal Test" })
 TestPump(0.6)
@@ -78,7 +79,8 @@ local function assertMasked(message)
 	eq(window.profileSubtitle.Visible, true, message .. ": username row visible")
 	eq(window.profileUserIdValue.Text, MASKED_ID, message .. ": user ID masked")
 	eq(window.profileCopyUserId.Visible, false, message .. ": COPY hidden while the user ID is masked")
-	eq(window.profilePlaceId.Text, "Place ID: " .. MASKED_ID, message .. ": place ID masked")
+	eq(window.profilePlaceId.Text, MASKED_ID, message .. ": place ID masked")
+	eq(window.profileServerIdValue.Text, MASKED_ID, message .. ": server ID masked")
 end
 
 local function assertRevealed(message)
@@ -86,7 +88,8 @@ local function assertRevealed(message)
 	eq(window.profileSubtitle.Text, "@TestUser", message .. ": username revealed")
 	eq(window.profileUserIdValue.Text, tostring(USER_ID), message .. ": user ID revealed")
 	eq(window.profileCopyUserId.Visible, true, message .. ": COPY available once the user ID is revealed")
-	eq(window.profilePlaceId.Text, "Place ID: " .. tostring(PLACE_ID), message .. ": place ID revealed")
+	eq(window.profilePlaceId.Text, tostring(PLACE_ID), message .. ": place ID revealed")
+	eq(window.profileServerIdValue.Text, "astra-reveal-server", message .. ": server ID revealed")
 end
 
 -- P1: the card is on screen by default, with everything masked.
@@ -127,6 +130,35 @@ window:SetProfile(nil)
 TestPump(0.1)
 eq(window.profileSubtitle.Text, "@Tes****", "P4 clearing the custom subtitle restores the masked @username")
 
+-- P8: the card's host-supplied rows (license key, whitelist) follow the same
+-- masking rule as the platform identities and never show invented data. Run on
+-- the first window (P4 just put its subtitle back) because CreateWindow would
+-- replace the active window while `lateWindow` is still under test.
+eq(window.profileKeyValue.Text, "—", "P8 no key is shown before the host supplies one")
+eq(window.profileWhitelistValue.Text, "—", "P8 no whitelist status is shown before the host supplies one")
+local expiresAt = os.time() + 5 * 86400
+window:SetProfile({
+	key = "ASTRA-LICENSE-KEY",
+	whitelist = { status = "Active", expiresAt = expiresAt },
+})
+TestPump(0.2)
+eq(window.profileSubtitle.Text, "@Tes****", "P8 SetProfile without a subtitle keeps the masked @username")
+eq(window.profileKeyValue.Text, "••••••••", "P8 the license key is masked while reveal is off")
+eq(window.profileWhitelistValue.Text, "5 days left", "P8 the whitelist row counts down from its expiry")
+revealToggle:Set(true)
+TestPump(0.2)
+eq(window.profileKeyValue.Text, "ASTRA-LICENSE-KEY", "P8 the reveal unmasks the license key")
+revealToggle:Set(false)
+TestPump(0.2)
+eq(window.profileKeyValue.Text, "••••••••", "P8 turning the reveal off masks the key again")
+window:SetProfile({ whitelist = { status = "Expired", daysLeft = -1 } })
+TestPump(0.2)
+eq(window.profileKeyValue.Text, "—", "P8 clearing the key row falls back to the neutral placeholder")
+eq(window.profileWhitelistValue.Text, "Expired", "P8 an elapsed whitelist reads as expired")
+window:SetProfile({})
+TestPump(0.2)
+
+
 -- P5: regression - the card must appear when the local player turns up after
 -- construction (the path that used to throw on the nil mask helper).
 window:Unload()
@@ -144,7 +176,7 @@ eq(lateWindow.profilePanel.Visible, true, "P5 the card shows once the local play
 eq(lateWindow.profileName.Text, "Tes****", "P5 the late identity refresh masks the display name")
 eq(lateWindow.profileSubtitle.Text, "@Tes****", "P5 the late identity refresh masks the username")
 eq(lateWindow.profileUserIdValue.Text, MASKED_ID, "P5 the late identity refresh masks the user ID")
-eq(lateWindow.profilePlaceId.Text, "Place ID: " .. MASKED_ID, "P5 the late identity refresh masks the place ID")
+eq(lateWindow.profilePlaceId.Text, MASKED_ID, "P5 the late identity refresh masks the place ID")
 
 local lateReveal = findSettingsElement(lateWindow, "Appearance", "Reveal profile details")
 expect(lateReveal ~= nil, "P5 the late window has its own reveal toggle")
@@ -153,7 +185,7 @@ TestPump(0.2)
 eq(lateWindow.profileName.Text, "Test User", "P5 the late window reveals the display name")
 eq(lateWindow.profileSubtitle.Text, "@TestUser", "P5 the late window reveals the username")
 eq(lateWindow.profileUserIdValue.Text, tostring(USER_ID), "P5 the late window reveals the user ID")
-eq(lateWindow.profilePlaceId.Text, "Place ID: " .. tostring(PLACE_ID), "P5 the late window reveals the place ID")
+eq(lateWindow.profilePlaceId.Text, tostring(PLACE_ID), "P5 the late window reveals the place ID")
 
 -- P6: the card also needs room; an active toggle on a cramped viewport says
 -- so instead of silently leaving the user without a card.
@@ -219,7 +251,7 @@ TestPump(0.2)
 eq(lateWindow.settings.showFullUsername, false, "P7 the refused reveal leaves the setting off")
 eq(lateReveal.value, false, "P7 the refused reveal rolls its switch back")
 eq(lateWindow.profileUserIdValue.Text, MASKED_ID, "P7 the refused reveal leaves the user ID masked")
-eq(lateWindow.profilePlaceId.Text, "Place ID: " .. MASKED_ID, "P7 the refused reveal leaves the place ID masked")
+eq(lateWindow.profilePlaceId.Text, MASKED_ID, "P7 the refused reveal leaves the place ID masked")
 expect(
 	hasNotification(lateWindow, "Show profile is required"),
 	"P7 the refused reveal says that Show profile is required"
