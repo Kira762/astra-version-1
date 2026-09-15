@@ -27,97 +27,15 @@ export type TabProps = {
     icon: (string | number)?,
 }
 
-export type SectionProps = {
-    name: string?,
-    icon: (string | number)?,
-}
-
-export type TextProps = {
-    name: string?,     text: string?,     icon: (string | number)?,
-}
-
-export type ChangelogChange = {
-    symbol: string?,
-    text: string?,
-    category: string?,
-}
-
-export type ChangelogEntry = {
-    version: string?,
-    date: string?,
-    game: string?,
-    gameId: string?,
-    title: string?,
-    changes: { ChangelogChange }?,
-}
-
-export type ChangelogProps = {
-    name: string?,
-    emptyText: string?,
-    entries: { ChangelogEntry }?,
-}
-
-export type DividerProps = {
-    text: string?,     spacing: number?,     line: boolean?, }
-
-export type GroupProps = {
-    direction: string?, }
-
--- Definitions use the corresponding element's normal properties plus `type`.
--- `elements` is allowed only for ordinary Groups; CollapsibleGroups cannot nest.
+-- [[The declarative element shape. Input is the library's only element, so it
+-- [[is the only `type` a definition can name.]]
 export type CollapsibleElementProps = {
-    type: "Button" | "Toggle" | "Switch" | "Slider" | "Dropdown" | "Input" | "Keybind"
-        | "Stat" | "Section" | "Text" | "Changelog" | "Divider" | "Group",
-    elements: { CollapsibleElementProps }?,
+    type: "Input",
     [string]: any,
 }
 
-export type CollapsibleGroupProps = {
-    name: string?,
-    icon: (string | number)?,
-    elements: { CollapsibleElementProps }?,
-}
-
-export type ButtonProps = {
-    name: string?,
-    icon: (string | number)?,
-    -- Built-in right-edge tap glyph: false hides it, a name/asset id replaces it.
-    tapIcon: (string | number | boolean)?,
-    callback: (() -> ())?,
-}
-
-export type ToggleProps = {
-    name: string?,
-    icon: (string | number)?,
-    flag: string?,
-    value: boolean?,
-    forgetState: boolean?,
-    callback: ((value: boolean) -> ())?,
-}
-
-export type SliderProps = {
-    name: string?,
-    icon: (string | number)?,
-    flag: string?,
-    range: { number }?,     increment: number?,
-    value: number?,
-    suffix: string?,
-    minimal: boolean?,     forgetState: boolean?,
-        callback: ((value: number, dragging: boolean) -> ())?,
-}
-
-export type DropdownProps = {
-    name: string?,
-    icon: (string | number)?,
-    flag: string?,
-    options: { string }?,
-    value: (string | { string })?,
-    multiSelect: boolean?,
-    placeholder: string?,
-    forgetState: boolean?,
-    callback: ((value: any) -> ())?,
-}
-
+-- [[Input is the only element: its props, its instance type, and the]]
+-- [[`Tab:CreateInput` constructor below are the whole element surface.]]
 export type InputProps = {
     name: string?,
     icon: (string | number)?,
@@ -128,23 +46,6 @@ export type InputProps = {
     clearOnFocus: boolean?,
     forgetState: boolean?,
     callback: ((value: string) -> ())?,
-}
-
-export type KeybindProps = {
-    name: string?,
-    icon: (string | number)?,
-    flag: string?,
-    value: (EnumItem | string)?,     forgetState: boolean?,     editable: boolean?,
-    isMenuToggle: boolean?,     hold: boolean?,     holdThreshold: number?,     callback: ((value: EnumItem | boolean) -> ())?,     onChanged: ((key: EnumItem) -> ())?, }
-
-export type StatProps = {
-    name: string?,
-    icon: (string | number)?,
-    prefix: string?,
-    suffix: string?,
-    value: number?,
-    display: string?,     compact: boolean?,
-    changeMode: string?,     changeBaseline: string?,     numberEasing: boolean?,
 }
 
 export type NotifyProps = {
@@ -191,100 +92,22 @@ export type Lockable = {
     IsLocked: (self: any) -> boolean,
 }
 
-export type Button = Moveable & Lockable & {}
-
-export type Toggle = Moveable & Lockable & {
-    value: boolean,
-    Set: (self: Toggle, value: boolean, skipCallback: boolean?) -> (),
-}
-
-export type Slider = Moveable & Lockable & {
-    value: number,
-    Set: (self: Slider, value: number, skipCallback: boolean?) -> (),
-}
-
-export type Dropdown = Moveable & Lockable & {
-    value: { string },     Set: (self: Dropdown, value: string | { string }, skipCallback: boolean?) -> (),
-    Refresh: (self: Dropdown, options: { string }) -> (),
-    Add: (self: Dropdown, option: string) -> (),
-    Remove: (self: Dropdown, option: string) -> (),
-}
-
 export type Input = Moveable & Lockable & {
     value: string,
     Set: (self: Input, value: string, skipCallback: boolean?) -> (),
-}
-
-export type Keybind = Moveable & Lockable & {
-    value: EnumItem,
-    Set: (self: Keybind, value: EnumItem | string, skipChanged: boolean?) -> (),
-}
-
-export type Stat = Moveable & {
-    value: number,
-    Set: (self: Stat, value: number) -> (),
-    ResetBaseline: (self: Stat, value: number?) -> (),
-}
-
-export type Section = Moveable & {}
-
-export type TabSection = {
-    Remove: (self: TabSection) -> (),
-}
-
-export type Text = Moveable & {
-    name: string,     text: string,     Set: (self: Text, text: string) -> (),
-    SetTitle: (self: Text, title: string) -> (),
-}
-
-export type Changelog = Moveable & {
-    Set: (self: Changelog, entries: { ChangelogEntry }) -> (),
-    Refresh: (self: Changelog, entries: { ChangelogEntry }) -> (),
-    Add: (self: Changelog, entry: ChangelogEntry, prepend: boolean?) -> (),
-    Clear: (self: Changelog) -> (),
-}
-
-export type Divider = Moveable & {
-    text: string,     Set: (self: Divider, text: string?) -> (),
+    -- [[Retype the empty field's hint; the box re-measures against it.]]
+    SetPlaceholder: (self: Input, placeholder: string) -> (),
 }
 
 export type Popup = {
     Close: (self: Popup) -> (),
 }
 
-export type Group = Moveable & {
-    CreateButton: (self: Group, props: ButtonProps) -> Button,
-    CreateToggle: (self: Group, props: ToggleProps) -> Toggle,
-    CreateStat: (self: Group, props: StatProps) -> Stat,
-    CreateSlider: (self: Group, props: SliderProps) -> Slider,
-        CreateDropdown: (self: Group, props: DropdownProps) -> Dropdown?,
-    CreateSection: (self: Group, props: SectionProps) -> Section?,
-    CreateText: (self: Group, props: TextProps) -> Text?,
-    CreateDivider: (self: Group, props: DividerProps?) -> Divider?,
-    CreateGroup: (self: Group, props: GroupProps?) -> Group,
-}
-
-export type CollapsibleGroup = Moveable & Lockable & {
-    elements: { any },
-}
-
 export type Tab = {
-    CreateCollapsibleGroup: (self: Tab, props: CollapsibleGroupProps) -> CollapsibleGroup,
     Select: (self: Tab, noAnimation: boolean?) -> (),
     Deselect: (self: Tab, noAnimation: boolean?) -> (),
     Remove: (self: Tab) -> (),
-    CreateButton: (self: Tab, props: ButtonProps) -> Button,
-    CreateToggle: (self: Tab, props: ToggleProps) -> Toggle,
-    CreateSlider: (self: Tab, props: SliderProps) -> Slider,
-    CreateDropdown: (self: Tab, props: DropdownProps) -> Dropdown,
     CreateInput: (self: Tab, props: InputProps) -> Input,
-    CreateKeybind: (self: Tab, props: KeybindProps) -> Keybind,
-    CreateStat: (self: Tab, props: StatProps) -> Stat,
-    CreateSection: (self: Tab, props: SectionProps) -> Section,
-    CreateText: (self: Tab, props: TextProps) -> Text,
-    CreateChangelog: (self: Tab, props: ChangelogProps) -> Changelog,
-    CreateDivider: (self: Tab, props: DividerProps?) -> Divider,
-    CreateGroup: (self: Tab, props: GroupProps?) -> Group,
 }
 
 export type Window = {
@@ -292,7 +115,6 @@ export type Window = {
     ResolveIcon: (self: Window, value: (string | number)?, pack: IconPack?) -> (string | number)?,
     Flags: { [string]: any },
     CreateTab: (self: Window, props: TabProps) -> Tab,
-        CreateSection: (self: Window, props: SectionProps) -> TabSection,
     Notify: (self: Window, props: NotifyProps) -> (),
     Toast: (self: Window, props: ToastProps) -> (),
     Popup: (self: Window, props: PopupProps) -> Popup?,     Show: (self: Window) -> (),

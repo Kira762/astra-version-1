@@ -174,7 +174,6 @@ function Window.new(props)
         themeProperties = {},
         localeProperties = {},
         tabs = {},
-        tabSections = {},
         selectedTab = nil,
         _settingsLayoutActive = false,
         _settingsTabs = {},
@@ -832,31 +831,6 @@ function Window:CreateTab(props)
     return tab
 end
 
-function Window:CreateSection(props)
-    assert(not self.unloaded, "Cannot create a section on an unloaded window.")
-    local section = require(script.Parent.Parent.elements.tabSection).new(self, props)
-    table.insert(self.tabSections, section)
-
-            if not section.inert and not self.hidden and not self.minimised then
-        section:_setVisible(true)
-        section:_setShown(true, false)
-    end
-
-    return section
-end
-
-function Window:_setTabSectionsShown(shown, tweenInfo)
-    for _, section in self.tabSections do
-        section:_setShown(shown, tweenInfo)
-    end
-end
-
-function Window:_setTabSectionsVisible(visible)
-    for _, section in self.tabSections do
-        section:_setVisible(visible)
-    end
-end
-
 function Window:_registerControl(element)
     if not element.flag or element.flag == "" or element.forgetState then
         return
@@ -904,29 +878,6 @@ function Window:_unregisterControl(element)
     if element.flag and self.controls[element.flag] == element then
         self.controls[element.flag] = nil
     end
-end
-
-function Window:_keybindUsing(keybind, source)
-    if typeof(keybind) ~= "EnumItem" or keybind == Enum.KeyCode.Unknown then
-        return nil
-    end
-    local function find(elements)
-        for _, element in ipairs(elements) do
-            if element ~= source and element.__type == "Keybind" and element.value == keybind then
-                return element
-            end
-            if element.elements then
-                local match = find(element.elements)
-                if match then return match end
-            end
-        end
-        return nil
-    end
-    for _, tab in self.tabs do
-        local match = find(tab.elements)
-        if match then return match end
-    end
-    return nil
 end
 
 function Window:_copyOverlayProps(props)
@@ -1140,10 +1091,6 @@ function Window:Hide()
         search.close(self, { showTabs = false, jumpTo = self.selectedTab and self.selectedTab.tabPage })
     end
 
-            if self._recordingKeybind then
-        self._recordingKeybind:_stopRecording()
-    end
-
     self.animating = true
     self._revealing = true
     self.hidden = true
@@ -1199,7 +1146,6 @@ function Window:Hide()
             tab:_applyVisual("hidden", hideTween)
         end
     end
-    self:_setTabSectionsShown(false, hideTween)
 
     self:_fadeSelectedElementsOut()
 
@@ -1301,8 +1247,6 @@ function Window:ToggleMinimise()
             end
             -- [[Restore the settings/normal rail split; the loop above shows all tabs.]]
             self:_applySettingsLayout(self._settingsMode)
-            self:_setTabSectionsVisible(true)
-            self:_setTabSectionsShown(true, surfaceTween)
 
             self:_revealElements(0.035, 0.4)
         end)
@@ -1320,7 +1264,6 @@ function Window:ToggleMinimise()
                 tab:_applyVisual("hidden", surfaceTween)
             end
         end
-        self:_setTabSectionsShown(false, surfaceTween)
 
         task.delay(0.3, function()
             if self.unloaded or not self.minimised then
@@ -1331,7 +1274,6 @@ function Window:ToggleMinimise()
                     tab.topbarItem.Visible = false
                 end
             end
-            self:_setTabSectionsVisible(false)
         end)
 
         self:_fadeSurfaces(false, surfaceTween)	chrome.setCollapsedShown(self, true, surfaceTween)
@@ -1600,7 +1542,7 @@ end
 
 function Window:_bindKeybind()
     self:Connect(state.userInputService.InputBegan, function(input, gameProcessed)
-        if gameProcessed or self._recordingKeybind then
+        if gameProcessed then
             return         end
         if input.KeyCode == self.settings.toggleKeybind or input.UserInputType == self.settings.toggleKeybind then
             self:ToggleHide()
@@ -2124,7 +2066,6 @@ function Window:_setLayoutMode(modeName)
         self.selectedTab:_applyVisual("selected")
     end
     self:_fadeSurfaces(true, tweenInfo)
-    self:_setTabSectionsShown(true, tweenInfo)
     task.spawn(function()
         if not self.unloaded and self._layoutTransitionId == transitionId then
             self:_revealElements(0.02, 0.5, transitionId)
@@ -2369,8 +2310,6 @@ function Window:_quickRestore()
     self.main.BackgroundTransparency = windowSurfaceTransparency
     self.topbar.Visible = true
     self:_setContentVisible(true)
-    self:_setTabSectionsVisible(true)
-    self:_setTabSectionsShown(true)
     -- [[Same two-beat structure as the first show, on the shorter restore
     -- [[timing: the card comes back first and the page follows it, instead of
     -- [[every control on the page being rewritten on the frame the restore
@@ -2469,8 +2408,6 @@ function Window:_firstShow()
     self._contentEntranceId = (self._contentEntranceId or 0) + 1
     local entranceId = self._contentEntranceId
     self:_setContentVisible(true)
-    self:_setTabSectionsVisible(true)
-    self:_setTabSectionsShown(true)
     for _, tab in pairs(self.tabs) do
         if not tab.neglectSelector and tab.topbarItem then
             tab.topbarItem.Visible = true
@@ -2777,7 +2714,11 @@ function Window:_flashResult(element, ok)
         element._flashToken = (element._flashToken or 0) + 1
     local token = element._flashToken
     task.delay(0.22, function()
-        if element._flashToken ~= token then
+        -- [[The restore lands a fifth of a second later, so it has to check that
+        -- [[there is still something to restore: a window unloaded (or an element
+        -- [[removed) between the flash and this callback would otherwise write a
+        -- [[property on a destroyed instance.]]
+        if self.unloaded or element._flashToken ~= token or not box.Parent then
             return
         end
         motion.tween(box, { BackgroundColor3 = self.theme.FieldBackground }, restoreTween)

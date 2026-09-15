@@ -2,6 +2,90 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-15 — Astra is now an Input-only library
+
+Every element but `Input` is gone, and the field box now sizes itself from the
+text it shows. The library keeps its window, tabs, themes, icons, motion,
+localisation, persistence, search, profile card and overlay stack — the element
+surface is one card with a text field in it.
+
+### Removed
+
+- **Elements:** `button`, `toggle`, `slider`, `dropdown`, `keybind`, `stat`,
+  `section`, `text`, `changelog`, `divider`, `group`, `collapsibleGroup` and
+  `tabSection`. `elements/` keeps `input.luau`, `tab.luau` and the two card
+  helpers it is built from (`baseCard.luau`, `description.luau`).
+- **Constructors:** `Tab` exposes `CreateInput` and nothing else; the
+  `Window:CreateSection` top-level section (and its `tabSections` show/visible
+  plumbing) went with `tabSection.luau`.
+- **Types:** `Types.luau` keeps `InputProps` and `Input` as its only element
+  types (`CollapsibleElementProps.type` is `"Input"`), and
+  `library_entrypoint.luau` exports only those two element names. The
+  entrypoint's export block also gained the `local types = require(script.Parent.Types)`
+  it had always been missing — every `types.X` in it read an undefined symbol.
+- **Dead plumbing:** `Window:_keybindUsing`, the `_recordingKeybind` guards,
+  the tab teardown branches for drag connections and dropdown outside-click
+  connections, the search overlay's group/section traversal, and
+  `utilities/odometer.luau` (only the stat readout animated through it).
+- **Suites for removed elements:** `button_click`, `toggle_switch`,
+  `slider_travel`, `dropdown_rows`, `dropdown_actions`, `keybind_input`,
+  `odometer` and `collapsible_group`.
+
+### The field sizes itself
+
+`Input:_sizeBox` was already measuring the right thing — the typed text, or the
+placeholder while the field is empty — but it only ran at construction and while
+typing, and its ceiling was a baked 220px.
+
+- **`SetPlaceholder(text)`** retypes the hint at runtime. It writes through
+  `Window:_bindLocale`, so the new placeholder is translated by the next
+  `SetLocale` exactly like the one the element was built with, and it
+  re-measures the box.
+- **Every trigger that can change the measurement re-measures:** the `Text`
+  signal, the `PlaceholderText` signal (which is what a locale switch writes),
+  the page's `AbsoluteSize` signal, and `_refreshTheme` — the measuring font is
+  a theme token, so a new theme can measure the same text differently.
+- **The ceiling is responsive:** `min(220, 55% of the page width)`, floored at
+  the 70px minimum so the clamp stays valid on a page that has not been laid out
+  yet. A phone-width page caps a long hint instead of letting it run under the
+  title.
+- **An unchanged width costs nothing.** Both the box and the title row's width
+  are pure functions of the measurement, so `_sizeBox` compares and returns
+  before writing: a re-measure that lands on the same number creates no tween.
+- **Fixed while in there:** a value that committed within 0.22s of
+  `Window:Unload` left the result flash's delayed restore tween to fire on a
+  destroyed field box (`The property 'BackgroundColor3' cannot be assigned to
+  because the instance has been destroyed`). The restore now checks
+  `self.unloaded`, its flash token and `box.Parent` first.
+
+### Built-in settings, typed
+
+The settings panel was built from toggles, dropdowns, buttons and text elements
+inside collapsible groups, none of which exist now. It is rebuilt from inputs:
+each setting is a field whose box shows the value that is active, and committing
+new text applies it. Switches read `On`/`Off` (and accept `true`/`false`,
+`yes`/`no`, `1`/`0`, `enabled`/`disabled`), choices accept their label or their
+key, the Toggle Keybind parses a key name, and Reset Positions takes `window`,
+`capsule` or `both`. A value a setting cannot honour snaps the field back to
+what is active and says why in a notification, so the panel never displays
+something the window is not using. Theme and Bar Layout still confirm through a
+popup, the profile reveal dependency still rolls the reveal field back when the
+card hides, and Persistence keeps its config list, name field and
+save/load/delete (now a typed action, plus `list`).
+
+### Verification
+
+`scripts/input_field_test.sh` gained the sizing suite (S1–S8): placeholder
+widths, the 70px floor, typed text taking over, clearing handing the width back,
+`SetPlaceholder`, the 220px ceiling, a locale switch re-measuring the translated
+hint, and the responsive cap on a 360px-wide page. `instance_budget_test` pins
+the input's 18-instance ceiling and an 18-instance one-field page (it uses 13);
+`inline_description_test`, `description_geometry_probe`, `config_preferences_test`
+and `capsule_reset_test` were rewritten around inputs, and the remaining suites
+now build inputs where they used to build the deleted elements. All 21 runtime
+suites pass, `check_requires.py` and `check_instance_fields.py` are clean, and
+the bundle is regenerated (88 modules, from 102).
+
 ## 2026-09-15 — Buttons stopped crashing on the first click
 
 Reported from the field as `attempt to index nil with 'spec'`, pointing at the

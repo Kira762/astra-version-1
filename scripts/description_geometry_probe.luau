@@ -119,28 +119,17 @@ TestPump(0.6)
 local tab = window:CreateTab({ name = "Controls" })
 local more = window:CreateTab({ name = "More" })
 
+-- [[Input is the library's only element, so the probe dumps the same card in]]
+-- [[the shapes its description line can take: described, undescribed, wrapped,]]
+-- [[iconified, and sized by a typed value rather than by its hint.]]
 local elements = {
-	{ "toggle", "Notifications", tab:CreateToggle({ name = "Notifications", description = "Ping me.", value = true }) },
-	{ "button", "Run routine", tab:CreateButton({ name = "Run routine", description = "Starts the routine.", callback = function() end }) },
-	{ "slider", "Volume", tab:CreateSlider({ name = "Volume", range = { 0, 100 }, value = 40, description = "Master level." }) },
-	{ "minimal", "Sensitivity", tab:CreateSlider({ name = "Sensitivity", range = { 0, 100 }, value = 40, minimal = true, description = "Narrow cards keep the line." }) },
-	{ "dropdown", "Quality", tab:CreateDropdown({ name = "Quality", description = "Applies instantly.", options = { "Low", "High" }, value = "Low" }) },
 	{ "input", "Display name", tab:CreateInput({ name = "Display name", description = "Shown to friends.", placeholder = "Enter a name" }) },
-	{ "keybind", "Push to talk", tab:CreateKeybind({ name = "Push to talk", description = "One letter only.", value = Enum.KeyCode.T }) },
-	{ "stat", "Frames", tab:CreateStat({ name = "Frames", value = 240, description = "Per second." }) },
-	{ "toggle", "No description", tab:CreateToggle({ name = "No description" }) },
-	{ "keybind", "Wrapped hint", more:CreateKeybind({ name = "Wrapped hint", description = "Type one letter. Extra characters are removed automatically, which makes this line wrap.", value = Enum.KeyCode.Y }) },
-	{ "group", "Player Preferences", more:CreateCollapsibleGroup({ name = "Player Preferences", description = "Click to expand. Closing keeps the values active.", elements = {} }) },
-	{
-		"grouped",
-		"Grouped control",
-		more:CreateCollapsibleGroup({
-			name = "Grouped children",
-			elements = {
-				{ type = "Toggle", name = "Grouped toggle", description = "Grouped line.", value = false },
-			},
-		}).elements[1],
-	},
+	{ "short", "Short hint", tab:CreateInput({ name = "Short hint", description = "Narrow field.", placeholder = "Name" }) },
+	{ "typed", "Typed text", tab:CreateInput({ name = "Typed text", description = "The value, not the hint, sizes the box.", placeholder = "hi", value = "a value much wider than its hint" }) },
+	{ "numeric", "Numeric", tab:CreateInput({ name = "Numeric", description = "Digits and the exponent form only.", placeholder = "0.5", numeric = true }) },
+	{ "undescribed", "No description", tab:CreateInput({ name = "No description", placeholder = "Nothing to measure" }) },
+	{ "wrapped", "Wrapped hint", more:CreateInput({ name = "Wrapped hint", description = "Type one letter. Extra characters are removed automatically, which makes this line wrap.", placeholder = "Type one letter" }) },
+	{ "icon", "Iconic", more:CreateInput({ name = "Iconic", icon = "user-round", description = "An icon rides in the title row.", placeholder = "Name" }) },
 }
 window:Show()
 TestPump(0.8)

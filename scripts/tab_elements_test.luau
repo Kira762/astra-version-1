@@ -100,7 +100,7 @@ for index = 1, 4 do
 	local tab = window:CreateTab({ name = "Tab " .. index })
 	tabs[index] = tab
 	for sub = 1, 5 do
-		tab:CreateButton({ name = ("T%d B%d"):format(index, sub), callback = function() end })
+		tab:CreateInput({ name = ("T%d B%d"):format(index, sub) })
 	end
 end
 instrument()
@@ -176,7 +176,7 @@ tabs[1]:Select()
 TestPump(0.4)
 window:Hide()
 TestPump(0.8)
-local late = tabs[3]:CreateButton({ name = "Late", callback = function() end })
+local late = tabs[3]:CreateInput({ name = "Late" })
 instrument()
 TestPump(0.3)
 eq(tabs[3]._elementsPending, true, "E5 a tab that gains an element while hidden waits")

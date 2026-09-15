@@ -12,31 +12,18 @@ local name = require(script.Parent.Parent.components.search)
 local icon = require(script.Parent.Parent.components.tabSelector)
 local flagNames = require(script.Parent.Parent.functions.flagNames)
 
-local function customOrder(window, forgetState)
-    for _, element in forgetState do
-        if element.__type == "Group" or element.__type == "CollapsibleGroup" then
-            customOrder(window, element.elements)
-        else
-            window:_unregisterControl(element)
-        end
+-- [[Drop every element this tab owns: unregister its flag, then release the
+-- [[signal connections it booked with the window (Window:ConnectFor keeps them
+-- [[on the element, so a removed tab cannot leave a live callback behind).]]
+local function teardownElements(window, elements)
+    for _, element in elements do
+        window:_unregisterControl(element)
 
-                if element.connections then
-            for _, neglectSelector in element.connections do
-                window:Disconnect(neglectSelector)
+        if element.connections then
+            for _, connection in element.connections do
+                window:Disconnect(connection)
             end
             element.connections = nil
-        end
-
-                if element._dragConnection then
-            element._dragConnection:Disconnect()
-            element._dragConnection = nil
-        end
-                        if window._recordingKeybind == element then
-            window._recordingKeybind = nil
-        end
-        if element._outsideClickConn then
-            window:Disconnect(element._outsideClickConn)
-            element._outsideClickConn = nil
         end
     end
 end
@@ -263,57 +250,10 @@ function state:_register(element)
     return element
 end
 
-function state:CreateButton(a27)
-    return self:_register(require(script.Parent.button).new(self, a27))
-end
-
-function state:CreateToggle(a28)
-    return self:_register(require(script.Parent.toggle).new(self, a28))
-end
-
-
-function state:CreateSection(a30)
-    return self:_register(require(script.Parent.section).new(self, a30))
-end
-
-function state:CreateText(a31)
-    return self:_register(require(script.Parent.text).new(self, a31))
-end
-
-function state:CreateChangelog(a32)
-    return self:_register(require(script.Parent.changelog).new(self, a32))
-end
-
-function state:CreateDivider(a32)
-    return self:_register(require(script.Parent.divider).new(self, a32))
-end
-
-function state:CreateStat(a35)
-    return self:_register(require(script.Parent.stat).new(self, a35))
-end
-
-function state:CreateSlider(a36)
-    return self:_register(require(script.Parent.slider).new(self, a36))
-end
-
-function state:CreateDropdown(a37)
-    return self:_register(require(script.Parent.dropdown).new(self, a37))
-end
-
-function state:CreateInput(a38)
-    return self:_register(require(script.Parent.input).new(self, a38))
-end
-
-function state:CreateKeybind(a39)
-    return self:_register(require(script.Parent.keybind).new(self, a39))
-end
-
-function state:CreateCollapsibleGroup(props)
-    return self:_register(require(script.Parent.collapsibleGroup).new(self, props))
-end
-
-function state:CreateGroup(a41)
-    return self:_register(require(script.Parent.group).new(self, a41))
+-- [[Input is the only element the library builds: a tab page holds inputs and
+-- [[nothing else, so this is the whole element surface.]]
+function state:CreateInput(inputProps)
+    return self:_register(require(script.Parent.input).new(self, inputProps))
 end
 
 function state:_moveElement(element, a42)
@@ -360,7 +300,7 @@ function state:Remove()
         end
     end
 
-            customOrder(window, self.elements)
+    teardownElements(window, self.elements)
 
             for _, a45 in self.connections do
         window:Disconnect(a45)

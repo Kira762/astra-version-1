@@ -215,20 +215,20 @@ eq(manager:set("motionSpeed", "not-a-profile"), false, "M8 the settings manager 
 -- ===== M9: element hover runs through the service =====
 
 local tab = window:CreateTab({ name = "Motion" })
-local button = tab:CreateButton({ name = "Test", callback = function() end })
+local input = tab:CreateInput({ name = "Test", callback = function() end })
 TestPump(0.2)
 
 motion.setProfile("normal")
 created, cancelled = 0, 0
-button.main.MouseEnter:Fire()
+input.main.MouseEnter:Fire()
 expect(created > 0, "M9 a hover animates through the motion service")
 local beforeLeave = cancelled
-button.main.MouseLeave:Fire()
+input.main.MouseLeave:Fire()
 expect(cancelled > beforeLeave, "M9 a hover leave cancels the enter tween on the same property")
 
 motion.setProfile("instant")
 created = 0
-button.main.MouseEnter:Fire()
+input.main.MouseEnter:Fire()
 eq(created, 0, "M9 with animation off a hover creates no tween")
 
 motion.setProfile("normal")

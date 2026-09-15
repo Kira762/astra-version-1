@@ -9,9 +9,9 @@
 -- the whole tree to borderless surfaces.
 --
 --   C1 the window's main frame explicitly opts out of the border,
---   C2 after a full exercise (first show, elements, toast, settings mode,
---      profile card, dropdown, popup, collapse and restore) no visible
---      surface anywhere in the ScreenGui carries a non-zero border,
+--   C2 after a full exercise (first show, inputs, toast, settings mode,
+--      profile card, popup, collapse and restore) no visible surface anywhere
+--      in the ScreenGui carries a non-zero border,
 --   C3 the window's corner radius is the theme's CornerRoundness (the
 --      "original rounded corners" the border used to cross).
 
@@ -43,20 +43,19 @@ TestPump(1.0)
 -- C1: the shell itself is borderless.
 expect(window.main.BorderSizePixel == 0, "C1 the window's main frame carries BorderSizePixel = 0")
 
--- Exercise every lazily-built surface so the audit below sees them.
-tab:CreateDropdown({ name = "Options", options = { "One", "Two", "Three" } })
+-- Exercise every lazily-built surface so the audit below sees them: the field
+-- box, its stroke, its glow and the described card are all input surfaces.
 tab:CreateInput({ name = "Field", value = "value" })
-tab:CreateKeybind({ name = "Key", value = Enum.KeyCode.P })
-tab:CreateButton({ name = "Button", callback = function() end })
+tab:CreateInput({ name = "Described field", placeholder = "Type here", description = "A described card." })
+tab:CreateInput({ name = "Numeric field", placeholder = "0.5", numeric = true })
 TestPump(0.8)
 
 window:Toast({ title = "Corner audit", subtitle = "toast body" })
 TestPump(0.8)
 
+-- [[The field glow is built on first hover, so the audit has to see it.]]
 for _, element in tab.elements do
-	if element.__type == "Dropdown" then
-		pcall(function() element:_open() end)
-	end
+	pcall(function() element:_fieldGlow() end)
 end
 TestPump(0.8)
 

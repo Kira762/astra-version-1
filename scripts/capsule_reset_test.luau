@@ -8,22 +8,18 @@ end
 assert(general, "General tab exists")
 general:Select()
 TestPump(0.6)
+-- [[Input is the library's only element, so the reset actions are typed into]]
+-- [[one field: "window", "capsule" or "both".]]
 local reset
-local function scan(elements)
-    for index, control in elements do
-        if control.name == "Reset Capsule Position" then
-            reset = control
-            assert(elements[index - 1].name == "Reset Window Position", "Reset actions are adjacent")
-            return
-        end
-        if control.elements then
-            scan(control.elements)
-            if reset then return end
-        end
+for _, control in general.elements do
+    if control.name == "Reset Positions" then
+        reset = control
     end
 end
-scan(general.elements)
-assert(reset and reset.__type == "Button", "Capsule reset is a settings button")
+assert(reset and reset.__type == "Input", "Capsule reset is a typed settings field")
+local function resetCapsule()
+    reset:Set("capsule")
+end
 local function samePosition(actual, expected)
     assert(actual.X.Scale == expected.X.Scale and actual.X.Offset == expected.X.Offset
         and actual.Y.Scale == expected.Y.Scale and actual.Y.Offset == expected.Y.Offset, "Position mismatch")
@@ -33,7 +29,7 @@ for _, iconOnly in { false, true } do
     window.main.Position = UDim2.fromOffset(400, 300)
     window._restorePosition = UDim2.fromOffset(400, 300)
     window._collapsedPosition = UDim2.fromOffset(750, 400)
-    reset.callback()
+    resetCapsule()
     TestPump(0.6)
     assert(window._collapsedPosition == nil, "Reset clears the capsule drag override")
     samePosition(window.main.Position, UDim2.fromOffset(400, 300))
@@ -46,10 +42,10 @@ for _, iconOnly in { false, true } do
     -- Also safe if invoked programmatically while the capsule is already visible.
     window.main.Position = UDim2.fromOffset(900, 450)
     window._collapsedPosition = window.main.Position
-    reset.callback()
+    resetCapsule()
     TestPump(0.6)
     samePosition(window.main.Position, defaultPosition)
-    reset.callback()
+    resetCapsule()
     TestPump(0.6)
     samePosition(window.main.Position, defaultPosition)
     window:Show()

@@ -311,12 +311,14 @@ expect(
 	"T9c opening settings builds General's lazy content (got " .. tostring(#window.rfSettings.elements) .. " elements)"
 )
 
--- T9d: every settings tab opens with its full content on its own page.
+-- T9d: every settings tab opens with its full content on its own page. The
+-- counts are the panel's fields: Input is the library's only element, so each
+-- setting is one field on the tab rather than a group holding several controls.
 local expectedSettingsContent = {
-    General = 3,
-    Appearance = 3,
-    Persistence = 2,
-    About = 3,
+    General = 9,
+    Appearance = 5,
+    Persistence = 5,
+    About = 5,
 }
 for name, wanted in expectedSettingsContent do
 	for _, tab in window._settingsTabs do
@@ -479,8 +481,8 @@ local function scan(elements)
     end
 end
 scan(appearanceTab.elements)
-expect(sideDropdown ~= nil, "T15 the Profile side option exists")
-expect(showProfileToggle ~= nil, "T15 the Show profile toggle exists")
+expect(sideDropdown ~= nil, "T15 the Profile side field exists")
+expect(showProfileToggle ~= nil, "T15 the Show profile field exists")
 
 -- Flipping the side moves the panel and shifts the window the other way.
 sideDropdown:Set("Left")

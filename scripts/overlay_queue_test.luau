@@ -87,7 +87,7 @@ end
 local window = Astra:CreateWindow({ name = "Overlay queue" })
 local tab = window:CreateTab({ name = "Home" })
 for index = 1, 6 do
-	tab:CreateToggle({ name = "Control " .. index, value = false })
+	tab:CreateInput({ name = "Control " .. index })
 end
 
 -- ===== Q1: the gate holds every overlay until the window has arrived =========
@@ -103,7 +103,7 @@ eq(queueOf(window).paused, true, "Q1 the gate is closed until the entrance lands
 -- ===== Q2/Q3: a burst lands one card per turn, and the queue is capped =======
 
 local paced = Astra:CreateWindow({ name = "Overlay pacing" })
-paced:CreateTab({ name = "Home" }):CreateToggle({ name = "Control", value = false })
+paced:CreateTab({ name = "Home" }):CreateInput({ name = "Control" })
 expect(pumpUntilShown(paced), "Q2 the window must reach its shown state inside the pump budget")
 expect(drainOverlays(paced), "Q2 the queue must come to rest once it has nothing to do")
 expect(builtCount(paced) == 0, "Q2 a quiet window had nothing queued but its own welcome toast")
@@ -200,7 +200,7 @@ TestPump(0.2)
 local staged = Astra:CreateWindow({ name = "Staged reveal" })
 local stagedTab = staged:CreateTab({ name = "Home" })
 for index = 1, 4 do
-	stagedTab:CreateButton({ name = "Button " .. index, callback = function() end })
+	stagedTab:CreateInput({ name = "Field " .. index })
 end
 eq(stagedTab.elements[1].title.TextTransparency, 1, "Q7 a control is not drawn while the window is hidden")
 

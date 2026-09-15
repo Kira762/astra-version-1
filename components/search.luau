@@ -16,21 +16,9 @@ local HOVER_SPEC_TIME = 0.25
 local defaultTransparency = 0.6
 local hoverTransparency = 0.2
 
+-- [[Every element is a flat card with a title, so the searchable text is the]]
+-- [[element's own name (there are no containers left to collect children from).]]
 local function getElementText(element)
-    if element.__type == "Group" or element.__type == "CollapsibleGroup" then
-        local names = { element.name or "" }
-        local function collectNames(group)
-            for _, child in group.elements do
-                if child.__type == "Group" or child.__type == "CollapsibleGroup" then
-                    collectNames(child)
-                elseif child.name then
-                    table.insert(names, child.name)
-                end
-            end
-        end
-        collectNames(element)
-        return table.concat(names, "\n")
-    end
     return element.name or ""
 end
 
@@ -41,9 +29,7 @@ local function getAllElements(window)
             continue
         end
         for _, element in tab.elements do
-            if element.__type ~= "Section" then
-                table.insert(elements, element)
-            end
+            table.insert(elements, element)
         end
     end
     return elements
@@ -77,9 +63,6 @@ local function filterElements(window, query)
     for _, unit in window._searchUnits do
         local isVisible = query == "" or string.find(unit.text, query, 1, true) ~= nil
         unit.unit.main.Visible = isVisible
-        if unit.homeExpanded ~= nil then
-            unit.unit:_setExpanded(if query ~= "" and isVisible then true else unit.homeExpanded, false)
-        end
         hasVisible = hasVisible or isVisible
     end
     window.searchEmpty.Visible = not hasVisible and query ~= ""
@@ -103,7 +86,6 @@ local function collectElements(window)
         local mainFrame = element.main
         table.insert(window._searchUnits, {
             unit = element,
-            homeExpanded = if element.__type == "CollapsibleGroup" then element._expanded else nil,
             text = string.lower(getElementText(element)),
             homeParent = mainFrame.Parent,
             homeOrder = mainFrame.LayoutOrder,
@@ -118,9 +100,6 @@ end
 local function restoreElements(window)
     for _, unit in window._searchUnits do
         local element = unit.unit
-        if unit.homeExpanded ~= nil then
-            element:_setExpanded(unit.homeExpanded, false)
-        end
         if element.main and element.main.Parent then
             element.main.LayoutOrder = unit.homeOrder
             element.main.Parent = unit.homeParent

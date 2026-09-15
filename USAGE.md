@@ -39,20 +39,26 @@ local window = Astra:CreateWindow({
 
 local tab = window:CreateTab({ name = "Home", icon = "house" })
 
-tab:CreateButton({
-    name = "Say hello",
-    callback = function()
-        window:Notify({ title = "Hello", content = "Your first element works." })
+tab:CreateInput({
+    name = "Nickname",
+    placeholder = "Type your name",
+    callback = function(value)
+        window:Notify({ title = "Hello", content = "You typed: " .. value })
     end,
 })
 
-tab:CreateToggle({
-    name = "Auto Sprint",
+tab:CreateInput({
+    name = "Walk speed",
+    placeholder = "16",
+    numeric = true,
     callback = function(value)
-        print("Auto Sprint:", value)
+        print("Walk speed:", value)
     end,
 })
 ```
+
+Input is the library's only element, and its field box sizes itself from the text
+it shows — the placeholder while it is empty, the typed text once it is not.
 
 The first visible tab opens on its own, so there is nothing else to wire up. Layout is built-in — switch it anytime in **Settings → Appearance → Bar Layout**.
 
@@ -70,7 +76,6 @@ from control values, even while Auto Save Config is off.
   Turning it on does not replace values in the current session.
 - Turning either off does not delete saved configurations.
 - Stable, unique flags are recommended for controls that should be restored.
-- Ordinary controls and controls inside Collapsible Groups use the same system.
 - File persistence requires a runtime with writable storage.
 
 Default storage identifiers are internal and are not displayed in Settings.
@@ -84,12 +89,12 @@ compatibility, but saved built-in save/load preferences take precedence.
 Flags, multiple configurations, and reading values back out.
 
 ```lua
--- any element with a flag participates in Save/Load
-tab:CreateToggle({ name = "Auto Sprint", flag = "autoSprint", value = true })
+-- any input with a flag participates in Save/Load
+tab:CreateInput({ name = "Nickname", flag = "nickname", value = "Player" })
 
-window:Set("autoSprint", false)
-print(window:Get("autoSprint"))
-print(window.Flags.autoSprint)
+window:Set("nickname", "Player two")
+print(window:Get("nickname"))
+print(window.Flags.nickname)
 
 window:Save("Slot2")
 window:Load("Slot2")
@@ -97,13 +102,14 @@ window:ListConfigs()
 window:DeleteConfig("Slot2")
 ```
 
-Elements with `forgetState = true` are excluded. Controls may derive flags from their names; explicit unique flags make restores stable when labels change.
+Inputs with `forgetState = true` are excluded. An input may derive its flag from
+its name; an explicit unique flag makes restores stable when labels change.
 
 ---
 
 ## Next steps
 
-Windows, tabs and groups, elements, secure mode — full reference below. See `example.client.luau` for a complete end-to-end example.
+Windows, tabs and the Input element — full reference below. See `example.client.luau` for a complete end-to-end example.
 
 ### Windows
 
@@ -112,7 +118,6 @@ Titles, themes, and every window method.
 | Method | Description |
 |---|---|
 | `window:CreateTab({ name, icon })` | Create a tab. Returns a `Tab`. |
-| `window:CreateSection({ name, icon })` | Top-level section — a `TabSection`. |
 | `window:Notify({ title, content, icon, duration })` | Classic notification; opens on the entrance queue (see [Startup performance](#startup-performance)). |
 | `window:Toast({ title, subtitle, icon, duration, position, ... })` | Compact toast; same queue, same one-at-a-time arrivals. |
 | `window:Popup({ title, content, boxes, options, ... })` | Modal popup. Returns `Popup:Close()`. |
@@ -155,172 +160,105 @@ Fields you leave out read `—` on the card, and the whole row set stays masked 
 Popup options: `options = { { text = "Cancel" }, { text = "Confirm", style = "primary" | "danger" | "neutral", callback = fn } }`.
 Popup props: `title`, `subtitle`, `icon`, `content`, `boxes`, `options`, `dismissable`.
 
-### Tabs and groups
+### Tabs
 
 ```lua
 local tab = window:CreateTab({ name = "Home", icon = "house" })
 tab:Select()      -- switch to it
 tab:Deselect()    -- switch away
 tab:Remove()      -- destroy it
-
-local row = tab:CreateGroup()                       -- horizontal row
-local col = row:CreateGroup({ direction = "column" }) -- nested column
-col:CreateToggle({ name = "Left 1" })
 ```
 
-Tab methods: `CreateButton`, `CreateToggle`, `CreateSlider`, `CreateDropdown`, `CreateInput`, `CreateKeybind`, `CreateStat`, `CreateSection`, `CreateText`, `CreateChangelog`, `CreateDivider`, `CreateGroup`, and optional `CreateCollapsibleGroup`.
-
-Groups support: `CreateButton`, `CreateToggle`, `CreateSlider`, `CreateDropdown`, `CreateStat`, `CreateSection`, `CreateText`, `CreateDivider`, `CreateGroup`. Collapsible Groups can only be created directly on a tab.
+Tab methods: `CreateInput`, `Select`, `Deselect` and `Remove`. `CreateInput` is
+the whole element surface — there are no groups, sections or containers to nest
+it in, so a tab page is a flat column of input cards.
 
 ### Elements
 
-Every element supports `Moveable` (`:MoveTo`, `:MoveToTop`, `:MoveToBottom`, `:MoveUp`, `:MoveDown`) and most support `Lockable` (`:Lock`, `:Unlock`, `:IsLocked`). Most element props also accept `icon`.
-
-```lua
-tab:CreateButton({ name = "Click Me", icon = "play", callback = function() end })
-tab:CreateSlider({ name = "Sensitivity", range = { 1, 10 }, value = 5, suffix = "x", minimal = true, callback = function(v, dragging) end })
-tab:CreateDropdown({ name = "Preset", options = { "Low", "Medium", "High" }, value = "Medium", multiSelect = true, placeholder = "Pick items", callback = function(s) end })
-tab:CreateInput({ name = "Name", placeholder = "Type here", numeric = true, clearOnFocus = true, callback = function(t) end })
-tab:CreateKeybind({ name = "Toggle Panel", value = Enum.KeyCode.F3, isMenuToggle = true, callback = function(v) end })
-```
-
-### Button
-```lua
-tab:CreateButton({
-    name = "Click Me", icon = "play",
-    callback = function() print("clicked") end,
-})
-```
-
-Every Button carries a built-in tap glyph on its right edge (phosphor `hand-tap`,
-resolved through the icon catalog). Tapping the card fires `callback` and pulses
-that glyph; the glyph itself is part of the card, so tapping it taps the button.
-`tapIcon = false` hides it, and `tapIcon = "name" | <assetId>` replaces it.
-
-```lua
-tab:CreateButton({
-    name = "Silent", icon = "bell-off",
-    tapIcon = false,
-    callback = function() end,
-})
-tab:CreateButton({
-    name = "Refresh", tapIcon = "refresh-cw",
-    callback = function() end,
-})
-```
-
-### Toggle
-```lua
-local t = tab:CreateToggle({
-    name = "Auto Sprint", flag = "autoSprint", value = true,
-    callback = function(on) print(on) end,
-})
-t:Set(false)          -- fires callback unless skipCallback
-t:Set(false, true)    -- silent
-```
-
-### Slider
-```lua
-tab:CreateSlider({
-    name = "Sensitivity", flag = "sens",
-    range = { 1, 10 }, value = 5, increment = 1, suffix = "x",
-    minimal = true,
-    callback = function(value, dragging) end,
-})
-```
-
-### Dropdown
-```lua
-local d = tab:CreateDropdown({
-    name = "Preset", options = { "Low", "Medium", "High" }, value = "Medium",
-    multiSelect = true, placeholder = "Pick items",
-    callback = function(selected) end,
-})
-d:Refresh({ "A", "B" })
-d:Add("C")
-d:Remove("A")
-```
+Input is the library's only element. It supports `Moveable` (`:MoveTo`,
+`:MoveToTop`, `:MoveToBottom`, `:MoveUp`, `:MoveDown`) and `Lockable` (`:Lock`,
+`:Unlock`, `:IsLocked`), plus the optional `icon` and `description` props every
+card understands.
 
 ### Input
+
 ```lua
-tab:CreateInput({
-    name = "Name", placeholder = "Type here",
-    value = "Initial", numeric = true, clearOnFocus = true,
+local field = tab:CreateInput({
+    name = "Name",                      -- card title (locale-bound)
+    icon = "user-round",                -- optional, from any pack
+    description = "Shown to friends.",  -- optional in-card line
+    placeholder = "Type here",          -- the hint, and what sizes an empty field
+    value = "Initial",                  -- optional starting text
+    flag = "nickname",                  -- optional; takes part in Save/Load
+    numeric = false,                    -- digits, minus and the 1.5^-3 exponent form
+    clearOnFocus = false,               -- clear on focus, restore the value on an empty blur
+    forgetState = false,                -- exclude from persistence
     callback = function(text) end,
 })
+
+field:Set("New value")           -- fires the callback
+field:Set("New value", true)     -- silent
+field:SetPlaceholder("New hint") -- retype the hint; the box re-measures
+field:MoveTo(1)                  -- also MoveToTop / MoveToBottom / MoveUp / MoveDown
+field:Lock("Reason shown on the description line")
+field:Unlock()
+print(field.value, field:IsLocked())
 ```
 
-### Keybind
-```lua
-tab:CreateKeybind({
-    name = "Toggle Panel", value = Enum.KeyCode.F3,
-    isMenuToggle = true, hold = true, holdThreshold = 0.2,
-    callback = function(value) end, onChanged = function(key) end,
-})
-```
+**The field box sizes itself from the text it shows.** While the field is empty
+the box measures its placeholder; as soon as something is typed it measures the
+typed text instead. The measurement is that text's width at the field's 15px
+size plus 30px of padding, clamped between a 70px floor (an empty field stays
+tappable) and a ceiling of `min(220, 55% of the page width)` — so a short hint
+renders as a short box, a long hint as a long box, and a narrow page caps both.
+The title row gives up exactly the width the box took, so the two never collide.
 
-### Stat
-```lua
-local s = tab:CreateStat({ name = "Kills", value = 128, prefix = "", suffix = " kills" })
-s:Set(200)
-s:ResetBaseline(0)
-```
-Extra props: `display`, `compact`, `changeMode`, `changeBaseline`, `numberEasing`.
+Every trigger that can change the measurement re-measures the box:
 
-### Text / Divider / Group
-```lua
-local x = tab:CreateText({ name = "Title", text = "Body text", icon = "info" })
-x:Set("New body") x:SetTitle("New title")
+| Trigger | What changed |
+|---|---|
+| typing, or `Set` | the typed text replaces the placeholder as the measure |
+| clearing the field | the placeholder becomes the measure again |
+| `SetPlaceholder(text)` | the hint — and so the empty field's width — is retyped at runtime |
+| `window:SetLocale(id)` | a translated hint is rarely the same length |
+| `window:ChangeTheme(theme)` | the font is a theme token, so the same text can measure differently |
+| the page changing width | a layout switch or a window resize moves the 55% ceiling |
 
-tab:CreateDivider()  tab:CreateDivider({ text = "or" })  tab:CreateDivider({ line = false, spacing = 8 })
-
-local row = tab:CreateGroup()
-local col = row:CreateGroup({ direction = "column" })
-col:CreateToggle({ name = "Left 1" })
-```
-
-### Changelog
-
-Scrollable release-history element with `+` (added), `-` (removed) and `~` (changed) change symbols, rendered in green/red/amber.
+An unchanged measurement costs nothing: the new width is compared with the one
+the box already has before anything is written, so a re-measure that lands on
+the same number creates no tween.
 
 ```lua
-local log = tab:CreateChangelog({
-    name = "Release history",
-    emptyText = "No entries yet.",   -- optional
-    entries = {
-        {
-            version = "0.0.35",
-            date = "2026-09-11",
-            game = "Game Name",      -- optional, game = "..." or gameId = number
-            title = "Settings highlight",
-            changes = {
-                { symbol = "~", category = "Fixed", text = "Settings stays highlighted while its tab is active." },
-                { symbol = "+", text = "Added the Changelog element." },
-                { symbol = "-", text = "Removed the old sub-tab API." },
-            },
-        },
-    },
-})
+-- Short, medium and long hints render as short, medium and long boxes.
+tab:CreateInput({ name = "Short", placeholder = "Name" })
+tab:CreateInput({ name = "Medium", placeholder = "Enter your display name" })
+tab:CreateInput({ name = "Long", placeholder = "Type the full name of the loadout you want to apply" })
 
-log:Add({ version = "Test", date = "Live", changes = { { symbol = "+", text = "Runtime entry." } } })  -- prepends by default
-log:Add(entry, false)  -- append at the end instead
-log:Set({ ... })       -- replace all entries
-log:Refresh({ ... })   -- alias of Set
-log:Clear()
+-- Retype a hint at runtime and its empty field follows.
+local field = tab:CreateInput({ name = "Retyped", placeholder = "Short" })
+field:SetPlaceholder("A much longer hint than before")
 ```
 
 ### Built-in Settings (window only)
 
 Every window ships a built-in Settings group (gear action in the topbar). Clicking the gear switches into settings mode — only the settings tabs are shown — and clicking it again returns to the previous tab. It's window-scoped: it edits this window's own behaviour, stored per-window — not global.
 
+Input is the library's only element, so the panel is typed rather than clicked:
+every setting is a field whose box shows the value that is active now, and
+committing new text applies it. Switches read `On`/`Off` (and accept
+`true`/`false`, `yes`/`no`, `1`/`0`, `enabled`/`disabled`); choices accept their
+label or their key (`frost`, `Frost`); a value a setting cannot honour snaps the
+field back to what is active and raises a notification saying why, so the panel
+never displays something the window is not using.
+
 The settings tabs are:
 
 | Tab | Contents |
 |---|---|
-| **General** | Menu Toggle keybind, unlock-cursor toggle, welcome toast toggle, Window Behavior (prevent duplicate windows, keep window on screen, draggable capsule, reset window & capsule positions), and Performance & Motion (haptics, animation speed). |
-| **Appearance** | Theme dropdown + Apply (popup confirm), Bar Layout dropdown (Default Topbar / Sidebar / Collapsed Sidebar), and Profile card controls (Show profile / Profile side / Reveal profile details). |
-| **Persistence** | Auto Save Config / Auto Load Config toggles; Saved-configurations dropdown + name input + Save/Load/Delete. |
-| **About** | Library info and links. |
+| **General** | Toggle Keybind (type a key name, e.g. `K` or `F3`), the window-behaviour switches (unlock cursor while open, welcome toast, prevent duplicate windows, keep window on screen, draggable capsule), Haptics, Animation speed (`Relaxed` / `Normal` / `Snappy` / `Instant`), and Reset Positions (type `window`, `capsule` or `both`). |
+| **Appearance** | Theme and Bar Layout (`Default Topbar` / `Sidebar (Responsive)` / `Collapsed Sidebar`) — both confirmed by a popup before they apply — plus the profile card controls (Show profile / Profile side / Reveal profile details). |
+| **Persistence** | Auto Save Config / Auto Load Config switches, the Saved Configurations list, a Configuration Name field, and a Config Action field (type `save`, `load`, `delete` or `list`). |
+| **About** | Library info and links, as description lines. |
 
 The window and its profile card (a compact 260x420 card — the default
 window's height) are centred as one unit: with the card on, the window rests
@@ -330,7 +268,8 @@ centre is re-derived on the first show, on every hide/show restore and whenever
 the card's state changes (toggle, side, viewport, a player turning up late), and
 "Keep window on screen" clamps the pair rather than the window alone, so a drag
 can push neither of them off the edge. A position you dragged to is respected —
-auto-centring never overrides it; **Reset Window Position** recentres the pair.
+auto-centring never overrides it; typing `window` (or `both`) into **Reset
+Positions** recentres the pair, and `capsule` puts the minimised bar back.
 
 There is no sub-tab API: these tabs are built by the window itself
 (`Window:_buildSettingsUI`), not by user code.
@@ -458,7 +397,11 @@ window:SetTranslator(function(source, localeId) return ... end)
 
 ### Full example
 
-See `example.client.luau` — a 20-tab example (Home, Controls, Appearance, Information, Changelog, Updates, plus 15 labelled test tabs) that loads the bundle with the remote loader and exercises tags, every element type, groups, and the Changelog element end to end.
+See `example.client.luau` — an Input-only example that loads the bundle with the
+remote loader and puts the sizing recipe on screen: short, medium and long
+placeholders side by side, a field whose typed value is wider than its hint, a
+numeric field, a `SetPlaceholder` pair that retypes one field from another, and
+a flagged field that persists.
 
 ---
 
@@ -511,98 +454,3 @@ Search controls are created the first time search opens. Additional built-in
 settings tabs are created on first settings access, and their controls remain lazy
 until each tab is selected. Controls added to inactive tabs wait until that tab is
 shown before running their reveal animations.
-
-### Collapsible Group (optional)
-
-`tab:CreateCollapsibleGroup` groups controls under an animated header. Existing
-standalone elements and ordinary Groups are unchanged; nothing is automatically
-wrapped in a Collapsible Group.
-
-```lua
-local window = Astra:CreateWindow({
-    name = "My Hub",
-    subtitle = "Player tools",
-    icon = "house",
-})
-local tab = window:CreateTab({ name = "Player", icon = "user-round" })
-
-local playerControls = tab:CreateCollapsibleGroup({
-    name = "LocalPlayer",
-    icon = "user-round", -- optional; may be from any icon pack
-    elements = {
-        {
-            type = "Toggle",
-            name = "Infinite Jump",
-            flag = "infiniteJump",
-            value = false,
-            callback = function(enabled)
-                print("Infinite jump:", enabled)
-            end,
-        },
-        {
-            type = "Slider",
-            name = "Walk Speed",
-            flag = "walkSpeed",
-            range = { 16, 100 },
-            value = 16,
-            callback = function(value)
-                print("Walk speed:", value)
-            end,
-        },
-        {
-            type = "Group",
-            elements = {
-                {
-                    type = "Button",
-                    name = "Reset Speed",
-                    icon = "feather:rotate-ccw",
-                    callback = function() window:Set("walkSpeed", 16) end,
-                },
-                {
-                    type = "Button",
-                    name = "Show Speed",
-                    callback = function() print(window:Get("walkSpeed")) end,
-                },
-            },
-        },
-    },
-})
-```
-
-**Supported types:** `Button`, `Toggle`, `Switch` (declarative alias of the
-toggle control), `Slider`, `Dropdown`, `Input`, `Keybind`, `Stat`,
-`Section`, `Text`, `Changelog`, `Divider`, and ordinary `Group`. Each uses the
-same properties and implementation as its normal `Create…` method, including
-the optional `description` helper line. `elements` can be omitted for an empty
-header.
-
-An ordinary Group retains its compact row layout when its children support it.
-Use `direction = "column"` for a vertical Group; the declarative builder also
-chooses a column automatically if the Group contains noncompact controls, so no
-chosen element is silently discarded. Ordinary Groups may contain ordinary Groups.
-**Collapsible Groups cannot contain Collapsible Groups**, directly or through a
-Group. Invalid types, sparse lists, and cyclic/nested Collapsible Group definitions
-are rejected before creating any UI.
-
-- Every Collapsible Group starts collapsed; there is no `expanded` usage property.
-- Click the header to open/close. Multiple groups operate independently.
-- Expansion uses Astra's motion service, including the instant-motion setting.
-- Values, flags and running features remain active when collapsed. Closing and
-  reopening do not recreate controls, reset them, or rerun their value callbacks.
-- Closing cancels an uncommitted input edit, closes open dropdowns, and ends
-  keybind recording; already committed values remain unchanged.
-- Search includes child names and temporarily expands matching groups. Closing
-  search restores their previous expansion state.
-- Children render at the same width as standalone elements, and the header
-  matches the Text element's card metrics (gutters, title and body styling).
-- The card silhouette stays even in both states: collapsed, the header band is the
-  card's bottom edge and carries the container's rounded bottom corners; open, the
-  band ends at the straight divider and the revealed body carries them. Both read
-  the same `ElementCornerRadius`, so no corner ever changes radius.
-- All three layouts are supported; the tab supplies scrolling for long contents.
-- `MoveTo`, `MoveToTop`, `MoveToBottom`, `MoveUp`, `MoveDown`, `Lock`, and `Unlock`
-  work on the container. Created child handles are also available in its
-  `elements` array, in definition order, just like an ordinary Group.
-- Controls are built in startup batches even while collapsed, so keybinds and
-  saved flags are usable before the first expansion. The optional feature adds
-  no container instances unless you explicitly create one.

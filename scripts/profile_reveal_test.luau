@@ -89,7 +89,7 @@ assertMasked("P1")
 
 -- P2: the reveal toggle drives all four identity fields at once.
 local revealToggle = findSettingsElement(window, "Appearance", "Reveal profile details")
-expect(revealToggle ~= nil, "P2 the 'Reveal profile details' toggle exists")
+expect(revealToggle ~= nil, "P2 the 'Reveal profile details' field exists")
 expect(
 	findSettingsElement(window, "Appearance", "Reveal full username") == nil,
 	"P2 the old 'Reveal full username' toggle is gone"
@@ -177,13 +177,13 @@ eq(lateWindow.profileSubtitle.Text, "@TestUser", "P5 the late window reveals the
 eq(lateWindow.profileUserIdValue.Text, tostring(USER_ID), "P5 the late window reveals the user ID")
 eq(lateWindow.profilePlaceId.Text, tostring(PLACE_ID), "P5 the late window reveals the place ID")
 
--- P6: the card also needs room; an active toggle on a cramped viewport says
+-- P6: the card also needs room; an active switch on a cramped viewport says
 -- so instead of silently leaving the user without a card.
 expect(lateWindow.notifications == nil, "P6 no notification has been raised yet")
 TestViewport.set(360, 390)
 TestPump(0.4)
 local showProfileToggle = findSettingsElement(lateWindow, "Appearance", "Show profile")
-expect(showProfileToggle ~= nil, "P6 the 'Show profile' toggle exists")
+expect(showProfileToggle ~= nil, "P6 the 'Show profile' field exists")
 showProfileToggle:Set(false)
 TestPump(0.2)
 showProfileToggle:Set(true)
@@ -227,7 +227,7 @@ end
 
 eq(lateWindow.settings.showProfile, true, "P7 the card is back on after P6")
 eq(lateWindow.settings.showFullUsername, false, "P7 P6 hiding the card already cleared the reveal")
-eq(lateReveal.value, false, "P7 and rolled the reveal switch back with it")
+eq(lateReveal.value, "Off", "P7 and rolled the reveal switch back with it")
 
 showProfileToggle:Set(false)
 TestPump(0.2)
@@ -239,7 +239,7 @@ expect(
 lateReveal:Set(true)
 TestPump(0.2)
 eq(lateWindow.settings.showFullUsername, false, "P7 the refused reveal leaves the setting off")
-eq(lateReveal.value, false, "P7 the refused reveal rolls its switch back")
+eq(lateReveal.value, "Off", "P7 the refused reveal rolls its switch back")
 eq(lateWindow.profileUserIdValue.Text, MASKED_ID, "P7 the refused reveal leaves the user ID masked")
 eq(lateWindow.profilePlaceId.Text, MASKED_ID, "P7 the refused reveal leaves the place ID masked")
 expect(
@@ -253,7 +253,7 @@ TestPump(0.2)
 lateReveal:Set(true)
 TestPump(0.2)
 eq(lateWindow.settings.showFullUsername, true, "P7 the reveal sticks once Show profile is on")
-eq(lateReveal.value, true, "P7 and its switch stays on")
+eq(lateReveal.value, "On", "P7 and its switch stays on")
 eq(lateWindow.profileUserIdValue.Text, tostring(USER_ID), "P7 the card reveals the user ID")
 
 -- Hiding the card again takes the active reveal off with it, so the reveal
@@ -261,7 +261,7 @@ eq(lateWindow.profileUserIdValue.Text, tostring(USER_ID), "P7 the card reveals t
 showProfileToggle:Set(false)
 TestPump(0.2)
 eq(lateWindow.settings.showFullUsername, false, "P7 hiding the card clears the reveal")
-eq(lateReveal.value, false, "P7 hiding the card rolls the reveal switch back")
+eq(lateReveal.value, "Off", "P7 hiding the card rolls the reveal switch back")
 expect(
 	hasNotification(lateWindow, "Turned off with the profile card"),
 	"P7 clearing the reveal explains itself"

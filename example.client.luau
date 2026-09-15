@@ -1,6 +1,10 @@
--- [[Astra element-coverage example.]]
--- [[Everything lives in one tab so startup pacing and every element type can be
--- [[tested without navigating through a collection of duplicate demo tabs.]]
+-- [[Astra Input example.]]
+-- [[Input is the library's only element. Every demo below is the same element]]
+-- [[with a different string in it, because that string is what sizes the field:]]
+-- [[while the field is empty the box measures its placeholder, and as soon as]]
+-- [[something is typed it measures the typed text instead. Short/medium/long]]
+-- [[hints therefore render as short/medium/long boxes, up to a ceiling that]]
+-- [[follows the page width (55% of it, never past 220px, never under 70px).]]
 
 local bundleSource = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
 local compile = loadstring or load
@@ -15,8 +19,8 @@ assert(
 )
 
 local window = Astra:CreateWindow({
-    name = "Astra Element Test",
-    subtitle = "All elements in one paced tab",
+    name = "Astra Input Test",
+    subtitle = "One element, sized by its own text",
     configuration = {
         fileName = "Astra-Example",
         customFolder = "AstraExamples",
@@ -25,161 +29,89 @@ local window = Astra:CreateWindow({
     },
 })
 
--- [[One tab intentionally contains every supported element type.]]
-local elements = window:CreateTab({ name = "Element Test", icon = "flask-conical" })
+local inputs = window:CreateTab({ name = "Inputs", icon = "text-cursor-input" })
 
-elements:CreateSection({ name = "Basic elements" })
-elements:CreateText({
-    name = "Text",
-    text = "This single tab builds every Astra element so startup batching and layout pacing are easy to observe.",
+-- ===== 1. Empty fields: the placeholder sets the width =====================
+
+inputs:CreateInput({
+    name = "Short placeholder",
+    placeholder = "Name",
+    description = "A two-word hint measures narrow, so the box sits near its 70px floor.",
 })
 
-local stat = elements:CreateStat({
-    name = "Stat",
-    value = 128,
-    suffix = " requests",
-    compact = true,
-    changeMode = "delta",
-    changeBaseline = 100,
+inputs:CreateInput({
+    name = "Medium placeholder",
+    placeholder = "Enter your display name",
+    description = "A sentence-long hint grows the box to fit it.",
 })
 
-elements:CreateDivider({ text = "Interactive elements" })
-
-elements:CreateButton({
-    name = "Button",
-    icon = "hand-tap",
-    callback = function()
-        stat:Set(stat.value + 1)
-        window:Notify({ title = "Button", content = "Stat was updated." })
-    end,
+inputs:CreateInput({
+    name = "Long placeholder",
+    placeholder = "Type the full name of the loadout you want to apply to this slot",
+    description = "A hint longer than the ceiling stops at it instead of pushing the title off the card.",
 })
 
-elements:CreateToggle({
-    name = "Toggle",
-    value = true,
+inputs:CreateInput({
+    name = "No placeholder",
+    description = "With nothing to measure, the box stays at its floor until something is typed.",
+})
+
+-- ===== 2. Typed text takes over from the placeholder =======================
+
+inputs:CreateInput({
+    name = "Typed text",
+    placeholder = "hi",
+    value = "a value much wider than its hint",
+    description = "The hint is short but the value is not: a non-empty field measures what is typed.",
     callback = function(value)
-        window:Toast({ title = "Toggle", subtitle = if value then "Enabled" else "Disabled" })
+        window:Toast({ title = "Typed text", subtitle = tostring(value) })
     end,
 })
 
-elements:CreateSlider({
-    name = "Slider",
-    range = { 0, 100 },
-    value = 50,
-    increment = 5,
-    suffix = "%",
-    callback = function(value)
-        stat:Set(value)
-    end,
-})
-
-elements:CreateDropdown({
-    name = "Dropdown",
-    options = { "Low", "Medium", "High" },
-    value = "Medium",
-    callback = function(value)
-        window:Toast({ title = "Dropdown", subtitle = tostring(value) })
-    end,
-})
-
-elements:CreateDropdown({
-    name = "Multi-select dropdown",
-    options = { "Combat", "Movement", "Visual" },
-    value = { "Combat" },
-    multiSelect = true,
-    placeholder = "Choose tags",
-})
-
-elements:CreateInput({
-    name = "Input",
-    placeholder = "Type something",
-    callback = function(value)
-        window:Toast({ title = "Input", subtitle = tostring(value) })
-    end,
-})
-
-elements:CreateInput({
-    name = "Numeric input",
-    placeholder = "Enter a number",
+inputs:CreateInput({
+    name = "Numeric",
+    placeholder = "0.5",
     numeric = true,
     clearOnFocus = true,
+    description = "Digits, minus and the 1.5^-3 exponent form; anything else is filtered as you type.",
 })
 
-elements:CreateKeybind({
-    name = "Keybind",
-    value = Enum.KeyCode.RightShift,
-    callback = function()
-        window:Toast({ title = "Keybind", subtitle = "Shortcut activated" })
+-- ===== 3. SetPlaceholder re-measures an empty field at runtime =============
+
+local retyped = inputs:CreateInput({
+    name = "Retyped hint",
+    placeholder = "Short",
+    description = "Its box follows whatever the field below commits, through SetPlaceholder.",
+})
+
+inputs:CreateInput({
+    name = "Hint for the field above",
+    placeholder = "Type a new hint",
+    description = "Commit text here and the field above retypes its placeholder and re-sizes.",
+    callback = function(value)
+        retyped:SetPlaceholder(value)
     end,
 })
 
-elements:CreateChangelog({
-    name = "Changelog",
-    entries = {
-        {
-            version = "Element Test",
-            date = "Live",
-            title = "All supported elements",
-            changes = {
-                { symbol = "+", category = "Added", text = "This changelog is part of the single-tab startup test." },
-            },
-        },
-    },
-})
+-- ===== 4. Flags, persistence and the ordinary props ========================
 
--- [[A normal Group is an element too. Its children use the compact row layout.]]
-local group = elements:CreateGroup({ direction = "column" })
-group:CreateSection({ name = "Group" })
-group:CreateButton({
-    name = "Grouped button",
-    callback = function()
-        window:Notify({ title = "Group", content = "The ordinary Group child is working." })
+inputs:CreateInput({
+    name = "Saved nickname",
+    icon = "user-round",
+    flag = "nickname",
+    placeholder = "Nickname",
+    description = "Flagged, so it is written to the configuration and restored on load.",
+    callback = function(value)
+        window:Notify({ title = "Nickname", content = tostring(value) })
     end,
 })
-group:CreateToggle({ name = "Grouped toggle", value = false })
 
--- [[The declarative group exercises the CollapsibleGroup path and every child
--- [[constructor, including the Switch alias used by declarative definitions.]]
-elements:CreateCollapsibleGroup({
-    name = "Collapsible Group",
-    icon = "panels-top-left",
-    description = "Expand this card to inspect every declarative child type.",
-    elements = {
-        { type = "Section", name = "Declarative children" },
-        { type = "Text", name = "Text child", text = "All child controls are constructed while the group is collapsed." },
-        { type = "Button", name = "Button child", callback = function() window:Toast({ title = "Child button", subtitle = "Clicked" }) end },
-        { type = "Toggle", name = "Toggle child", value = true },
-        { type = "Switch", name = "Switch alias child", value = false },
-        { type = "Slider", name = "Slider child", range = { 0, 100 }, value = 25 },
-        { type = "Dropdown", name = "Dropdown child", options = { "One", "Two" }, value = "One" },
-        { type = "Input", name = "Input child", placeholder = "Child input" },
-        { type = "Keybind", name = "Keybind child", value = Enum.KeyCode.RightControl },
-        { type = "Stat", name = "Stat child", value = 42, suffix = " checks" },
-        { type = "Divider", text = "Nested diagnostics" },
-        {
-            type = "Changelog",
-            name = "Changelog child",
-            entries = {
-                {
-                    version = "Test",
-                    date = "Live",
-                    title = "Nested changelog",
-                    changes = {
-                        { symbol = "+", text = "Changelog works inside a Collapsible Group." },
-                    },
-                },
-            },
-        },
-        {
-            type = "Group",
-            direction = "column",
-            elements = {
-                { type = "Text", name = "Nested Group", text = "Ordinary Groups may be nested." },
-                { type = "Button", name = "Nested action", callback = function() window:Notify({ title = "Nested Group", content = "The nested action works." }) end },
-            },
-        },
-    },
+local locked = inputs:CreateInput({
+    name = "Locked field",
+    placeholder = "Read only while locked",
+    description = "Lock shows its reason on the description line and refuses commits.",
 })
+locked:Lock("Demonstrating the lockable mixin")
 
 -- [[Select the only user tab explicitly so the example is deterministic.]]
-elements:Select()
+inputs:Select()

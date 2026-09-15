@@ -25,7 +25,7 @@ Exported names (typed surface is `Types.luau`'s `Astra`): `CreateWindow`, `Icons
 `CreateWindow` side effects: enforces the anti-duplicate guard (persisted `antiWindowDuplicate` setting, per-window opt-out via `settings.antiWindowDuplicate`), in secure mode preloads window images (`Image.preload` → failure `Notify`) and swaps in the brand fonts via `ChangeTheme({ Font, TitleFont })` once the entrance has landed (a theme pass over every instance the window owns is not something to spend while the window is still arriving; `FONT_SETTLE_BUDGET` bounds the wait so a window that never shows still gets its font), then auto-`Show()`s the window on the next frame (a `task.defer` plus one heartbeat, so a script's first synchronous `CreateTab` calls land before the shell appears; remaining constructors stream in behind it in small budget-limited batches until the build goes quiet, and an explicit `Hide()` before that tick cancels it via `_autoShowCancelled`). The two secure-mode branches (optional-icon preload, brand-font swap) run as sibling threads under one guard.
 
 ### `example.client.luau`
-Usage example (not minified). Loads the bundle with `game:HttpGet` + `loadstring`, then builds a 20-tab window: Home, Controls, Appearance, Information, Changelog, Updates, plus 15 labelled test tabs. Demonstrates window tags, every element type, groups, and the `CreateChangelog` element (including a runtime `changelog:Add`), and ends with an explicit `home:Select()`.
+Usage example (not minified). Loads the bundle with `game:HttpGet` + `loadstring`, then builds one tab of inputs that puts the sizing recipe on screen: short, medium, long and absent placeholders side by side, a field whose typed value is wider than its hint, a numeric field with `clearOnFocus`, a `SetPlaceholder` pair (one field retypes another's hint), a flagged field that persists, and a locked field. Ends with an explicit `inputs:Select()`.
 
 ---
 
@@ -86,16 +86,19 @@ Method map (names preserved through minification). Settings-related:
   each tab stores a `_settingsContentBuilder` closure and
   `Window:_buildSettingsContent(tab)` runs it on the tab's first open
   (`Tab:Select`, after construction), so `CreateWindow` stays fast.
-  Appearance hosts theme picker + Bar Layout picker (both
-  popup-confirmed), the profile toggles (Show profile, Profile side
-  Right/Left, Reveal profile details — refused with a "Show profile is
-  required" notification while Show profile is off, and switched off with
-  the card when Show profile goes off) and window toggles, Reset Window
-  Position (recentres the window + card pair) and Reset Capsule Position;
-  Persistence always hosts saved-config Save/Load/Delete (independent of
-  the `configuration` prop), plus default-on Auto Save Config and Auto Load
-  Config toggles. Storage defaults are internal; the named-preset dropdown
-  does not expose the default config filename. Auto-save writes are coalesced.
+  Input is the library's only element, so every setting is a typed field
+  (see `components/settings.luau`): the box shows the value that is active
+  now and committing new text applies it. Appearance hosts the theme and
+  Bar Layout pickers (both popup-confirmed), and the profile fields (Show
+  profile, Profile side Right/Left, Reveal profile details — refused with a
+  "Show profile is required" notification while Show profile is off, and
+  switched off with the card when Show profile goes off); General hosts the
+  Toggle Keybind, the window switches, Haptics, Animation speed and Reset
+  Positions (typed `window`, `capsule` or `both`); Persistence always hosts
+  saved-config save/load/delete (independent of the `configuration` prop),
+  plus default-on Auto Save Config and Auto Load Config switches. Storage
+  defaults are internal; the named-preset list does not expose the default
+  config filename. Auto-save writes are coalesced.
 - `settingsAction` (topbar gear, `linkedTab = rfSettings`) — toggles
   settings mode via `_toggleSettingsMode`: entering shows only settings
   tabs and remembers the previous tab; a second click restores it. The
@@ -109,7 +112,7 @@ Public surface:
   property recording (`themeProperties`), locale-token binding
   (`_bindLocale`), image-guessed property assignment; tracks every instance
   for `Unload`.
-- `ChangeTheme`, `CreateTab`/`CreateSection`, `Notify`/`Toast`
+- `ChangeTheme`, `CreateTab`, `Notify`/`Toast`
   (both construct their card on the entrance queue's turn, see
   `components/overlayQueue.luau`)/`Popup`, `Show`/`Hide`/`ToggleHide`/`ToggleMinimise`, `Close` (animated
   close → `Unload`), `Save`/`Load`/`ListConfigs`/`DeleteConfig`/`GetPath`,
@@ -136,8 +139,8 @@ re-clamps for the card that comes back), `_setLayoutMode`, `_toggleSettingsMode`
 `_runGuarded`, `_setElementLocked`/`_buildLockScrim`, `_updateWindowTitle`.
 
 ### `components/settings.luau`
-Dedicated settings component providing UI generation and management for Astra's built-in settings tabs (Appearance, Persistence, About, and General controls):
-- `buildUI(window)` — instantiates the settings tab shells on demand.
+Dedicated settings component providing UI generation and management for Astra's built-in settings tabs (Appearance, Persistence, About, and General controls). Input is the library's only element, so the panel is typed rather than clicked; three file-scope parsers (`parseSwitch`, `parseChoice`, `parseKeyCode`) plus `choiceLabel`/`choiceList` normalise what the user typed, and two `buildUI`-local builders (`switchSetting`, `choiceSetting`) turn a spec into a field that shows the active value, applies a valid commit and snaps back — with a notification — on anything it cannot honour:
+- `buildUI(window)` — instantiates the settings tab shells on demand and stores each tab's `_settingsContentBuilder`.
 - `buildContent(window, tab)` — lazily constructs controls within a given settings tab upon first selection.
 - `toggleSettingsMode(window)` — toggles between user tabs and settings tabs.
 - `setSettingsMode(window, active)` — applies visibility and layout for settings mode.
@@ -399,41 +402,53 @@ implementation in `_setLayoutMode`.
 
 ## elements/
 
-All element classes share the pattern:
-- First local — `require(...core.state)` alias.
-- `new(tab, props)` — locals for normalized props, created frame, and connections.
-- `_setShown`, `_refreshTheme`, `Set`/`Set_`-style setters keep their public names.
+Input is the only element. Four modules remain: the element, the tab that hosts
+it, and the two card helpers it is built from.
 
-Per-element specifics:
-- `toggle.luau` — track/knob frames, accent tween locals.
-- `slider.luau` — fill frame, handle, drag math locals (`a1..a12`: range min/max, step, value normalization).
-- `dropdown.luau` — button, list frame, option rows (built on first open, `_materialiseOptions`/`_buildOptionAt`), highlight, search filter, and the multi-select action row: a checkbox in the rows' own 16px glyph slot (a drawn 12px outline when off, the rows' check glyph when on) with Select all, which toggles the visible options, and Clear with its pack bin, which removes only those. The box is re-synced by every path that can move the selection or the visible set (`_syncActions`), and only a multi-select dropdown builds any of it.
-- `input.luau` — TextBox, placeholder/focus locals, validation callback.
-- `keybind.luau` — listening state flag, input connection. Editable fields keep the current key selected, accept exactly one letter (extras are truncated, non-letters dropped), unbind on backspace while staying focused for the next key, and restore the bound key's display on focus loss; capture mode is unchanged.
-- `collapsibleGroup.luau` — optional declarative container for all tab element
-  types and ordinary Groups. Validates definitions, rejects nested collapsibles,
-  marks descendants as visually nested (transparent cards/no child outlines),
-  animates measured content height through the motion service, and keeps child
-  controls alive while hidden. Search and tab removal traverse its descendants.
-  Surfaces: the container carries the element surface (`ElementGradient` over a
-  white base) so its own rounded top corners read as the header band, the band
-  rounds *its* top corners with the same `ElementCornerRadius` (Roblox rounds a
-  GuiObject's own surface but never clips descendants to the arcs — a square
-  band squared off the stroke's silhouette), and `bodyClip` paints the darker
-  window surface under the divider with the container's bottom arcs. Because the
-  band *is* the card's bottom edge while the group is closed, `_fitHeaderCorners`
-  (through `Window:_setRoundedCorners`, the state-flipping companion of
-  `_roundCorners`) moves the container's bottom arcs onto the band and squares
-  them off again the moment the body is revealed, so both states keep one even
-  silhouette on the same radius token.
-- `description.luau` — legacy in-card helper-line utility kept for bundle
-  compatibility; public element constructors no longer read `description` props.
-- `tab.luau` — tab class: `tabPage` (ScrollingFrame), `_register(element)` pipeline into `window.controls[flag]`, selector button visuals.
-- `group.luau`, `section.luau`, `tabSection.luau` — container classes with UIListLayout locals.
-- `changelog.luau` — release-history element (`__type = "Changelog"`): normalizes `ChangelogEntry`/`ChangelogChange` props, maps symbols (`+`/`-`/`~`, or words like "added"/"removed"/"changed") to green/red/amber, fades entries in, supports `Set`/`Refresh`/`Add(entry, prepend?)`/`Clear`.
-- `divider.luau`, `stat.luau`, `text.luau` — display and interaction elements.
-- `button.luau` — action card with a built-in right-edge tap glyph (`tapIcon` opts out or replaces it), themed through `ContentColor`, revealed with the card, and pulsed on press.
-- `baseCard.luau` — shared card container and header layout helper for element modules.
+- `input.luau` — the element (`__type = "Input"`): card frame, title row,
+  field box (`self.box`), its `TextBox` (`self.input`), stroke and lazy glow.
+  File-scope locals are named for what they hold (`functions`, `moveable`,
+  `lockable`, `locale`, `description`, `haptic`, `motion`, `boxSpec`,
+  `textSpec`) and the sizing recipe is a set of named numbers: `textSize` 15,
+  `boxPadding` 30, `minWidth` 70, `maxWidth` 220, `boxHeight` 30,
+  `pageWidthShare` 0.55, `titleGap` 35.
+  - `_sizeBox(animate)` — the single width writer. Measures the typed text, or
+    the placeholder while the field is empty (reading the field's *resolved*
+    `PlaceholderText`, so a translation measures as the language on screen),
+    adds `boxPadding`, clamps to `minWidth.._maxWidth()`, and writes both the
+    box and the title row's width (`-(width + titleGap)`). Both are pure
+    functions of the measurement, so an unchanged width returns early instead
+    of re-tweening.
+  - `_maxWidth()` — `min(maxWidth, 55% of the page width)`, floored at
+    `minWidth` so the clamp stays valid on a page that has not been laid out.
+  - Re-measure triggers: the `Text` signal (typing, `Set`), the
+    `PlaceholderText` signal (`SetPlaceholder` and `Window:SetLocale`, which
+    re-types the bound hint), the page's `AbsoluteSize` signal (a layout switch
+    or a window resize moves the ceiling), and `_refreshTheme` (the measuring
+    font is a theme token).
+  - `SetPlaceholder(text)` — retypes the hint through `Window:_bindLocale`, so
+    the new text is translated by the next `SetLocale` exactly like the one the
+    element was built with, then re-measures.
+  - `_commit(value, skipCallback)` / `Set(value, skipCallback)` — normalise
+    (`parseNumeric` accepts the `1.5^-3` exponent form while a `numeric` field
+    is being typed, and rejects NaN/inf by restoring the last value), write
+    `self.value` and the field, then run the callback, persist, and flash the
+    result.
+  - `_setShown`, `_fieldGlow`, `_refreshTheme`, plus the `moveable` and
+    `lockable` mixins.
+- `tab.luau` — tab class: `tabPage` (ScrollingFrame), `_register(element)`
+  pipeline into `window.controls[flag]`, selector button visuals, and
+  `CreateInput` — the whole element surface. `teardownElements` unregisters
+  each element's flag and releases the connections it booked with the window.
+- `description.luau` — the in-card description line: `attach(self)` builds it
+  and grows the card by the measured wrapped-line count, `center(self, base)`
+  keeps the title row and the field box centred in the *base* region,
+  `height(self, base)` and `rebase(self, base)` are the card-height writers,
+  and the line doubles as the lock-message surface.
+- `baseCard.luau` — shared card container and header layout helper
+  (`buildFull(element, opts)`): main frame, element stroke, hover overlay,
+  description attach, content container with its horizontal list layout, icon
+  and title label.
 
 ---
 
@@ -533,8 +548,9 @@ Per-element specifics:
   chosen theme, so custom tables inherit missing keys).
 - `default.luau` + 9 themes (`amethyst`, `cobalt`, `crimson`, `ember`,
   `emerald`, `frost`, `gold`, `onyx`, `rose`) — theme tables of ~65 keys
-  (surfaces, strokes, text colors, gradients, fonts, corner radii,
-  slider/toggle/picker styling). Keys a theme omits are inherited from the
+  (surfaces, strokes, text colors, gradients, fonts, corner radii, plus the
+  legacy control tokens — slider/toggle/picker styling — that no element reads
+  now that `Input` is the only one). Keys a theme omits are inherited from the
   `default` clone. Registered in two places: the settings-UI theme table in
   `components/window.luau` and the persisted-theme whitelist in
   `utilities/persistenceSettings.luau`.
@@ -555,7 +571,7 @@ Per-element specifics:
   `motion.tween(instance, props, spec, onCompleted)` which drops
   already-satisfied properties and cancels an in-flight tween that would fight
   over the same property, `motion.spec(info)` for rescaling a bespoke
-  TweenInfo (delayed glow beats, the odometer reel) with the active profile,
+  TweenInfo (the delayed glow beats) with the active profile,
   `motion.step(base)` for cascade pacing, and the speed profiles (`relaxed`
   1.35x, `normal` 1x, `snappy` 0.7x, `instant` = no animation) behind the
   window's "Animation speed" setting. Public as `Astra.Motion`.
@@ -578,7 +594,7 @@ Per-element specifics:
 - `windowSizing.luau` — responsive size computation (desktop tiers around the
   600x420 default, min/max protected) plus the fixed mobile profile returned
   for touch-only phone-sized viewports (`isMobileViewport`).
-- `enums.luau`, `ordering.luau`, `odometer.luau`, `fontManager.luau`, `functions.luau` (legacy shim), `path.luau` — small helpers.
+- `enums.luau`, `ordering.luau`, `fontManager.luau`, `functions.luau` (legacy shim), `path.luau` — small helpers.
 
 ---
 
@@ -589,22 +605,28 @@ Per-element specifics:
 | `generate_bundle.js` | Rebuilds `version-1.luau` from the modular tree. |
 | `check_requires.py` | Static require graph: every module resolves, no cycles. |
 | `check_instance_fields.py` | Fails on custom-field writes on instances (the `_profileGeneration` crash class). |
-| `profile_{compact,centering,reveal,details}_test.sh` | Profile card suites: geometry/visibility, window-pair centring, the reveal toggle, and the redesigned card (tokens, pinned header + scrolling, live server/session values, license rows, tooltip, no-player case). |
-| `sidebar_tab_sizing_test.sh`, `smoke_test_bundle.sh` | Rail sizing (name-driven width, cap, restore) and a bundle smoke run; also the collapsed rail: rows are icon-only (title hidden, content centred, no expanded padding) whether they were collapsed in place, rebuilt by a layout switch, or created while the rail was already icon-only, and a capped title re-constrains after that rebuild. |
-| `collapsible_group_test.sh` | Collapsible groups: every declarative element type, state/callbacks, the connected-card geometry and surface recipe, and the corner treatment (band's top arcs matching the container, body clipper's bottom arcs). |
-| `instance_budget_test.sh` | Per-element instance ceilings plus a realistic-page budget — the frame-time proxy guard. |
-| `odometer_test.sh` | Odometer readout: lazy row materialisation, and the resting row still showing the value's digit through plain/wrap/roll-down transitions. |
-| `dropdown_rows_test.sh` | Dropdown option rows: none (and no search bar) while closed whatever the list length, one per option in order on open plus the bar once, the rendered selected/unselected state and corner tiers, reopening reusing the rows, edits and picks made while closed, and the search filter. |
-| `dropdown_actions_test.sh` | The multi-select action row: only a multi-select dropdown builds it, the checkbox's two states (the drawn outline against the rows' check glyph), Select all filling the visible set and toggling it back off, Clear sparing what the filter hides, the box following picks and filters, the 32px row in the open height, and the bin resolving to the pack's trash icon. |
+| `eager_graph.py` | Measures the eager (transitive) module graph loaded at startup. |
+| `input_field_test.sh` | The input's field box: it rounds with the theme's `ElementCornerRadius` as a theme binding (a pixel radius, never a capsule scale) shared with its card, and its width follows the text it shows — placeholder while empty, typed text once it is not — through the 70px floor, the 220px ceiling, `SetPlaceholder`, a locale switch and the responsive 55%-of-page cap. |
+| `inline_description_test.sh` | The in-card description line: inside the element's own card, growing it by the measured wrapped height, never covering the title row or the field box, still letting the box size from its text, revealed at 0.45, swapped for the lock message and restored on unlock. |
+| `description_geometry_probe.luau` + `render_description_preview.py` | Dumps the real bundle's card/line/control rects for the described input shapes and draws them (PNG + HTML) so the layout can be inspected without the engine. |
+| `instance_budget_test.sh` | The input's instance ceiling and a one-field page budget — the frame-time proxy guard. |
+| `config_preferences_test.sh` | Built-in saving preferences: default-on auto save/load, coalesced autosave writes, the settings fields that drive them, and next-startup restoration of flagged inputs. |
+| `capsule_reset_test.sh` | Capsule-position regressions, driven through the settings panel's Reset Positions field. |
+| `startup_test.sh` | Startup batching, lazy panels and the construction checkpoints. |
+| `overlay_queue_test.sh` | The overlay entrance queue and the staged window entrance. |
 | `tab_elements_test.sh` | Tab elements: only the selected tab is walked on a show/hide, a tab opened later shows its elements in the same frame and state, the search shows every tab it renders, and a late element shows with its tab. |
-| `toggle_switch_test.sh` | Switch geometry: one set of metrics, mirrored resting states, equal clearance, the sheen under the knob, and the animated positions matching the built ones. |
-| `input_field_test.sh` | Field-box corners: the Input field and the Keybind cap round with the theme's `ElementCornerRadius` as theme bindings (pixel radii, never capsule scales), re-stated on a theme switch, and shared with their element cards. |
-| `slider_travel_test.sh` | Slider knob travel: the capsule's centre stays half a knob inside each track end (resting, held and after release), so it never overlaps the track end or card edge at max/min, and the fill ends at the knob's centre. |
-| `icons_test.sh` | Icon resolver: name-only lookup across the packs in priority order (and how lazily they load), qualified `pack:name`, case sensitivity, unknown-pack warnings, custom assets (one import per path, memoised misses, the `listfiles` index), cache-key separation, and `window:ResolveIcon`. |
-| `motion_test.sh` | Motion service: shared specs, time scale + its cache, profiles, tween ownership (cancel-on-overlap vs. unrelated properties), the no-op and animation-off paths, the window's "Animation speed" setting, and hover going through the service. |
+| `sidebar_tab_sizing_test.sh`, `topbar_strip_test.sh` | Rail sizing (name-driven width, cap, restore, the icon-only collapsed rail) and the top-layout tab strip. |
+| `window_corners_test.sh`, `motion_paths_test.sh` | No visible surface anywhere in the tree draws a GuiObject border, and the capsule/window motion paths. |
+| `profile_{compact,centering,reveal,details,created,ui}_test.sh` | Profile card suites: geometry/visibility, window-pair centring, the reveal dependency, the redesigned card, the created-date row, and the card's surface/copy-button/tier-pill behaviour. All of them drive the settings panel's typed fields. |
+| `icons_test.sh` | Icon resolver: name-only lookup across the packs in priority order (and how lazily they load), qualified `pack:name`, case sensitivity, unknown-pack warnings, custom assets, cache-key separation, and `window:ResolveIcon`. |
+| `motion_test.sh` | Motion service: shared specs, time scale + its cache, profiles, tween ownership, the no-op and animation-off paths, the window's "Animation speed" setting, and hover going through the service. |
+| `smoke_test_bundle.sh` | Loads the generated bundle and asserts the public API surface. |
+| `generate_icon_packs.js`, `generate_icon_guides.py` | Regenerate the six icon-pack modules and the visual catalogs from `assets/icons/`. |
 
-All of them assemble `scripts/sidebar_sizing_stubs.luau` + `version-1.luau`
-(so regenerate the bundle after a source edit) and run under the Luau CLI.
+All of the runtime suites assemble `scripts/sidebar_sizing_stubs.luau` (plus
+`scripts/profile_image_stubs.luau` where a suite touches the filesystem, and
+`scripts/smoke_stubs.luau` for the smoke run) with `version-1.luau`, so
+regenerate the bundle after a source edit, and run under the Luau CLI.
 
 ## Naming conventions after minification
 

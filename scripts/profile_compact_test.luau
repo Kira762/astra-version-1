@@ -218,7 +218,7 @@ eqUDim2(
 assertNoOverlap(window, "D2 right-side")
 
 local sideDropdown = findSettingsElement(window, "Appearance", "Profile side")
-expect(sideDropdown ~= nil, "D2 the 'Profile side' dropdown exists")
+expect(sideDropdown ~= nil, "D2 the 'Profile side' field exists")
 sideDropdown:Set("Left")
 TestPump(0.3)
 eq(window.settings.profileSide, "left", "D2 the selected side setting is preserved")
@@ -323,7 +323,7 @@ eqUDim2(
 )
 
 local showProfileToggle = findSettingsElement(window, "Appearance", "Show profile")
-expect(showProfileToggle ~= nil, "D5 the 'Show profile' toggle exists")
+expect(showProfileToggle ~= nil, "D5 the 'Show profile' field exists")
 
 -- Off: the card hides and the window recentres by itself.
 showProfileToggle:Set(false)
@@ -340,7 +340,7 @@ eqUDim2(main.Position, 0.5, -PANEL_SHIFT, 0.5, 0, "D5 and centres the window + g
 -- ===== D6: the reveal dependency =====
 
 local revealToggle = findSettingsElement(window, "Appearance", "Reveal profile details")
-expect(revealToggle ~= nil, "D6 the 'Reveal profile details' toggle exists")
+expect(revealToggle ~= nil, "D6 the 'Reveal profile details' field exists")
 
 showProfileToggle:Set(false)
 TestPump(0.2)
@@ -350,7 +350,7 @@ expect(not hasNotification(window, "Show profile is required"), "D6 no dependenc
 revealToggle:Set(true)
 TestPump(0.2)
 eq(window.settings.showFullUsername, false, "D6 the refused reveal leaves the setting off")
-eq(revealToggle.value, false, "D6 the refused reveal keeps the switch visually off")
+eq(revealToggle.value, "Off", "D6 the refused reveal keeps the switch visually off")
 assertMasked(window, "D6 the refused reveal")
 expect(
 	hasNotification(window, "Show profile is required"),
@@ -362,7 +362,7 @@ TestPump(0.2)
 revealToggle:Set(true)
 TestPump(0.2)
 eq(window.settings.showFullUsername, true, "D6 the reveal sticks once Show profile is on")
-eq(revealToggle.value, true, "D6 and its switch stays on")
+eq(revealToggle.value, "On", "D6 and its switch stays on")
 eq(window.profileName.Text, "Test User", "D6 the card reveals the display name")
 eq(window.profileSubtitle.Text, "@TestUser", "D6 the card reveals the username")
 eq(window.profileUserIdValue.Text, tostring(USER_ID), "D6 the card reveals the user ID")
@@ -375,7 +375,7 @@ eq(window.profileWhitelistValue.Text, "—", "D6 no whitelist status is invented
 showProfileToggle:Set(false)
 TestPump(0.2)
 eq(window.settings.showFullUsername, false, "D6 hiding the card turns 'Reveal profile details' off")
-eq(revealToggle.value, false, "D6 and keeps the switch visually in sync")
+eq(revealToggle.value, "Off", "D6 and keeps the switch visually in sync")
 assertMasked(window, "D6 hiding the card re-masks the sensitive fields")
 expect(
 	hasNotification(window, "Turned off with the profile card"),

@@ -281,8 +281,8 @@ eq(window:ResolveIcon("nope-nope"), "nope-nope", "I12 the window keeps the old f
 
 local mixed = window:CreateTab({ name = "Mixed", icon = "tabler:brand-discord" })
 for _, name in { "lucide:house", "material:access_time", "feather:home", "tabler:brand-discord" } do
-    local button = mixed:CreateButton({ name = name, icon = name })
-    eq(button.icon, Icons.resolve(name), "I12 elements in one window can use different packs")
+    local element = mixed:CreateInput({ name = name, icon = name })
+    eq(element.icon, Icons.resolve(name), "I12 elements in one window can use different packs")
 end
 eq(window:ResolveIcon("brand-discord"), Icons.resolve("tabler:brand-discord"), "I12 bare names find later packs")
 window:Unload()

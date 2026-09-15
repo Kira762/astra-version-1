@@ -230,7 +230,7 @@ eq(clampedOrigin.Y.Offset, pairHalfH + EDGE_MARGIN, "C4 the card's height limits
 
 -- Flipping the card to the left mirrors both the resting centre and the clamp.
 local sideDropdown = findSettingsElement(lateWindow, "Appearance", "Profile side")
-expect(sideDropdown ~= nil, "C4 the 'Profile side' dropdown exists")
+expect(sideDropdown ~= nil, "C4 the 'Profile side' field exists")
 sideDropdown:Set("Left")
 TestPump(0.3)
 eqUDim2(lateWindow.main.Position, 0.5, PANEL_SHIFT, 0.5, 0, "C4 a left-side card mirrors the resting centre")
@@ -256,7 +256,7 @@ eqUDim2(lateWindow.main.Position, 0.5, -PANEL_SHIFT, 0.5, 0, "C4 back on the rig
 -- ===== C5: with the card off, everything falls back to the plain window =====
 
 local showProfileToggle = findSettingsElement(lateWindow, "Appearance", "Show profile")
-expect(showProfileToggle ~= nil, "C5 the 'Show profile' toggle exists")
+expect(showProfileToggle ~= nil, "C5 the 'Show profile' field exists")
 showProfileToggle:Set(false)
 TestPump(0.3)
 eq(lateWindow.profilePanel.Visible, false, "C5 the card is off")

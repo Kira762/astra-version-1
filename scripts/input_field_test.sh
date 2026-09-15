@@ -1,7 +1,10 @@
 #!/bin/sh
-# Runtime test for the input element's field corner: the box rounds with the
-# theme's ElementCornerRadius (a theme binding, like every other element
-# surface) instead of a capsule of its own.
+# Runtime test for the input element's field: the box rounds with the theme's
+# ElementCornerRadius (a theme binding, like every other surface) instead of a
+# capsule of its own, and its width follows the text it shows - the placeholder
+# while the field is empty, the typed text once it is not - up to a ceiling that
+# answers to the page width. SetPlaceholder, a locale switch and a theme refresh
+# all re-measure it.
 #
 # Assembles: mini Roblox stubs + bundle (wrapped in a function to keep
 # `local` scoping) + assertions, writes it to a temp file, and runs it under

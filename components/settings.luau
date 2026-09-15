@@ -3,7 +3,6 @@ local constants = require(utilities.constants)
 local locale = require(utilities.locale)
 local haptic = require(utilities.HapticEngine)
 local profilePanel = require(script.Parent.profilePanel)
-local layouts = require(utilities.layouts)
 
 local settingsComponent = {}
 
@@ -12,6 +11,69 @@ local function layoutKey(layout)
         return "collapsedSidebar"
     end
     return if type(layout) == "table" and layout.mode then layout.mode else "top"
+end
+
+-- [[Input is the library's only element, so the built-in settings panel is typed
+-- [[rather than clicked: every setting is an Input whose field shows the value
+-- [[that is active right now, and committing new text applies it. Three parsing
+-- [[helpers cover the shapes a setting takes - a switch, a choice from a fixed
+-- [[list, and a key name - and each one answers nil for text it cannot honour,
+-- [[which is the caller's cue to put the active value back in the field.
+local switchWords = {
+    on = true, ["true"] = true, yes = true, y = true, ["1"] = true, enabled = true,
+    off = false, ["false"] = false, no = false, n = false, ["0"] = false, disabled = false,
+}
+
+local function parseSwitch(text)
+    local word = string.lower(tostring(text or "")):gsub("%s+", "")
+    local parsed = switchWords[word]
+    if parsed == nil then
+        return nil
+    end
+    return parsed
+end
+
+local function parseChoice(options, text)
+    local wanted = string.lower(tostring(text or "")):gsub("%s+", " ")
+    for _, option in options do
+        if string.lower(option.label) == wanted or string.lower(option.key) == wanted then
+            return option.key
+        end
+    end
+    return nil
+end
+
+local function choiceLabel(options, key)
+    for _, option in options do
+        if option.key == key then
+            return option.label
+        end
+    end
+    return ""
+end
+
+local function choiceList(options)
+    local labels = {}
+    for _, option in options do
+        table.insert(labels, option.label)
+    end
+    return table.concat(labels, ", ")
+end
+
+local function parseKeyCode(text)
+    local name = string.upper(tostring(text or ""):gsub("%s+", ""))
+    if name == "" then
+        return nil
+    end
+    -- [[The engine raises on a key name it does not know, so the lookup is
+    -- [[guarded: an unknown name is a rejected setting, not a crash.]]
+    local ok, item = pcall(function()
+        return Enum.KeyCode[name]
+    end)
+    if ok and typeof(item) == "EnumItem" then
+        return item
+    end
+    return nil
 end
 
 function settingsComponent.buildUI(window)
@@ -33,525 +95,499 @@ function settingsComponent.buildUI(window)
     -- [[builders run at most once, in the original creation order.]]
     window._settingsContentBuilt = window._settingsContentBuilt or {}
 
+    -- [[A setting that cannot honour what was typed puts the active value back
+    -- [[and says why: the field is the panel's only readout, so it must never
+    -- [[show something the window is not using.]]
+    local function reject(input, message, active)
+        input:Set(active, true)
+        window:Notify({ title = locale.resolve("Settings"), content = message })
+    end
+
+    local function switchSetting(tab, spec)
+        local function activeLabel()
+            return if spec.get() then "On" else "Off"
+        end
+        local input
+        input = tab:CreateInput({
+            name = spec.name,
+            icon = spec.icon,
+            description = spec.description,
+            placeholder = "On / Off",
+            value = activeLabel(),
+            forgetState = true,
+            callback = function(text)
+                local parsed = parseSwitch(text)
+                if parsed == nil then
+                    reject(input, `'${text}' is not a switch value - type On or Off.`, activeLabel())
+                    return
+                end
+                spec.set(parsed)
+                input:Set(activeLabel(), true)
+            end,
+        })
+        return input
+    end
+
+    local function choiceSetting(tab, spec)
+        local function activeLabel()
+            local label = choiceLabel(spec.options, spec.get())
+            return if label ~= "" then label else choiceLabel(spec.options, spec.options[1] and spec.options[1].key)
+        end
+        local input
+        input = tab:CreateInput({
+            name = spec.name,
+            icon = spec.icon,
+            description = spec.description or `Type one of: {choiceList(spec.options)}.`,
+            placeholder = activeLabel(),
+            value = activeLabel(),
+            forgetState = true,
+            callback = function(text)
+                local key = parseChoice(spec.options, text)
+                if not key then
+                    reject(input, `'${text}' is not one of: {choiceList(spec.options)}.`, activeLabel())
+                    return
+                end
+                -- [[The setter owns the field while it works: a choice that
+                -- [[confirms through a popup applies from the popup's own
+                -- [[callback, later, and retypes the field there.]]
+                spec.set(key, input, choiceLabel(spec.options, key))
+                input:Set(activeLabel(), true)
+            end,
+        })
+        return input
+    end
+
     local function buildAbout()
-        about:CreateCollapsibleGroup({
+        about:CreateInput({
             name = "Rayfield Gen2",
             icon = "info",
-            elements = {
-                {
-                    type = "Text",
-                    name = "About Rayfield Gen2",
-                    text = "Rayfield Gen2 is a ground-up rebuild of the Rayfield Interface Suite, built entirely in code for a faster, more stable, and more consistent experience.",
-                },
-                {
-                    type = "Text",
-                    name = "Highlights",
-                    text = "State can persist between sessions, themes can change at runtime, labels can be translated, and the interface is designed for both desktop and mobile.",
-                },
-            },
+            description = "Rayfield Gen2 is a ground-up rebuild of the Rayfield Interface Suite, built entirely in code for a faster, more stable, and more consistent experience.",
+            placeholder = "About",
+            forgetState = true,
         })
-        about:CreateCollapsibleGroup({
+        about:CreateInput({
+            name = "Highlights",
+            description = "State can persist between sessions, themes can change at runtime, labels can be translated, and the interface is designed for both desktop and mobile.",
+            placeholder = "About",
+            forgetState = true,
+        })
+        about:CreateInput({
             name = "Astra",
             icon = "sparkles",
-            elements = {
-                {
-                    type = "Text",
-                    name = "Our Story",
-                    text = "Astra began from Rayfield Gen2 and was reshaped into a distinct interface library with its own visual language, behavior, and features.",
-                },
-                {
-                    type = "Text",
-                    name = "What Astra Provides",
-                    text = "A responsive, customizable interface with persistent settings, runtime themes, localization support, animated window transitions, and a growing set of reusable elements.",
-                },
-                {
-                    type = "Text",
-                    name = "Customized by Haijo",
-                    text = "Originally from Rayfield, Astra is customized, refined, and maintained by Haijo.",
-                },
-            },
+            description = "Astra began from Rayfield Gen2 and was reshaped into a distinct interface library with its own visual language, behavior, and features: a responsive, customizable interface with persistent settings, runtime themes, localization support and animated window transitions.",
+            placeholder = "About",
+            forgetState = true,
         })
-        about:CreateCollapsibleGroup({
-            name = "Links",
+        about:CreateInput({
+            name = "Customized by Haijo",
+            description = "Originally from Rayfield, Astra is customized, refined, and maintained by Haijo.",
+            placeholder = "About",
+            forgetState = true,
+        })
+        about:CreateInput({
+            name = "Documentation",
             icon = "link",
-            elements = {
-                {
-                    type = "Text",
-                    name = "Documentation",
-                    text = "https://docs.sirius.menu/rayfield-gen2",
-                },
-            },
+            description = "The field holds the documentation address; select it to copy it out.",
+            value = "https://docs.sirius.menu/rayfield-gen2",
+            placeholder = "docs.sirius.menu",
+            forgetState = true,
         })
     end
     about._settingsContentBuilder = buildAbout
 
     local function buildGeneral()
-        window.rfSettings:CreateCollapsibleGroup({
-            name = "General Controls",
-            icon = constants.icons.settings,
-            elements = {
-                {
-                    type = "Keybind",
-                    name = "Toggle Keybind",
-                    icon = constants.icons.search,
-                    value = window.settings.toggleKeybind,
-                    editable = true,
-                    isMenuToggle = true,
-                    onChanged = function(value)
-                        window.settings.toggleKeybind = value
-                        window:SaveSettings()
-                    end,
-                },
-                {
-                    type = "Toggle",
-                    name = "Unlock cursor while open",
-                    value = window.settings.mouseOverride,
-                    callback = function(value)
-                        window.settings.mouseOverride = value
-                        window:SaveSettings()
-                    end,
-                },
-                {
-                    type = "Toggle",
-                    name = "Welcome toast",
-                    value = window.settings.welcomeToast,
-                    callback = function(value)
-                        window.settings.welcomeToast = value
-                        window:SaveSettings()
-                    end,
-                },
-            },
+        local settingsTab = window.rfSettings
+
+        local function keyLabel()
+            local keybind = window.settings.toggleKeybind
+            return if keybind then tostring(keybind.Name) else ""
+        end
+
+        local keybindInput
+        keybindInput = settingsTab:CreateInput({
+            name = "Toggle Keybind",
+            icon = constants.icons.search,
+            description = "Type the key that shows or hides the window, e.g. K or F3.",
+            placeholder = "Key name",
+            value = keyLabel(),
+            forgetState = true,
+            callback = function(text)
+                local keyCode = parseKeyCode(text)
+                if not keyCode then
+                    reject(keybindInput, `'${text}' is not a key name - try K, F3 or LeftShift.`, keyLabel())
+                    return
+                end
+                window.settings.toggleKeybind = keyCode
+                window:SaveSettings()
+                keybindInput:Set(keyLabel(), true)
+            end,
         })
 
-        window.rfSettings:CreateCollapsibleGroup({
-            name = "Window Behavior",
-            icon = "layout",
-            elements = {
-                {
-                    type = "Toggle",
-                    name = "Prevent duplicate windows",
-                    value = window.settings.antiWindowDuplicate,
-                    callback = function(value)
-                        window.settings.antiWindowDuplicate = value
-                        window:SaveSettings()
-                    end,
-                },
-                {
-                    type = "Toggle",
-                    name = "Keep window on screen",
-                    value = window.settings.keepOnScreen,
-                    callback = function(value)
-                        window.settings.keepOnScreen = value
-                        window:SaveSettings()
-                    end,
-                },
-                {
-                    type = "Toggle",
-                    name = "Draggable capsule",
-                    value = window.settings.dragMinimisedBar,
-                    callback = function(value)
-                        window.settings.dragMinimisedBar = value == true
-                        window:SaveSettings()
-                    end,
-                },
-                {
-                    type = "Button",
-                    name = "Reset Window Position",
-                    callback = function()
-                        window:_recenterForProfile(true)
-                    end,
-                },
-                {
-                    type = "Button",
-                    name = "Reset Capsule Position",
-                    callback = function()
-                        window:_resetCapsulePosition()
-                    end,
-                },
-            },
+        switchSetting(settingsTab, {
+            name = "Unlock cursor while open",
+            description = "Type On to free the cursor while the window is open.",
+            get = function() return window.settings.mouseOverride end,
+            set = function(value)
+                window.settings.mouseOverride = value
+                window:SaveSettings()
+            end,
+        })
+        switchSetting(settingsTab, {
+            name = "Welcome toast",
+            description = "Type On to greet the player when the window opens.",
+            get = function() return window.settings.welcomeToast end,
+            set = function(value)
+                window.settings.welcomeToast = value
+                window:SaveSettings()
+            end,
+        })
+        switchSetting(settingsTab, {
+            name = "Prevent duplicate windows",
+            description = "Type On to close an older window when a new one is created.",
+            get = function() return window.settings.antiWindowDuplicate end,
+            set = function(value)
+                window.settings.antiWindowDuplicate = value
+                window:SaveSettings()
+            end,
+        })
+        switchSetting(settingsTab, {
+            name = "Keep window on screen",
+            description = "Type On to pull the window back when it would leave the viewport.",
+            get = function() return window.settings.keepOnScreen end,
+            set = function(value)
+                window.settings.keepOnScreen = value
+                window:SaveSettings()
+            end,
+        })
+        switchSetting(settingsTab, {
+            name = "Draggable capsule",
+            description = "Type On to drag the minimised bar around the screen.",
+            get = function() return window.settings.dragMinimisedBar == true end,
+            set = function(value)
+                window.settings.dragMinimisedBar = value == true
+                window:SaveSettings()
+            end,
+        })
+        switchSetting(settingsTab, {
+            name = "Haptics",
+            description = "Type On for controller and touch feedback on interaction.",
+            get = function() return window.settings.haptics end,
+            set = function(value)
+                window.settings.haptics = value
+                haptic.setEnabled(value)
+                window:SaveSettings()
+            end,
         })
 
-        local motionLabels = { relaxed = "Relaxed", normal = "Normal", snappy = "Snappy", instant = "Instant" }
-        local motionOptions = { "Relaxed", "Normal", "Snappy", "Instant" }
-        local motionProfiles = { Relaxed = "relaxed", Normal = "normal", Snappy = "snappy", Instant = "instant" }
-        local currentMotion = motionLabels[window.settings.motionSpeed] or motionLabels.normal
-
-        window.rfSettings:CreateCollapsibleGroup({
-            name = "Performance & Motion",
+        choiceSetting(settingsTab, {
+            name = "Animation speed",
             icon = "gauge",
-            elements = {
-                {
-                    type = "Toggle",
-                    name = "Haptics",
-                    value = window.settings.haptics,
-                    callback = function(value)
-                        window.settings.haptics = value
-                        haptic.setEnabled(value)
-                        window:SaveSettings()
-                    end,
-                },
-                {
-                    type = "Dropdown",
-                    name = "Animation speed",
-                    options = motionOptions,
-                    value = currentMotion,
-                    callback = function(value)
-                        local profile = motionProfiles[value]
-                        if not profile or profile == window.settings.motionSpeed then
-                            return
-                        end
-                        window.settings.motionSpeed = profile
-                        window:_applyMotionSetting()
-                        window:SaveSettings()
-                    end,
-                },
+            description = "Type Relaxed, Normal, Snappy or Instant.",
+            options = {
+                { key = "relaxed", label = "Relaxed" },
+                { key = "normal", label = "Normal" },
+                { key = "snappy", label = "Snappy" },
+                { key = "instant", label = "Instant" },
             },
+            get = function() return window.settings.motionSpeed end,
+            set = function(profile)
+                if profile == window.settings.motionSpeed then
+                    return
+                end
+                window.settings.motionSpeed = profile
+                window:_applyMotionSetting()
+                window:SaveSettings()
+            end,
+        })
+
+        local resetInput
+        resetInput = settingsTab:CreateInput({
+            name = "Reset Positions",
+            icon = "layout",
+            description = "Type window, capsule or both to put it back where it started.",
+            placeholder = "window / capsule",
+            value = "",
+            forgetState = true,
+            callback = function(text)
+                local target = string.lower(tostring(text or ""):gsub("%s+", ""))
+                if target == "window" then
+                    window:_recenterForProfile(true)
+                elseif target == "capsule" then
+                    window:_resetCapsulePosition()
+                elseif target == "both" then
+                    window:_recenterForProfile(true)
+                    window:_resetCapsulePosition()
+                else
+                    reject(resetInput, `'${text}' is not a position to reset - type window, capsule or both.`, "")
+                    return
+                end
+                resetInput:Set("", true)
+            end,
         })
     end
     window.rfSettings._settingsContentBuilder = buildGeneral
 
     local function buildAppearance()
-        local themes = {
-            default = "Default",
-            amethyst = "Amethyst",
-            cobalt = "Cobalt",
-            crimson = "Crimson",
-            ember = "Ember",
-            emerald = "Emerald",
-            frost = "Frost",
-            gold = "Gold",
-            onyx = "Onyx",
-            rose = "Rose",
+        local themeOptions = {
+            { key = "default", label = "Default" },
+            { key = "amethyst", label = "Amethyst" },
+            { key = "cobalt", label = "Cobalt" },
+            { key = "crimson", label = "Crimson" },
+            { key = "ember", label = "Ember" },
+            { key = "emerald", label = "Emerald" },
+            { key = "frost", label = "Frost" },
+            { key = "gold", label = "Gold" },
+            { key = "onyx", label = "Onyx" },
+            { key = "rose", label = "Rose" },
         }
-        local selectedTheme = window.settings.theme
-        local function themeLabel(key)
-            return themes[key] or themes.default
-        end
-        if not themes[selectedTheme] then
-            selectedTheme = "default"
-        end
 
-        appearance:CreateCollapsibleGroup({
+        choiceSetting(appearance, {
             name = "Theme",
             icon = "palette",
-            elements = {
-                {
-                    type = "Dropdown",
-                    name = "Theme",
-                    options = { "Default", "Amethyst", "Cobalt", "Crimson", "Ember", "Emerald", "Frost", "Gold", "Onyx", "Rose" },
-                    value = themeLabel(selectedTheme),
-                    callback = function(value)
-                        for key, label in themes do
-                            if value == label then
-                                selectedTheme = key
-                                break
-                            end
-                        end
-                    end,
-                },
-                {
-                    type = "Button",
-                    name = "Apply theme",
-                    callback = function()
-                        if selectedTheme == window.settings.theme then
-                            window:Notify({ title = "Theme", content = "The " .. themeLabel(selectedTheme) .. " theme is already active." })
-                            return
-                        end
-                        window:Popup({
-                            title = "Apply theme?",
-                            content = "Apply the " .. themeLabel(selectedTheme) .. " theme to this window?",
-                            options = {
-                                { text = "Cancel" },
-                                {
-                                    text = "Apply",
-                                    style = "primary",
-                                    callback = function()
-                                        window.settings.theme = selectedTheme
-                                        window:ChangeTheme(selectedTheme)
-                                        window:SaveSettings()
-                                        window:Notify({ title = "Theme applied", subtitle = themeLabel(selectedTheme) })
-                                    end,
-                                },
-                            },
-                        })
-                    end,
-                },
-            },
+            description = "Type a theme name; the change is confirmed before it is applied.",
+            options = themeOptions,
+            get = function()
+                return if choiceLabel(themeOptions, window.settings.theme) ~= "" then window.settings.theme else "default"
+            end,
+            set = function(key, input, label)
+                if key == window.settings.theme then
+                    window:Notify({ title = locale.resolve("Theme"), content = `The {label} theme is already active.` })
+                    return
+                end
+                window:Popup({
+                    title = locale.resolve("Apply theme?"),
+                    content = `Apply the {label} theme to this window?`,
+                    options = {
+                        { text = locale.resolve("Cancel") },
+                        {
+                            text = locale.resolve("Apply"),
+                            style = "primary",
+                            callback = function()
+                                window.settings.theme = key
+                                window:ChangeTheme(key)
+                                window:SaveSettings()
+                                input:Set(label, true)
+                                window:Notify({ title = locale.resolve("Theme applied"), subtitle = label })
+                            end,
+                        },
+                    },
+                })
+            end,
         })
 
-        local layoutMap = { top = "Default Topbar", sidebar = "Sidebar (Responsive)", collapsedSidebar = "Collapsed Sidebar" }
-        local layoutDropdown
-        local currentLayout = window.settings.layoutMode or window.layout.mode
+        local layoutOptions = {
+            { key = "top", label = "Default Topbar" },
+            { key = "sidebar", label = "Sidebar (Responsive)" },
+            { key = "collapsedSidebar", label = "Collapsed Sidebar" },
+        }
 
-        local layoutGroup = appearance:CreateCollapsibleGroup({
-            name = "Layout",
+        choiceSetting(appearance, {
+            name = "Bar Layout",
             icon = "panel-left",
-            elements = {
-                {
-                    type = "Dropdown",
-                    name = "Bar Layout",
-                    options = { layoutMap.top, layoutMap.sidebar, layoutMap.collapsedSidebar },
-                    value = layoutMap[currentLayout],
-                    callback = function(choice)
-                        local requested
-                        for key, label in layoutMap do
-                            if choice == label then
-                                requested = key
-                                break
-                            end
-                        end
-                        if not requested then
-                            return
-                        end
-                        local active = layoutKey(window.layout)
-                        if requested == active then
-                            window:Notify({ title = "Bar layout", content = "The " .. choice .. " layout is already active." })
-                            if layoutDropdown then
-                                layoutDropdown:Set(layoutMap[active], true)
-                            end
-                            return
-                        end
-                        if layoutDropdown then
-                            layoutDropdown:Set(layoutMap[active], true)
-                        end
-                        window:Popup({
-                            title = "Apply bar layout?",
-                            content = "Are you sure you want to change the layout to " .. choice .. "?",
-                            options = {
-                                { text = "Cancel" },
-                                {
-                                    text = "Apply",
-                                    style = "primary",
-                                    callback = function()
-                                        if window:_setLayoutMode(requested) then
-                                            currentLayout = requested
-                                            window.settings.layoutMode = requested
-                                            window:SaveSettings()
-                                            if layoutDropdown then
-                                                layoutDropdown:Set(layoutMap[requested], true)
-                                            end
-                                            window:Notify({ title = "Bar layout changed", content = "Switched to the " .. layoutMap[requested] .. " layout." })
-                                        else
-                                            currentLayout = layoutKey(window.layout)
-                                            if layoutDropdown then
-                                                layoutDropdown:Set(layoutMap[currentLayout], true)
-                                            end
-                                            window:Notify({ title = "Bar layout", content = "The selected bar layout could not be applied right now." })
-                                        end
-                                    end,
-                                },
-                            },
-                        })
-                    end,
-                },
-            },
-        })
-        layoutDropdown = layoutGroup.elements[1]
-
-        local revealToggle
-        local profileGroup = appearance:CreateCollapsibleGroup({
-            name = "Profile",
-            icon = "user",
-            elements = {
-                {
-                    type = "Toggle",
-                    name = "Show profile",
-                    value = window.settings.showProfile,
-                    callback = function(value)
-                        local revealCleared = profilePanel.setEnabled(window, value)
-                        if revealCleared and revealToggle then
-                            revealToggle:Set(false, true)
-                        end
-                        window:SaveSettings()
-                    end,
-                },
-                {
-                    type = "Dropdown",
-                    name = "Profile side",
-                    options = { "Right", "Left" },
-                    value = if (window.settings.profileSide or "right") == "left" then "Left" else "Right",
-                    callback = function(choice)
-                        local side = if choice == "Left" then "left" else "right"
-                        if (window.settings.profileSide or "right") == side then
-                            return
-                        end
-                        profilePanel.setSide(window, side)
-                        window:SaveSettings()
-                    end,
-                },
-                {
-                    type = "Toggle",
-                    name = "Reveal profile details",
-                    value = window.settings.showFullUsername,
-                    callback = function(value)
-                        if not profilePanel.setReveal(window, value) and revealToggle then
-                            revealToggle:Set(false, true)
-                        end
-                        window:SaveSettings()
-                    end,
-                },
-            },
-        })
-        revealToggle = profileGroup.elements[3]
-    end
-    appearance._settingsContentBuilder = buildAppearance
-
-    local function buildPersistence()
-        persistence:CreateCollapsibleGroup({
-            name = "Auto Save & Load",
-            icon = "save",
-            elements = {
-                {
-                    type = "Toggle",
-                    name = "Auto Save Config",
-                    value = window.settings.autoSaveConfig,
-                    callback = function(value)
-                        window.settings.autoSaveConfig = value
-                        window.configuration.autoSave = value
-                        window:SaveSettings()
-                    end,
-                },
-                {
-                    type = "Toggle",
-                    name = "Auto Load Config",
-                    value = window.settings.autoLoadConfig,
-                    callback = function(value)
-                        window.settings.autoLoadConfig = value
-                        window.configuration.autoLoad = value
-                        window:SaveSettings()
-                    end,
-                },
-            },
-        })
-
-        local function namedConfigs()
-            return window:ListConfigs()
-        end
-        local selected = namedConfigs()[1]
-        local configDropdown, configName
-        local function refresh()
-            local configs = namedConfigs()
-            if configDropdown then
-                configDropdown:Refresh(configs)
-                if selected and not table.find(configs, selected) then
-                    selected = configs[1]
-                elseif not selected and #configs > 0 then
-                    selected = configs[1]
+            description = "Type a layout name; the switch is confirmed before it happens.",
+            options = layoutOptions,
+            get = function()
+                return window.settings.layoutMode or layoutKey(window.layout)
+            end,
+            set = function(key, input, label)
+                if key == layoutKey(window.layout) then
+                    window:Notify({ title = locale.resolve("Bar layout"), content = `The {label} layout is already active.` })
+                    return
                 end
-                if selected then
-                    configDropdown:Set(selected, true)
-                else
-                    configDropdown:Set(nil, true)
-                end
-            end
-        end
-
-        local configGroup = persistence:CreateCollapsibleGroup({
-            name = "Configurations",
-            icon = constants.icons.config,
-            elements = {
-                {
-                    type = "Dropdown",
-                    name = "Saved Configurations",
-                    icon = constants.icons.config,
-                    options = namedConfigs(),
-                    value = selected,
-                    placeholder = "No saved configurations",
-                    callback = function(value)
-                        selected = value
-                    end,
-                },
-                {
-                    type = "Input",
-                    name = "Configuration Name",
-                    placeholder = "e.g. PvP Loadout",
-                    clearOnFocus = false,
-                },
-                {
-                    type = "Group",
-                    elements = {
+                window:Popup({
+                    title = locale.resolve("Apply bar layout?"),
+                    content = `Are you sure you want to change the layout to {label}?`,
+                    options = {
+                        { text = locale.resolve("Cancel") },
                         {
-                            type = "Button",
-                            name = "Save",
-                            icon = constants.icons.config,
+                            text = locale.resolve("Apply"),
+                            style = "primary",
                             callback = function()
-                                local name = if configName then configName.value else ""
-                                if name == "" then
-                                    name = selected
-                                end
-                                if not name or name == "" then
-                                    name = window.configuration.fileName or "Configuration"
-                                end
-                                if window:Save(name) then
-                                    if configName then
-                                        configName:Set("")
-                                    end
-                                    selected = name
-                                    refresh()
-                                    window:Toast({
-                                        title = locale.resolve("Saved configuration"),
-                                        subtitle = name,
-                                        icon = constants.icons.config,
-                                    })
+                                if window:_setLayoutMode(key) then
+                                    window.settings.layoutMode = key
+                                    window:SaveSettings()
+                                    input:Set(label, true)
+                                    window:Notify({ title = locale.resolve("Bar layout changed"), content = `Switched to the {label} layout.` })
                                 else
-                                    window:Toast({
-                                        title = locale.resolve("Couldn't save configuration"),
-                                        subtitle = name,
-                                    })
-                                end
-                            end,
-                        },
-                        {
-                            type = "Button",
-                            name = "Load",
-                            callback = function()
-                                if not selected or selected == "" then
-                                    window:Toast({ title = locale.resolve("Pick a configuration to load") })
-                                    return
-                                end
-                                if window:_applyNamedConfig(selected) then
-                                    window:Toast({
-                                        title = locale.resolve("Loaded configuration"),
-                                        subtitle = selected,
-                                    })
-                                else
-                                    window:Toast({
-                                        title = locale.resolve("Couldn't load configuration"),
-                                        subtitle = selected,
-                                    })
-                                end
-                            end,
-                        },
-                        {
-                            type = "Button",
-                            name = "Delete",
-                            callback = function()
-                                local name = selected
-                                if not name or name == "" then
-                                    window:Toast({ title = locale.resolve("Pick a configuration to delete") })
-                                    return
-                                end
-                                if window:DeleteConfig(name) then
-                                    selected = nil
-                                    refresh()
-                                    window:Toast({
-                                        title = locale.resolve("Deleted configuration"),
-                                        subtitle = name,
-                                    })
-                                else
-                                    window:Toast({
-                                        title = locale.resolve("Couldn't delete configuration"),
-                                        subtitle = name,
-                                    })
+                                    input:Set(choiceLabel(layoutOptions, layoutKey(window.layout)), true)
+                                    window:Notify({ title = locale.resolve("Bar layout"), content = locale.resolve("The selected bar layout could not be applied right now.") })
                                 end
                             end,
                         },
                     },
-                },
-            },
+                })
+            end,
         })
-        configDropdown = configGroup.elements[1]
-        configName = configGroup.elements[2]
+
+        -- [[The two profile settings depend on each other (hiding the card
+        -- [[clears its detail reveal), so the reveal field is declared before
+        -- [[the card's switch is built and filled in below it.]]
+        local revealInput
+        switchSetting(appearance, {
+            name = "Show profile",
+            icon = "user",
+            description = "Type On to show the profile card beside the window.",
+            get = function() return window.settings.showProfile end,
+            set = function(value)
+                -- [[Hiding the card clears its detail reveal too, so the]]
+                -- [[reveal field has to read Off the moment that happens.]]
+                if profilePanel.setEnabled(window, value) and revealInput then
+                    revealInput:Set("Off", true)
+                end
+                window:SaveSettings()
+            end,
+        })
+
+        choiceSetting(appearance, {
+            name = "Profile side",
+            description = "Type Right or Left.",
+            options = {
+                { key = "right", label = "Right" },
+                { key = "left", label = "Left" },
+            },
+            get = function()
+                return if (window.settings.profileSide or "right") == "left" then "left" else "right"
+            end,
+            set = function(side)
+                if (window.settings.profileSide or "right") == side then
+                    return
+                end
+                profilePanel.setSide(window, side)
+                window:SaveSettings()
+            end,
+        })
+
+        revealInput = switchSetting(appearance, {
+            name = "Reveal profile details",
+            description = "Type On to spell out the full username on the profile card.",
+            get = function() return window.settings.showFullUsername end,
+            set = function(value)
+                if not profilePanel.setReveal(window, value) then
+                    -- [[The card refused (it is hidden), so the switch stays where
+                    -- [[the panel actually is instead of showing a lie.]]
+                    revealInput:Set(if window.settings.showFullUsername then "On" else "Off", true)
+                end
+                window:SaveSettings()
+            end,
+        })
+    end
+    appearance._settingsContentBuilder = buildAppearance
+
+    local function buildPersistence()
+        switchSetting(persistence, {
+            name = "Auto Save Config",
+            icon = "save",
+            description = "Type On to write the configuration whenever a value changes.",
+            get = function() return window.settings.autoSaveConfig end,
+            set = function(value)
+                window.settings.autoSaveConfig = value
+                window.configuration.autoSave = value
+                window:SaveSettings()
+            end,
+        })
+        switchSetting(persistence, {
+            name = "Auto Load Config",
+            description = "Type On to load the saved configuration when the window opens.",
+            get = function() return window.settings.autoLoadConfig end,
+            set = function(value)
+                window.settings.autoLoadConfig = value
+                window.configuration.autoLoad = value
+                window:SaveSettings()
+            end,
+        })
+
+        -- [[The list of configurations on disk, retyped after every action that
+        -- [[changes it. It is a field like the rest of the panel: the name the
+        -- [[action below works on is the one typed beside it.]]
+        local function configListValue()
+            return table.concat(window:ListConfigs(), ", ")
+        end
+
+        local configList = persistence:CreateInput({
+            name = "Saved Configurations",
+            icon = constants.icons.config,
+            description = "Every configuration on disk for this window.",
+            placeholder = "No saved configurations",
+            value = configListValue(),
+            forgetState = true,
+        })
+
+        local configName = persistence:CreateInput({
+            name = "Configuration Name",
+            icon = constants.icons.config,
+            description = "The name the action below saves to, loads or deletes.",
+            placeholder = "e.g. PvP Loadout",
+            clearOnFocus = false,
+            forgetState = true,
+        })
+
+        local actionInput
+        actionInput = persistence:CreateInput({
+            name = "Config Action",
+            icon = constants.icons.config,
+            description = "Type save, load, delete or list and press enter.",
+            placeholder = "save / load / delete",
+            value = "",
+            forgetState = true,
+            callback = function(text)
+                local action = string.lower(tostring(text or ""):gsub("%s+", ""))
+                actionInput:Set("", true)
+
+                if action == "list" then
+                    local configs = window:ListConfigs()
+                    window:Notify({
+                        title = locale.resolve("Saved configurations"),
+                        content = if #configs > 0 then table.concat(configs, ", ") else locale.resolve("No saved configurations"),
+                    })
+                    return
+                end
+
+                local name = configName.value
+                if name == "" then
+                    name = window.configuration.fileName or "Configuration"
+                end
+
+                if action == "save" then
+                    if window:Save(name) then
+                        configName:Set("")
+                        configList:Set(configListValue(), true)
+                        window:Toast({
+                            title = locale.resolve("Saved configuration"),
+                            subtitle = name,
+                            icon = constants.icons.config,
+                        })
+                    else
+                        window:Toast({ title = locale.resolve("Couldn't save configuration"), subtitle = name })
+                    end
+                    return
+                end
+
+                if action == "load" then
+                    if window:_applyNamedConfig(name) then
+                        window:Toast({ title = locale.resolve("Loaded configuration"), subtitle = name })
+                    else
+                        window:Toast({ title = locale.resolve("Couldn't load configuration"), subtitle = name })
+                    end
+                    return
+                end
+
+                if action == "delete" then
+                    if window:DeleteConfig(name) then
+                        configName:Set("")
+                        configList:Set(configListValue(), true)
+                        window:Toast({ title = locale.resolve("Deleted configuration"), subtitle = name })
+                    else
+                        window:Toast({ title = locale.resolve("Couldn't delete configuration"), subtitle = name })
+                    end
+                    return
+                end
+
+                window:Notify({
+                    title = locale.resolve("Settings"),
+                    content = `'${text}' is not a configuration action - type save, load, delete or list.`,
+                })
+            end,
+        })
     end
     persistence._settingsContentBuilder = buildPersistence
 end

@@ -18,7 +18,7 @@ task.spawn(function()
     first = window:CreateTab({ name = "Visible" })
     second = window:CreateTab({ name = "Later" })
     for index = 1, 100 do
-        first:CreateToggle({ name = "Control " .. index, value = false })
+        first:CreateInput({ name = "Control " .. index })
         built += 1
     end
     completed = true
@@ -86,7 +86,7 @@ first:Select()
 TestPump(0.6)
 
 -- Hidden pages should never start a reveal tween when adding a control.
-local late = second:CreateToggle({ name = "Hidden control", value = false })
+local late = second:CreateInput({ name = "Hidden control" })
 assert(second._elementsPending, "Hidden-tab control is marked for first reveal")
 assert(late.title.TextTransparency == 1, "Off-screen control is not animated")
 second:Select()
@@ -123,7 +123,7 @@ task.spawn(function()
         building = Astra:CreateWindow({ name = "Cancel build" })
         local tab = building:CreateTab({ name = "Batch" })
         for i = 1, 100 do
-            tab:CreateToggle({ name = "Cancel " .. i, value = false })
+            tab:CreateInput({ name = "Cancel " .. i })
             added += 1
         end
     end)

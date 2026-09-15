@@ -131,12 +131,14 @@ slightly longer time-to-fully-interactive in exchange for an instant shell.
 
 ## Deliberately *not* changed
 
-* **Collapsible-group children still construct eagerly.** Host scripts
-  reference `group.elements[i]` immediately after
-  `CreateCollapsibleGroup`, and saved values must restore while collapsed
-  (`config_preferences` asserts this). Deferring instances would break that
-  contract; instead each child already crosses the frame-budget checkpoint, so
-  a big group streams in without hitching.
+* **Elements still construct eagerly.** A host script uses the element it just
+  created immediately (`field.value`, `field:Set(...)`, `field:SetPlaceholder(...)`),
+  and saved values must restore on load (`config_preferences` asserts this).
+  Deferring instances would break that contract; instead each input crosses the
+  frame-budget checkpoint as it is built, so a long page streams in without
+  hitching. The containers that used to share this rule (`Group`,
+  `CollapsibleGroup`) are gone — `Input` is the library's only element — so a tab
+  page is a flat column of cards.
 * Entrance animations still tween `UIScale`/size only; theming, dragging,
   singleton semantics (`__ASTRA_ACTIVE_WINDOW_V1__`), camelCase/PascalCase
   prop aliases and the 260 px side-card clamp/recenter are untouched.

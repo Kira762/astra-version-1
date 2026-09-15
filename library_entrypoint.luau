@@ -6,6 +6,7 @@ local Constants = require(script.Parent.utilities.constants)
 local Icons = require(script.Parent.icons)
 local Motion = require(script.Parent.utilities.motion)
 local Settings = require(script.Parent.settings)
+local types = require(script.Parent.Types)
 
 export type Theme = types.Theme
 export type Translator = types.Translator
@@ -14,42 +15,21 @@ export type WindowConfiguration = types.WindowConfiguration
 
 export type WindowProps = types.WindowProps
 export type TabProps = types.TabProps
-export type SectionProps = types.SectionProps
-export type GroupProps = types.GroupProps
-export type CollapsibleGroupProps = types.CollapsibleGroupProps
-export type CollapsibleElementProps = types.CollapsibleElementProps
-export type ButtonProps = types.ButtonProps
-export type ToggleProps = types.ToggleProps
-export type SliderProps = types.SliderProps
-export type DropdownProps = types.DropdownProps
-export type InputProps = types.InputProps
-export type KeybindProps = types.KeybindProps
-export type StatProps = types.StatProps
-export type TextProps = types.TextProps
-export type DividerProps = types.DividerProps
 export type NotifyProps = types.NotifyProps
 export type ToastProps = types.ToastProps
 export type PopupBox = types.PopupBox
 export type PopupOption = types.PopupOption
 export type PopupProps = types.PopupProps
 
+-- [[Input is the library's only element, so its props and its instance type are]]
+-- [[the only element exports.]]
+export type InputProps = types.InputProps
+export type Input = types.Input
+
 export type Moveable = types.Moveable
 export type Lockable = types.Lockable
 export type Window = types.Window
 export type Tab = types.Tab
-export type Group = types.Group
-export type CollapsibleGroup = types.CollapsibleGroup
-export type Button = types.Button
-export type Toggle = types.Toggle
-export type Slider = types.Slider
-export type Dropdown = types.Dropdown
-export type Input = types.Input
-export type Keybind = types.Keybind
-export type Stat = types.Stat
-export type Section = types.Section
-export type TabSection = types.TabSection
-export type Text = types.Text
-export type Divider = types.Divider
 export type Popup = types.Popup
 export type Astra = types.Astra
 
