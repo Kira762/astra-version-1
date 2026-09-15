@@ -32,7 +32,7 @@ local tweenStyle = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirecti
 -- content — and short enough that nothing looks like it is waiting for the
 -- next thing to happen. Scaled by the motion service, and skipped entirely
 -- when animation is switched off.]]
-local contentRevealBeat = 0.22
+local contentRevealBeat = 0.12
 
 local collapsedWideSize = UDim2.fromOffset(185, 50)
 local collapsedIconOnlySize = UDim2.fromOffset(50, 50)
@@ -64,10 +64,10 @@ local scrollbarWidth = 8
 
 local viewportCheckInterval = 2
 
--- Startup is deliberately paced in small, completed-object batches. Before the
--- first reveal this prevents a large host script from monopolising a frame;
--- after the reveal, one completed control is handed to the renderer per frame
--- until the host's initial build goes quiet.
+-- Startup is deliberately paced in small, completed-object batches, before the
+-- first reveal and after it alike. This prevents a large host script from
+-- monopolising a frame while still letting the opening tween render as the
+-- remaining controls stream in behind the already-visible shell.
 local constructionFrameBudget = 0.003
 local constructionInstanceBudget = 48
 
@@ -76,12 +76,11 @@ local constructionInstanceBudget = 48
 -- their normal stacks while the next one enters.
 local overlayEntranceCadence = 0.65
 
--- Existing controls wait briefly behind the window surface, then reveal in a
--- cascade. This makes the first open read as an entrance instead of one large
--- visibility flip.
-local firstContentDelay = 0.14
-local firstContentStep = 0.045
-local firstContentDuration = 0.9
+-- The first open reads as an entrance instead of one large visibility flip:
+-- the shell animates in, then `_stageContentReveal` walks the visible page one
+-- control per beat (see `_firstShow`). There is exactly one cascade — an older
+-- second timer used to walk the same page concurrently, restarting the first
+-- cascade's tweens mid-flight through the motion service's cancel-on-overlap.
 
 local function computeSize(mode): UDim2
     local size = state.workspace.CurrentCamera
@@ -166,6 +165,11 @@ function Window.new(props)
         -- has been quiet for two frames. Checkpoints continue after the window
         -- appears so the remaining controls cannot freeze its entrance.
         _startupComplete = false,
+        -- [[Placeholder for the entrance queue: the queue's own shape (pending
+        -- list, gate flags) is completed by `queueFor` in
+        -- `components/overlayQueue.luau` on first use, so what lives here is
+        -- only "the window has somewhere to put its overlays", which is what
+        -- lets `Unload` clear it unconditionally.]]
         _overlayQueue = {},
         _overlayQueueRunning = false,
 
@@ -179,7 +183,6 @@ function Window.new(props)
         localeProperties = {},
         tabs = {},
         tabSections = {},
-        tags = {},
         selectedTab = nil,
         _settingsLayoutActive = false,
         _settingsTabs = {},
@@ -413,28 +416,6 @@ function Window.new(props)
         }, { TextColor3 = "TitlingColor", FontFace = "Font" })
     end
 
-    self.tagContainer = self:Create("Frame", {
-        AnchorPoint = Vector2.new(0, 0.5),
-        Position = UDim2.new(0, 25, 0.5, 0),
-        Size = UDim2.fromOffset(50, 24),
-        AutomaticSize = Enum.AutomaticSize.XY,
-        BackgroundTransparency = 1,
-        LayoutOrder = 2,
-        Visible = false,
-
-        Parent = self.topContainer,
-    })
-
-    self.tagContainerLayout = self:Create("UIListLayout", {
-        Padding = UDim.new(0, 5),
-        FillDirection = Enum.FillDirection.Horizontal,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-
-        Parent = self.tagContainer,
-    })
-
-
         self.windowShadow = self:CreateGlow(self.main, "ShadowColor", 20, 1)
 
                 self.elements = self:Create("Frame", {
@@ -651,11 +632,11 @@ function Window.new(props)
 end
 
 -- Yield only at completed construction boundaries, never halfway through a
--- control. Limit pre-reveal batches by both CPU time and instance count. Once
--- the window is visible, yield after every completed control until the initial
--- host build goes quiet; this is what lets the entrance keep rendering while a
--- large script finishes adding the rest of its tabs and elements. The API is
--- still synchronous: each constructor resumes with a fully usable object.
+-- control. Batches are limited by both CPU time and instance count, before
+-- the first reveal and after it alike: the opening tween keeps receiving
+-- frames while a large script streams the rest of its controls in, and no
+-- single frame pays for the whole build. The API is still synchronous: each
+-- constructor resumes with a fully usable object.
 function Window:_constructionCheckpoint(force)
     if self._startupComplete or (not force and not self._constructed) then
         return
@@ -664,10 +645,8 @@ function Window:_constructionCheckpoint(force)
     local now = os.clock()
     local last = self._constructionClock or now
     local count = #self.instances
-    local visibleStartup = self.hasShownOnce == true
     if
         force
-        or visibleStartup
         or now - last >= constructionFrameBudget
         or count - (self._constructionInstances or 0) >= constructionInstanceBudget
     then
@@ -762,6 +741,12 @@ function Window:ChangeTheme(themeInput)
         deriveStrokes(self.theme, themeTable)
     end
 
+    -- [[Before the first show the window is invisible, so routing every
+    -- Color3/number through a 0.5s tween only buys dozens of tween allocations
+    -- on the startup path — nothing can be seen animating. Assign the end
+    -- state directly; the values are identical to what the tweens would have
+    -- settled on, and everything from the first entrance on still tweens.]]
+    local instantApply = self.hidden and not self.hasShownOnce
     for instance, properties in self.themeProperties do
         for prop, binding in properties do
             local resolvedValue = if typeof(binding) == "table" then binding[2](self.theme[binding[1]]) else self.theme[binding]
@@ -769,7 +754,7 @@ function Window:ChangeTheme(themeInput)
             if instance[prop] == resolvedValue then
                 continue
             end
-            if typeof(resolvedValue) == "Color3" or typeof(resolvedValue) == "number" then
+            if not instantApply and (typeof(resolvedValue) == "Color3" or typeof(resolvedValue) == "number") then
                 state.tweenService:Create(instance, tweenStyle, { [prop] = resolvedValue }):Play()
             else
                 instance[prop] = resolvedValue
@@ -866,13 +851,6 @@ function Window:_setTabSectionsVisible(visible)
     end
 end
 
-function Window:CreateTag(props)
-    assert(not self.unloaded, "Cannot create a tag on an unloaded window.")
-    local tag = require(script.Parent.Parent.elements.tag).new(self, props)
-    table.insert(self.tags, tag)
-    return tag
-end
-
 function Window:_registerControl(element)
     if not element.flag or element.flag == "" or element.forgetState then
         return
@@ -953,6 +931,16 @@ function Window:_copyOverlayProps(props)
         end
     end
     return copy
+end
+
+-- Public notification API. Keep the queueing implementation private so all
+-- callers, including settings and secure-mode diagnostics, use the same
+-- bounded entrance lane.
+function Window:Notify(props)
+    if self.unloaded then
+        return
+    end
+    return self:_showNotification(props)
 end
 
 function Window:_showNotification(props)
@@ -1084,9 +1072,6 @@ function Window:Close()
     if self.topbarIcon then
         motion.tween(self.topbarIcon, { ImageTransparency = 1 }, closeTweenInfo)
     end
-    for _, tag in self.tags do
-        tag:_setShown(false, closeTweenInfo)
-    end
     self:_fadeSelectedElementsOut()
     -- [[The contraction goes through the motion service so the close answers
     -- the speed setting like the rest of the window. A nil return means
@@ -1187,10 +1172,6 @@ function Window:Hide()
         if actionFrame:IsA("Frame") then
             motion.tween(actionFrame.ImageLabel, { ImageTransparency = 1 }, hideTween)
         end
-    end
-
-    for _, tag in self.tags do
-        tag:_setShown(false, hideTween)
     end
 
     for _, tab in pairs(self.tabs) do
@@ -1763,7 +1744,7 @@ function Window:SaveSettings()
 end
 
 function Window:LoadSettings()
-    local loaded = persistence.loadSettings(self)
+    local loaded, migrated = persistence.loadSettings(self)
     self.configuration.autoSave = self.settings.autoSaveConfig
     self.configuration.autoLoad = self.settings.autoLoadConfig
     -- [[The animation-speed setting lives in the same file, and the motion
@@ -1777,14 +1758,23 @@ function Window:LoadSettings()
     -- [[card never unmasks identity data while it is hidden and the toggle]]
     -- [[is built showing the truth.]]
     profilePanel.syncReveal(self)
+    if migrated then
+        -- [[Persist the normalized legacy profile state once. This keeps the
+        -- [[default off without overriding a deliberate choice on later boots.]]
+        self:SaveSettings()
+    end
     return loaded
 end
 
-function Window:_roundCorners(frame, corners)
+-- [[`token` is the theme key the rounded corners read; it defaults to the
+-- [[window's own roundness, but callers inside an element pass that element's
+-- [[radius token so an inner surface can share the container's arcs.]]
+function Window:_roundCorners(frame, corners, token)
+    token = token or "CornerRoundness"
     if not corners or not hasPerCornerRadius then
         return self:Create("UICorner", {
             Parent = frame,
-        }, { CornerRadius = "CornerRoundness" })
+        }, { CornerRadius = token })
     end
 
     local props = { Parent = frame }
@@ -1793,10 +1783,36 @@ function Window:_roundCorners(frame, corners)
         props[key] = UDim.new(0, 0)
     end
     for _, corner in corners do
-        props[corner] = nil         themeMap[corner] = "CornerRoundness"
+        props[corner] = nil         themeMap[corner] = token
     end
 
     return self:Create("UICorner", props, themeMap)
+end
+
+-- [[Companion to `_roundCorners` for a corner set an element flips with its own
+-- [[state instead of once at construction: `corners` (default: all four, as in
+-- [[`_roundCorners`) ride the `token` radius and every other corner of the frame
+-- [[goes back to square, so a caller can move which of an inner surface's edges
+-- [[match the container's arcs — a collapsible header is the card's bottom edge
+-- [[only while it is closed. No theme binding is recorded here (`themeProperties`
+-- [[still owns whatever `_roundCorners` bound), so a later `ChangeTheme` re-reads
+-- [[`token` through this same call from the element instead of fighting it. There
+-- [[is nothing to move on an engine without per-corner radii, where
+-- [[`_roundCorners` already gave the frame one radius on all four corners, so the
+-- [[call is a no-op there.]]
+function Window:_setRoundedCorners(corner, corners, token)
+    if not corner or not hasPerCornerRadius then
+        return
+    end
+
+    local radius = if token then self.theme[token] else nil
+    for _, key in cornerKeys do
+        local wanted = radius ~= nil and (not corners or table.find(corners, key) ~= nil)
+        local target = if wanted then radius else UDim.new(0, 0)
+        if corner[key] ~= target then
+            corner[key] = target
+        end
+    end
 end
 
 function Window:_setElementLocked(element, locked, message)
@@ -1881,21 +1897,32 @@ function Window:_refreshTabStripChrome()
         return
     end
 
-    local rightClipped = strip.AbsoluteCanvasSize.X > strip.AbsoluteWindowSize.X + 0.5
+    -- [[The canvas carries an end gutter on each side (UIPadding), and the]]
+    -- [[frame itself is inset from the window edge, so clipping is read from]]
+    -- [[the last pill's canvas-space right edge against the frame's full]]
+    -- [[width — AbsoluteWindowSize alone would count the trailing gutter as]]
+    -- [[clipped content and light the fade a gutter too early.]]
+    local edgePadding = self.layout.tabStripEdgePadding or 14
+    local frameWidth = strip.AbsoluteSize.X
+    local scrollX = strip.CanvasPosition.X
+    local contentRight = strip.AbsoluteCanvasSize.X - edgePadding
+
+    local rightClipped = contentRight > scrollX + frameWidth + 0.5
     if fadeRight and fadeRight.Parent and fadeRight.Visible ~= rightClipped then
         fadeRight.Visible = rightClipped
     end
 
-    local scrolledFromLeft = strip.CanvasPosition.X > 0.5
+    local scrolledFromLeft = scrollX > 0.5
     if fadeLeft and fadeLeft.Parent and fadeLeft.Visible ~= scrolledFromLeft then
         fadeLeft.Visible = scrolledFromLeft
     end
 end
 
 -- [[Keep the selected pill inside the strip's viewport after a selection.]]
--- [[Children of the ScrollingFrame sit in canvas space, so item.Position]]
--- [[is the tab's offset along the strip without any absolute-position]]
--- [[math; the inset keeps the landing a touch clear of the edge fades.]]
+-- [[Children of the ScrollingFrame sit in canvas space (the end-gutter]]
+-- [[padding shifts the first pill's origin), so item.Position is the tab's]]
+-- [[offset along the strip without any absolute-position math; the landing]]
+-- [[clearance parks the pill just clear of whichever edge fade is showing.]]
 function Window:_scrollSelectedTabIntoView(tweened)
     local strip = self.tabList
     if self.layout.mode ~= "top" or not strip or not strip.Parent then
@@ -1908,21 +1935,24 @@ function Window:_scrollSelectedTabIntoView(tweened)
         return
     end
 
-    local inset = self.layout.tabStripInset or 22
-    local viewport = strip.AbsoluteWindowSize.X
-    local maxScroll = math.max(0, strip.AbsoluteCanvasSize.X - viewport)
+    local edgePadding = self.layout.tabStripEdgePadding or 14
+    local fadeLanding = self.layout.tabStripFadeWidth or 30
+    local frameWidth = strip.AbsoluteSize.X
+    local maxScroll = math.max(0, strip.AbsoluteCanvasSize.X - frameWidth)
     local left = item.Position.X.Offset
     local right = left + item.AbsoluteSize.X
     local pos = strip.CanvasPosition.X
 
     -- [[Move the strip only when the pill is clipped or pressed up
     -- [[against an edge fade; a comfortably visible tab stays put, so
-    -- [[selecting it does not re-scroll the strip for no reason.]]
+    -- [[selecting it does not re-scroll the strip for no reason. The left]]
+    -- [[landing clears the fade; the right landing leaves the end gutter]]
+    -- [[visible beside the pill.]]
     local target = nil
-    if left < pos + inset then
-        target = left - inset
-    elseif right > pos + viewport - inset then
-        target = right + inset - viewport
+    if left < pos + fadeLanding then
+        target = left - fadeLanding
+    elseif right > pos + frameWidth - edgePadding then
+        target = right + edgePadding - frameWidth
     end
     if target == nil then
         return
@@ -2028,6 +2058,12 @@ function Window:_setLayoutMode(modeName)
             tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected")
         end
     end
+    -- [[The rows above are brand-new instances, and the rail's width was
+    -- [[applied before they existed. Re-applying it now lands the row state on
+    -- [[the rows that actually live in the rail — icon-only rows in a
+    -- [[collapsed rail (a rail that came back showing tab names), titles held
+    -- [[inside a capped one (a rail that came back overflowing).
+    self:_applyRailWidth()
     self:_applySettingsLayout(self._settingsMode)
     if self.selectedTab then
         self:_jumpTo(self.selectedTab.tabPage)
@@ -2152,7 +2188,6 @@ function Window:_revealElements(stepDelay, totalDuration, layoutTransitionId)
     if not tab then
         return
     end
-    tab._elementsPending = false
 
     -- [[The cascade is the moment this page's elements are being looked at, so]]
     -- [[it owns the pending mark `_showTabElements` would otherwise clear in]]
@@ -2219,7 +2254,10 @@ function Window:_stageContentReveal(beat, stepDelay, totalDuration, entranceId)
 end
 
 function Window:Show()
-        if self.animating or not self.hidden then
+        -- [[An unload retires every instance the window owns, including the ones
+        -- [[the entrance tweens next, and a window closed before its deferred
+        -- [[startup reveal ran still has that reveal queued (`library_entrypoint`).]]
+        if self.animating or self.unloaded or not self.hidden then
         return
     end
     self.animating = true
@@ -2317,9 +2355,6 @@ function Window:_quickRestore()
         end
     end
 
-    for _, tag in self.tags do
-        tag:_setShown(true, false)
-    end
     -- [[Same contract as the first show: run the settle path from the tween's
     -- Completed, or immediately when there is no tween (motion switched off),
     -- so `animating` is never left set.]]
@@ -2397,9 +2432,6 @@ function Window:_firstShow()
     -- [[for when it is opened; the staged reveal below walks the page that is
     -- [[actually on screen, one control per beat.]]
     self:_applySettingsLayout(self._settingsMode)
-    for _, tag in self.tags do
-        tag:_setShown(false, false)
-    end
     local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     if self.topbarIcon then
         self.topbarIcon.ImageTransparency = 1
@@ -2420,9 +2452,6 @@ function Window:_firstShow()
         end
     end
 
-    for _, tag in self.tags do
-        tag:_setShown(true, tweenInfo)
-    end
     self:_fadeSurfaces(true, tweenInfo)
 
     -- [[The entrance is the library's hero transition. Only UIScale moves:
@@ -2455,29 +2484,19 @@ function Window:_firstShow()
         overlayQueue.resume(self)
     end
 
-    -- Let the shell establish itself before revealing the visible page. The
-    -- cascade is independently guarded, so hiding/unloading during the delay
-    -- cannot resurrect content.
-    task.delay(firstContentDelay, function()
-        if self.unloaded or self.hidden or self.minimised then
-            return
-        end
-        self:_revealElements(firstContentStep, firstContentDuration)
-    end)
-
     motion.tween(self.main, { BackgroundTransparency = windowSurfaceTransparency }, "emphasized")
     if not motion.tween(self.windowScale, { Scale = 1 }, "pop", settle) then
         settle()
     end
     motion.tween(self.windowCorner, { CornerRadius = self.theme.CornerRoundness }, "pop")
 
-    -- [[Second beat of the entrance: the page's controls cascade in once the
-    -- [[frame is close to its resting size, and only then do the queued
-    -- [[notifications and toasts start arriving one at a time. Everything after
-    -- [[`CreateWindow` — the welcome toast, a host's "loaded N modules"
-    -- [[notifications, the optional-icon warning — rides that queue instead of
-    -- [[sharing the frame the window itself opens on.]]
-    self:_stageContentReveal(motion.step(contentRevealBeat), 0.02, 0.5, entranceId)
+    -- [[Second beat of the entrance: the single cascade walks the page's
+    -- [[controls in once the frame is close to its resting size, and only
+    -- [[then do the queued notifications and toasts start arriving one at a
+    -- [[time. Everything after `CreateWindow` — the welcome toast, a host's
+    -- [["loaded N modules" notifications, the optional-icon warning — rides
+    -- [[that queue instead of sharing the frame the window itself opens on.]]
+    self:_stageContentReveal(motion.step(contentRevealBeat), 0.02, 0.35, entranceId)
 
     local player = state.localPlayer
     if player and self.settings.welcomeToast and chrome.isNewUser() then

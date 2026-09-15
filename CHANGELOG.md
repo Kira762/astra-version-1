@@ -2,6 +2,250 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-15 — Instant startup: the window shows on the next frame
+
+The 1–3s wait before the window appeared was three deliberate gates, not slow
+construction: a fixed one-second reveal deadline in the entrypoint (paid even
+by an empty window), a settle loop behind it, and a first-show entrance that
+ran *two* overlapping content cascades over the same page. The shell now
+appears on the next frame and the entrance is a single staged sequence.
+
+- **No reveal deadline.** `STARTUP_REVEAL_DELAY` (1s) and the `STARTUP_SETTLE`
+  loop are gone: auto-show runs on a `task.defer` plus one heartbeat, so the
+  caller's first synchronous `CreateTab` calls still land before the shell
+  appears. Pacing is budget-limited on both sides of the reveal now (3ms /
+  48 instances per frame) instead of dropping to one control per frame after
+  it — with the window visible from frame two, the old post-reveal lane
+  would have funnelled nearly every control through single-frame yields and
+  made large builds finish *slower*. `Hide()` before that tick still cancels
+  auto-show via `_autoShowCancelled`.
+- **One cascade.** `_firstShow` used to walk the visible page twice: a
+  `task.delay(firstContentDelay)` reveal *and* the `_stageContentReveal` one,
+  with different pacing each. The second cascade's tweens cancelled the
+  first's mid-flight through motion's cancel-on-overlap, so the entrance did
+  double work to look worse. Only the staged path remains
+  (`contentRevealBeat` 0.22 → 0.12, cascade budget 0.5 → 0.35); the
+  `firstContent*` timers and the duplicated `_elementsPending` clear are
+  removed. The `pop`/`emphasized` shell specs are untouched.
+- **No tween storm while hidden.** `Window:ChangeTheme` routed every
+  Color3/number binding through a 0.5s tween even when called pre-first-show
+  from `Window.new`, where nothing can be seen animating. While hidden and
+  never shown it now assigns the identical end state directly; every later
+  theme change still tweens.
+- **One secure-mode branch.** The entrypoint's two separately-guarded
+  `if State.secureMode` blocks (icon preload, font swap) run as sibling
+  threads under a single guard. The unread `window._startupStartedAt` stamp
+  goes with the deadline it served.
+- Bundle regenerated (`version-1.luau`).
+
+## 2026-09-15 — Tab-strip end gutters and the end of Tags
+
+Follow-up to today's tab-strip spacing pass. The outer pills could still
+touch the strip's clip edges: the strip frame was inset from the *window*
+but nothing separated the first and last pill from the strip's own edges, so
+an end pill sat flush against the fade boundary at rest and a scrolled strip
+parked the last pill against the edge. The Tag element is also removed
+entirely.
+
+- **End gutters inside the strip.** The top-layout strip now carries a
+  `UIPadding` (`tabStripEdgePadding = 14`, a new layout token) at each canvas
+  end. Padding scrolls with the content, so the first pill starts — and the
+  last pill ends — a fixed distance inside the clip edge at every scroll
+  position, while an overflowing pill still clips well inside the window
+  border (the frame inset is unchanged at 30). Pill-to-pill spacing opens from
+  7 to 8.
+- **Chrome band is balanced.** The top clearance and the gap below the strip
+  are both 6 (`tabStripTopClearance` / `tabStripBottomClearance`, was 3/3 with
+  the row 1px above the topbar edge in older builds): the strip is centred in
+  its band and `chromeHeight` follows, shifting the content area, search pill
+  and window sizing together.
+- **Fades are gutter-aware.** `tabStripFadeWidth` (30, was a local 24) covers
+  the new gutter; `_refreshTabStripChrome` measures clipping from the last
+  pill's canvas-space edge, so the trailing 14px gutter no longer lights the
+  right fade a gutter early. `_scrollSelectedTabIntoView` lands the selected
+  pill clear of whichever fade is showing (left: fade width; right: end
+  gutter) and clamps against the true `AbsoluteCanvasSize - frame width`
+  scroll range.
+- **Tags permanently removed.** `elements/tag.luau`, `Window:CreateTag`, the
+  topbar tag container and its `tags` list, the `Tag`/`TagProps` types, the
+  example's tags and the USAGE/MODULES references are gone, along with the
+  tag fade loops from close/hide/show. The example and docs no longer mention
+  tags; new `scripts/topbar_strip_test` asserts the strip geometry, fade
+  thresholds, scroll-into-view landings and the removed tag API.
+- Bundle regenerated (`version-1.luau`, 102 modules).
+
+## 2026-09-15 — Breathing room around the topbar tab strip
+
+The top-layout tab strip sat almost flush with its surroundings: its
+ScrollingFrame started one pixel *above* the topbar's bottom edge and the side
+insets were only 22px, so the tabs read as pressed up against the title row and
+the outermost pills crowded the window's side edges.
+
+- **Clearance under the topbar.** `tabStripTopOffset` is now
+  `topbarHeight + 3` (was `topbarHeight - 1`): the strip no longer overlaps the
+  topbar's bottom edge, so a real gap separates the tab pills from the title
+  row. `chromeHeight` recomputes from the same constants, so the elements area,
+  the search pill, and window sizing all shift with it.
+- **Wider side insets.** `tabStripInset` is 30 (was 22), so the first and last
+  pills keep a visible margin from the window's edges. The edge fades and the
+  scroll-into-view padding derive from the same inset and follow automatically;
+  the duplicated `or 22` fallbacks in `Topbar.Build` and
+  `Window:_scrollSelectedTabIntoView` now read `or 30`.
+- Bundle regenerated (`version-1.luau`, 103 modules).
+
+## 2026-09-15 — The closed Collapsible Group's bottom corners
+
+Follow-up on today's corner entry: rounding the header band's *top* corners left
+the same flaw one edge down. A closed group's container is exactly as tall as the
+band, so the band is the card's bottom edge — and since Roblox rounds a GuiObject's
+own surface but never clips a descendant to those arcs, its square bottom corners
+painted over the container's bottom arcs. The stroke drew a rounded outline while
+the fill ran past it: rounded top, uneven bottom. Open groups were already fine
+(`bodyClip` is flush with the container's floor and carries those arcs), so nothing
+about the revealed body changed.
+
+- **The band now carries the container's bottom arcs while it is closed.**
+  `Collapsible:_fitHeaderCorners()` re-reads one radius token (`ElementCornerRadius`)
+  for both states, so only *which surface owns the edge* changes, never the radius:
+  closed → all four corners round, open → the bottom pair squares off against the
+  straight divider again.
+- **The flip is timed to the settle, not the click.** Collapsing rounds the band in
+  `Window`-independent `_resize` finish (so the shrink shows the clipper's arcs for
+  every frame in between, and a reversal mid-tween cannot strand a state — a stale
+  revision still returns early), while opening squares the band *before* the body is
+  revealed so the first expanded frame shows a straight seam instead of two notches
+  at the band's floor. Instant motion and a hidden window's deferred reveal settle
+  synchronously through the same path, and the reveal/`_refreshTheme` route re-applies
+  it, so a radius changed while closed still lands.
+- **`Window:_setRoundedCorners(corner, corners, token)`** is the state-flipping
+  companion to `_roundCorners`: the listed corners ride the token, every other corner
+  of that frame goes back to square, and already-matching corners are not rewritten.
+  It reuses the container's one `UICorner` (no instance churn — open/close/move still
+  create nothing) and is a no-op on an engine without per-corner radii, where
+  `_roundCorners` already gave the frame one radius on all four corners.
+- Tests extended: the group suite asserts all four closed-band arcs against the
+  container's, that the band keeps a single `UICorner` across states, that expanding
+  squares only the bottom pair, that a settled collapse and an instant (zero-length)
+  collapse/expansion both land in the same step, and that a theme radius change flows
+  to the band's bottom corners and the body clipper. Bundle regenerated
+  (`version-1.luau`, 103 modules).
+
+## 2026-09-15 — Collapsible Group corners, and icon-only rows that stayed readable
+
+A screenshot review found the Collapsible Group's top-left and top-right
+corners squared off, and the collapsed sidebar rail showing the start of every
+tab name next to its icon. Both come from the same engine rule: Roblox rounds a
+GuiObject's **own** surface with `UICorner` but never clips its **descendants**
+to those arcs, and a rebuilt row is a descendant that gets its state from how it
+was constructed, not from where it sits.
+
+- **The header band squares off the card's top corners.** `headerSurface` is a
+  child of the container spanning its full width, so it painted over the corner
+  arcs the stroke draws: the band filled the top-left and top-right corners and
+  the silhouette read as a rounded outline with square corners behind it. The
+  band now rounds its own top corners with the container's `ElementCornerRadius`
+  (`Window:_roundCorners` takes the theme token as an optional third argument),
+  and the container's own surface is the element surface the band paints
+  (`ElementGradient`, not `WindowColor`), so the arcs resolve to the band's
+  colour instead of a darker wedge. The revealed body keeps its darker window
+  surface — `bodyClip` now paints it (the clipper is flush with the container's
+  bottom edge, so it carries the container's bottom arcs and leaves the top
+  corners square under the straight divider) — and it fades in with the rest of
+  the card (`_setShown`), so a group revealed on a page entrance never shows an
+  opaque body surface first.
+- **The collapsed rail showed tab names.** Rows rebuilt *after* the rail was
+  sized came back as expanded rows: `Window:_setLayoutMode` rebuilds every row
+  (`Tab:_rebuildSelector`) after `ApplyWidth` had already sized the rail, and a
+  `Window:CreateTab` made while the rail was icon-only built a fresh row too. In
+  a 64px rail that left the 10px content padding in place with the title still
+  visible, so the first characters of the name ("El…" of *Elements*) rendered
+  past the icon against the rail edge, with the icon pushed off centre. Both
+  paths fix at the source: `tabSelector.railCollapsed(window, layout)` reads the
+  rail's current width and `tabSelector.build` collapses a row as it is built,
+  and `Window:_setLayoutMode` re-applies the rail width after its rebuild loop
+  (which also re-constrains a capped long title's wrapping slot — those came
+  back unconstrained and overflowed the rail too).
+- **The icon-only tile is square.** A collapsed row kept its full-rail width, so
+  a 64px rail produced a 34x38 tile and the icon sat 7px from the tile's sides
+  but 9px from its top and bottom. `setRowCollapsed` sizes a collapsed row to
+  `rowHeight` square (the rail's list still centres it, the icon stays 20px), so
+  the glyph has the same clearance on all four edges; an expanded row keeps the
+  full-rail recipe (inset each side).
+- Tests extended for both: the group suite asserts the band's top-corner radii
+  against the container's, the band's square bottom corners and the body
+  clipper's surface/bottom arcs; the sidebar suite asserts that a row created
+  while the rail is collapsed is born an icon-only square tile (title hidden,
+  content centred, no expanded padding) and that rebuilt rows keep the capped
+  title slot. Bundle regenerated (`version-1.luau`, 103 modules).
+
+## 2026-09-14 — Collapsible Group rebuilt as one connected card (design reference)
+
+The previous container drew the header as a standalone card and the revealed
+content as a second, detached panel a gap below, ran child cards edge to edge
+against the panel stroke, and faded children to 75% transparency with hidden
+strokes. The design reference shows one connected container with crisp inner
+cards; the element now renders exactly that. This supersedes today's
+"children are visually recessed" entry and restores the `Switch` declarative
+alias and `description` props that the "Toggle-only API" entry had retired
+(both are asserted by `scripts/collapsible_group_test.luau` and
+`scripts/inline_description_test.luau`, which pass again).
+
+- **One container, two surfaces.** `main` is a single rounded, stroked frame
+  that clips its descendants; the header band rides the standard element
+  gradient over the darker window surface of the body, split by a 1px
+  stroke-colored divider. The outer stroke uses the supported
+  `ApplyStrokeMode = Border` mode so the container's own clip can never shave
+  it.
+- **Children are crisp inset cards.** The reveal mask spans the container and
+  rides its bottom edge; child cards keep their normal width recipes and land
+  one 10px gutter inside the container on every side with 10px gaps — defined
+  surfaces and visible strokes via the `CollapsibleChildElement*` theme tokens
+  (0.35 surface transparency, 0 stroke transparency), instead of edge-to-edge
+  75%-faded ghosts.
+- **Expansion math**: collapsed height is the header (41px, 61px with a
+  `description`); expanded adds divider + top pad + measured content + bottom
+  pad, so the container ends exactly one gutter under the last card.
+- **Fixed flaws the reference exposed**: the `description`/`Description` prop
+  was dropped by every element constructor (the in-card line never rendered;
+  all eight control constructors read it again), the group header never
+  received its own line for the same reason, `type = "Switch"` definitions
+  were rejected by `CollapsibleGroup` validation (alias of the toggle control
+  in the declarative builder, ordinary Groups and `Types.luau`), and the
+  content frame double-counted the header offset inside the clipper, letting
+  children overflow the container's floor.
+- Tests updated to the new geometry (`bodyClip` spans the container instead of
+  bleeding 20px, divider position, padded expansion height); bundle
+  regenerated (`version-1.luau`, 103 modules).
+
+## 2026-09-14 — The entrance queue no longer trips over a window with no overlays
+
+- **Hiding (or unloading) a window that had never queued an overlay raised
+  `attempt to get length of a nil value` inside a coroutine.** `Window.new` seeds
+  `_overlayQueue` with an empty placeholder so `Window:Unload` always has something
+  to clear, and construction pauses the gate *through* that placeholder — so the
+  first thing a window with no requests owns is a **paused queue with no `pending`
+  list**. Opening the gate (`Window:Hide` before the first show, the settle of
+  `_stageContentReveal`, `_quickRestore`) tested `queue.paused`, watched it come
+  true, and then took `#queue.pending`.
+- **`queueFor` now completes the queue's shape instead of only creating it.** It
+  treats anything without a `pending` list as unbuilt, carries `paused` / `running`
+  / `closed` across the upgrade (a gate closed before the first request is a gate
+  that must *stay* closed), and every entry point — `pause`, `resume`, `request`,
+  `pump`, `close` — reads the queue through it, so `#queue.pending` is safe
+  everywhere in the module.
+- **`OverlayQueue.close` leaves the queue at its placeholder values** rather than
+  just draining `pending`, because `Window:Unload` clears the whole table
+  immediately afterwards; a late entrance coroutine now finds an empty list
+  instead of a missing one.
+- **`Window:Show` returns early for an unloaded window.** Its guard covered only
+  `animating`/`hidden`, so the deferred startup reveal (`library_entrypoint`) that
+  is already in flight when a host unloads inside the reveal deadline reached
+  `self.drag` on a torn-down window.
+- New pin `Q8` in `scripts/overlay_queue_test.luau` walks the exact sequence:
+  construct → hide → queue → unload, asserting the gate opens on the placeholder,
+  invents no work, keeps a cancelled entrance's gate closed for anything queued
+  afterwards, and never rebuilds an unloaded window.
+
 ## 2026-09-14 — Buttons show a built-in tap affordance
 
 - Every `CreateButton` card now renders a themed 16px tap glyph on its right edge; compact rows place it as the trailing item.

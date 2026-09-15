@@ -107,13 +107,12 @@ Windows, tabs and groups, elements, secure mode — full reference below. See `e
 
 ### Windows
 
-Titles, tags, themes, and every window method.
+Titles, themes, and every window method.
 
 | Method | Description |
 |---|---|
 | `window:CreateTab({ name, icon })` | Create a tab. Returns a `Tab`. |
 | `window:CreateSection({ name, icon })` | Top-level section — a `TabSection`. |
-| `window:CreateTag({ text, title, icon, color, order })` | Small tag in the window footer. |
 | `window:Notify({ title, content, icon, duration })` | Classic notification; opens on the entrance queue (see [Startup performance](#startup-performance)). |
 | `window:Toast({ title, subtitle, icon, duration, position, ... })` | Compact toast; same queue, same one-at-a-time arrivals. |
 | `window:Popup({ title, content, boxes, options, ... })` | Modal popup. Returns `Popup:Close()`. |
@@ -323,14 +322,6 @@ log:Refresh({ ... })   -- alias of Set
 log:Clear()
 ```
 
-### Tag
-
-```lua
-local tag = window:CreateTag({ text = "0.0.35", icon = "tag", color = Color3.fromRGB(88, 70, 170), order = 1 })
-tag:Set({ text = "0.0.36" })
-tag:SetText("0.0.36")  tag:SetColor(Color3.new())  tag:SetIcon("badge-check")  tag:Remove()
-```
-
 ### Built-in Settings (window only)
 
 Every window ships a built-in Settings group (gear action in the topbar). Clicking the gear switches into settings mode — only the settings tabs are shown — and clicking it again returns to the previous tab. It's window-scoped: it edits this window's own behaviour, stored per-window — not global.
@@ -503,10 +494,12 @@ work or 120 new instances. These are cooperative limits, not a hard frame-time
 cap: a single expensive control can exceed them. Calls still return fully built
 objects, but may yield while creating the initial UI.
 
-Automatic show waits for a quiet construction frame, then one short settle beat, so
-large scripts do not reveal a half-built menu and the tail of the build does not
-share a frame with the entrance. `window:Hide()` before the first reveal cancels
-auto-show; `window:Show()` can still be called explicitly.
+Automatic show happens on the next frame — one deferred tick plus one heartbeat,
+so the caller's first synchronous `CreateTab` calls land before the shell
+appears — and the remaining constructors keep streaming in behind the
+already-visible window in small budget-limited batches until the build goes
+quiet, so the opening tween keeps receiving frames. `window:Hide()` before the
+first reveal cancels auto-show; `window:Show()` can still be called explicitly.
 
 The arrival itself is staged rather than instant: the window's shell (frame, surface,
 corner, topbar) animates in first, the page's controls cascade in one control per beat
@@ -582,10 +575,12 @@ local playerControls = tab:CreateCollapsibleGroup({
 })
 ```
 
-**Supported types:** `Button`, `Toggle`, `Slider`, `Dropdown`, `Input`,
-`Keybind`, `Stat`, `Progress`, `Section`, `Text`, `Changelog`, `Divider`,
-and ordinary `Group`. Each uses the same properties and implementation as its
-normal `Create…` method. `elements` can be omitted for an empty header.
+**Supported types:** `Button`, `Toggle`, `Switch` (declarative alias of the
+toggle control), `Slider`, `Dropdown`, `Input`, `Keybind`, `Stat`, `Progress`,
+`Section`, `Text`, `Changelog`, `Divider`, and ordinary `Group`. Each uses the
+same properties and implementation as its normal `Create…` method, including
+the optional `description` helper line. `elements` can be omitted for an empty
+header.
 
 An ordinary Group retains its compact row layout when its children support it.
 Use `direction = "column"` for a vertical Group; the declarative builder also
@@ -606,6 +601,10 @@ are rejected before creating any UI.
   search restores their previous expansion state.
 - Children render at the same width as standalone elements, and the header
   matches the Text element's card metrics (gutters, title and body styling).
+- The card silhouette stays even in both states: collapsed, the header band is the
+  card's bottom edge and carries the container's rounded bottom corners; open, the
+  band ends at the straight divider and the revealed body carries them. Both read
+  the same `ElementCornerRadius`, so no corner ever changes radius.
 - All three layouts are supported; the tab supplies scrolling for long contents.
 - `MoveTo`, `MoveToTop`, `MoveToBottom`, `MoveUp`, `MoveDown`, `Lock`, and `Unlock`
   work on the container. Created child handles are also available in its

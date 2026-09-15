@@ -22,7 +22,7 @@ Public API singleton. Key top-level locals:
 - Requires — `core` (state/registry/loader), `core.state`, `images.image`, `utilities.locale`, `utilities.constants`, `icons`, `settings`, `Types`.
 - Singleton bookkeeping: existing-window guard backed by a module-local `activeWindow` **and** a `getgenv()`-backed global store (key `__ASTRA_ACTIVE_WINDOW_V1`) so the anti-duplicate guard survives across `loadstring`ed instances; the `CreateWindow` dispatcher (pcall around `components.window.new`, re-throws on failure); the export table.
 Exported names (typed surface is `Types.luau`'s `Astra`): `CreateWindow`, `Icons`; `Core` and `Settings` are also assigned on the table at runtime. There is no top-level `ChangeTheme`/`SetLocale`/`SetTranslator`/`RegisterTranslations`/`Unload` — those are window methods.
-`CreateWindow` side effects: enforces the anti-duplicate guard (persisted `antiWindowDuplicate` setting, per-window opt-out via `settings.antiWindowDuplicate`), in secure mode preloads window images (`Image.preload` → failure `Notify`) and swaps in the brand fonts via `ChangeTheme({ Font, TitleFont })` once the entrance has landed (a theme pass over every instance the window owns is not something to spend while the window is still arriving; `FONT_SETTLE_BUDGET` bounds the wait so a window that never shows still gets its font), then auto-`Show()`s the window once the construction batches go quiet plus one settle beat `STARTUP_SETTLE` (a `task.defer`, so a script that builds its tabs synchronously can finish first and the window appears once, fully populated; an explicit `Hide()` before that tick cancels it via `_autoShowCancelled`).
+`CreateWindow` side effects: enforces the anti-duplicate guard (persisted `antiWindowDuplicate` setting, per-window opt-out via `settings.antiWindowDuplicate`), in secure mode preloads window images (`Image.preload` → failure `Notify`) and swaps in the brand fonts via `ChangeTheme({ Font, TitleFont })` once the entrance has landed (a theme pass over every instance the window owns is not something to spend while the window is still arriving; `FONT_SETTLE_BUDGET` bounds the wait so a window that never shows still gets its font), then auto-`Show()`s the window on the next frame (a `task.defer` plus one heartbeat, so a script's first synchronous `CreateTab` calls land before the shell appears; remaining constructors stream in behind it in small budget-limited batches until the build goes quiet, and an explicit `Hide()` before that tick cancels it via `_autoShowCancelled`). The two secure-mode branches (optional-icon preload, brand-font swap) run as sibling threads under one guard.
 
 ### `example.client.luau`
 Usage example (not minified). Loads the bundle with `game:HttpGet` + `loadstring`, then builds a 20-tab window: Home, Controls, Appearance, Information, Changelog, Updates, plus 15 labelled test tabs. Demonstrates window tags, every element type, groups, and the `CreateChangelog` element (including a runtime `changelog:Add`), and ends with an explicit `home:Select()`.
@@ -109,7 +109,7 @@ Public surface:
   property recording (`themeProperties`), locale-token binding
   (`_bindLocale`), image-guessed property assignment; tracks every instance
   for `Unload`.
-- `ChangeTheme`, `CreateTab`/`CreateSection`/`CreateTag`, `Notify`/`Toast`
+- `ChangeTheme`, `CreateTab`/`CreateSection`, `Notify`/`Toast`
   (both construct their card on the entrance queue's turn, see
   `components/overlayQueue.luau`)/`Popup`, `Show`/`Hide`/`ToggleHide`/`ToggleMinimise`, `Close` (animated
   close → `Unload`), `Save`/`Load`/`ListConfigs`/`DeleteConfig`/`GetPath`,
@@ -328,15 +328,33 @@ changes, tab removal), `Tab:Remove`, `Window:SetLocale` and
 (`railCollapsedWidth`), so a content-sized rail narrower than the old fixed
 219px still shows titles.
 
+`tabSelector.railCollapsed(window, layout)` answers whether the rail is at that
+icon-only width right now (the rail's own `Size`, written by the layout's
+`Build`/`ApplyWidth`; `forceCollapsed` is always collapsed). `tabSelector.build`
+reads it, so a row rebuilt *after* the rail was sized — a layout switch
+(`Window:_setLayoutMode` rebuilds every row), or `Window:CreateTab` while the
+rail is icon-only — is born in the rail's current state: icon-only rows hide
+their title, drop the expanded row padding and size themselves as a square
+`rowHeight` tile (a full-rail row was 34x38 in a 64px rail, which left the icon
+7px from the tile's sides but 9px from its top and bottom), instead of leaking
+the start of the tab name past the icon inside a 64px rail. `Window:_setLayoutMode` also
+re-applies the rail width after its rebuild loop, which is what re-constrains a
+capped title's wrapping slot on the new rows.
+
 ### `components/overlayQueue.luau`
 The entrance queue shared by every window-level overlay: `pending` (requests
 waiting for a turn), `running` (one pump per window), `paused` (the gate held
 closed while the window's own entrance is up), `closed` (the window is gone).
+`Window.new` pre-seeds `_overlayQueue` with a placeholder that has none of those
+fields, so `queueFor` completes the shape on first use — carrying `paused`/
+`running`/`closed` across — and every entry point reads the queue through it;
+that is what lets the rest of the module take `#queue.pending` unconditionally.
 `OverlayQueue.request(window, build)` enqueues, `OverlayQueue.pause`/
 `OverlayQueue.resume` open and close the gate (`Window.new` closes it,
 `_firstShow`'s settle and `Window:_stageContentReveal` open it; `Window:Hide`
 re-opens it when the entrance was cancelled before it ran), and
-`OverlayQueue.close` is called from `Window:Unload`. A card takes its turn with
+`OverlayQueue.close` is called from `Window:Unload` (and leaves the queue at its
+placeholder values, since `Unload` clears the table whole afterwards). A card takes its turn with
 `build(release)` and calls `release()` when its entrance is committed — the
 constructor does that through `_entranceDone`, which the dismiss path also
 reaches so a retired card cannot wedge the queue. Locals: `entranceGap` /
@@ -397,12 +415,23 @@ Per-element specifics:
   marks descendants as visually nested (transparent cards/no child outlines),
   animates measured content height through the motion service, and keeps child
   controls alive while hidden. Search and tab removal traverse its descendants.
+  Surfaces: the container carries the element surface (`ElementGradient` over a
+  white base) so its own rounded top corners read as the header band, the band
+  rounds *its* top corners with the same `ElementCornerRadius` (Roblox rounds a
+  GuiObject's own surface but never clips descendants to the arcs — a square
+  band squared off the stroke's silhouette), and `bodyClip` paints the darker
+  window surface under the divider with the container's bottom arcs. Because the
+  band *is* the card's bottom edge while the group is closed, `_fitHeaderCorners`
+  (through `Window:_setRoundedCorners`, the state-flipping companion of
+  `_roundCorners`) moves the container's bottom arcs onto the band and squares
+  them off again the moment the body is revealed, so both states keep one even
+  silhouette on the same radius token.
 - `description.luau` — legacy in-card helper-line utility kept for bundle
   compatibility; public element constructors no longer read `description` props.
 - `tab.luau` — tab class: `tabPage` (ScrollingFrame), `_register(element)` pipeline into `window.controls[flag]`, selector button visuals.
 - `group.luau`, `section.luau`, `tabSection.luau` — container classes with UIListLayout locals.
 - `changelog.luau` — release-history element (`__type = "Changelog"`): normalizes `ChangelogEntry`/`ChangelogChange` props, maps symbols (`+`/`-`/`~`, or words like "added"/"removed"/"changed") to green/red/amber, fades entries in, supports `Set`/`Refresh`/`Add(entry, prepend?)`/`Clear`.
-- `divider.luau`, `progress.luau`, `stat.luau`, `tag.luau`, `text.luau` — display and interaction elements.
+- `divider.luau`, `progress.luau`, `stat.luau`, `text.luau` — display and interaction elements.
 - `button.luau` — action card with a built-in right-edge tap glyph (`tapIcon` opts out or replaces it), themed through `ContentColor`, revealed with the card, and pulsed on press.
 - `baseCard.luau` — shared card container and header layout helper for element modules.
 
@@ -557,7 +586,8 @@ Per-element specifics:
 | `check_requires.py` | Static require graph: every module resolves, no cycles. |
 | `check_instance_fields.py` | Fails on custom-field writes on instances (the `_profileGeneration` crash class). |
 | `profile_{compact,centering,reveal,details}_test.sh` | Profile card suites: geometry/visibility, window-pair centring, the reveal toggle, and the redesigned card (tokens, pinned header + scrolling, live server/session values, license rows, tooltip, no-player case). |
-| `sidebar_tab_sizing_test.sh`, `smoke_test_bundle.sh` | Rail sizing and a bundle smoke run. |
+| `sidebar_tab_sizing_test.sh`, `smoke_test_bundle.sh` | Rail sizing (name-driven width, cap, restore) and a bundle smoke run; also the collapsed rail: rows are icon-only (title hidden, content centred, no expanded padding) whether they were collapsed in place, rebuilt by a layout switch, or created while the rail was already icon-only, and a capped title re-constrains after that rebuild. |
+| `collapsible_group_test.sh` | Collapsible groups: every declarative element type, state/callbacks, the connected-card geometry and surface recipe, and the corner treatment (band's top arcs matching the container, body clipper's bottom arcs). |
 | `instance_budget_test.sh` | Per-element instance ceilings plus a realistic-page budget — the frame-time proxy guard. |
 | `odometer_test.sh` | Odometer readout: lazy row materialisation, and the resting row still showing the value's digit through plain/wrap/roll-down transitions. |
 | `dropdown_rows_test.sh` | Dropdown option rows: none (and no search bar) while closed whatever the list length, one per option in order on open plus the bar once, the rendered selected/unselected state and corner tiers, reopening reusing the rows, edits and picks made while closed, and the search filter. |

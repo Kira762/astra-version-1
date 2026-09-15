@@ -26,7 +26,6 @@ export type WindowConfiguration = types.WindowConfiguration
 
 export type WindowProps = types.WindowProps
 export type TabProps = types.TabProps
-export type TagProps = types.TagProps
 export type SectionProps = types.SectionProps
 export type GroupProps = types.GroupProps
 export type CollapsibleGroupProps = types.CollapsibleGroupProps
@@ -65,7 +64,6 @@ export type Section = types.Section
 export type TabSection = types.TabSection
 export type Text = types.Text
 export type Divider = types.Divider
-export type Tag = types.Tag
 export type Popup = types.Popup
 export type Astra = types.Astra
 
@@ -74,16 +72,15 @@ type WindowModule = { new: (types.WindowProps) -> types.Window }
 local Astra = {} :: Astra
 local activeWindow: types.Window? = nil
 local ACTIVE_WINDOW_KEY = "__ASTRA_ACTIVE_WINDOW_V1"
-local STARTUP_REVEAL_DELAY = 1
 
--- [[Beats of the arrival sequence, in seconds: how long the window waits after
--- the host's build goes quiet before it shows itself, and how long a font
--- download waits for that entrance before it triggers its own full theme pass.
--- Both are cooldowns between *parts* of startup, not extra work: neither makes
--- the interface take longer to be usable, they stop several expensive steps
--- from all taking the same frame. The settle stays inside one or two frames on
--- purpose — the entrance and everything after it are where the slack belongs.]]
-local STARTUP_SETTLE = 0.1
+-- [[How long a font download waits for the entrance before it triggers its own
+-- full theme pass. It is a cooldown between *parts* of startup, not extra
+-- work: a font swap walks every instance the window owns, so running it while
+-- the window is still arriving would put that pass on the frames the entrance
+-- needs. Bounded, because a host that never shows the window must still end
+-- up with its font. There is deliberately no reveal gate beside it: the
+-- window shows on the next frame and the remaining constructors stream in
+-- behind it in small budget-limited batches.]]
 local FONT_SETTLE_BUDGET = 3
 
 local function getGlobalStore(): { [string]: any }
@@ -107,10 +104,6 @@ Astra.Core = Core
 Astra.Settings = Settings
 
 function Astra:CreateWindow(props: types.WindowProps): types.Window
-	-- Count module loading and shell construction toward the one-second reveal
-	-- target. If either is slow, the shell opens on the next available frame
-	-- rather than adding another full delay afterward.
-	local creationStartedAt = os.clock()
 	local existingWindow = activeWindow or globalStore[ACTIVE_WINDOW_KEY]
 	activeWindow = existingWindow
 	if existingWindow then
@@ -140,9 +133,11 @@ function Astra:CreateWindow(props: types.WindowProps): types.Window
 	end
 
 	local window = result :: types.Window
-	window._startupStartedAt = creationStartedAt
 	activeWindow = window
 	globalStore[ACTIVE_WINDOW_KEY] = window
+	-- [[One secure-mode branch: the optional-icon preload and the brand-font
+	-- swap are independent, so they run as sibling threads rather than in two
+	-- separately-guarded blocks.]]
 	if State.secureMode then
 		task.defer(function()
 			Image.preload(function(failedCount, failedRoles)
@@ -158,8 +153,6 @@ function Astra:CreateWindow(props: types.WindowProps): types.Window
 				})
 			end)
 		end)
-	end
-	if State.secureMode then
 		task.spawn(function()
 			local mediumFont = State.fontManager:loadFont(Constants.fontAsset, Enum.FontWeight.Medium)
 			local semiBoldFont = State.fontManager:loadFont(Constants.fontAsset, Enum.FontWeight.SemiBold)
@@ -191,18 +184,17 @@ function Astra:CreateWindow(props: types.WindowProps): types.Window
 	end
 
 	if not window.unloaded then
-		-- Reveal on a predictable deadline instead of waiting for an arbitrarily
-		-- large host script to finish. Checkpoints continue pacing the remaining
-		-- constructors after this, so the opening tween keeps receiving frames.
+		-- Reveal on the next frame instead of on a fixed one-second deadline.
+		-- The old gate waited out the interval even for an empty window, which
+		-- is the 1s of the reported startup lag that every script paid. The
+		-- checkpoints below keep pacing the remaining constructors in small
+		-- budget-limited batches until the build goes quiet, so the opening
+		-- tween keeps receiving frames while late controls stream in behind
+		-- the already-visible shell.
 		task.defer(function()
-			local remaining = STARTUP_REVEAL_DELAY - (os.clock() - creationStartedAt)
-			if remaining > 0 then
-				task.wait(remaining)
-			else
-				-- The constructor already consumed the target interval. Still yield
-				-- once so the caller can add its first tab before the shell appears.
-				task.wait()
-			end
+			-- Still yield once so the caller can add its first tab before the
+			-- shell appears.
+			task.wait()
 
 			if window.unloaded then
 				return
@@ -215,43 +207,22 @@ function Astra:CreateWindow(props: types.WindowProps): types.Window
 				window:Show()
 			end
 
-			-- Keep post-reveal constructors at one completed control per frame
-			-- until two consecutive frames observe no construction activity.
+			-- Keep pacing post-reveal constructors until two consecutive frames
+			-- observe no construction activity.
 			local stableFrames = 0
 			while not window.unloaded and not window._autoShowCancelled and stableFrames < 2 do
 				local revision = window._constructionRevision
 				task.wait()
 				if (window._constructionBusy or 0) == 0 and revision == window._constructionRevision then
 					stableFrames += 1
-					else
-						stableFrames = 0
-					end
-				end
-
-			-- [[One beat of slack between the last batch of the build and the
-			-- entrance. The tail of a host's script — a configuration read, an
-			-- image preloading, the first frames of layout settling — used to
-			-- land on the same frame the window opened on, which is what made a
-			-- long load end in a stutter instead of an arrival. The window is
-			-- still handed the next frames to itself, and everything the script
-			-- queued (toasts, notifications, the profile card) follows it.]]
-			local settled = 0
-			while settled < STARTUP_SETTLE do
-				if window.unloaded or window._autoShowCancelled then
-					return
-				end
-				settled += task.wait()
-				-- [[A host that carries on building from a delayed callback
-				-- keeps the entrance parked until it goes quiet again: showing
-				-- mid-batch is exactly the thing this loop exists to avoid.]]
-				while (window._constructionBusy or 0) > 0 do
-					if window.unloaded or window._autoShowCancelled then
-						return
-					end
-					settled += task.wait()
+				else
+					stableFrames = 0
 				end
 			end
 
+			if window.unloaded or window._autoShowCancelled then
+				return
+			end
 			window:Show()
 		end)
 	end
@@ -290,14 +261,6 @@ export type WindowProps = {
 export type TabProps = {
     name: string?,
     icon: (string | number)?,
-}
-
-export type TagProps = {
-    text: string?,
-    title: string?,
-    icon: (string | number)?,
-    color: Color3?,
-    order: number?,
 }
 
 export type SectionProps = {
@@ -339,7 +302,7 @@ export type GroupProps = {
 -- Definitions use the corresponding element's normal properties plus `type`.
 -- `elements` is allowed only for ordinary Groups; CollapsibleGroups cannot nest.
 export type CollapsibleElementProps = {
-    type: "Button" | "Toggle" | "Slider" | "Dropdown" | "Input" | "Keybind"
+    type: "Button" | "Toggle" | "Switch" | "Slider" | "Dropdown" | "Input" | "Keybind"
         | "Stat" | "Progress" | "Section" | "Text" | "Changelog" | "Divider" | "Group",
     elements: { CollapsibleElementProps }?,
     [string]: any,
@@ -536,14 +499,6 @@ export type Divider = Moveable & {
     text: string,     Set: (self: Divider, text: string?) -> (),
 }
 
-export type Tag = {
-    Set: (self: Tag, props: TagProps) -> (),
-    SetColor: (self: Tag, color: Color3) -> (),
-    SetText: (self: Tag, text: string?) -> (),
-    SetIcon: (self: Tag, icon: (string | number)?) -> (),
-    Remove: (self: Tag) -> (),
-}
-
 export type Popup = {
     Close: (self: Popup) -> (),
 }
@@ -590,7 +545,6 @@ export type Window = {
     Flags: { [string]: any },
     CreateTab: (self: Window, props: TabProps) -> Tab,
         CreateSection: (self: Window, props: SectionProps) -> TabSection,
-    CreateTag: (self: Window, props: TagProps) -> Tag,
     Notify: (self: Window, props: NotifyProps) -> (),
     Toast: (self: Window, props: ToastProps) -> (),
     Popup: (self: Window, props: PopupProps) -> Popup?,     Show: (self: Window) -> (),
@@ -1852,15 +1806,31 @@ local gateBudget = 2.5
 -- before it is ever built, which is the whole point.]]
 local maxQueued = 6
 
+-- [[The queue table lives on the window, but the window is allowed to hold a
+-- placeholder for it: `Window.new` pre-seeds `_overlayQueue` so `Window:Unload`
+-- always has something to clear, and a host that assigns its own table lands
+-- here too. A placeholder is not a queue — it has no `pending` list to pump —
+-- so the shape is completed rather than trusted. Every entry point into the
+-- queue comes through here, which is what lets the rest of the module read
+-- `queue.pending` unconditionally.]]
 local function queueFor(window): { [string]: any }
     local queue = window._overlayQueue
-    if not queue then
+    if type(queue) ~= "table" or type(queue.pending) ~= "table" then
+        local previous = if type(queue) == "table" then queue else nil
         queue = {
             pending = {},
             running = false,
             paused = false,
             closed = false,
         }
+        -- [[A placeholder is the queue's *initial* state: a window paused
+        -- before its first request has to stay paused through the upgrade, or
+        -- the entrance gate would open on the very thing that made it wait.]]
+        if previous then
+            queue.running = previous.running == true
+            queue.paused = previous.paused == true
+            queue.closed = previous.closed == true
+        end
         window._overlayQueue = queue
     end
     return queue
@@ -1874,9 +1844,12 @@ function OverlayQueue.pause(window)
     queue.paused = true
 end
 
+-- [[Open the gate. A window that never queued anything has a placeholder or no
+-- queue at all, so there is nothing to wake: read the shape through
+-- `queueFor` and the `paused` test below does the rest of the work.]]
 function OverlayQueue.resume(window)
-    local queue = window._overlayQueue
-    if not queue or not queue.paused then
+    local queue = queueFor(window)
+    if not queue.paused then
         return
     end
     queue.paused = false
@@ -1902,6 +1875,7 @@ end
 -- moment: a request that arrives while the queue is running is picked up by
 -- the loop that is already going.]]
 function OverlayQueue.pump(window, queue)
+    queue = queue or queueFor(window)
     if queue.running then
         return
     end
@@ -1970,11 +1944,14 @@ end
 -- `release()` when its entrance is committed. Returns true when the request was
 -- accepted, which is false only for a window that is already gone.]]
 function OverlayQueue.request(window, build): boolean
-    if window.unloaded or (window._overlayQueue ~= nil and window._overlayQueue.closed) then
+    if window.unloaded then
         return false
     end
 
     local queue = queueFor(window)
+    if queue.closed then
+        return false
+    end
 
     -- [[A burst stays bounded: the oldest request that was never built is
     -- dropped for the newest one, which is the one the host still cares about.]]
@@ -1989,14 +1966,24 @@ function OverlayQueue.request(window, build): boolean
 end
 
 -- [[Stops the pump and drops everything that never got built. Called from
--- `Window:Unload`, where the whole overlay layer is going away anyway.]]
+-- `Window:Unload`, where the whole overlay layer is going away anyway. A
+-- window that never queued an overlay only has the placeholder, which is
+-- already empty — `queueFor` gives the flag somewhere to live either way.]]
 function OverlayQueue.close(window)
-    local queue = window._overlayQueue
+    -- [[A window that never had a queue at all has nothing to stop; a
+    -- placeholder only has to be given somewhere to record the flag.]]
+    local queue = if window._overlayQueue then queueFor(window) else nil
     if not queue then
         return
     end
     queue.closed = true
+    -- [[`Window:Unload` clears the queue table whole afterwards, so *every*
+    -- field has to be left at its placeholder value: a caller that reads the
+    -- queue after the unload — the entrance coroutines still winding down do —
+    -- must find an empty list, never a missing one.]]
     table.clear(queue.pending)
+    queue.running = false
+    queue.paused = false
 end
 
 return OverlayQueue
@@ -6375,9 +6362,33 @@ local function buildSidebarStyle(tab, layout)
     buildContent(tab, layout.rowIconSize, true)
 end
 
+-- [[Whether the rail is currently at its icon-only width. The rail's own Size
+-- [[is the source of truth: it is written by ApplyWidth (the layout's Build
+-- [[sizes it too), and row rebuilds happen after that. A window whose rail has
+-- [[not been built yet falls back to the layout's requested width.]]
+function tabSelector.railCollapsed(window, layout)
+    if layout.mode ~= "sidebar" then
+        return false
+    end
+    if layout.forceCollapsed then
+        return true
+    end
+    local sidebar = window.sidebar
+    local width = if sidebar then sidebar.Size.X.Offset else (layout.railWidth :: number)
+    return width <= (layout.railCollapsedWidth :: number)
+end
+
 function tabSelector.build(tab, layoutMode)
     if layoutMode.mode == "sidebar" or layoutMode.forceCollapsed then
         buildSidebarStyle(tab, layoutMode)
+        -- [[A row has to be born in whatever state the rail is in right now.
+        -- [[Rows are rebuilt after the rail is sized (a layout switch, or a tab
+        -- [[created while the rail is icon-only), and a row built as an
+        -- [[expanded one keeps its title: in a 64px rail that leaked "El…" of
+        -- [[the tab name past the icon instead of the icon-only row.
+        if tabSelector.railCollapsed(tab.window, layoutMode) then
+            tabSelector.setRowCollapsed(tab, true, layoutMode)
+        end
     else
         buildTopStyle(tab)
     end
@@ -6499,6 +6510,14 @@ function tabSelector.setRowCollapsed(tab, collapsed, layout)
     if tab.topbarItemInitial then
         tab.topbarItemInitial.Visible = collapsed
     end
+    -- [[An icon-only row is a square tile the height of the row. The rail is
+    -- [[64px wide, so a full-rail row (inset 15px each side) was 34x38: the
+    -- [[icon sat 7px from its sides but 9px from its top and bottom, which
+    -- [[reads as an off-centre glyph. The square tile keeps the list's
+    -- [[centring and leaves the icon the same clearance on all four edges.
+    tab.topbarItem.Size = if collapsed
+        then UDim2.fromOffset(layout.rowHeight :: number, layout.rowHeight :: number)
+        else UDim2.new(1, -(layout.rowInset :: number) * 2, 0, layout.rowHeight :: number)
     local rowPadding = if collapsed then 0 else layout.rowPadding
     tab.topbarItemContainer.Size = UDim2.new(1, -rowPadding, 0, 24)
     tab.topbarItemContainer.Position = UDim2.new(0, rowPadding, 0.5, 0)
@@ -6980,7 +6999,7 @@ local tweenStyle = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirecti
 -- content — and short enough that nothing looks like it is waiting for the
 -- next thing to happen. Scaled by the motion service, and skipped entirely
 -- when animation is switched off.]]
-local contentRevealBeat = 0.22
+local contentRevealBeat = 0.12
 
 local collapsedWideSize = UDim2.fromOffset(185, 50)
 local collapsedIconOnlySize = UDim2.fromOffset(50, 50)
@@ -7012,10 +7031,10 @@ local scrollbarWidth = 8
 
 local viewportCheckInterval = 2
 
--- Startup is deliberately paced in small, completed-object batches. Before the
--- first reveal this prevents a large host script from monopolising a frame;
--- after the reveal, one completed control is handed to the renderer per frame
--- until the host's initial build goes quiet.
+-- Startup is deliberately paced in small, completed-object batches, before the
+-- first reveal and after it alike. This prevents a large host script from
+-- monopolising a frame while still letting the opening tween render as the
+-- remaining controls stream in behind the already-visible shell.
 local constructionFrameBudget = 0.003
 local constructionInstanceBudget = 48
 
@@ -7024,12 +7043,11 @@ local constructionInstanceBudget = 48
 -- their normal stacks while the next one enters.
 local overlayEntranceCadence = 0.65
 
--- Existing controls wait briefly behind the window surface, then reveal in a
--- cascade. This makes the first open read as an entrance instead of one large
--- visibility flip.
-local firstContentDelay = 0.14
-local firstContentStep = 0.045
-local firstContentDuration = 0.9
+-- The first open reads as an entrance instead of one large visibility flip:
+-- the shell animates in, then `_stageContentReveal` walks the visible page one
+-- control per beat (see `_firstShow`). There is exactly one cascade — an older
+-- second timer used to walk the same page concurrently, restarting the first
+-- cascade's tweens mid-flight through the motion service's cancel-on-overlap.
 
 local function computeSize(mode): UDim2
     local size = state.workspace.CurrentCamera
@@ -7114,6 +7132,11 @@ function Window.new(props)
         -- has been quiet for two frames. Checkpoints continue after the window
         -- appears so the remaining controls cannot freeze its entrance.
         _startupComplete = false,
+        -- [[Placeholder for the entrance queue: the queue's own shape (pending
+        -- list, gate flags) is completed by `queueFor` in
+        -- `components/overlayQueue.luau` on first use, so what lives here is
+        -- only "the window has somewhere to put its overlays", which is what
+        -- lets `Unload` clear it unconditionally.]]
         _overlayQueue = {},
         _overlayQueueRunning = false,
 
@@ -7127,7 +7150,6 @@ function Window.new(props)
         localeProperties = {},
         tabs = {},
         tabSections = {},
-        tags = {},
         selectedTab = nil,
         _settingsLayoutActive = false,
         _settingsTabs = {},
@@ -7361,28 +7383,6 @@ function Window.new(props)
         }, { TextColor3 = "TitlingColor", FontFace = "Font" })
     end
 
-    self.tagContainer = self:Create("Frame", {
-        AnchorPoint = Vector2.new(0, 0.5),
-        Position = UDim2.new(0, 25, 0.5, 0),
-        Size = UDim2.fromOffset(50, 24),
-        AutomaticSize = Enum.AutomaticSize.XY,
-        BackgroundTransparency = 1,
-        LayoutOrder = 2,
-        Visible = false,
-
-        Parent = self.topContainer,
-    })
-
-    self.tagContainerLayout = self:Create("UIListLayout", {
-        Padding = UDim.new(0, 5),
-        FillDirection = Enum.FillDirection.Horizontal,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-
-        Parent = self.tagContainer,
-    })
-
-
         self.windowShadow = self:CreateGlow(self.main, "ShadowColor", 20, 1)
 
                 self.elements = self:Create("Frame", {
@@ -7599,11 +7599,11 @@ function Window.new(props)
 end
 
 -- Yield only at completed construction boundaries, never halfway through a
--- control. Limit pre-reveal batches by both CPU time and instance count. Once
--- the window is visible, yield after every completed control until the initial
--- host build goes quiet; this is what lets the entrance keep rendering while a
--- large script finishes adding the rest of its tabs and elements. The API is
--- still synchronous: each constructor resumes with a fully usable object.
+-- control. Batches are limited by both CPU time and instance count, before
+-- the first reveal and after it alike: the opening tween keeps receiving
+-- frames while a large script streams the rest of its controls in, and no
+-- single frame pays for the whole build. The API is still synchronous: each
+-- constructor resumes with a fully usable object.
 function Window:_constructionCheckpoint(force)
     if self._startupComplete or (not force and not self._constructed) then
         return
@@ -7612,10 +7612,8 @@ function Window:_constructionCheckpoint(force)
     local now = os.clock()
     local last = self._constructionClock or now
     local count = #self.instances
-    local visibleStartup = self.hasShownOnce == true
     if
         force
-        or visibleStartup
         or now - last >= constructionFrameBudget
         or count - (self._constructionInstances or 0) >= constructionInstanceBudget
     then
@@ -7710,6 +7708,12 @@ function Window:ChangeTheme(themeInput)
         deriveStrokes(self.theme, themeTable)
     end
 
+    -- [[Before the first show the window is invisible, so routing every
+    -- Color3/number through a 0.5s tween only buys dozens of tween allocations
+    -- on the startup path — nothing can be seen animating. Assign the end
+    -- state directly; the values are identical to what the tweens would have
+    -- settled on, and everything from the first entrance on still tweens.]]
+    local instantApply = self.hidden and not self.hasShownOnce
     for instance, properties in self.themeProperties do
         for prop, binding in properties do
             local resolvedValue = if typeof(binding) == "table" then binding[2](self.theme[binding[1]]) else self.theme[binding]
@@ -7717,7 +7721,7 @@ function Window:ChangeTheme(themeInput)
             if instance[prop] == resolvedValue then
                 continue
             end
-            if typeof(resolvedValue) == "Color3" or typeof(resolvedValue) == "number" then
+            if not instantApply and (typeof(resolvedValue) == "Color3" or typeof(resolvedValue) == "number") then
                 state.tweenService:Create(instance, tweenStyle, { [prop] = resolvedValue }):Play()
             else
                 instance[prop] = resolvedValue
@@ -7814,13 +7818,6 @@ function Window:_setTabSectionsVisible(visible)
     end
 end
 
-function Window:CreateTag(props)
-    assert(not self.unloaded, "Cannot create a tag on an unloaded window.")
-    local tag = require(script.Parent.Parent.elements.tag).new(self, props)
-    table.insert(self.tags, tag)
-    return tag
-end
-
 function Window:_registerControl(element)
     if not element.flag or element.flag == "" or element.forgetState then
         return
@@ -7901,6 +7898,16 @@ function Window:_copyOverlayProps(props)
         end
     end
     return copy
+end
+
+-- Public notification API. Keep the queueing implementation private so all
+-- callers, including settings and secure-mode diagnostics, use the same
+-- bounded entrance lane.
+function Window:Notify(props)
+    if self.unloaded then
+        return
+    end
+    return self:_showNotification(props)
 end
 
 function Window:_showNotification(props)
@@ -8032,9 +8039,6 @@ function Window:Close()
     if self.topbarIcon then
         motion.tween(self.topbarIcon, { ImageTransparency = 1 }, closeTweenInfo)
     end
-    for _, tag in self.tags do
-        tag:_setShown(false, closeTweenInfo)
-    end
     self:_fadeSelectedElementsOut()
     -- [[The contraction goes through the motion service so the close answers
     -- the speed setting like the rest of the window. A nil return means
@@ -8135,10 +8139,6 @@ function Window:Hide()
         if actionFrame:IsA("Frame") then
             motion.tween(actionFrame.ImageLabel, { ImageTransparency = 1 }, hideTween)
         end
-    end
-
-    for _, tag in self.tags do
-        tag:_setShown(false, hideTween)
     end
 
     for _, tab in pairs(self.tabs) do
@@ -8711,7 +8711,7 @@ function Window:SaveSettings()
 end
 
 function Window:LoadSettings()
-    local loaded = persistence.loadSettings(self)
+    local loaded, migrated = persistence.loadSettings(self)
     self.configuration.autoSave = self.settings.autoSaveConfig
     self.configuration.autoLoad = self.settings.autoLoadConfig
     -- [[The animation-speed setting lives in the same file, and the motion
@@ -8725,14 +8725,23 @@ function Window:LoadSettings()
     -- [[card never unmasks identity data while it is hidden and the toggle]]
     -- [[is built showing the truth.]]
     profilePanel.syncReveal(self)
+    if migrated then
+        -- [[Persist the normalized legacy profile state once. This keeps the
+        -- [[default off without overriding a deliberate choice on later boots.]]
+        self:SaveSettings()
+    end
     return loaded
 end
 
-function Window:_roundCorners(frame, corners)
+-- [[`token` is the theme key the rounded corners read; it defaults to the
+-- [[window's own roundness, but callers inside an element pass that element's
+-- [[radius token so an inner surface can share the container's arcs.]]
+function Window:_roundCorners(frame, corners, token)
+    token = token or "CornerRoundness"
     if not corners or not hasPerCornerRadius then
         return self:Create("UICorner", {
             Parent = frame,
-        }, { CornerRadius = "CornerRoundness" })
+        }, { CornerRadius = token })
     end
 
     local props = { Parent = frame }
@@ -8741,10 +8750,36 @@ function Window:_roundCorners(frame, corners)
         props[key] = UDim.new(0, 0)
     end
     for _, corner in corners do
-        props[corner] = nil         themeMap[corner] = "CornerRoundness"
+        props[corner] = nil         themeMap[corner] = token
     end
 
     return self:Create("UICorner", props, themeMap)
+end
+
+-- [[Companion to `_roundCorners` for a corner set an element flips with its own
+-- [[state instead of once at construction: `corners` (default: all four, as in
+-- [[`_roundCorners`) ride the `token` radius and every other corner of the frame
+-- [[goes back to square, so a caller can move which of an inner surface's edges
+-- [[match the container's arcs — a collapsible header is the card's bottom edge
+-- [[only while it is closed. No theme binding is recorded here (`themeProperties`
+-- [[still owns whatever `_roundCorners` bound), so a later `ChangeTheme` re-reads
+-- [[`token` through this same call from the element instead of fighting it. There
+-- [[is nothing to move on an engine without per-corner radii, where
+-- [[`_roundCorners` already gave the frame one radius on all four corners, so the
+-- [[call is a no-op there.]]
+function Window:_setRoundedCorners(corner, corners, token)
+    if not corner or not hasPerCornerRadius then
+        return
+    end
+
+    local radius = if token then self.theme[token] else nil
+    for _, key in cornerKeys do
+        local wanted = radius ~= nil and (not corners or table.find(corners, key) ~= nil)
+        local target = if wanted then radius else UDim.new(0, 0)
+        if corner[key] ~= target then
+            corner[key] = target
+        end
+    end
 end
 
 function Window:_setElementLocked(element, locked, message)
@@ -8829,21 +8864,32 @@ function Window:_refreshTabStripChrome()
         return
     end
 
-    local rightClipped = strip.AbsoluteCanvasSize.X > strip.AbsoluteWindowSize.X + 0.5
+    -- [[The canvas carries an end gutter on each side (UIPadding), and the]]
+    -- [[frame itself is inset from the window edge, so clipping is read from]]
+    -- [[the last pill's canvas-space right edge against the frame's full]]
+    -- [[width — AbsoluteWindowSize alone would count the trailing gutter as]]
+    -- [[clipped content and light the fade a gutter too early.]]
+    local edgePadding = self.layout.tabStripEdgePadding or 14
+    local frameWidth = strip.AbsoluteSize.X
+    local scrollX = strip.CanvasPosition.X
+    local contentRight = strip.AbsoluteCanvasSize.X - edgePadding
+
+    local rightClipped = contentRight > scrollX + frameWidth + 0.5
     if fadeRight and fadeRight.Parent and fadeRight.Visible ~= rightClipped then
         fadeRight.Visible = rightClipped
     end
 
-    local scrolledFromLeft = strip.CanvasPosition.X > 0.5
+    local scrolledFromLeft = scrollX > 0.5
     if fadeLeft and fadeLeft.Parent and fadeLeft.Visible ~= scrolledFromLeft then
         fadeLeft.Visible = scrolledFromLeft
     end
 end
 
 -- [[Keep the selected pill inside the strip's viewport after a selection.]]
--- [[Children of the ScrollingFrame sit in canvas space, so item.Position]]
--- [[is the tab's offset along the strip without any absolute-position]]
--- [[math; the inset keeps the landing a touch clear of the edge fades.]]
+-- [[Children of the ScrollingFrame sit in canvas space (the end-gutter]]
+-- [[padding shifts the first pill's origin), so item.Position is the tab's]]
+-- [[offset along the strip without any absolute-position math; the landing]]
+-- [[clearance parks the pill just clear of whichever edge fade is showing.]]
 function Window:_scrollSelectedTabIntoView(tweened)
     local strip = self.tabList
     if self.layout.mode ~= "top" or not strip or not strip.Parent then
@@ -8856,21 +8902,24 @@ function Window:_scrollSelectedTabIntoView(tweened)
         return
     end
 
-    local inset = self.layout.tabStripInset or 22
-    local viewport = strip.AbsoluteWindowSize.X
-    local maxScroll = math.max(0, strip.AbsoluteCanvasSize.X - viewport)
+    local edgePadding = self.layout.tabStripEdgePadding or 14
+    local fadeLanding = self.layout.tabStripFadeWidth or 30
+    local frameWidth = strip.AbsoluteSize.X
+    local maxScroll = math.max(0, strip.AbsoluteCanvasSize.X - frameWidth)
     local left = item.Position.X.Offset
     local right = left + item.AbsoluteSize.X
     local pos = strip.CanvasPosition.X
 
     -- [[Move the strip only when the pill is clipped or pressed up
     -- [[against an edge fade; a comfortably visible tab stays put, so
-    -- [[selecting it does not re-scroll the strip for no reason.]]
+    -- [[selecting it does not re-scroll the strip for no reason. The left]]
+    -- [[landing clears the fade; the right landing leaves the end gutter]]
+    -- [[visible beside the pill.]]
     local target = nil
-    if left < pos + inset then
-        target = left - inset
-    elseif right > pos + viewport - inset then
-        target = right + inset - viewport
+    if left < pos + fadeLanding then
+        target = left - fadeLanding
+    elseif right > pos + frameWidth - edgePadding then
+        target = right + edgePadding - frameWidth
     end
     if target == nil then
         return
@@ -8976,6 +9025,12 @@ function Window:_setLayoutMode(modeName)
             tab:_applyVisual(if self.selectedTab == tab then "selected" else "unselected")
         end
     end
+    -- [[The rows above are brand-new instances, and the rail's width was
+    -- [[applied before they existed. Re-applying it now lands the row state on
+    -- [[the rows that actually live in the rail — icon-only rows in a
+    -- [[collapsed rail (a rail that came back showing tab names), titles held
+    -- [[inside a capped one (a rail that came back overflowing).
+    self:_applyRailWidth()
     self:_applySettingsLayout(self._settingsMode)
     if self.selectedTab then
         self:_jumpTo(self.selectedTab.tabPage)
@@ -9100,7 +9155,6 @@ function Window:_revealElements(stepDelay, totalDuration, layoutTransitionId)
     if not tab then
         return
     end
-    tab._elementsPending = false
 
     -- [[The cascade is the moment this page's elements are being looked at, so]]
     -- [[it owns the pending mark `_showTabElements` would otherwise clear in]]
@@ -9167,7 +9221,10 @@ function Window:_stageContentReveal(beat, stepDelay, totalDuration, entranceId)
 end
 
 function Window:Show()
-        if self.animating or not self.hidden then
+        -- [[An unload retires every instance the window owns, including the ones
+        -- [[the entrance tweens next, and a window closed before its deferred
+        -- [[startup reveal ran still has that reveal queued (`library_entrypoint`).]]
+        if self.animating or self.unloaded or not self.hidden then
         return
     end
     self.animating = true
@@ -9265,9 +9322,6 @@ function Window:_quickRestore()
         end
     end
 
-    for _, tag in self.tags do
-        tag:_setShown(true, false)
-    end
     -- [[Same contract as the first show: run the settle path from the tween's
     -- Completed, or immediately when there is no tween (motion switched off),
     -- so `animating` is never left set.]]
@@ -9345,9 +9399,6 @@ function Window:_firstShow()
     -- [[for when it is opened; the staged reveal below walks the page that is
     -- [[actually on screen, one control per beat.]]
     self:_applySettingsLayout(self._settingsMode)
-    for _, tag in self.tags do
-        tag:_setShown(false, false)
-    end
     local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     if self.topbarIcon then
         self.topbarIcon.ImageTransparency = 1
@@ -9368,9 +9419,6 @@ function Window:_firstShow()
         end
     end
 
-    for _, tag in self.tags do
-        tag:_setShown(true, tweenInfo)
-    end
     self:_fadeSurfaces(true, tweenInfo)
 
     -- [[The entrance is the library's hero transition. Only UIScale moves:
@@ -9403,29 +9451,19 @@ function Window:_firstShow()
         overlayQueue.resume(self)
     end
 
-    -- Let the shell establish itself before revealing the visible page. The
-    -- cascade is independently guarded, so hiding/unloading during the delay
-    -- cannot resurrect content.
-    task.delay(firstContentDelay, function()
-        if self.unloaded or self.hidden or self.minimised then
-            return
-        end
-        self:_revealElements(firstContentStep, firstContentDuration)
-    end)
-
     motion.tween(self.main, { BackgroundTransparency = windowSurfaceTransparency }, "emphasized")
     if not motion.tween(self.windowScale, { Scale = 1 }, "pop", settle) then
         settle()
     end
     motion.tween(self.windowCorner, { CornerRadius = self.theme.CornerRoundness }, "pop")
 
-    -- [[Second beat of the entrance: the page's controls cascade in once the
-    -- [[frame is close to its resting size, and only then do the queued
-    -- [[notifications and toasts start arriving one at a time. Everything after
-    -- [[`CreateWindow` — the welcome toast, a host's "loaded N modules"
-    -- [[notifications, the optional-icon warning — rides that queue instead of
-    -- [[sharing the frame the window itself opens on.]]
-    self:_stageContentReveal(motion.step(contentRevealBeat), 0.02, 0.5, entranceId)
+    -- [[Second beat of the entrance: the single cascade walks the page's
+    -- [[controls in once the frame is close to its resting size, and only
+    -- [[then do the queued notifications and toasts start arriving one at a
+    -- [[time. Everything after `CreateWindow` — the welcome toast, a host's
+    -- [["loaded N modules" notifications, the optional-icon warning — rides
+    -- [[that queue instead of sharing the frame the window itself opens on.]]
+    self:_stageContentReveal(motion.step(contentRevealBeat), 0.02, 0.35, entranceId)
 
     local player = state.localPlayer
     if player and self.settings.welcomeToast and chrome.isNewUser() then
@@ -10263,6 +10301,7 @@ function state.new(tab, frame)
         window = tab.window,
         name = frame.name or frame.Name or "Button",
         icon = tab.window:ResolveIcon(frame.icon or frame.Icon),
+        description = frame.description or frame.Description,
         compact = tab.compact or false,
         callback = frame.callback or frame.Callback or function() end,
     }, state)
@@ -10962,6 +11001,7 @@ Collapsible.__type = "CollapsibleGroup"
 local constructors = {
     Button = function(parent, props) return require(script.Parent.button).new(parent, props) end,
     Toggle = function(parent, props) return require(script.Parent.toggle).new(parent, props) end,
+    Switch = function(parent, props) return require(script.Parent.toggle).new(parent, props) end,
     Slider = function(parent, props) return require(script.Parent.slider).new(parent, props) end,
     Dropdown = function(parent, props) return require(script.Parent.dropdown).new(parent, props) end,
     Input = function(parent, props) return require(script.Parent.input).new(parent, props) end,
@@ -10974,7 +11014,17 @@ local constructors = {
     Divider = function(parent, props) return require(script.Parent.divider).new(parent, props) end,
     Group = function(parent, props) return require(script.Parent.group).new(parent, props) end,
 }
-local compactTypes = { Button = true, Toggle = true, Slider = true, Stat = true, Group = true }
+local compactTypes = { Button = true, Toggle = true, Switch = true, Slider = true, Stat = true, Group = true }
+
+-- [[Which corners of the header band carry the container's arcs. Open, the band
+-- [[is only the top of the card: its bottom edge is the straight divider, so the
+-- [[bottom corners must stay square or they would notch into the revealed body.
+-- [[Closed, the band *is* the whole card, so its bottom corners have to carry the
+-- [[container's bottom arcs exactly like its top ones carry the top.]]
+local bandCorners = {
+    expanded = { "TopLeftRadius", "TopRightRadius" },
+    collapsed = { "TopLeftRadius", "TopRightRadius", "BottomLeftRadius", "BottomRightRadius" },
+}
 
 local function validate(definitions, path, ancestors, depth)
     assert(type(definitions) == "table", path .. " must be an array")
@@ -11053,6 +11103,7 @@ function Collapsible.new(tab, props)
         tab = tab, window = tab.window, elements = {}, connections = {},
         name = props.name or props.Name or "Collapsible Group",
         icon = tab.window:ResolveIcon(props.icon or props.Icon),
+        description = props.description or props.Description,
         deriveFlagFromName = tab.deriveFlagFromName,
         forgetState = props.forgetState or tab.forgetState,
         _expanded = false, _shown = false,
@@ -11062,27 +11113,60 @@ function Collapsible.new(tab, props)
     -- [[recipe: the header grows by the line's 20px band (41 -> 61) instead of
     -- [[letting the line run into the title row or the first child.]]
     self.headerHeight = if self.description then 61 else 41
-    -- The container only reserves layout space: it must not clip. The header
-    -- card fills it edge to edge, and a tight ClipsDescendants parent shaves
-    -- the outer half of its 1px stroke (Border mode straddles the edge) plus
-    -- the corner arcs on all four sides — the flaw that made these corners
-    -- read thinner than every other element. Clipping lives on the body
-    -- frame below, mirroring the dropdown: its expanding panel clips, while
-    -- its stroked top card never sits inside a tight clipper.
+    -- [[One connected card, two surfaces: the header band rides the standard
+    -- [[element gradient, the revealed body sits on the darker window surface
+    -- [[and a 1px stroke-colored divider separates them — the unified
+    -- [[container the design reference shows, instead of a header card and a
+    -- [[detached panel floating a gap apart.
+    self.bodyPad = 10
     self.main = w:Create("Frame", {
         Name = self.name, Size = UDim2.new(1, -20, 0, self.headerHeight),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BackgroundTransparency = 1, BorderSizePixel = 0,
-        Parent = tab.tabPage,
-    })
-    self.header = w:Create("Frame", {
-        Name = "Header", Size = UDim2.new(1, 0, 0, self.headerHeight),
+        ClipsDescendants = true, Parent = tab.tabPage,
+    }, { BackgroundTransparency = "ElementTransparency" })
+    -- [[The container's own surface is the element surface (the white base
+    -- [[under the ElementGradient recipe every element uses), so the card's
+    -- [[silhouette — its rounded top corners included — reads as the header
+    -- [[band. Roblox rounds a GuiObject's own surface but never clips its
+    -- [[descendants to the arcs, so the band below carries the same radius on
+    -- [[its top corners and the body clipper paints the darker window surface
+    -- [[the revealed body sits on.
+    w:Create("UIGradient", { Rotation = 270, Parent = self.main }, { Color = "ElementGradient" })
+    w:Create("UICorner", { Parent = self.main }, { CornerRadius = "ElementCornerRadius" })
+    -- [[The container masks its own descendants to its bounds; the rounded
+    -- [[silhouette comes from the container's corner plus the band's matching
+    -- [[top-corner radius.]]
+    -- [[UIStroke supports Border/Contextual modes, not Interior; Border keeps
+    -- [[the outline on the container without reading an invalid enum member.]]
+    self.stroke = w:Create("UIStroke", {
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Transparency = 1, Parent = self.main,
+    }, { Color = "ElementStroke", Transparency = "ElementStrokeTransparency" })
+    self.headerSurface = w:Create("Frame", {
+        Name = "HeaderSurface", Size = UDim2.new(1, 0, 0, self.headerHeight),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BackgroundTransparency = 1, BorderSizePixel = 0, Parent = self.main,
     }, { BackgroundTransparency = "ElementTransparency" })
-    -- StyleElementBody paints the ElementGradient over a white base, exactly
-    -- like every other element surface; binding the base to ElementSurface
-    -- here multiplied the gradient and drew the header almost black.
-    self.stroke = w:StyleElementBody(self.header)
+    -- [[The plain white base under the ElementGradient is the standard element
+    -- [[surface recipe; a themed base would multiply the gradient near-black.
+    w:Create("UIGradient", { Rotation = 270, Parent = self.headerSurface }, { Color = "ElementGradient" })
+    -- [[The band is a child of the container, and Roblox only rounds a
+    -- [[GuiObject's own surface — descendants paint over the arcs. Left
+    -- [[square, the band filled the card's top-left and top-right corners and
+    -- [[squared off the silhouette the stroke draws. Rounding the band's top
+    -- [[corners with the container's own radius makes the two arcs one, and
+    -- [[_fitHeaderCorners adds the bottom pair while the group is closed.
+    self.headerCorner = w:_roundCorners(self.headerSurface, { "TopLeftRadius", "TopRightRadius" }, "ElementCornerRadius")
+    self:_fitHeaderCorners()
+    self.divider = w:Create("Frame", {
+        Name = "HeaderDivider", Position = UDim2.fromOffset(0, self.headerHeight),
+        Size = UDim2.new(1, 0, 0, 1), BorderSizePixel = 0,
+        BackgroundTransparency = 1, Visible = false, Parent = self.main,
+    }, { BackgroundColor3 = "ElementStroke", BackgroundTransparency = "ElementStrokeTransparency" })
+    self.header = w:Create("Frame", {
+        Name = "Header", Size = UDim2.new(1, 0, 0, self.headerHeight),
+        BackgroundTransparency = 1, BorderSizePixel = 0, Parent = self.main,
+    })
     self.hoverOverlay = w:CreateHoverOverlay(self.header)
     -- Header metrics mirror the Text element: 20px gutters, a 6px icon gap,
     -- a 16px TitlingColor title and a 14px body line at 0.45 transparency.
@@ -11117,41 +11201,36 @@ function Collapsible.new(tab, props)
         Text = "", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
         AutoButtonColor = false, ZIndex = 6, Parent = self.header,
     })
-    -- The clipper is 20px wider than the container (10px of transparent
-    -- bleed each side) so children — which size themselves at UDim2.new(1,
-    -- -20) — land at exactly the header's width instead of compounding the
-    -- container's own -20 into a second, narrower inset. The bleed is
-    -- transparent and `main` no longer clips, so it reads as nothing; the
-    -- only reveal edge is the clipper's own bounds. The content sits 1px
-    -- inside those bounds so the first and last child's stroke keep the same
-    -- breathing room on every side as standalone elements.
+    -- [[The reveal mask spans the container edge to edge and rides its bottom
+    -- [[edge, so the mask's floor always matches the container's own corner
+    -- [[arcs. Children keep their normal width recipes — a card at
+    -- [[UDim2.new(1, -20) of this full-width body lands exactly one gutter
+    -- [[inside the container on each side, the inset the reference shows,
+    -- [[instead of running edge to edge against the container stroke.
     self.bodyClip = w:Create("Frame", {
         Name = "ContentsClip",
-        Position = UDim2.new(0, -10, 0, self.headerHeight + 6),
-        Size = UDim2.new(1, 20, 0, 0),
+        Position = UDim2.fromOffset(0, self.headerHeight + 1),
+        Size = UDim2.new(1, 0, 1, -(self.headerHeight + 1)),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BackgroundTransparency = 1, BorderSizePixel = 0,
         ClipsDescendants = true, Visible = false, Parent = self.main,
-    })
-    -- [[The expanded content sits on a connected inner surface rather than
-    -- [[floating directly on the page. It follows the same measured height as
-    -- [[the clipper, so the background grows with the number and size of the
-    -- [[children. It is created before the content frame so controls paint
-    -- [[above the panel's gradient and stroke.]]
-    self.bodyPanel = w:Create("Frame", {
-        Name = "ContentsPanel", Position = UDim2.fromOffset(0, 0),
-        Size = UDim2.new(1, 0, 0, 0), BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false,
-        Parent = self.bodyClip,
     }, { BackgroundTransparency = "ElementTransparency" })
-    self.bodyPanelStroke = w:StyleElementPanel(self.bodyPanel)
+    -- [[The revealed body sits on the darker window surface, and the clipper
+    -- [[is flush with the container's bottom edge, so it paints that surface
+    -- [[for the whole body region and keeps the container's bottom arcs (its
+    -- [[top corners stay square — the divider above is a straight line).
+    w:Create("UIGradient", { Rotation = 270, Parent = self.bodyClip }, { Color = "WindowColor" })
+    w:_roundCorners(self.bodyClip, { "BottomLeftRadius", "BottomRightRadius" }, "ElementCornerRadius")
+    -- [[body lives inside the clipper, which already starts under the divider,
+    -- [[so only the top pad offsets it here.
     self.body = w:Create("Frame", {
-        Name = "Contents", Position = UDim2.fromOffset(0, 1),
+        Name = "Contents", Position = UDim2.fromOffset(0, self.bodyPad),
         Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, Parent = self.bodyClip,
     })
     self.tabPage = self.body
     self.contentLayout = w:Create("UIListLayout", {
-        Padding = UDim.new(0, 7), FillDirection = Enum.FillDirection.Vertical,
+        Padding = UDim.new(0, self.bodyPad), FillDirection = Enum.FillDirection.Vertical,
         HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = self.body,
     })
@@ -11168,47 +11247,65 @@ function Collapsible.new(tab, props)
     return self
 end
 
+-- [[Collapsed, the band is the whole card — there is no body under it — so it
+-- [[has to carry the container's bottom arcs too, or its square bottom corners
+-- [[paint over the silhouette the stroke draws and the card reads as rounded at
+-- [[the top and uneven at the bottom. Expanded, the clipper below takes the
+-- [[bottom edge (it is flush with the container's floor and keeps the same
+-- [[radius token), so the band squares off against the straight divider. One
+-- [[token for both states means the corner never changes radius, only which
+-- [[surface owns it, and the clipper keeps the arcs for every frame in between:
+-- [[the collapse rounds the band as it settles, and the opening squares it
+-- [[before the body is revealed underneath.]]
+function Collapsible:_fitHeaderCorners()
+    self.window:_setRoundedCorners(
+        self.headerCorner,
+        if self._expanded then bandCorners.expanded else bandCorners.collapsed,
+        "ElementCornerRadius"
+    )
+end
+
 function Collapsible:_resize(animate)
     -- (The engine always reports an AbsoluteContentSize; the test harness
     -- only stubs it once content is driven, so an unmeasured layout reads 0.)
     local measured = self.contentLayout.AbsoluteContentSize
     local contentHeight = if measured then measured.Y else 0
     local height = self.headerHeight
-    local clipHeight = 0
     if self._expanded then
-        -- 7px of tab rhythm between the header and the first child; the
-        -- container then ends exactly at the last child, with no dead slack.
-        height += 7 + contentHeight
-        -- 1px of stroke breathing room above and below the revealed content.
-        clipHeight = contentHeight + 2
+        -- divider + top pad + content + bottom pad: the container ends one
+        -- gutter under the last child card, the same inset its sides keep,
+        -- with no dead slack.
+        height += 1 + self.bodyPad + contentHeight + self.bodyPad
     end
     local size = UDim2.new(1, -20, 0, height)
-    local clipSize = UDim2.new(1, 20, 0, clipHeight)
-    local panelSize = UDim2.new(1, 0, 0, clipHeight)
     self._resizeRevision = (self._resizeRevision or 0) + 1
     local revision = self._resizeRevision
     local function finish()
-        if not self.window.unloaded and self.main.Parent and self._resizeRevision == revision and not self._expanded then
+        if self.window.unloaded or not self.main.Parent or self._resizeRevision ~= revision then
+            return
+        end
+        if not self._expanded then
             self.body.Visible = false
             self.bodyClip.Visible = false
-            self.bodyPanel.Visible = false
+            self.divider.Visible = false
         end
+        -- [[Runs on every settle, in both states: the corner set follows the
+        -- [[height the container has actually reached, so a reversal mid-tween
+        -- [[(a stale revision returns above) can never leave the band's bottom
+        -- [[arcs on a card that is about to show its body, or off a card that
+        -- [[has just released it.]]
+        self:_fitHeaderCorners()
     end
     if animate and self._shown then
-        -- The layout reservation (main) and the reveal mask (bodyClip) ride
-        -- the same spec so the mask's edge never leads or trails the frame.
-        -- A nil tween means the size is already applied (instant profile, or
-        -- already at target), so the settle path runs directly.
+        -- The reveal mask derives its bounds from the container, so a single
+        -- tween grows both in lockstep; the mask's edge never leads or trails
+        -- the frame. A nil tween means the size is already applied (instant
+        -- profile, or already at target), so the settle path runs directly.
         local mainTween = motion.tween(self.main, { Size = size }, "snappy", finish)
-        motion.tween(self.bodyClip, { Size = clipSize }, "snappy")
-        motion.tween(self.bodyPanel, { Size = panelSize }, "snappy")
         if not mainTween then finish() end
     else
         motion.cancel(self.main)
-        motion.cancel(self.bodyClip)
         self.main.Size = size
-        self.bodyClip.Size = clipSize
-        self.bodyPanel.Size = panelSize
         finish()
     end
 end
@@ -11217,11 +11314,13 @@ function Collapsible:_setExpanded(expanded, animate)
     if self._expanded == expanded then return end
     self._expanded = expanded
     if expanded then
+        -- [[Square the band off against the divider before the body surfaces
+        -- [[under it, so the first revealed frame already shows a straight
+        -- [[header/body seam instead of two notches at the band's floor.
+        self:_fitHeaderCorners()
         self.body.Visible = true
         self.bodyClip.Visible = true
-        self.bodyPanel.Visible = true
-        self.bodyPanel.BackgroundTransparency = if self._shown then self.window.theme.ElementTransparency or 0 else 1
-        self.bodyPanelStroke.Transparency = if self._shown then self.window.theme.ElementStrokeTransparency else 1
+        self.divider.Visible = true
         for _, child in ipairs(self.elements) do child:_setShown(self._shown, false) end
     else
         -- End transient editing, but never reset values or trigger callbacks.
@@ -11251,16 +11350,17 @@ end
 function Collapsible:_setShown(shown, animate)
     self._shown = shown
     local w = self.window
-    w:_reveal(self.header, { BackgroundTransparency = if shown then w.theme.ElementTransparency or 0 else 1 }, animate)
+    w:_reveal(self.main, { BackgroundTransparency = if shown then w.theme.ElementTransparency or 0 else 1 }, animate)
+    w:_reveal(self.headerSurface, { BackgroundTransparency = if shown then w.theme.ElementTransparency or 0 else 1 }, animate)
+    w:_reveal(self.bodyClip, { BackgroundTransparency = if shown then w.theme.ElementTransparency or 0 else 1 }, animate)
     w:_reveal(self.stroke, { Transparency = if shown then w.theme.ElementStrokeTransparency else 1 }, animate)
+    w:_reveal(self.divider, { BackgroundTransparency = if shown then w.theme.ElementStrokeTransparency else 1 }, animate)
     w:_reveal(self.title, { TextTransparency = if shown then 0 else 1 }, animate)
     w:_reveal(self.chevron, { ImageTransparency = if shown then 0.4 else 1 }, animate)
     if self.iconLabel then w:_reveal(self.iconLabel, { ImageTransparency = if shown then 0 else 1 }, animate) end
     if self.descriptionLabel then
         w:_reveal(self.descriptionLabel, { TextTransparency = if shown then 0.45 else 1 }, animate)
     end
-    w:_reveal(self.bodyPanel, { BackgroundTransparency = if shown then w.theme.ElementTransparency or 0 else 1 }, animate)
-    w:_reveal(self.bodyPanelStroke, { Transparency = if shown then w.theme.ElementStrokeTransparency else 1 }, animate)
     if self._expanded then
         for _, child in ipairs(self.elements) do child:_setShown(shown, animate) end
     end
@@ -11713,6 +11813,7 @@ function state.new(tab, a49)
         window = tab.window,
         name = a49.name or a49.Name or "Dropdown",
         icon = tab.window:ResolveIcon(a49.icon or a49.Icon),
+        description = a49.description or a49.Description,
         forgetState = a49.forgetState or a49.ForgetState or tab.forgetState,
         flag = a49.flag
             or a49.Flag
@@ -12990,6 +13091,7 @@ local props = 8
 local direction = {
     button = true,
     toggle = true,
+    switch = true,
     stat = true,
     slider = true,
 }
@@ -13045,6 +13147,10 @@ function state.new(tab, element)
 end
 
 function state:_add(a13, a14)
+    -- "Switch" is the declarative alias of the toggle control.
+    if a13 == "switch" then
+        a13 = "toggle"
+    end
     if self.compact and not direction[a13] then
         Group.warn(
             `Astra: a row only holds compact elements (button/toggle/stat/slider), ignoring '{a13}'. Use a column for it.`
@@ -13228,6 +13334,7 @@ function state.new(tab, placeholderLabel)
         window = tab.window,
         name = placeholderLabel.name or placeholderLabel.Name or "Input",
         icon = tab.window:ResolveIcon(placeholderLabel.icon or placeholderLabel.Icon),
+        description = placeholderLabel.description or placeholderLabel.Description,
         forgetState = placeholderLabel.forgetState or placeholderLabel.ForgetState or tab.forgetState,
         placeholder = placeholderLabel.placeholder or placeholderLabel.Placeholder or "",
         numeric = placeholderLabel.numeric or placeholderLabel.Numeric or false,
@@ -13524,6 +13631,7 @@ function state.new(tab, a22)
         window = tab.window,
         name = a22.name or a22.Name or "Keybind",
         icon = tab.window:ResolveIcon(a22.icon or a22.Icon),
+        description = a22.description or a22.Description,
         forgetState = a22.forgetState or a22.ForgetState or tab.forgetState,
         editable = a22.editable or a22.Editable or false,
 
@@ -14080,6 +14188,7 @@ function state.new(tab, a22)
         window = tab.window,
         name = a22.name or a22.Name or "Progress",
         icon = tab.window:ResolveIcon(a22.icon or a22.Icon),
+        description = a22.description or a22.Description,
 
         min = a25,
         max = a26,
@@ -14608,6 +14717,7 @@ function state.new(ownerTab, a31)
         window = ownerTab.window,
         name = a31.name or a31.Name or "Slider",
         icon = ownerTab.window:ResolveIcon(a31.icon or a31.Icon),
+        description = a31.description or a31.Description,
         forgetState = a31.forgetState or a31.ForgetState or ownerTab.forgetState,
 
         range = a31.range or a31.Range or { 0, 100 },
@@ -15213,6 +15323,7 @@ function state.new(tab, a25)
         window = tab.window,
         name = a25.name or a25.Name or "Statistic",
         icon = tab.window:ResolveIcon(a25.icon or a25.Icon),
+        description = a25.description or a25.Description,
 
         value = if (a25.value or a25.Value) ~= nil then (a25.value or a25.Value) else 0,
                         _hasValue = (a25.value or a25.Value) ~= nil,
@@ -16021,8 +16132,8 @@ function state:_register(element)
     if not self.window.hidden and not self.window.minimised and self.window.selectedTab == self then
         -- Controls added after the startup shell is visible should join it
         -- with their normal reveal animation instead of popping in instantly.
-        -- Window:_constructionCheckpoint paces these registrations one per
-        -- frame while the initial host build is still active.
+        -- Window:_constructionCheckpoint paces these registrations in small
+        -- budget-limited batches while the initial host build is still active.
         element:_setShown(true, true)
     else
         -- [[The element stayed hidden with the window: remember that this tab
@@ -16292,170 +16403,6 @@ end)() end,
     [39] = function()local wax,script,require=ImportGlobals(39)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
-state.__type = "Tag"
-
-local constants = script.Parent.Parent.utilities
-
-local Tag = require(constants.Parent.core.state)
-local tab = require(script.Parent.Parent.functions)
-local props = require(script.Parent.Parent.images.image)
-
-local text = Color3.fromRGB(255, 175, 15)
-local title = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-
-function state.new(window, icon)
-    icon = if typeof(icon) == "table" then icon else {}
-
-    local self = setmetatable({
-        window = assert(window, "Missing argument #1 (Window expected)"),
-        text = icon.text or icon.Text or icon.title or icon.Title,
-        icon = window:ResolveIcon(icon.icon or icon.Icon),
-        color = icon.color or icon.Color or text,
-    }, state)
-
-    assert(self.icon or (self.text and self.text ~= ""), "A Tag requires an icon, text, or both.")
-
-    self.main = self.window:Create("Frame", {
-        Name = "Tag",
-        Size = UDim2.fromOffset(10, 24),
-        AutomaticSize = Enum.AutomaticSize.X,
-        BackgroundColor3 = self.color,
-        BorderSizePixel = 0,
-        LayoutOrder = icon.order or icon.Order or 0,
-
-                BackgroundTransparency = 1,
-        Parent = self.window.tagContainer,
-    })
-
-    self.window:Create("UICorner", {
-        CornerRadius = UDim.new(0, 8),
-
-        Parent = self.main,
-    })
-
-    self.window:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, 10),
-        PaddingRight = UDim.new(0, 10),
-
-        Parent = self.main,
-    })
-
-    self.window:Create("UIListLayout", {
-        Padding = UDim.new(0, 5),
-        FillDirection = Enum.FillDirection.Horizontal,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-
-        Parent = self.main,
-    })
-
-    local color = tab.contrastColor(self.color)
-
-    self.iconLabel = self.window:Create("ImageLabel", {
-        Name = "Icon",
-        Image = self.icon or "",
-        ImageColor3 = color,
-        Size = UDim2.fromOffset(16, 16),
-        BackgroundTransparency = 1,
-        Visible = self.icon ~= nil,
-        ZIndex = 5,
-
-                ImageTransparency = 1,
-        Parent = self.main,
-    })
-
-    self.title = self.window:Create("TextLabel", {
-        Name = "Title",
-        AnchorPoint = Vector2.new(0, 0.5),
-        Size = UDim2.fromOffset(10, 15),
-        AutomaticSize = Enum.AutomaticSize.X,
-        BackgroundTransparency = 1,
-        Text = self.text or "",
-        TextColor3 = color,
-        TextSize = 15,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextWrapped = true,
-        RichText = true,
-        Visible = self.text ~= nil and self.text ~= "",
-        LayoutOrder = 1,
-        ZIndex = 5,
-
-                TextTransparency = 1,
-        Parent = self.main,
-    }, { FontFace = "Font" })
-
-    self.window.tagContainer.Visible = true
-
-        if not self.window.hidden then
-        self:_setShown(true, title)
-    end
-
-    return self
-end
-
-function state:_setShown(order, element)
-    local frame = if order then 0 else 1
-    local a13 = if typeof(element) == "TweenInfo" then element elseif element then title else nil
-    if a13 then
-        Tag.tweenService:Create(self.main, a13, { BackgroundTransparency = frame }):Play()
-        Tag.tweenService:Create(self.iconLabel, a13, { ImageTransparency = frame }):Play()
-        Tag.tweenService:Create(self.title, a13, { TextTransparency = frame }):Play()
-    else
-        self.main.BackgroundTransparency = frame
-        self.iconLabel.ImageTransparency = frame
-        self.title.TextTransparency = frame
-    end
-end
-
-function state:SetColor(a14)
-    self.color = a14
-    local a15 = tab.contrastColor(a14)
-    Tag.tweenService:Create(self.main, title, { BackgroundColor3 = a14 }):Play()
-    Tag.tweenService:Create(self.iconLabel, title, { ImageColor3 = a15 }):Play()
-    Tag.tweenService:Create(self.title, title, { TextColor3 = a15 }):Play()
-end
-
-function state:SetText(a16)
-    self.text = a16
-    self.title.Text = a16 or ""
-    self.title.Visible = a16 ~= nil and a16 ~= ""
-end
-
-function state:SetIcon(a17)
-    self.icon = a17
-    props.assign(self.iconLabel, "Image", a17)
-    self.iconLabel.Visible = a17 ~= nil
-end
-
-function state:Set(a18)
-    if a18.color or a18.Color then
-        self:SetColor(a18.color or a18.Color)
-    end
-    if a18.text or a18.Text or a18.title or a18.Title then
-        self:SetText(a18.text or a18.Text or a18.title or a18.Title)
-    end
-    if a18.icon ~= nil or a18.Icon ~= nil then
-        self:SetIcon(a18.icon or a18.Icon)
-    end
-end
-
-function state:Remove()
-        self.window:DestroySubtree(self.main)
-    local a19 = table.find(self.window.tags, self)
-    if a19 then
-        table.remove(self.window.tags, a19)
-    end
-    if #self.window.tags == 0 then
-        self.window.tagContainer.Visible = false
-    end
-end
-
-return state
-
-end)() end,
-    [40] = function()local wax,script,require=ImportGlobals(40)local ImportGlobals return (function(...)
-local state = {}
-state.__index = state
 state.__type = "Text"
 
 local constants = require(script.Parent.Parent.utilities.moveable)
@@ -16607,7 +16554,7 @@ constants(state)
 return state
 
 end)() end,
-    [41] = function()local wax,script,require=ImportGlobals(41)local ImportGlobals return (function(...)
+    [40] = function()local wax,script,require=ImportGlobals(40)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Toggle"
@@ -16655,6 +16602,7 @@ function state.new(tab, element)
         window = tab.window,
         name = element.name or element.Name or "Toggle",
         icon = tab.window:ResolveIcon(element.icon or element.Icon),
+        description = element.description or element.Description,
         forgetState = element.forgetState or element.ForgetState or tab.forgetState,
         compact = tab.compact or false,
         flag = element.flag
@@ -17081,7 +17029,7 @@ end
 return state
 
 end)() end,
-    [50] = function()local wax,script,require=ImportGlobals(50)local ImportGlobals return (function(...)
+    [49] = function()local wax,script,require=ImportGlobals(49)local ImportGlobals return (function(...)
 
 local managerModule = require(script.manager)
 local registryModule = require(script.registry)
@@ -17106,7 +17054,7 @@ end
 return settings
 
 end)() end,
-    [43] = function()local wax,script,require=ImportGlobals(43)local ImportGlobals return (function(...)
+    [42] = function()local wax,script,require=ImportGlobals(42)local ImportGlobals return (function(...)
 
 local appearance = {}
 
@@ -17129,7 +17077,7 @@ end
 return appearance
 
 end)() end,
-    [44] = function()local wax,script,require=ImportGlobals(44)local ImportGlobals return (function(...)
+    [43] = function()local wax,script,require=ImportGlobals(43)local ImportGlobals return (function(...)
 
 local behavior = {}
 
@@ -17146,7 +17094,7 @@ end
 return behavior
 
 end)() end,
-    [45] = function()local wax,script,require=ImportGlobals(45)local ImportGlobals return (function(...)
+    [44] = function()local wax,script,require=ImportGlobals(44)local ImportGlobals return (function(...)
 
 local defaults = {}
 
@@ -17179,7 +17127,7 @@ end
 return defaults
 
 end)() end,
-    [46] = function()local wax,script,require=ImportGlobals(46)local ImportGlobals return (function(...)
+    [45] = function()local wax,script,require=ImportGlobals(45)local ImportGlobals return (function(...)
 
 local registry = require(script.Parent.registry)
 local defaults = require(script.Parent.defaults)
@@ -17301,7 +17249,7 @@ end
 return SettingsManager
 
 end)() end,
-    [47] = function()local wax,script,require=ImportGlobals(47)local ImportGlobals return (function(...)
+    [46] = function()local wax,script,require=ImportGlobals(46)local ImportGlobals return (function(...)
 
 local motion = require(script.Parent.Parent.utilities.motion)
 
@@ -17325,7 +17273,7 @@ end
 return performance
 
 end)() end,
-    [48] = function()local wax,script,require=ImportGlobals(48)local ImportGlobals return (function(...)
+    [47] = function()local wax,script,require=ImportGlobals(47)local ImportGlobals return (function(...)
 
 local settingsPersistence = require(script.Parent.Parent.utilities.persistenceSettings)
 local settingsCache = require(script.Parent.Parent.cache.persistenceCache)
@@ -17374,7 +17322,7 @@ end
 return persistenceWrite
 
 end)() end,
-    [49] = function()local wax,script,require=ImportGlobals(49)local ImportGlobals return (function(...)
+    [48] = function()local wax,script,require=ImportGlobals(48)local ImportGlobals return (function(...)
 
 local registry = {}
 
@@ -17493,7 +17441,7 @@ end
 return registry
 
 end)() end,
-    [54] = function()local wax,script,require=ImportGlobals(54)local ImportGlobals return (function(...)
+    [53] = function()local wax,script,require=ImportGlobals(53)local ImportGlobals return (function(...)
 
 local imageCache = require(script.moduleCache)
 
@@ -17504,7 +17452,7 @@ local moduleCache = {
 return moduleCache
 
 end)() end,
-    [51] = function()local wax,script,require=ImportGlobals(51)local ImportGlobals return (function(...)
+    [50] = function()local wax,script,require=ImportGlobals(50)local ImportGlobals return (function(...)
 local filesystem = require(script.Parent.Parent.utilities.filesystem)
 local path = require(script.Parent.Parent.utilities.path)
 local variables = require(script.Parent.Parent.core.state)
@@ -17807,7 +17755,7 @@ end
 return imageCache
 
 end)() end,
-    [52] = function()local wax,script,require=ImportGlobals(52)local ImportGlobals return (function(...)
+    [51] = function()local wax,script,require=ImportGlobals(51)local ImportGlobals return (function(...)
 
 local moduleCache = {}
 
@@ -17838,7 +17786,7 @@ end
 return moduleCache
 
 end)() end,
-    [53] = function()local wax,script,require=ImportGlobals(53)local ImportGlobals return (function(...)
+    [52] = function()local wax,script,require=ImportGlobals(52)local ImportGlobals return (function(...)
 
 local persistenceCache = {}
 
@@ -17863,7 +17811,7 @@ end
 return persistenceCache
 
 end)() end,
-    [58] = function()local wax,script,require=ImportGlobals(58)local ImportGlobals return (function(...)
+    [57] = function()local wax,script,require=ImportGlobals(57)local ImportGlobals return (function(...)
 
 local textMetrics = require(script.textMetrics)
 local colors = require(script.colors)
@@ -17881,7 +17829,7 @@ functions.contrastText = colors.contrastText
 return functions
 
 end)() end,
-    [55] = function()local wax,script,require=ImportGlobals(55)local ImportGlobals return (function(...)
+    [54] = function()local wax,script,require=ImportGlobals(54)local ImportGlobals return (function(...)
 local colors = {}
 
 function colors.contrastColor(color: Color3): Color3
@@ -17901,7 +17849,7 @@ end
 return colors
 
 end)() end,
-    [56] = function()local wax,script,require=ImportGlobals(56)local ImportGlobals return (function(...)
+    [55] = function()local wax,script,require=ImportGlobals(55)local ImportGlobals return (function(...)
 local flagNames = {}
 
 local offsetBasis = 2166136261
@@ -17933,7 +17881,7 @@ end
 return flagNames
 
 end)() end,
-    [57] = function()local wax,script,require=ImportGlobals(57)local ImportGlobals return (function(...)
+    [56] = function()local wax,script,require=ImportGlobals(56)local ImportGlobals return (function(...)
 local state = require(script.Parent.Parent.core.state)
 local textService = state.textService
 
@@ -18040,7 +17988,7 @@ end
 return textMetrics
 
 end)() end,
-    [59] = function()local wax,script,require=ImportGlobals(59)local ImportGlobals return (function(...)
+    [58] = function()local wax,script,require=ImportGlobals(58)local ImportGlobals return (function(...)
 local sidebar = require(script.Parent.Parent.components.sidebar)
 
 local Sidebar = {}
@@ -18099,7 +18047,7 @@ end
 return Sidebar
 
 end)() end,
-    [60] = function()local wax,script,require=ImportGlobals(60)local ImportGlobals return (function(...)
+    [59] = function()local wax,script,require=ImportGlobals(59)local ImportGlobals return (function(...)
 local sidebar = require(script.Parent.Parent.components.sidebar)
 
 local SidebarCollapsed = {}
@@ -18159,7 +18107,7 @@ end
 return SidebarCollapsed
 
 end)() end,
-    [61] = function()local wax,script,require=ImportGlobals(61)local ImportGlobals return (function(...)
+    [60] = function()local wax,script,require=ImportGlobals(60)local ImportGlobals return (function(...)
 local search = require(script.Parent.Parent.components.search)
 local functions = require(script.Parent.Parent.functions)
 local utilities = script.Parent.Parent.utilities
@@ -18167,7 +18115,8 @@ local constants = require(utilities.constants)
 
 local Topbar = {}
 
-local FADE_WIDTH = 24
+local DEFAULT_FADE_WIDTH = 30
+local DEFAULT_EDGE_PADDING = 14
 
 -- [[The window surface's WindowColor gradient runs bottom-to-top (rotation]]
 -- [[270), so the colour behind the strip — at the top of the window — is]]
@@ -18182,11 +18131,12 @@ local function buildFade(window, layout, inset, name, anchoredRight, transparent
     -- [[transparentEdge is the frame edge that must be fully clear:]]
     -- [[left for the right fade (it dissolves towards the visible tabs),]]
     -- [[right for the left fade.]]
+    local fadeWidth = layout.tabStripFadeWidth or DEFAULT_FADE_WIDTH
     local fade = window:Create("Frame", {
         Name = name,
-        Size = UDim2.fromOffset(FADE_WIDTH, layout.tabStripHeight),
+        Size = UDim2.fromOffset(fadeWidth, layout.tabStripHeight),
         Position = if anchoredRight
-            then UDim2.new(1, -(inset + FADE_WIDTH), 0, layout.tabStripTop)
+            then UDim2.new(1, -(inset + fadeWidth), 0, layout.tabStripTop)
             else UDim2.new(0, inset, 0, layout.tabStripTop),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
@@ -18215,11 +18165,14 @@ local function buildFade(window, layout, inset, name, anchoredRight, transparent
 end
 
 function Topbar.Build(window, layout)
-    -- [[The strip is inset from the window edge on both sides (instead of]]
-    -- [[using UIPadding, which would scroll away with the content), so a]]
-    -- [[tab that overflows clips inside the window — never touching its]]
-    -- [[border — and the edge fades below mark where tabs go off.]]
-    local inset = layout.tabStripInset or 22
+    -- [[The strip frame itself is inset from the window edge on both]]
+    -- [[sides, and the canvas carries its own UIPadding at each end. The]]
+    -- [[two margins stack: an overflowing tab clips well inside the]]
+    -- [[window border, and even the first/last pill keeps a visible gap]]
+    -- [[from the clip edge (UIPadding scrolls with the content, unlike a]]
+    -- [[margin on the frame). The edge fades below mark where tabs go off.]]
+    local inset = layout.tabStripInset or 30
+    local edgePadding = layout.tabStripEdgePadding or DEFAULT_EDGE_PADDING
 
     window.tabList = window:Create("ScrollingFrame", {
         Name = "Tabs",
@@ -18234,8 +18187,21 @@ function Topbar.Build(window, layout)
         ScrollingDirection = Enum.ScrollingDirection.X,
         Parent = window.main,
     })
+
+    -- [[End gutters: empty space the pills can never occupy, so the]]
+    -- [[outermost pill never touches the strip edge at either scroll]]
+    -- [[extreme. AutomaticCanvasSize folds the padding into the canvas,]]
+    -- [[which is also what keeps the last pill scrollable clear of the]]
+    -- [[right fade.]]
+    window:Create("UIPadding", {
+        PaddingLeft = UDim.new(0, edgePadding),
+        PaddingRight = UDim.new(0, edgePadding),
+
+        Parent = window.tabList,
+    })
+
     window.tabListLayout = window:Create("UIListLayout", {
-        Padding = UDim.new(0, 7),
+        Padding = UDim.new(0, 8),
         FillDirection = Enum.FillDirection.Horizontal,
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
@@ -18270,7 +18236,7 @@ end
 return Topbar
 
 end)() end,
-    [65] = function()local wax,script,require=ImportGlobals(65)local ImportGlobals return (function(...)
+    [64] = function()local wax,script,require=ImportGlobals(64)local ImportGlobals return (function(...)
 
 local image = require(script.image)
 
@@ -18285,7 +18251,7 @@ local windowIcons = {
 return windowIcons
 
 end)() end,
-    [63] = function()local wax,script,require=ImportGlobals(63)local ImportGlobals return (function(...)
+    [62] = function()local wax,script,require=ImportGlobals(62)local ImportGlobals return (function(...)
 local imageCache = require(script.Parent.Parent.cache.imageCache)
 local variables = require(script.Parent.Parent.core.state)
 
@@ -18450,7 +18416,7 @@ end
 return image
 
 end)() end,
-    [64] = function()local wax,script,require=ImportGlobals(64)local ImportGlobals return (function(...)
+    [63] = function()local wax,script,require=ImportGlobals(63)local ImportGlobals return (function(...)
 
 local windowIcons = {}
 
@@ -18512,7 +18478,7 @@ end
 return windowIcons
 
 end)() end,
-    [72] = function()local wax,script,require=ImportGlobals(72)local ImportGlobals return (function(...)
+    [71] = function()local wax,script,require=ImportGlobals(71)local ImportGlobals return (function(...)
 -- [[Icon resolver service.]]
 -- [[]]
 -- [[Public API is compatible with the previous single-module catalog:]]
@@ -19010,7 +18976,7 @@ end
 return icons
 
 end)() end,
-    [66] = function()local wax,script,require=ImportGlobals(66)local ImportGlobals return (function(...)
+    [65] = function()local wax,script,require=ImportGlobals(65)local ImportGlobals return (function(...)
 local function expand(prefix: string, pack: string, raw: { [string]: string }): { [string]: string }
     local t = {}
     for k, name in raw do
@@ -19313,7 +19279,7 @@ local feather = expand("assets/icons/feather-pack/", "feather", {
 return feather
 
 end)() end,
-    [67] = function()local wax,script,require=ImportGlobals(67)local ImportGlobals return (function(...)
+    [66] = function()local wax,script,require=ImportGlobals(66)local ImportGlobals return (function(...)
 local function expand(prefix: string, pack: string, raw: { [string]: string }): { [string]: string }
     local t = {}
     for k, name in raw do
@@ -19977,7 +19943,7 @@ local heroicons = expand("assets/icons/heroicons-pack/", "heroicons", {
 return heroicons
 
 end)() end,
-    [68] = function()local wax,script,require=ImportGlobals(68)local ImportGlobals return (function(...)
+    [67] = function()local wax,script,require=ImportGlobals(67)local ImportGlobals return (function(...)
 local function expand(prefix: string, pack: string, raw: { [string]: string }): { [string]: string }
     local t = {}
     for k, name in raw do
@@ -21769,7 +21735,7 @@ local lucide = expand("assets/icons/lucide-pack/", "lucide", {
 return lucide
 
 end)() end,
-    [69] = function()local wax,script,require=ImportGlobals(69)local ImportGlobals return (function(...)
+    [68] = function()local wax,script,require=ImportGlobals(68)local ImportGlobals return (function(...)
 local function expand(prefix: string, pack: string, raw: { [string]: string }): { [string]: string }
     local t = {}
     for k, name in raw do
@@ -22918,7 +22884,7 @@ local material = expand("assets/icons/material-pack/white/", "material", {
 return material
 
 end)() end,
-    [70] = function()local wax,script,require=ImportGlobals(70)local ImportGlobals return (function(...)
+    [69] = function()local wax,script,require=ImportGlobals(69)local ImportGlobals return (function(...)
 local function expand(prefix: string, pack: string, raw: { [string]: string }): { [string]: string }
     local t = {}
     for k, name in raw do
@@ -24446,7 +24412,7 @@ local phosphor = expand("assets/icons/phosphor-pack/", "phosphor", {
 return phosphor
 
 end)() end,
-    [71] = function()local wax,script,require=ImportGlobals(71)local ImportGlobals return (function(...)
+    [70] = function()local wax,script,require=ImportGlobals(70)local ImportGlobals return (function(...)
 local function expand(prefix: string, pack: string, raw: { [string]: string }): { [string]: string }
     local t = {}
     for k, name in raw do
@@ -29592,7 +29558,7 @@ local tabler = expand("assets/icons/tabler-pack/", "tabler", {
 return tabler
 
 end)() end,
-    [83] = function()local wax,script,require=ImportGlobals(83)local ImportGlobals return (function(...)
+    [82] = function()local wax,script,require=ImportGlobals(82)local ImportGlobals return (function(...)
 -- [[Theme resolution engine (themes/init.luau).]]
 -- [[]]
 -- [[Extracted verbatim from components/window.luau so the window no longer owns]]
@@ -29698,7 +29664,7 @@ end
 return themes
 
 end)() end,
-    [73] = function()local wax,script,require=ImportGlobals(73)local ImportGlobals return (function(...)
+    [72] = function()local wax,script,require=ImportGlobals(72)local ImportGlobals return (function(...)
 return {
     -- [[Semantic palette]]
     Background = Color3.fromRGB(16, 13, 24),
@@ -29764,7 +29730,7 @@ return {
 }
 
 end)() end,
-    [74] = function()local wax,script,require=ImportGlobals(74)local ImportGlobals return (function(...)
+    [73] = function()local wax,script,require=ImportGlobals(73)local ImportGlobals return (function(...)
 return {
     -- [[Semantic palette]]
     Background = Color3.fromRGB(11, 16, 25),
@@ -29830,7 +29796,7 @@ return {
 }
 
 end)() end,
-    [75] = function()local wax,script,require=ImportGlobals(75)local ImportGlobals return (function(...)
+    [74] = function()local wax,script,require=ImportGlobals(74)local ImportGlobals return (function(...)
 local crimson = require(script.Parent.Parent.core.state)
 
 return {
@@ -29905,7 +29871,7 @@ return {
 }
 
 end)() end,
-    [76] = function()local wax,script,require=ImportGlobals(76)local ImportGlobals return (function(...)
+    [75] = function()local wax,script,require=ImportGlobals(75)local ImportGlobals return (function(...)
 local default = require(script.Parent.Parent.core.state)
 
 -- [[Rayfield Gen2 default palette, ported 1:1 for shared keys. Astra-only
@@ -29975,11 +29941,14 @@ return {
     LiveAnimation = false,
     DarkToggleOverlay = true,
     ElementTransparency = 0,
-    CollapsibleChildElementTransparency = 0.75,
+    -- [[Grouped children render as defined cards — a surface a shade under the
+    -- [[header band and a visible stroke — the crisp rows the design
+    -- [[reference shows, not 75%-faded ghosts without strokes.
+    CollapsibleChildElementTransparency = 0.35,
     ElementStrokeTransparency = 0,
-    CollapsibleChildElementStrokeTransparency = 1,
+    CollapsibleChildElementStrokeTransparency = 0,
     ElementStrokeHoverTransparency = 0,
-    CollapsibleChildElementStrokeHoverTransparency = 1,
+    CollapsibleChildElementStrokeHoverTransparency = 0,
     ElementStrokeHover = Color3.fromRGB(82, 82, 82),
     ElementCornerRadius = UDim.new(0, 12),
     ElementTextHoverColor = Color3.fromRGB(255, 255, 255),
@@ -30008,7 +29977,7 @@ return {
 }
 
 end)() end,
-    [77] = function()local wax,script,require=ImportGlobals(77)local ImportGlobals return (function(...)
+    [76] = function()local wax,script,require=ImportGlobals(76)local ImportGlobals return (function(...)
 return {
     -- [[Semantic palette]]
     Background = Color3.fromRGB(22, 18, 16),
@@ -30074,7 +30043,7 @@ return {
 }
 
 end)() end,
-    [78] = function()local wax,script,require=ImportGlobals(78)local ImportGlobals return (function(...)
+    [77] = function()local wax,script,require=ImportGlobals(77)local ImportGlobals return (function(...)
 local emerald = require(script.Parent.Parent.core.state)
 
 return {
@@ -30149,7 +30118,7 @@ return {
 }
 
 end)() end,
-    [79] = function()local wax,script,require=ImportGlobals(79)local ImportGlobals return (function(...)
+    [78] = function()local wax,script,require=ImportGlobals(78)local ImportGlobals return (function(...)
 local frost = require(script.Parent.Parent.core.state)
 
 return {
@@ -30224,7 +30193,7 @@ return {
 }
 
 end)() end,
-    [80] = function()local wax,script,require=ImportGlobals(80)local ImportGlobals return (function(...)
+    [79] = function()local wax,script,require=ImportGlobals(79)local ImportGlobals return (function(...)
 local gold = require(script.Parent.Parent.core.state)
 
 return {
@@ -30299,7 +30268,7 @@ return {
 }
 
 end)() end,
-    [81] = function()local wax,script,require=ImportGlobals(81)local ImportGlobals return (function(...)
+    [80] = function()local wax,script,require=ImportGlobals(80)local ImportGlobals return (function(...)
 local onyx = require(script.Parent.Parent.core.state)
 
 return {
@@ -30374,7 +30343,7 @@ return {
 }
 
 end)() end,
-    [82] = function()local wax,script,require=ImportGlobals(82)local ImportGlobals return (function(...)
+    [81] = function()local wax,script,require=ImportGlobals(81)local ImportGlobals return (function(...)
 return {
     -- [[Semantic palette]]
     Background = Color3.fromRGB(23, 15, 19),
@@ -30440,7 +30409,7 @@ return {
 }
 
 end)() end,
-    [84] = function()local wax,script,require=ImportGlobals(84)local ImportGlobals return (function(...)
+    [83] = function()local wax,script,require=ImportGlobals(83)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 
 local hapticService = {}
@@ -30538,7 +30507,7 @@ end
 return hapticService
 
 end)() end,
-    [85] = function()local wax,script,require=ImportGlobals(85)local ImportGlobals return (function(...)
+    [84] = function()local wax,script,require=ImportGlobals(84)local ImportGlobals return (function(...)
 local networkUtil = require(script.Parent.network)
 local logger = require(script.Parent.log)
 
@@ -30716,7 +30685,7 @@ end
 return assetResolver
 
 end)() end,
-    [86] = function()local wax,script,require=ImportGlobals(86)local ImportGlobals return (function(...)
+    [85] = function()local wax,script,require=ImportGlobals(85)local ImportGlobals return (function(...)
 local iconRegistry = require(script.Parent.Parent.images.windowIcons)
 local constants = {}
 
@@ -30768,7 +30737,7 @@ constants.displayOrder = {
 return constants
 
 end)() end,
-    [87] = function()local wax,script,require=ImportGlobals(87)local ImportGlobals return (function(...)
+    [86] = function()local wax,script,require=ImportGlobals(86)local ImportGlobals return (function(...)
 local enums = {}
 
 function enums.itemFromValue(enumType, value)
@@ -30798,7 +30767,7 @@ end
 return enums
 
 end)() end,
-    [88] = function()local wax,script,require=ImportGlobals(88)local ImportGlobals return (function(...)
+    [87] = function()local wax,script,require=ImportGlobals(87)local ImportGlobals return (function(...)
 local serviceProvider = require(script.Parent.services)
 local filesystem = {}
 
@@ -31049,7 +31018,7 @@ end
 return filesystem
 
 end)() end,
-    [89] = function()local wax,script,require=ImportGlobals(89)local ImportGlobals return (function(...)
+    [88] = function()local wax,script,require=ImportGlobals(88)local ImportGlobals return (function(...)
 local fs = require(script.Parent.filesystem)
 local pathUtil = require(script.Parent.path)
 
@@ -31098,7 +31067,7 @@ end
 return filesystemManager
 
 end)() end,
-    [90] = function()local wax,script,require=ImportGlobals(90)local ImportGlobals return (function(...)
+    [89] = function()local wax,script,require=ImportGlobals(89)local ImportGlobals return (function(...)
 local fontManager = require(script.Parent.services)
 local a2 = fontManager.getService("HttpService")
 local a3 = fontManager.getService("RunService")
@@ -31551,7 +31520,7 @@ end
 return a16
 
 end)() end,
-    [91] = function()local wax,script,require=ImportGlobals(91)local ImportGlobals return (function(...)
+    [90] = function()local wax,script,require=ImportGlobals(90)local ImportGlobals return (function(...)
 
 local functions = {}
 
@@ -31569,7 +31538,7 @@ functions.contrastText = textMetrics.contrastText
 return functions
 
 end)() end,
-    [92] = function()local wax,script,require=ImportGlobals(92)local ImportGlobals return (function(...)
+    [91] = function()local wax,script,require=ImportGlobals(91)local ImportGlobals return (function(...)
 local layouts = {}
 
 local topbarLayout = require(script.Parent.Parent.layouts.Topbar)
@@ -31578,9 +31547,14 @@ local sidebarCollapsedLayout = require(script.Parent.Parent.layouts.SidebarColla
 
 local topbarHeightConstant = 64
 
-local tabStripTopOffset = topbarHeightConstant - 1
+-- [[Clearance above and below the tab row. The strip is centred in the]]
+-- [[chrome band with matching gaps on both sides, so the pills read as]]
+-- [[neither pressed against the topbar nor pressed against the content.]]
+local tabStripTopClearance = 6
+local tabStripBottomClearance = 6
+local tabStripTopOffset = topbarHeightConstant + tabStripTopClearance
 local tabStripRowHeight = 38
-local chromeGap = 3
+local chromeGap = tabStripBottomClearance
 
 export type Mode = "top" | "sidebar"
 
@@ -31599,6 +31573,8 @@ export type Layout = {
         tabStripTop: number?,
     tabStripHeight: number?,
     tabStripInset: number?,
+    tabStripEdgePadding: number?,
+    tabStripFadeWidth: number?,
 
         railWidth: number?,
     railCollapsedWidth: number?,
@@ -31630,7 +31606,17 @@ layouts.top = {
     -- [[Margin between the window edge and the tab strip. The strip's]]
     -- [[ScrollingFrame is inset by this much on each side, so overflowing]]
     -- [[tabs clip inside the window instead of running into its border.]]
-    tabStripInset = 22,
+    tabStripInset = 30,
+
+    -- [[Empty gutter *inside* the strip at each end (canvas UIPadding):]]
+    -- [[the first and last pills never touch the strip's clip edge, at]]
+    -- [[rest or scrolled, so the edge fades dissolve over empty space]]
+    -- [[instead of over a pill pressed up against the edge.]]
+    tabStripEdgePadding = 14,
+
+    -- [[Width of the gradient fade that marks a clipping edge; wide]]
+    -- [[enough to cover the end gutter plus a little strip beyond it.]]
+    tabStripFadeWidth = 30,
 
     pageDirection = Enum.FillDirection.Horizontal,
 
@@ -31721,7 +31707,7 @@ end
 return layouts
 
 end)() end,
-    [93] = function()local wax,script,require=ImportGlobals(93)local ImportGlobals return (function(...)
+    [92] = function()local wax,script,require=ImportGlobals(92)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local logger = require(script.Parent.log)
 
@@ -31820,7 +31806,7 @@ end
 return locale
 
 end)() end,
-    [94] = function()local wax,script,require=ImportGlobals(94)local ImportGlobals return (function(...)
+    [93] = function()local wax,script,require=ImportGlobals(93)local ImportGlobals return (function(...)
 local function lockable<T>(element: T): T
     local target = element :: any
 
@@ -31842,7 +31828,7 @@ end
 return lockable
 
 end)() end,
-    [95] = function()local wax,script,require=ImportGlobals(95)local ImportGlobals return (function(...)
+    [94] = function()local wax,script,require=ImportGlobals(94)local ImportGlobals return (function(...)
 local log = {}
 
 type SuppressPredicate = () -> boolean
@@ -31892,7 +31878,7 @@ end
 return log
 
 end)() end,
-    [96] = function()local wax,script,require=ImportGlobals(96)local ImportGlobals return (function(...)
+    [95] = function()local wax,script,require=ImportGlobals(95)local ImportGlobals return (function(...)
 -- [[Astra motion service.
 --
 -- Every animation in the library used to build its own TweenInfo and call
@@ -32217,7 +32203,7 @@ end
 return motion
 
 end)() end,
-    [97] = function()local wax,script,require=ImportGlobals(97)local ImportGlobals return (function(...)
+    [96] = function()local wax,script,require=ImportGlobals(96)local ImportGlobals return (function(...)
 local function moveable<T>(dragState: T): T
     local target = dragState :: any
 
@@ -32253,7 +32239,7 @@ end
 return moveable
 
 end)() end,
-    [98] = function()local wax,script,require=ImportGlobals(98)local ImportGlobals return (function(...)
+    [97] = function()local wax,script,require=ImportGlobals(97)local ImportGlobals return (function(...)
 local network = {}
 network.__index = network
 
@@ -32271,7 +32257,7 @@ end
 return network
 
 end)() end,
-    [99] = function()local wax,script,require=ImportGlobals(99)local ImportGlobals return (function(...)
+    [98] = function()local wax,script,require=ImportGlobals(98)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local textService = coreState.textService
 
@@ -32620,7 +32606,7 @@ end
 return odometer
 
 end)() end,
-    [100] = function()local wax,script,require=ImportGlobals(100)local ImportGlobals return (function(...)
+    [99] = function()local wax,script,require=ImportGlobals(99)local ImportGlobals return (function(...)
 type OrderedElement = {
     main: GuiObject,
 }
@@ -32632,7 +32618,7 @@ end
 return ordering
 
 end)() end,
-    [101] = function()local wax,script,require=ImportGlobals(101)local ImportGlobals return (function(...)
+    [100] = function()local wax,script,require=ImportGlobals(100)local ImportGlobals return (function(...)
 local path = {}
 
 function path.join(base: string, suffix: string?): string
@@ -32683,7 +32669,7 @@ end
 return path
 
 end)() end,
-    [102] = function()local wax,script,require=ImportGlobals(102)local ImportGlobals return (function(...)
+    [101] = function()local wax,script,require=ImportGlobals(101)local ImportGlobals return (function(...)
 local persistence = {}
 
 local configPersistence = require(script.Parent.persistenceConfig)
@@ -32702,7 +32688,7 @@ persistence.loadSettings = settingsPersistence.loadSettings
 return persistence
 
 end)() end,
-    [103] = function()local wax,script,require=ImportGlobals(103)local ImportGlobals return (function(...)
+    [102] = function()local wax,script,require=ImportGlobals(102)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local fs = require(script.Parent.filesystem)
 local logger = require(script.Parent.log)
@@ -32953,7 +32939,7 @@ end
 return persistenceConfig
 
 end)() end,
-    [104] = function()local wax,script,require=ImportGlobals(104)local ImportGlobals return (function(...)
+    [103] = function()local wax,script,require=ImportGlobals(103)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local pathUtil = require(script.Parent.path)
 
@@ -32997,7 +32983,7 @@ end
 return persistencePaths
 
 end)() end,
-    [105] = function()local wax,script,require=ImportGlobals(105)local ImportGlobals return (function(...)
+    [104] = function()local wax,script,require=ImportGlobals(104)local ImportGlobals return (function(...)
 local coreState = require(script.Parent.Parent.core.state)
 local fs = require(script.Parent.filesystem)
 local paths = require(script.Parent.persistencePaths)
@@ -33005,6 +32991,12 @@ local writer = require(script.Parent.persistenceWrite)
 local enumHelper = require(script.Parent.enums)
 
 local persistenceSettings = {}
+
+-- [[Settings files written before profile visibility was explicitly kept off
+-- [[did not carry a schema marker. Treat those files as legacy once, clear the
+-- [[profile visibility pair, and write the marker back so a user can still turn
+-- [[the profile on intentionally afterward.]]
+local SETTINGS_VERSION = 1
 
 type SettingsWindow = {
     settings: {
@@ -33028,6 +33020,7 @@ type SettingsWindow = {
 }
 
 type DecodedSettings = {
+    settingsVersion: unknown?,
     toggleKeybind: { [number]: unknown }?,
     theme: unknown?,
     mouseOverride: unknown?,
@@ -33053,6 +33046,7 @@ function persistenceSettings.saveSettings(window: SettingsWindow): boolean
     local folder, filePath = persistenceSettings.getSettingsPath()
 
     local payload: { [string]: unknown } = {
+        settingsVersion = SETTINGS_VERSION,
         toggleKeybind = {
             tostring(window.settings.toggleKeybind.EnumType),
             window.settings.toggleKeybind.Value,
@@ -33126,11 +33120,21 @@ local function readWithFallback(): DecodedSettings?
     return nil
 end
 
-function persistenceSettings.loadSettings(window: SettingsWindow): boolean
+function persistenceSettings.loadSettings(window: SettingsWindow): (boolean, boolean)
     local decodedSettings = readWithFallback()
 
     if not decodedSettings then
-        return false
+        return false, false
+    end
+
+    local storedVersion = tonumber(decodedSettings.settingsVersion) or 0
+    local migrated = storedVersion < SETTINGS_VERSION
+    if migrated then
+        -- [[A legacy profile preference may have been saved as true. Clear it
+        -- [[only during the one-time migration; after this file is rewritten,
+        -- [[users can enable the profile normally and keep that choice.]]
+        decodedSettings.showProfile = false
+        decodedSettings.showFullUsername = false
     end
 
     for _, key in { "autoSaveConfig", "autoLoadConfig" } do
@@ -33216,13 +33220,13 @@ function persistenceSettings.loadSettings(window: SettingsWindow): boolean
         end
     end
 
-    return true
+    return true, migrated
 end
 
 return persistenceSettings
 
 end)() end,
-    [106] = function()local wax,script,require=ImportGlobals(106)local ImportGlobals return (function(...)
+    [105] = function()local wax,script,require=ImportGlobals(105)local ImportGlobals return (function(...)
 local fs = require(script.Parent.filesystem)
 
 local persistenceWrite = {}
@@ -33250,7 +33254,7 @@ end
 return persistenceWrite
 
 end)() end,
-    [107] = function()local wax,script,require=ImportGlobals(107)local ImportGlobals return (function(...)
+    [106] = function()local wax,script,require=ImportGlobals(106)local ImportGlobals return (function(...)
 local services = {}
 
 function services.getService(serviceName)
@@ -33261,7 +33265,7 @@ end
 return services
 
 end)() end,
-    [108] = function()local wax,script,require=ImportGlobals(108)local ImportGlobals return (function(...)
+    [107] = function()local wax,script,require=ImportGlobals(107)local ImportGlobals return (function(...)
 local layoutMetrics = require(script.Parent.layouts)
 local coreState = require(script.Parent.Parent.core.state)
 
@@ -33471,108 +33475,107 @@ end)() end,
 
 local LineOffsets = {
     [2] = 12,
-    [3] = 266,
-    [5] = 683,
-    [6] = 718,
-    [7] = 763,
-    [8] = 669,
-    [9] = 880,
-    [10] = 990,
-    [11] = 1235,
-    [12] = 1462,
-    [13] = 1799,
-    [14] = 2006,
-    [15] = 2724,
-    [16] = 5115,
-    [17] = 5461,
-    [18] = 6100,
-    [19] = 6161,
-    [20] = 6544,
-    [21] = 6949,
-    [23] = 10134,
-    [24] = 10220,
-    [25] = 10527,
-    [26] = 10948,
-    [27] = 11291,
-    [28] = 11461,
-    [29] = 11606,
-    [30] = 12980,
-    [31] = 13194,
-    [32] = 13465,
-    [33] = 14025,
-    [34] = 14472,
-    [35] = 14558,
-    [36] = 15144,
-    [37] = 15767,
-    [38] = 16163,
-    [39] = 16293,
-    [40] = 16457,
-    [41] = 16611,
-    [43] = 17110,
-    [44] = 17133,
-    [45] = 17150,
-    [46] = 17183,
-    [47] = 17305,
-    [48] = 17329,
-    [49] = 17378,
-    [50] = 17085,
-    [51] = 17508,
-    [52] = 17811,
-    [53] = 17842,
-    [54] = 17497,
-    [55] = 17885,
-    [56] = 17905,
-    [57] = 17937,
-    [58] = 17867,
-    [59] = 18044,
-    [60] = 18103,
-    [61] = 18163,
-    [63] = 18289,
-    [64] = 18454,
-    [65] = 18274,
-    [66] = 19014,
-    [67] = 19317,
-    [68] = 19981,
-    [69] = 21773,
-    [70] = 22922,
-    [71] = 24450,
-    [72] = 18516,
-    [73] = 29702,
-    [74] = 29768,
-    [75] = 29834,
-    [76] = 29909,
-    [77] = 30012,
-    [78] = 30078,
-    [79] = 30153,
-    [80] = 30228,
-    [81] = 30303,
-    [82] = 30378,
-    [83] = 29596,
-    [84] = 30444,
-    [85] = 30542,
-    [86] = 30720,
-    [87] = 30772,
-    [88] = 30802,
-    [89] = 31053,
-    [90] = 31102,
-    [91] = 31555,
-    [92] = 31573,
-    [93] = 31725,
-    [94] = 31824,
-    [95] = 31846,
-    [96] = 31896,
-    [97] = 32221,
-    [98] = 32257,
-    [99] = 32275,
-    [100] = 32624,
-    [101] = 32636,
-    [102] = 32687,
-    [103] = 32706,
-    [104] = 32957,
-    [105] = 33001,
-    [106] = 33226,
-    [107] = 33254,
-    [108] = 33265,
+    [3] = 237,
+    [5] = 637,
+    [6] = 672,
+    [7] = 717,
+    [8] = 623,
+    [9] = 834,
+    [10] = 944,
+    [11] = 1189,
+    [12] = 1416,
+    [13] = 1753,
+    [14] = 1993,
+    [15] = 2711,
+    [16] = 5102,
+    [17] = 5448,
+    [18] = 6087,
+    [19] = 6148,
+    [20] = 6563,
+    [21] = 6968,
+    [23] = 10172,
+    [24] = 10258,
+    [25] = 10566,
+    [26] = 10987,
+    [27] = 11391,
+    [28] = 11561,
+    [29] = 11706,
+    [30] = 13081,
+    [31] = 13300,
+    [32] = 13572,
+    [33] = 14133,
+    [34] = 14581,
+    [35] = 14667,
+    [36] = 15254,
+    [37] = 15878,
+    [38] = 16274,
+    [39] = 16404,
+    [40] = 16558,
+    [42] = 17058,
+    [43] = 17081,
+    [44] = 17098,
+    [45] = 17131,
+    [46] = 17253,
+    [47] = 17277,
+    [48] = 17326,
+    [49] = 17033,
+    [50] = 17456,
+    [51] = 17759,
+    [52] = 17790,
+    [53] = 17445,
+    [54] = 17833,
+    [55] = 17853,
+    [56] = 17885,
+    [57] = 17815,
+    [58] = 17992,
+    [59] = 18051,
+    [60] = 18111,
+    [62] = 18255,
+    [63] = 18420,
+    [64] = 18240,
+    [65] = 18980,
+    [66] = 19283,
+    [67] = 19947,
+    [68] = 21739,
+    [69] = 22888,
+    [70] = 24416,
+    [71] = 18482,
+    [72] = 29668,
+    [73] = 29734,
+    [74] = 29800,
+    [75] = 29875,
+    [76] = 29981,
+    [77] = 30047,
+    [78] = 30122,
+    [79] = 30197,
+    [80] = 30272,
+    [81] = 30347,
+    [82] = 29562,
+    [83] = 30413,
+    [84] = 30511,
+    [85] = 30689,
+    [86] = 30741,
+    [87] = 30771,
+    [88] = 31022,
+    [89] = 31071,
+    [90] = 31524,
+    [91] = 31542,
+    [92] = 31711,
+    [93] = 31810,
+    [94] = 31832,
+    [95] = 31882,
+    [96] = 32207,
+    [97] = 32243,
+    [98] = 32261,
+    [99] = 32610,
+    [100] = 32622,
+    [101] = 32673,
+    [102] = 32692,
+    [103] = 32943,
+    [104] = 32987,
+    [105] = 33230,
+    [106] = 33258,
+    [107] = 33269,
 }
 
 -- [[Misc AOT variable imports]]
@@ -33740,7 +33743,7 @@ local ObjectTree = {
                 },
             },
             {
-                42,
+                41,
                 1,
                 {
                     "elements",
@@ -33862,18 +33865,11 @@ local ObjectTree = {
                         39,
                         2,
                         {
-                            "tag",
-                        },
-                    },
-                    {
-                        40,
-                        2,
-                        {
                             "text",
                         },
                     },
                     {
-                        41,
+                        40,
                         2,
                         {
                             "toggle",
@@ -33882,56 +33878,56 @@ local ObjectTree = {
                 },
             },
             {
-                50,
+                49,
                 2,
                 {
                     "settings",
                 },
                 {
                     {
-                        43,
+                        42,
                         2,
                         {
                             "appearance",
                         },
                     },
                     {
-                        44,
+                        43,
                         2,
                         {
                             "behavior",
                         },
                     },
                     {
-                        45,
+                        44,
                         2,
                         {
                             "defaults",
                         },
                     },
                     {
-                        46,
+                        45,
                         2,
                         {
                             "manager",
                         },
                     },
                     {
-                        47,
+                        46,
                         2,
                         {
                             "performance",
                         },
                     },
                     {
-                        48,
+                        47,
                         2,
                         {
                             "persistence",
                         },
                     },
                     {
-                        49,
+                        48,
                         2,
                         {
                             "registry",
@@ -33940,28 +33936,28 @@ local ObjectTree = {
                 },
             },
             {
-                54,
+                53,
                 2,
                 {
                     "cache",
                 },
                 {
                     {
-                        51,
+                        50,
                         2,
                         {
                             "imageCache",
                         },
                     },
                     {
-                        52,
+                        51,
                         2,
                         {
                             "moduleCache",
                         },
                     },
                     {
-                        53,
+                        52,
                         2,
                         {
                             "persistenceCache",
@@ -33970,28 +33966,28 @@ local ObjectTree = {
                 },
             },
             {
-                58,
+                57,
                 2,
                 {
                     "functions",
                 },
                 {
                     {
-                        55,
+                        54,
                         2,
                         {
                             "colors",
                         },
                     },
                     {
-                        56,
+                        55,
                         2,
                         {
                             "flagNames",
                         },
                     },
                     {
-                        57,
+                        56,
                         2,
                         {
                             "textMetrics",
@@ -34000,28 +33996,28 @@ local ObjectTree = {
                 },
             },
             {
-                62,
+                61,
                 1,
                 {
                     "layouts",
                 },
                 {
                     {
-                        59,
+                        58,
                         2,
                         {
                             "Sidebar",
                         },
                     },
                     {
-                        60,
+                        59,
                         2,
                         {
                             "SidebarCollapsed",
                         },
                     },
                     {
-                        61,
+                        60,
                         2,
                         {
                             "Topbar",
@@ -34030,21 +34026,21 @@ local ObjectTree = {
                 },
             },
             {
-                65,
+                64,
                 2,
                 {
                     "images",
                 },
                 {
                     {
-                        63,
+                        62,
                         2,
                         {
                             "image",
                         },
                     },
                     {
-                        64,
+                        63,
                         2,
                         {
                             "windowIcons",
@@ -34053,49 +34049,49 @@ local ObjectTree = {
                 },
             },
             {
-                72,
+                71,
                 2,
                 {
                     "icons",
                 },
                 {
                     {
-                        66,
+                        65,
                         2,
                         {
                             "feather",
                         },
                     },
                     {
-                        67,
+                        66,
                         2,
                         {
                             "heroicons",
                         },
                     },
                     {
-                        68,
+                        67,
                         2,
                         {
                             "lucide",
                         },
                     },
                     {
-                        69,
+                        68,
                         2,
                         {
                             "material",
                         },
                     },
                     {
-                        70,
+                        69,
                         2,
                         {
                             "phosphor",
                         },
                     },
                     {
-                        71,
+                        70,
                         2,
                         {
                             "tabler",
@@ -34104,77 +34100,77 @@ local ObjectTree = {
                 },
             },
             {
-                83,
+                82,
                 2,
                 {
                     "themes",
                 },
                 {
                     {
-                        73,
+                        72,
                         2,
                         {
                             "amethyst",
                         },
                     },
                     {
-                        74,
+                        73,
                         2,
                         {
                             "cobalt",
                         },
                     },
                     {
-                        75,
+                        74,
                         2,
                         {
                             "crimson",
                         },
                     },
                     {
-                        76,
+                        75,
                         2,
                         {
                             "default",
                         },
                     },
                     {
-                        77,
+                        76,
                         2,
                         {
                             "ember",
                         },
                     },
                     {
-                        78,
+                        77,
                         2,
                         {
                             "emerald",
                         },
                     },
                     {
-                        79,
+                        78,
                         2,
                         {
                             "frost",
                         },
                     },
                     {
-                        80,
+                        79,
                         2,
                         {
                             "gold",
                         },
                     },
                     {
-                        81,
+                        80,
                         2,
                         {
                             "onyx",
                         },
                     },
                     {
-                        82,
+                        81,
                         2,
                         {
                             "rose",
@@ -34183,182 +34179,182 @@ local ObjectTree = {
                 },
             },
             {
-                109,
+                108,
                 1,
                 {
                     "utilities",
                 },
                 {
                     {
-                        84,
+                        83,
                         2,
                         {
                             "HapticEngine",
                         },
                     },
                     {
-                        85,
+                        84,
                         2,
                         {
                             "assetResolver",
                         },
                     },
                     {
-                        86,
+                        85,
                         2,
                         {
                             "constants",
                         },
                     },
                     {
-                        87,
+                        86,
                         2,
                         {
                             "enums",
                         },
                     },
                     {
-                        88,
+                        87,
                         2,
                         {
                             "filesystem",
                         },
                     },
                     {
-                        89,
+                        88,
                         2,
                         {
                             "filesystemManager",
                         },
                     },
                     {
-                        90,
+                        89,
                         2,
                         {
                             "fontManager",
                         },
                     },
                     {
-                        91,
+                        90,
                         2,
                         {
                             "functions",
                         },
                     },
                     {
-                        92,
+                        91,
                         2,
                         {
                             "layouts",
                         },
                     },
                     {
-                        93,
+                        92,
                         2,
                         {
                             "locale",
                         },
                     },
                     {
-                        94,
+                        93,
                         2,
                         {
                             "lockable",
                         },
                     },
                     {
-                        95,
+                        94,
                         2,
                         {
                             "log",
                         },
                     },
                     {
-                        96,
+                        95,
                         2,
                         {
                             "motion",
                         },
                     },
                     {
-                        97,
+                        96,
                         2,
                         {
                             "moveable",
                         },
                     },
                     {
-                        98,
+                        97,
                         2,
                         {
                             "network",
                         },
                     },
                     {
-                        99,
+                        98,
                         2,
                         {
                             "odometer",
                         },
                     },
                     {
-                        100,
+                        99,
                         2,
                         {
                             "ordering",
                         },
                     },
                     {
-                        101,
+                        100,
                         2,
                         {
                             "path",
                         },
                     },
                     {
-                        102,
+                        101,
                         2,
                         {
                             "persistence",
                         },
                     },
                     {
-                        103,
+                        102,
                         2,
                         {
                             "persistenceConfig",
                         },
                     },
                     {
-                        104,
+                        103,
                         2,
                         {
                             "persistencePaths",
                         },
                     },
                     {
-                        105,
+                        104,
                         2,
                         {
                             "persistenceSettings",
                         },
                     },
                     {
-                        106,
+                        105,
                         2,
                         {
                             "persistenceWrite",
                         },
                     },
                     {
-                        107,
+                        106,
                         2,
                         {
                             "services",
                         },
                     },
                     {
-                        108,
+                        107,
                         2,
                         {
                             "windowSizing",

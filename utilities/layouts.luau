@@ -6,9 +6,14 @@ local sidebarCollapsedLayout = require(script.Parent.Parent.layouts.SidebarColla
 
 local topbarHeightConstant = 64
 
-local tabStripTopOffset = topbarHeightConstant - 1
+-- [[Clearance above and below the tab row. The strip is centred in the]]
+-- [[chrome band with matching gaps on both sides, so the pills read as]]
+-- [[neither pressed against the topbar nor pressed against the content.]]
+local tabStripTopClearance = 6
+local tabStripBottomClearance = 6
+local tabStripTopOffset = topbarHeightConstant + tabStripTopClearance
 local tabStripRowHeight = 38
-local chromeGap = 3
+local chromeGap = tabStripBottomClearance
 
 export type Mode = "top" | "sidebar"
 
@@ -27,6 +32,8 @@ export type Layout = {
         tabStripTop: number?,
     tabStripHeight: number?,
     tabStripInset: number?,
+    tabStripEdgePadding: number?,
+    tabStripFadeWidth: number?,
 
         railWidth: number?,
     railCollapsedWidth: number?,
@@ -58,7 +65,17 @@ layouts.top = {
     -- [[Margin between the window edge and the tab strip. The strip's]]
     -- [[ScrollingFrame is inset by this much on each side, so overflowing]]
     -- [[tabs clip inside the window instead of running into its border.]]
-    tabStripInset = 22,
+    tabStripInset = 30,
+
+    -- [[Empty gutter *inside* the strip at each end (canvas UIPadding):]]
+    -- [[the first and last pills never touch the strip's clip edge, at]]
+    -- [[rest or scrolled, so the edge fades dissolve over empty space]]
+    -- [[instead of over a pill pressed up against the edge.]]
+    tabStripEdgePadding = 14,
+
+    -- [[Width of the gradient fade that marks a clipping edge; wide]]
+    -- [[enough to cover the end gutter plus a little strip beyond it.]]
+    tabStripFadeWidth = 30,
 
     pageDirection = Enum.FillDirection.Horizontal,
 
