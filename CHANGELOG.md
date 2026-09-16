@@ -2,6 +2,342 @@
 
 All notable changes to Astra v1. Dates use 2026.
 
+## 2026-09-16 — The drag handle shows up again (and answers the pointer)
+
+The small detached pill under the window never appeared. It is built
+`Visible = false`, and the window wrote that flag to `false` in ten places
+while writing it `true` in exactly one — the minimise settle, 0.5s after
+folding. So in the normal expanded state the hitbox was invisible, a hidden
+parent takes `MouseEnter`/`MouseLeave` with it, and the pill could not be
+revealed by a hover, could not be grabbed, and did not exist as far as the
+window's own topbar drag was concerned.
+
+- **The handle now leaves its visibility to the handle.** `components/drag.luau`
+  gains the four live states it already had values for — `handleHover` (64x3,
+  0.5), `handleGrab` (56x3, 0), `handleIdle` (48x3, 0.7, the faint hint) and
+  `handleParked` (0x3, 1.0) — plus `Drag:enable`, `Drag:disable`,
+  `Drag:fadeOut` and `Drag:setMoving`. `components/window.luau` no longer writes
+  `self.drag.drag.Visible` anywhere; it calls the lifecycle instead, and every
+  write that used to switch the handle off now *parks* the pill as well, so an
+  entrance can never inherit a look from the hover the previous one was
+  interrupted in.
+- **Reachable after every settle.** `_firstShow`'s settle and `_quickRestore`'s
+  settle call `enable`, as does `ToggleMinimise` in both directions (the expand
+  branch previously never brought the handle back at all — un-minimising left
+  it dead until the next hide/show cycle). Enabled means *reachable*, not
+  revealed: the pill stays unseen until the pointer finds it, so a window
+  that has never been moved does not announce a handle it does not need.
+- **Shown when the window is moved.** `Window:_bindTopbarDrag` now distinguishes
+  a click from a move (the existing 4px threshold) and calls
+  `Drag:setMoving(true)` on the first real movement: the pill brightens to the
+  hover look for the length of the drag, follows the window at the same 22px
+  gap, then settles to the idle hint when the move ends. It stays there — the
+  faint pill under the window is the affordance the next interaction starts
+  from — until the window is hidden, folded or closed. A press that never
+  crosses the threshold is a click and leaves the handle untouched.
+- **Hovering and dragging it works again** for the same reason: a reachable
+  hitbox fires `MouseEnter`/`MouseLeave`, so the pill fades in at the hover
+  size and can be grabbed to move the window (with the grab look while held).
+  While the window is being moved by its topbar the hover tweens stand down —
+  `moving` is recorded but the pill is not fought over — so the sweep of the
+  handle past the cursor cannot flicker it between looks.
+- **The 22px offset is named.** `dragHandleGap` in `window.luau` (next to the
+  other local layout constants) and `handleGap` in `drag.luau`; the five places
+  that place the handle all read the constant instead of a bare `22`.
+- **Verification:** new suite `scripts/drag_handle_test.sh` /
+  `scripts/drag_handle_test.luau` (H1-H9) pins the reachability of a settled
+  window, the hover reveal, the move reveal (topbar and handle drag, both
+  driven through real input events), the 22px ride, the click-versus-move
+  threshold, hide/show, minimise/expand and close. The stub environment grew
+  the vector/UDim2 arithmetic those paths need (`__add`/`__sub`/`__mul`,
+  `Magnitude`, `UDim2:Lerp`) — without it the drag code could not run under a
+  suite at all. All 29 runtime suites plus a compile of every published
+  `.luau` pass.
+
+## 2026-09-16 — The bundle loader is a single `loadstring` line
+
+`example.client.luau` and `USAGE.md` now load the published bundle with exactly one
+statement, the one every host pastes:
+
+```lua
+local Astra = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"))()
+```
+
+- **The guarded loader is gone.** The `loadstring or load` fallback, the byte-size and
+  HTML-page probes, and the `assert`s that named each failure are removed from the
+  example; there is no second way to compile the bundle.
+- **The trailing `()` is load-bearing.** `loadstring(text)` only compiles — without the
+  call `Astra` is a function and the first `Astra:CreateWindow` dies with `attempt to
+  index a function value`, which is why the docs state it explicitly.
+- **Studio keeps only its load path.** `loadstring` is an executor function, so the docs
+  say the line needs one, and in Studio/Rojo the ModuleScript tree is `require`d instead.
+- **The failure modes stay documented.** A text that does not compile still surfaces as
+  `attempt to call a nil value` at line 1, so `USAGE.md` keeps a short "what a failed
+  load looks like" list (an HTML error page, or a real syntax error caught by
+  `scripts/check_syntax.sh`) instead of putting the checks back in the loader.
+- **No bundle change:** `version-1.luau` is generated from the modular tree, and the
+  loader is not part of it — `example.client.luau` is only compiled by
+  `scripts/check_syntax.sh`. `MODULES.md`'s and `USAGE.md`'s descriptions of the example
+  now match the one-tab file it actually is.
+- **Carry-over fix found while re-checking the example:** its `CreateStat` passed
+  `changeBaseline = 100`, but that prop is a mode string (`"previous"` | `"initial"`) and
+  any other value — a number included — is read as `"previous"`, so the line never did
+  anything. The example now passes `"initial"`, and `USAGE.md` lists the accepted values
+  for `display`, `changeMode` and `changeBaseline` (a numeric baseline is
+  `stat:ResetBaseline(number)`).
+
+## 2026-09-16 — The Keybind element is removed
+
+The only remaining first-party use of the Keybind element was the Settings menu
+binding, and that row moved to an `Input` field in the entry below. The element
+is now gone from the library rather than left as an unused public surface.
+
+- **`tab:CreateKeybind` no longer exists.** `elements/keybind.luau` is deleted,
+  the `Keybind` declarative type is no longer accepted by
+  `CreateCollapsibleGroup`, and the `Keybind`/`KeybindProps` types are gone
+  from `Types.luau`, `library_entrypoint.luau` and the bundle.
+- **The window drops the plumbing that only served the element.**
+  `Window:_keybindUsing` (the conflict check), `_recordingKeybind` (the
+  capture guard in `_bindKeybind`, `ToggleHide` and tab teardown) and the
+  Settings field's "bound to another Keybind" refusal are removed. The
+  menu-toggle key still refuses junk text and left click, still clears on
+  `none`/empty, and still toggles the window.
+- **`window.settings.toggleKeybind` is unchanged.** It stays an `EnumItem`, is
+  persisted the same way, and `Window:_bindKeybind` still compares against it.
+- `example.client.luau` no longer shows a Keybind element or a `Keybind`
+  collapsible child.
+- Suites: `keybind_input_test` now covers only the Settings field;
+  `collapsible_group_test`, `inline_description_test`, `input_field_test`,
+  `instance_budget_test`, `window_corners_test` and the description geometry
+  probe drop their Keybind rows (the wrapped-description probe uses an Input).
+  `collapsible_group_test` also had its child indices re-pinned; the row/column
+  Group assertions were pointing one element past their targets.
+  `USAGE.md` and `MODULES.md` no longer document the element.
+
+## 2026-09-16 — The Settings menu key is typed into an Input field
+
+Reported from the field as a Settings keybind that would not take a click: the
+row never entered its recording state, so the menu key could not be changed at
+all. That row was the only place the library asked for a key through the Keybind
+element's click-to-record cap, and it now asks the way every other typed value
+in the library asks — through the `Input` element.
+
+- **`components/settings.luau` builds General → Toggle Keybind as
+  `type = "Input"`** (icon `keyboard`, placeholder `e.g. K, Space, MB2`). The
+  field shows the bound key's name and reads one back on the commit every Input
+  makes: focus lost. The Keybind element's cap is gone from Settings, and no
+  second input widget is built for it.
+- **`window.settings.toggleKeybind` stays an `EnumItem`.** That is what
+  `Window:_bindKeybind` compares the incoming input against, what the other
+  Keybind elements refuse to take, and what
+  `utilities/persistenceSettings.luau` writes as `{ EnumType, Value }`, so
+  existing settings files keep loading unchanged.
+- **`keyLabel`/`parseKey` carry the element's display and capture rules over to
+  text**: `None` for an unbound key, `MB2`/`MB3` for mouse buttons, case and
+  separators ignored (`k`, `Space`, `left shift`, `f7`, `5`, `rmb`), an empty
+  field or `none` clearing the binding, and anything not in that table left to
+  an `Enum.KeyCode`/`Enum.UserInputType` lookup so an uncommon but real name
+  still binds.
+- **Refusals keep the rules they had.** A key another Keybind already owns is
+  rejected with the same "%s is bound to %s. Kept %s." notification; text that
+  names no key is rejected; and left click is rejected with its own reason,
+  because a toggle bound to `MouseButton1` would fire on every click in the game
+  and the cap's capture never offered it either. A rejected field restores the
+  previous binding and flashes the error colour over the commit's flash.
+- **The Keybind element itself is unchanged** — `tab:CreateKeybind` still gets
+  the button-backed cap, its click-to-record flow, hold mode and conflict
+  checks.
+- Suite: `scripts/keybind_input_test.luau` drives the field (commit, case and
+  alias parsing, mouse button, clearing, junk/left-click/conflict refusals,
+  typing the bound key inside the field not toggling the window, and the new key
+  toggling it afterwards) and keeps the element's cap covered beside it. Bundle
+  regenerated.
+
+## 2026-09-16 — The loader stops reporting `attempt to call a nil value`
+
+Reported from the field as `dROpudBpfgnVovyLM:1: attempt to call a nil value`,
+`Script 'LocalScript', Line 1`. Nothing in the library was at fault and nothing
+in the message is a location: the random name is the executor's chunk for the
+fetched string, and a one-line script means the failing call is on line 1. The
+nil being called is the *compiled chunk* — `loadstring` returns
+`nil, compileError` instead of throwing, so a bundle that never compiles shows
+up as a nil call, and the real reason (a syntax error, or an HTML error page
+where a repo was expected) is thrown away.
+
+- **`example.client.luau` did not compile.** `CreateCollapsibleGroup` was
+  missing the comma between `description` and `elements`, which is exactly the
+  kind of defect the message hides: parse fails at line 141, the user sees a
+  nil call at line 1. Fixed, and a Luau parse of all 136 `.luau` files in the
+  tree is now clean.
+- **`scripts/check_syntax.sh`** compiles the modular tree, the example and the
+  bundle with the Luau CLI, so this class of defect stops shipping. It exits 2
+  ("not checked") rather than 0 when no CLI is installed.
+- **The example's loader now checks both steps** it used to assume: that the
+  fetch returned Luau rather than an error page or a truncation, and that
+  `loadstring` — not Studio's function-only `load` — is what compiled it. Each
+  failure names itself instead of leaving the caller to read a nil call.
+- **`USAGE.md` documents the message.** The loader snippet keeps its `assert`s,
+  and the section that follows says what `attempt to call a nil value` means
+  and the three things to check in order.
+
+## 2026-09-15 — Keybinds use the original cap again
+
+- Removed the editable TextBox path from `Keybind`; the key cap is a `TextButton`
+  with a `TextLabel` again, so clicking it enters the normal capture flow instead
+  of creating a separate input field.
+- The built-in Settings toggle binding now uses that same Keybind control without
+  the `editable` prop. Capture behavior remains: press a key or supported mouse
+  button to bind, Backspace clears, Escape cancels, and conflicts are rejected.
+- Updated the keybind regression to pin the original button-backed cap and
+  regenerated the standalone bundle.
+- Cleaned `example.client.luau` so it only demonstrates the original `Input`
+  element once; duplicate no-op numeric/declarative input rows are gone.
+
+## 2026-09-15 — Buttons stopped crashing on the first click
+
+Reported from the field as `attempt to index nil with 'spec'`, pointing at the
+bundle line inside a `LocalScript`. The example was never at fault: the fault
+was in the element the example was clicking.
+
+### The button's missing require
+
+The button's click choreography rides the shared motion service — the tap
+glyph dips on `fast` and springs back on `settle`, the card nudges on `snappy`
+— but `elements/button.luau` never required it. Every `motion.spec(...)` call
+read a bare global, so the module *built* cleanly and then died on the first
+tap, before `self:_runCallback()` could run the caller's callback.
+
+- **`local motion = require(constants.motion)`** added to
+  `elements/button.luau`, mirroring the sibling header in `elements/toggle.luau`
+  (which has the same comment block and the require the button had lost). Both
+  click handlers were affected: the full card and the compact row built by a
+  row `Group`.
+- **`Astra.Settings.persistence` was `nil`.** `settings/init.luau` built
+  `local persistenceModule = require(script.persistence)` and then exported
+  `persistence = persistence` — the bare global, not the local. `MODULES.md`
+  has always documented the export; the value behind it was missing. No
+  internal consumer touched the field, so it failed silently.
+- **The generated loader carried the same defect.** `scripts/generate_bundle.js`
+  injected `ErrorNonModuleScript` and `ErrorSelfRequire` by string-replacing a
+  `local ErrorNonModuleScript` declaration that the loader template never
+  contained, so both `.replace()` calls were silent no-ops and the bundle's
+  two require guards raised `error(nil)` — a blank message instead of
+  `Expected ModuleScript got Folder` / `Cannot require self`. The constants are
+  declared in the template now, where `CurrentRefPointer` is in scope.
+- **New suite `scripts/button_click_test`** (B1–B6) pins the whole path: the
+  tap glyph exists so the animation is really exercised, the click runs the
+  callback, and the press/release *sequence* of writes lands on the tap scale
+  (0.78 → 1), the card width (−26 → −20) and the stroke (open → resting token)
+  for both the card and the compact row, plus the settings surface's
+  persistence export. Against the previous bundle it fails with the reported
+  `attempt to index nil with 'spec'`; no earlier suite ever fired a click on a
+  `Button`, which is how this shipped.
+
+## 2026-09-15 — The window's corners, and one motion system
+
+Two fixes that were visible together: straight 1px lines drawn across the
+window's four rounded corners, and an interface whose animations had drifted
+into a pile of one-off curves.
+
+### The corners
+
+Roblox gives every GuiObject a 1px border by default. The border draws the
+frame's *rectangular* outline — it does not follow UICorner arcs — so the
+moment the window's background faded in, a hard square outline crossed all
+four rounded corners (most visible top and bottom, where the straight line
+cuts visibly across the arc). The window frame was the last surface in the
+tree still shipping that default.
+
+- **`BorderSizePixel = 0` on the window's main frame.** The silhouette is the
+  UICorner's job alone; only the original rounded corners remain visible.
+- **The dropdown's search icon button** carried the same latent default and
+  is borderless now too.
+- **New `scripts/window_corners_test`** builds a window, exercises every
+  lazily-created surface (first show, elements, toast, dropdown, popup,
+  profile card, collapse and restore) and asserts that no visible surface
+  anywhere in the ScreenGui carries a border, and that the shell's corner
+  radius still follows the theme's `CornerRoundness`.
+
+### The motion redesign
+
+Every component used to build its own `TweenInfo` (92 construction sites, ~30
+distinct curves). Identical interactions — a hover, a dismissal, a panel
+sliding home — could ease differently depending on which file they lived in,
+dismissals lasted as long as entrances, and only some of the paths answered
+the user's "Animation speed" setting. Everything now rides the shared motion
+service and one legible vocabulary:
+
+- **A system, not a pile of curves.** Entrances decelerate (Out); exits
+  accelerate (`exit` is now a 0.3s Quart *In* — a card leaves faster than it
+  arrived); lateral state moves ease InOut (new `glide`, 0.35s Quart — the
+  window folding into its capsule and back); and the playful surfaces get a
+  short Back overshoot (`pop` for the shell, new `settle` for small elements
+  like the capsule's face and button presses, `spring` for drag landings).
+  Durations still step with scale: 0.16 press → 0.25 hover → 0.4 element →
+  0.5–0.6 surface → 0.55 shell.
+- **Every remaining bespoke tween migrated.** Window open/close/hide/restore/
+  minimise, tab pills and page hand-off, element click nudges, the toggle's
+  knob (now a physical slide with a landing), slider fill and handle, field
+  boxes and keybind caps, dropdown rows/panel/chevron, search pill, toast and
+  notification entrances and dismissals, popups, the profile card, drag
+  landings and the lock scrim all resolve through `motion.tween` or
+  `motion.spec` — so all of them follow the time scale, skip no-op writes,
+  and hand over one owner per animated property.
+- **Targeted feel changes where the old curve fought the gesture.** Close and
+  hide now contract on `glide` while their surfaces accelerate out on `exit`;
+  restore unfolds on `glide` with the corner springing open on `settle`;
+  toggle knobs slide on `settle` instead of drifting on a 0.6s curve; button
+  and toggle press-dips spring back with a small overshoot; the collapsed
+  capsule's face arrives on `settle`.
+- **Theme changes are one gesture.** `ChangeTheme` batched its per-property
+  tweens into one motion-service tween per instance (a theme switch used to
+  create a tween per property), all cross-fading on `smooth`.
+- **Bespoke curves that must stay bespoke now rescale.** The progress sweep
+  keeps its ambient loop; the delayed accent-glow beats (toggle, slider) and
+  the odometer's digit roll go through `motion.spec`, so they stretch and
+  shorten with the speed profile like everything else. The unused
+  `pillResizeInfo` constant is gone (field boxes resize on `snappy`).
+- Bundle regenerated (`version-1.luau`); `motion_test` extended for the new
+  vocabulary (registered specs, `settle`/`glide` easing family, exit being
+  quicker than its entrance).
+
+## 2026-09-15 — Multi-select dropdowns get a real Select all / Clear row
+
+The bulk-action line was two bare text buttons with no state of their own: no
+way to see whether "Select all" still had anything left to do, and a Clear that
+read like a label rather than a control. The row is now the checkbox-and-bin
+line from the design reference.
+
+- **Select all is a checkbox.** It sits at the left edge in the same 16px glyph
+  slot an option row uses — unchecked draws a 12px rounded outline (the width
+  of the row glyphs), checked shows the check glyph a selected row shows — so
+  the box's two states are never a size apart from the rows beside them. The
+  label beside it reads at the row's own 16px instead of 13px.
+- **It toggles.** With every visible option selected the box is on and a click
+  clears that set; otherwise the click fills in what is missing. Individual
+  picks, `Set`, `Add`/`Remove`/`Refresh` and a changed search filter all move
+  the box with the list, and a filter that matches nothing leaves it off. A
+  click that empties the box under the pointer leaves the outline at its hover
+  brightness, and a sync that would change neither half is skipped — the filter
+  runs on every keystroke, and it should not replay two tweens per character.
+- **Clear keeps its meaning** — it removes only the options the filter shows,
+  so selections it is hiding survive — and gains the bin icon, resolved through
+  the icon packs (`trash`, lucide) like every other icon, dimmed with its label
+  and brightened on hover.
+- **The row is 32px**, up from the 22px text strip, so the checkbox has the
+  room the reference gives it; `_openHeight()` carries the new height and the
+  row keeps LayoutOrder 2, between the search bar and the list. A single-select
+  dropdown is untouched: no action row, no instances.
+
+Suite: new `scripts/dropdown_actions_test.{luau,sh}` — A1 only a multi-select
+dropdown carries the row (and what it holds), A2 the box answers for the
+visible options, A3/A4 Select all fills the visible set and toggles back off,
+A5 Clear leaves the hidden options alone, A6 the box follows picks and filters,
+A7 the row is what the open panel pays for, A8 an unchecked box stays hovered
+when a click empties it under the pointer, A9 the bin is a real pack icon.
+
+Bundle regenerated (`version-1.luau`).
+
 ## 2026-09-15 — Instant startup: the window shows on the next frame
 
 The 1–3s wait before the window appeared was three deliberate gates, not slow

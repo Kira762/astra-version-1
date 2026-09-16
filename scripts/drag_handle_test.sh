@@ -1,5 +1,5 @@
 #!/bin/sh
-# Run the Settings menu-toggle binding regressions against the standalone bundle.
+# Run the drag-handle regressions against the standalone bundle.
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -25,7 +25,7 @@ if [ -z "$LUAU_BIN" ]; then
 fi
 
 TMPDIR_LOCAL="${TMPDIR:-/tmp}"
-OUT="$TMPDIR_LOCAL/astra_keybind_input_$$.luau"
+OUT="$TMPDIR_LOCAL/astra_drag_handle_$$.luau"
 trap 'rm -f "$OUT"' EXIT
 
 {
@@ -37,13 +37,13 @@ trap 'rm -f "$OUT"' EXIT
 	echo ""
 	echo "end)()"
 	echo ""
-	cat "$ROOT/scripts/keybind_input_test.luau"
+	cat "$ROOT/scripts/drag_handle_test.luau"
 } > "$OUT"
 
 if "$LUAU_BIN" "$OUT"; then
-	echo "KEYBIND INPUT TEST PASSED"
+	echo "DRAG HANDLE TEST PASSED"
 	exit 0
 else
-	echo "KEYBIND INPUT TEST FAILED (see above)" >&2
+	echo "DRAG HANDLE TEST FAILED (see above)" >&2
 	exit 1
 fi

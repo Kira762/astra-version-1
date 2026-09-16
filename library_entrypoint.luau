@@ -6,7 +6,6 @@ local Constants = require(script.Parent.utilities.constants)
 local Icons = require(script.Parent.icons)
 local Motion = require(script.Parent.utilities.motion)
 local Settings = require(script.Parent.settings)
-local TypesModule = require(script.Parent.Types)
 
 export type Theme = types.Theme
 export type Translator = types.Translator
@@ -24,9 +23,7 @@ export type ToggleProps = types.ToggleProps
 export type SliderProps = types.SliderProps
 export type DropdownProps = types.DropdownProps
 export type InputProps = types.InputProps
-export type KeybindProps = types.KeybindProps
 export type StatProps = types.StatProps
-export type ProgressProps = types.ProgressProps
 export type TextProps = types.TextProps
 export type DividerProps = types.DividerProps
 export type NotifyProps = types.NotifyProps
@@ -46,9 +43,7 @@ export type Toggle = types.Toggle
 export type Slider = types.Slider
 export type Dropdown = types.Dropdown
 export type Input = types.Input
-export type Keybind = types.Keybind
 export type Stat = types.Stat
-export type Progress = types.Progress
 export type Section = types.Section
 export type TabSection = types.TabSection
 export type Text = types.Text
@@ -213,6 +208,18 @@ function Astra:CreateWindow(props: types.WindowProps): types.Window
 				return
 			end
 			window:Show()
+
+			-- [[Auto-load persisted control state once the host's constructors
+			-- [[have gone quiet: that quiet point is the de-facto "startup
+			-- [[finished" signal (the constructor itself returns before the
+			-- [[host has added any tab). The load applies over the controls in
+			-- [[small checkpoints, and controls registered even later are
+			-- [[still covered by Window:_restoreLate. Runs once per window; a
+			-- [[missing file or autoLoad turned off simply skips it.]]
+			if window.configuration and window.configuration.autoLoad and not window._autoLoadDone then
+				window._autoLoadDone = true
+				window:Load()
+			end
 		end)
 	end
 

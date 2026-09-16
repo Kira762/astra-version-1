@@ -24,8 +24,10 @@ local themes = require(script.Parent.Parent.themes)
 local Window = {}
 Window.__index = Window
 
-local revealTween = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local tweenStyle = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+-- [[Element reveals, theme cross-fades and the toast stack's lane changes all
+-- ride the motion service's shared specs (see utilities/motion.luau) instead
+-- of per-call TweenInfo values: one vocabulary, one time scale, one owner per
+-- animated property.]]
 
 -- [[The beat between the window's shell landing and its page coming in. Long
 -- enough that the two read as one entrance in the right order — frame, then
@@ -39,11 +41,16 @@ local collapsedIconOnlySize = UDim2.fromOffset(50, 50)
 local collapsedPosition = UDim2.new(0.5, 0, 0, 20)
 local toastsTopPosition = UDim2.new(0.5, 0, 0, 12)
 local toastsTopWhenCollapsed = UDim2.new(0.5, 0, 0, collapsedPosition.Y.Offset + collapsedWideSize.Y.Offset + 12)
-local toastPositionTween = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 local toastWidth = 320
 
 local compactRowHeight = 41
+
+-- [[The drag handle's centre sits this far below the window's bottom edge
+-- [[(the same `handleGap` components/drag.luau owns). Every place that puts
+-- [[the handle under the window reads it, so the two files cannot drift apart
+-- [[and leave the pill floating a few pixels off the window it belongs to.
+local dragHandleGap = 22
 
 -- [[The window's own surface, defined once. Everything that has to read as
 -- [["the window background" — the frame itself and the profile card beside it —
@@ -59,9 +66,6 @@ local windowSurfaceGradientOffset = Vector2.new(0, -0.1)
 local lockScrimTransparency = 0.55
 local lockedTextTransparency = 0.55
 
-local epsilon = 0.04
-local scrollbarWidth = 8
-
 local viewportCheckInterval = 2
 
 -- Startup is deliberately paced in small, completed-object batches, before the
@@ -74,8 +78,6 @@ local constructionInstanceBudget = 48
 -- Toasts and notifications share one entrance lane. Their 0.6s transitions do
 -- not overlap, but already-visible messages are still allowed to remain in
 -- their normal stacks while the next one enters.
-local overlayEntranceCadence = 0.65
-
 -- The first open reads as an entrance instead of one large visibility flip:
 -- the shell animates in, then `_stageContentReveal` walks the visible page one
 -- control per beat (see `_firstShow`). There is exactly one cascade — an older
@@ -98,10 +100,6 @@ local hasPerCornerRadius = (function()
         end)
     )
 end)()
-
-local function layoutFor(isSidebar)
-    return if isSidebar then layouts.sidebar else layouts.top
-end
 
 local function layoutKey(layout)
     if layout.mode == "sidebar" and layout.forceCollapsed then
@@ -127,7 +125,7 @@ local function updateToastPosition(window, animate)
         return
     end
 
-    state.tweenService:Create(toastsTop, toastPositionTween, { Position = targetPos }):Play()
+    motion.tween(toastsTop, { Position = targetPos }, "snappy")
 end
 
 function Window:ResolveIcon(value, pack)
@@ -266,7 +264,14 @@ function Window.new(props)
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0.5, 0),
                 Size = self.size,
-        BackgroundTransparency = 1,         Visible = false,
+        BackgroundTransparency = 1,
+        -- [[Roblox gives every GuiObject a 1px border by default. The border
+        -- draws the frame's rectangular outline — straight lines that ignore
+        -- the UICorner arcs — so on the rounded window it painted a hard
+        -- square edge across all four corners once the surface faded in.
+        -- The window's silhouette is the UICorner's job alone.]]
+        BorderSizePixel = 0,
+        Visible = false,
         Parent = self.screenGui,
     })
 
@@ -501,6 +506,9 @@ function Window.new(props)
     })
     self.rfSettings._isSettingsTab = true
     self._settingsTabs = { self.rfSettings }
+    -- [[Settings tab shell landed; hand the frame back before the action
+    -- [[buttons and search chrome are added.]]
+    self:_constructionCheckpoint(true)
 
     require(script.Parent.action).new(self, {
         name = "Close",
@@ -548,6 +556,9 @@ function Window.new(props)
 
     search.build(self)
         self:_applyRailWidth()
+    -- [[Toolbar complete; another frame before persisted settings are read
+    -- [[and applied (a disk read, the theme pass and possibly a layout swap).]]
+    self:_constructionCheckpoint(true)
 
     self.unloaded = false
     self.minimised = false
@@ -565,48 +576,24 @@ function Window.new(props)
         self:_setLayoutMode(self.settings.layoutMode)
     end
 
-    haptic.setContainer(self.screenGui)     haptic.setEnabled(self.settings.haptics)     chrome.buildCollapsedFace(self)
+    haptic.setContainer(self.screenGui)     haptic.setEnabled(self.settings.haptics)
+    chrome.buildCollapsedFace(self)
 
     self:_constructionCheckpoint(true)
-    profilePanel.build(self)
+    -- [[The profile card is opt-in: it builds only when "Show profile" is on
+    -- [[(the default is off), so the common window skips its ~90 themed
+    -- [[instances on the spawn path. The first toggle to enable it builds the
+    -- [[card on demand through profilePanel.ensureBuilt.]]
+    profilePanel.ensureBuilt(self)
     profilePanel.setSubtitle(self, self.profileText)
     if profilePanel.isEnabled(self) then
         self.main.Position = self:_profileCenterPosition()
     end
-    task.defer(function()
-        if self.unloaded or state.localPlayer or not self.profilePanel then
-            return
-        end
-        local deadline = os.clock() + 2
-        local connection
-        connection = state.runService.RenderStepped:Connect(function()
-            if self.unloaded then
-                connection:Disconnect()
-                return
-            end
-            if state.localPlayer or os.clock() > deadline then
-                connection:Disconnect()
-                if state.localPlayer and self.profilePanel then
-                    profilePanel.applyIdentity(self)
-                    profilePanel.setShown(self, true, profilePanel.settleInfo)
-                    -- [[The player may have arrived after construction, when]]
-                    -- [[the panel was still disabled and the window was not]]
-                    -- [[shifted. If the window is still anchored at the]]
-                    -- [[screen centre (the user has not dragged it), centre]]
-                    -- [[the window + panel pair now.]]
-                    if self.main.Position.X.Scale == 0.5 and self.main.Position.Y.Scale == 0.5 then
-                        self:_recenterForProfile(true)
-                    end
-                end
-            end
-        end)
-        -- [[The connection already exists here, so it is adopted into the]]
-        -- [[window's list directly: Window:Connect takes a *signal* and calls]]
-        -- [[:Connect on it, which threw on a connection object and killed this]]
-        -- [[waiter — the profile card then stayed hidden even with "Show]]
-        -- [[profile" on.]]
-        table.insert(self.connections, connection)
-    end)
+    -- [[Card on but the player object is not replicated yet: this waiter fills
+    -- [[and reveals it the moment the player arrives. It is also re-armed by
+    -- [[setEnabled when the card is switched on later (lazy build), so the
+    -- [[toggle path keeps the same late-player behaviour as startup.]]
+    self:_armProfilePlayerWaiter()
     self:_bindKeybind()
     self:_bindMouseOverride()
     self:_bindTopbarDrag()
@@ -631,34 +618,44 @@ function Window.new(props)
     return self
 end
 
--- Yield only at completed construction boundaries, never halfway through a
--- control. Batches are limited by both CPU time and instance count, before
--- the first reveal and after it alike: the opening tween keeps receiving
--- frames while a large script streams the rest of its controls in, and no
--- single frame pays for the whole build. The API is still synchronous: each
--- constructor resumes with a fully usable object.
-function Window:_constructionCheckpoint(force)
-    if self._startupComplete or (not force and not self._constructed) then
-        return
-    end
-    self._constructionRevision = (self._constructionRevision or 0) + 1
+-- Yield at a completed construction boundary when the current frame has
+-- spent its budget. Batches are limited by both CPU time and instance count,
+-- and the check is unconditional: components that build lazily after startup
+-- (the profile card on first enable, late settings panels) use this directly
+-- so a deferred build can never monopolise a frame either. Yields land on the
+-- next Heartbeat (not another deferred task in the same frame).
+function Window:_paceBudget(force)
     local now = os.clock()
     local last = self._constructionClock or now
     local count = #self.instances
     if
-        force
-        or now - last >= constructionFrameBudget
-        or count - (self._constructionInstances or 0) >= constructionInstanceBudget
+        not force
+        and now - last < constructionFrameBudget
+        and count - (self._constructionInstances or 0) < constructionInstanceBudget
     then
-        self._constructionBusy = (self._constructionBusy or 0) + 1
-        task.wait() -- next Heartbeat, not another deferred task in this frame
-        self._constructionBusy -= 1
-        assert(not self.unloaded, "Window unloaded during construction")
-        self._constructionClock = os.clock()
-        self._constructionInstances = #self.instances
-    else
         self._constructionClock = last
+        return
     end
+    self._constructionRevision = (self._constructionRevision or 0) + 1
+    self._constructionBusy = (self._constructionBusy or 0) + 1
+    task.wait()
+    self._constructionBusy -= 1
+    assert(not self.unloaded, "Window unloaded during construction")
+    self._constructionClock = os.clock()
+    self._constructionInstances = #self.instances
+end
+
+-- Startup-only checkpoint: element constructors stream in between the shell's
+-- first reveal and the build going quiet, so yielding is gated to that window.
+-- `force` marks an explicit shell phase boundary inside Window.new (where
+-- `_constructed` is still false). Every boundary yields whole, completed
+-- objects, never half a control, so each constructor resumes with a fully
+-- usable object.
+function Window:_constructionCheckpoint(force)
+    if self._startupComplete or (not force and not self._constructed) then
+        return
+    end
+    self:_paceBudget(force)
 end
 
 -- Configuration restoration can execute host callbacks. Apply a small group,
@@ -745,8 +742,13 @@ function Window:ChangeTheme(themeInput)
     -- Color3/number through a 0.5s tween only buys dozens of tween allocations
     -- on the startup path — nothing can be seen animating. Assign the end
     -- state directly; the values are identical to what the tweens would have
-    -- settled on, and everything from the first entrance on still tweens.]]
+    -- settled on, and everything from the first entrance on still tweens.
+    -- When the theme *can* be seen changing, the per-instance properties are
+    -- batched into one motion-service tween each (instead of one TweenService
+    -- tween per property), so a theme switch both animates as one gesture and
+    -- hands ownership of every animated property to the service.]]
     local instantApply = self.hidden and not self.hasShownOnce
+    local pendingThemeTweens: { [Instance]: { [string]: any } } = {}
     for instance, properties in self.themeProperties do
         for prop, binding in properties do
             local resolvedValue = if typeof(binding) == "table" then binding[2](self.theme[binding[1]]) else self.theme[binding]
@@ -755,10 +757,20 @@ function Window:ChangeTheme(themeInput)
                 continue
             end
             if not instantApply and (typeof(resolvedValue) == "Color3" or typeof(resolvedValue) == "number") then
-                state.tweenService:Create(instance, tweenStyle, { [prop] = resolvedValue }):Play()
+                local batch = pendingThemeTweens[instance]
+                if not batch then
+                    batch = {}
+                    pendingThemeTweens[instance] = batch
+                end
+                batch[prop] = resolvedValue
             else
                 instance[prop] = resolvedValue
             end
+        end
+    end
+    if not instantApply then
+        for instance, batch in pendingThemeTweens do
+            motion.tween(instance, batch, "smooth")
         end
     end
 
@@ -777,7 +789,7 @@ function Window:ChangeTheme(themeInput)
     if self.windowCorner and (self._collapsedShown or self.minimised) and not self.animating then
         local pill = self.theme.PillCornerRadius or UDim.new(1, 0)
         if self.windowCorner.CornerRadius ~= pill then
-            state.tweenService:Create(self.windowCorner, tweenStyle, { CornerRadius = pill }):Play()
+            motion.tween(self.windowCorner, { CornerRadius = pill }, "smooth")
         end
     end
 end
@@ -814,7 +826,7 @@ function Window:CreateTab(props)
             tab.topbarItem.Visible = true
             tab:_applyVisual(
                 if self.selectedTab == tab then "selected" else "unselected",
-                TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+                "normal"
             )
         end
         -- [[A runtime-created tab may belong to the other rail.]]
@@ -898,29 +910,6 @@ function Window:_unregisterControl(element)
     if element.flag and self.controls[element.flag] == element then
         self.controls[element.flag] = nil
     end
-end
-
-function Window:_keybindUsing(keybind, source)
-    if typeof(keybind) ~= "EnumItem" or keybind == Enum.KeyCode.Unknown then
-        return nil
-    end
-    local function find(elements)
-        for _, element in ipairs(elements) do
-            if element ~= source and element.__type == "Keybind" and element.value == keybind then
-                return element
-            end
-            if element.elements then
-                local match = find(element.elements)
-                if match then return match end
-            end
-        end
-        return nil
-    end
-    for _, tab in self.tabs do
-        local match = find(tab.elements)
-        if match then return match end
-    end
-    return nil
 end
 
 function Window:_copyOverlayProps(props)
@@ -1050,7 +1039,12 @@ function Window:Close()
     local transitionId = self._closeTransitionId
     local originalSize = self.main.Size
     local originalPosition = self.main.Position
-    local closeTweenInfo = TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut)
+    -- [[A close is a departure: the shell contracts on the `glide` spec (a
+    -- symmetric ease reads as the window folding itself away) while the
+    -- surface accelerates out on `exit`, so the window never lingers at the
+    -- tail of its own goodbye.]]
+    local contractTween = "glide"
+    local fadeOutTween = "exit"
     local targetSize = UDim2.new(
         originalSize.X.Scale * 0.88,
         math.floor(originalSize.X.Offset * 0.88),
@@ -1061,16 +1055,18 @@ function Window:Close()
     self.main.ClipsDescendants = true
     self.main.AnchorPoint = Vector2.new(0.5, 0.5)
     self.main.Position = originalPosition
-    self.drag.drag.Visible = false
-    self:_fadeSurfaces(false, closeTweenInfo)
+    -- [[The handle leaves with the window it belongs to, and leaves parked:
+    -- [[a close is not a state the next entrance should inherit a look from.
+    self.drag:disable()
+    self:_fadeSurfaces(false, fadeOutTween)
     if self.title then
-        motion.tween(self.title, { TextTransparency = 1 }, closeTweenInfo)
+        motion.tween(self.title, { TextTransparency = 1 }, fadeOutTween)
     end
     if self.subtitle then
-        motion.tween(self.subtitle, { TextTransparency = 1 }, closeTweenInfo)
+        motion.tween(self.subtitle, { TextTransparency = 1 }, fadeOutTween)
     end
     if self.topbarIcon then
-        motion.tween(self.topbarIcon, { ImageTransparency = 1 }, closeTweenInfo)
+        motion.tween(self.topbarIcon, { ImageTransparency = 1 }, fadeOutTween)
     end
     self:_fadeSelectedElementsOut()
     -- [[The contraction goes through the motion service so the close answers
@@ -1084,15 +1080,18 @@ function Window:Close()
             return
         end
         closed = true
-        self.drag.drag.Visible = false
+        self.drag:disable()
         self:Unload()
     end
 
+    -- [[The surface accelerates out first (a separate tween from the
+    -- contraction: one owner per property, and the fade never delays the
+    -- settle path the teardown waits on).]]
+    motion.tween(self.main, { BackgroundTransparency = 1 }, fadeOutTween)
     if not motion.tween(self.main, {
         Size = targetSize,
         Position = originalPosition,
-        BackgroundTransparency = 1,
-    }, closeTweenInfo, finishClose) then
+    }, contractTween, finishClose) then
         -- [[Nothing animated, so the teardown just ran and the window's
         -- instances are gone — the corner below must not be touched.]]
         finishClose()
@@ -1101,8 +1100,12 @@ function Window:Close()
         end
     end
     -- [[Collapse to a capsule using the theme's pill radius so a custom
-    -- [[PillCornerRadius still reads on the closing shrink.]]
-    motion.tween(self.windowCorner, { CornerRadius = self.theme.PillCornerRadius or UDim.new(1, 0) }, closeTweenInfo)
+    -- [[PillCornerRadius still reads on the closing shrink. A synchronous
+    -- completion (the test harness plays tweens on the spot) may have torn
+    -- the window down inside the call above; never touch the corner then.]]
+    if not self.unloaded then
+        motion.tween(self.windowCorner, { CornerRadius = self.theme.PillCornerRadius or UDim.new(1, 0) }, contractTween)
+    end
 end
 
 function Window:Hide()
@@ -1122,10 +1125,6 @@ function Window:Hide()
         search.close(self, { showTabs = false, jumpTo = self.selectedTab and self.selectedTab.tabPage })
     end
 
-            if self._recordingKeybind then
-        self._recordingKeybind:_stopRecording()
-    end
-
     self.animating = true
     self._revealing = true
     self.hidden = true
@@ -1138,23 +1137,22 @@ function Window:Hide()
 
     local collapsedPos, collapsedSize = self:_collapsedRect()
 
-    local hideTween = TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local surfaceTween = TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut)
-    local cornerTween = TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut)
-    local collapseShowTween = TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    -- [[The fold: content leaves quickly (snappy fades), the shell glides
+    -- into the capsule with the symmetric ease, and the capsule's face
+    -- appears with a small settle overshoot so the fold ends on a landing,
+    -- not a stop.]]
+    local hideTween = "snappy"
+    local surfaceTween = "glide"
+    local cornerTween = "glide"
+    local collapseShowTween = "settle"
 
             self._hideTransitionId = (self._hideTransitionId or 0) + 1
     local transitionId = self._hideTransitionId
 
-            state.tweenService
-        :Create(self.drag.dragCosmetic, hideTween, { Size = UDim2.fromOffset(0, 4), BackgroundTransparency = 1 })
-        :Play()
-    task.delay(0.18, function()
-        if self.unloaded or not self.hidden or self._hideTransitionId ~= transitionId then
-            return
-        end
-        self.drag.drag.Visible = false
-    end)
+    -- [[The handle folds away with the surface: the pill shrinks out first
+    -- [[and the hitbox follows once the fade has read (the handle owns that
+    -- [[timing, and stands down if a Show claims it back in the meantime).
+    self.drag:fadeOut("fast")
 
             self:_fadeSurfaces(false, hideTween)
 
@@ -1231,19 +1229,26 @@ function Window:ToggleMinimise()
     end
 
     self.animating = true
-    self.drag.drag.Visible = false
+    -- [[Either direction moves one surface between two shapes, and the handle
+    -- [[is not one of them: it fades out with the shell and is handed back by
+    -- [[the settle below (the fold's own `minimised` write turns it on again
+    -- [[under the capsule, exactly as before).
+    self.drag:fadeOut("fast")
     self.collapsedInteract.Visible = false
 
-    local expandTween = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-    local surfaceTween = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+    -- [[Both directions of the minimise move one surface between two shapes,
+    -- so both ride the same pair of specs: `smooth` carries the geometric
+    -- unfold (a big decelerating move reads as arriving), `settle` lands the
+    -- capsule face when folding away.]]
+    local expandTween = "smooth"
+    local surfaceTween = "smooth"
 
     self._hideTransitionId = (self._hideTransitionId or 0) + 1
 
     if self.minimised then
         self.minimised = false
-        self.drag.drag.Visible = false
         image.assign(self.minimiseAction.iconLabel, "Image", constants.icons.minimise)
-        state.tweenService:Create(self.main, expandTween, { Size = self.size }):Play()
+        motion.tween(self.main, { Size = self.size }, expandTween)
         motion.tween(self.windowCorner, { CornerRadius = self.theme.CornerRoundness }, expandTween)
         self:_fadeSurfaces(true, surfaceTween)	chrome.setCollapsedShown(self, false, surfaceTween)
 
@@ -1255,16 +1260,14 @@ function Window:ToggleMinimise()
         -- [[is off).]]
         self:_clampToScreen()
 
-        state.tweenService
-            :Create(self.drag.drag, expandTween, {
-                Position = UDim2.new(
-                    self.main.Position.X.Scale,
-                    self.main.Position.X.Offset,
-                    self.main.Position.Y.Scale,
-                    self.main.Position.Y.Offset + self.size.Y.Offset / 2 + 15
-                ),
-            })
-            :Play()
+        motion.tween(self.drag.drag, {
+            Position = UDim2.new(
+                self.main.Position.X.Scale,
+                self.main.Position.X.Offset,
+                self.main.Position.Y.Scale,
+                self.main.Position.Y.Offset + self.size.Y.Offset / 2 + dragHandleGap
+            ),
+        }, expandTween)
 
                         task.delay(0.2, function()
             if self.unloaded or self.minimised or self.hidden then
@@ -1286,11 +1289,18 @@ function Window:ToggleMinimise()
         end)
 
         task.delay(0.5, function()
+            if self.unloaded or self.minimised or self.hidden then
+                return
+            end
+            -- [[The window is back to its full size, so the handle is
+            -- [[reachable again. It is handed back unseen (the pill was
+            -- [[parked when the fold started) and waits for the pointer,
+            -- [[exactly like the handle of a freshly opened window.
+            self.drag:enable()
             self.animating = false
         end)
     else
         self.minimised = true
-        self.drag.drag.Visible = false
         image.assign(self.minimiseAction.iconLabel, "Image", self:ResolveIcon(constants.icons.maximise))
                         self:_fadeSelectedElementsOut()
         for _, tab in pairs(self.tabs) do
@@ -1313,22 +1323,18 @@ function Window:ToggleMinimise()
         end)
 
         self:_fadeSurfaces(false, surfaceTween)	chrome.setCollapsedShown(self, true, surfaceTween)
-        state.tweenService
-            :Create(self.main, expandTween, { Size = UDim2.fromOffset(self.size.X.Offset, self.layout.topbarHeight) })
-            :Play()
+        motion.tween(self.main, { Size = UDim2.fromOffset(self.size.X.Offset, self.layout.topbarHeight) }, expandTween)
         -- [[Minimised bar reads as a theme-aware capsule (PillCornerRadius).]]
         motion.tween(self.windowCorner, { CornerRadius = self.theme.PillCornerRadius or UDim.new(1, 0) }, expandTween)
 
-        state.tweenService
-            :Create(self.drag.drag, expandTween, {
-                Position = UDim2.new(
-                    self.main.Position.X.Scale,
-                    self.main.Position.X.Offset,
-                    self.main.Position.Y.Scale,
-                    self.main.Position.Y.Offset + self.layout.topbarHeight / 2 + 15
-                ),
-            })
-            :Play()
+        motion.tween(self.drag.drag, {
+            Position = UDim2.new(
+                self.main.Position.X.Scale,
+                self.main.Position.X.Offset,
+                self.main.Position.Y.Scale,
+                self.main.Position.Y.Offset + self.layout.topbarHeight / 2 + dragHandleGap
+            ),
+        }, expandTween)
 
         task.delay(0.5, function()
             if self.unloaded then
@@ -1336,7 +1342,7 @@ function Window:ToggleMinimise()
             end
             if self.minimised and not self.hidden then
                 self:_syncDragBar()
-                self.drag.drag.Visible = true
+                self.drag:enable()
             end
             self.animating = false
         end)
@@ -1349,7 +1355,7 @@ function Window:_syncDragBar()
         return
     end
     local pos = self.main.Position
-    local dragOffset = if self.minimised then self.layout.topbarHeight / 2 + 15 else self.size.Y.Offset / 2 + 15
+    local dragOffset = if self.minimised then self.layout.topbarHeight / 2 + dragHandleGap else self.size.Y.Offset / 2 + dragHandleGap
     dragFrame.Position = UDim2.new(pos.X.Scale, pos.X.Offset, pos.Y.Scale, pos.Y.Offset + dragOffset)
 end
 
@@ -1407,19 +1413,57 @@ function Window:_recenterForProfile(animate)
         return
     end
     if animate and not self.animating then
-        local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-        state.tweenService:Create(self.main, tweenInfo, { Position = target }):Play()
-        state.tweenService
-            :Create(
-                self.drag.drag,
-                tweenInfo,
-                { Position = UDim2.new(target.X.Scale, target.X.Offset, target.Y.Scale, target.Y.Offset + self.size.Y.Offset / 2 + 15) }
-            )
-            :Play()
+        -- [[A recenter slides the pair sideways between resting places: the
+        -- symmetric `glide` ease reads as deliberate, not reactive.]]
+        motion.tween(self.main, { Position = target }, "glide")
+        motion.tween(self.drag.drag, {
+            Position = UDim2.new(target.X.Scale, target.X.Offset, target.Y.Scale, target.Y.Offset + self.size.Y.Offset / 2 + dragHandleGap),
+        }, "glide")
     else
         self.main.Position = target
         self:_syncDragBar()
     end
+end
+
+-- [[One-shot waiter for a LocalPlayer that has not replicated when the card
+-- [[was enabled. On arrival it builds the (lazily skipped) card if needed,
+-- [[fills its identity and reveals the window + card pair. Bounded by a short
+-- [[deadline so a host with no player at all does not keep polling forever.
+-- [[Safe to call repeatedly; the first arm wins.
+function Window:_armProfilePlayerWaiter()
+    if self._profileWaiterArmed or self.unloaded then
+        return
+    end
+    if self.settings.showProfile ~= true or state.localPlayer then
+        return
+    end
+    self._profileWaiterArmed = true
+
+    task.defer(function()
+        local deadline = os.clock() + 2
+        local connection
+        connection = state.runService.RenderStepped:Connect(function()
+            if self.unloaded then
+                connection:Disconnect()
+                return
+            end
+            if state.localPlayer or os.clock() > deadline then
+                connection:Disconnect()
+                if state.localPlayer and profilePanel.ensureBuilt(self) then
+                    profilePanel.applyIdentity(self)
+                    profilePanel.setShown(self, true, profilePanel.settleSpec)
+                    -- [[Centre the pair if the user has not dragged the
+                    -- [[window off its resting spot.]]
+                    if self.main.Position.X.Scale == 0.5 and self.main.Position.Y.Scale == 0.5 then
+                        self:_recenterForProfile(true)
+                    end
+                end
+            end
+        end)
+        -- [[Adopt the connection directly: Window:Connect takes a *signal*,
+        -- [[not a connection object.]]
+        table.insert(self.connections, connection)
+    end)
 end
 
 function Window:_applyWindowSize()
@@ -1544,8 +1588,9 @@ end
 
 function Window:_bindKeybind()
     self:Connect(state.userInputService.InputBegan, function(input, gameProcessed)
-        if gameProcessed or self._recordingKeybind then
-            return         end
+        if gameProcessed then
+            return
+        end
         if input.KeyCode == self.settings.toggleKeybind or input.UserInputType == self.settings.toggleKeybind then
             self:ToggleHide()
         end
@@ -1589,6 +1634,7 @@ end
 function Window:_bindTopbarDrag()
     local inputService = state.userInputService
     local isDragging = false
+    local hasMoved = false
     local dragOffset = Vector2.zero
     local renderConnection
     local startMousePos = Vector2.zero
@@ -1620,6 +1666,15 @@ function Window:_bindTopbarDrag()
 
     local function endDrag()
         isDragging = false
+        if hasMoved then
+            -- [[The move is over: the handle drops back to its resting look
+            -- [[and stays where it is — that faint pill under the window is
+            -- [[the affordance the next drag starts from.
+            hasMoved = false
+            if self.drag then
+                self.drag:setMoving(false)
+            end
+        end
         if renderConnection then
             self:Disconnect(renderConnection)
             renderConnection = nil
@@ -1643,6 +1698,18 @@ function Window:_bindTopbarDrag()
             return
         end
 
+        if not hasMoved then
+            -- [[The pointer has left the threshold, so this is a move and not
+            -- [[a click: bring the handle out for the length of it. Nothing is
+            -- [[pointing at the handle (the gesture started on the topbar), so
+            -- [[this is the one moment it has to show itself — the pill
+            -- [[brightens here and settles back when the move ends.
+            hasMoved = true
+            if self.drag then
+                self.drag:setMoving(true)
+            end
+        end
+
         local constrainedPos = getConstrainedPosition()
         if self.main.Position == constrainedPos then
             return
@@ -1654,7 +1721,7 @@ function Window:_bindTopbarDrag()
                 mainPos.X.Scale,
                 mainPos.X.Offset,
                 mainPos.Y.Scale,
-                mainPos.Y.Offset + (self.main.Size.Y.Offset / 2 + 15)
+                mainPos.Y.Offset + (self.main.Size.Y.Offset / 2 + dragHandleGap)
             )
         end
     end
@@ -1827,18 +1894,18 @@ function Window:_setElementLocked(element, locked, message)
         self:_buildLockScrim(element)
     end
 
-    local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    -- [[The lock scrim arrives on the shared hover spec; the unlock delay
+    -- tracks its duration so the scrim never hides after it has faded.]]
+    local lockSpec = "snappy"
 
     if locked then
         element.lockScrim.Visible = true
     end
-    state.tweenService
-        :Create(element.lockScrim, tweenInfo, {
-            BackgroundTransparency = if locked then lockScrimTransparency else 1,
-        })
-        :Play()
+    motion.tween(element.lockScrim, {
+        BackgroundTransparency = if locked then lockScrimTransparency else 1,
+    }, lockSpec)
     if not locked then
-        task.delay(tweenInfo.Time, function()
+        task.delay(0.25, function()
             if not element.locked and element.lockScrim and element.lockScrim.Parent then
                 element.lockScrim.Visible = false             end
         end)
@@ -1857,11 +1924,9 @@ function Window:_setElementLocked(element, locked, message)
         element._descriptionBefore = nil
     end
 
-    state.tweenService
-        :Create(label, tweenInfo, {
-            TextTransparency = if locked then lockedTextTransparency else 0.45,
-        })
-        :Play()
+    motion.tween(label, {
+        TextTransparency = if locked then lockedTextTransparency else 0.45,
+    }, lockSpec)
 end
 
 function Window:_buildLockScrim(element)
@@ -1987,7 +2052,7 @@ function Window:_setLayoutMode(modeName)
     self._layoutTransitioning = true
     self._layoutTransitionId = (self._layoutTransitionId or 0) + 1
     local transitionId = self._layoutTransitionId
-    local tweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local tweenInfo = "fast"
     self:_fadeSurfaces(false, tweenInfo)
     self:_fadeSelectedElementsOut()
     for _, tab in self.tabs do
@@ -2262,10 +2327,13 @@ function Window:Show()
     end
     self.animating = true
     self._revealing = true
-    self.drag.drag.Visible = false
+    -- [[The handle waits while the shell is in the air: it is handed back by
+    -- [[whichever settle path this entrance takes (_firstShow or
+    -- [[_quickRestore), and only an entrance that actually lands gets one.
+    self.drag:disable()
 
-    -- If General is still the selected page, its heavier content is built
-    -- after the shell settles (see _scheduleInitialSettingsContent).
+    -- General's heavier content is never built here: settings panels build
+    -- lazily on first open through _buildSettingsContent / buildContent.
 
     self.hidden = false
     self.minimised = false
@@ -2305,7 +2373,11 @@ function Window:_quickRestore()
     end
     local targetPos = self:_clampedPosition(restore)
     self._restorePosition = targetPos
-    local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    -- [[The restore unfolds one surface between two shapes: the shell glides
+    -- (symmetric ease) while the corner springs open with a small overshoot,
+    -- so the capsule visibly "pops" back into the window.]]
+    local restoreTween = "glide"
+    local restoreCornerTween = "settle"
 
     self.main.ClipsDescendants = true
     self.main.BackgroundTransparency = windowSurfaceTransparency
@@ -2367,7 +2439,11 @@ function Window:_quickRestore()
         self.main.ClipsDescendants = false
         self._collapsedShown = false
         self:_syncDragBar()
-        self.drag.drag.Visible = false
+        -- [[The window is on screen and settled, so the handle is reachable
+        -- [[again. Note it is *enabled*, not revealed: the pill was parked on
+        -- [[the way out, so a restored window offers its handle to the pointer
+        -- [[instead of announcing it.
+        self.drag:enable()
         self.animating = false
         self._revealing = false
         updateToastPosition(self, true)
@@ -2378,14 +2454,14 @@ function Window:_quickRestore()
         overlayQueue.resume(self)
     end
 
-    if not motion.tween(self.main, { Size = self.size, Position = targetPos }, tweenInfo, settle) then
+    if not motion.tween(self.main, { Size = self.size, Position = targetPos }, restoreTween, settle) then
         settle()
     end
-    motion.tween(self.windowCorner, { CornerRadius = self.theme.CornerRoundness }, tweenInfo)
+    motion.tween(self.windowCorner, { CornerRadius = self.theme.CornerRoundness }, restoreCornerTween)
     self:_stageContentReveal(motion.step(contentRevealBeat * 0.6), 0.02, 0.4, entranceId)
 end
 function Window:_firstShow()
-    self.drag.drag.Visible = false
+    self.drag:disable()
     self.main.Visible = true
     self.main.ClipsDescendants = true
     self.main.BackgroundTransparency = 1
@@ -2402,7 +2478,7 @@ function Window:_firstShow()
     end
 
     self.main.Size = self.size
-    self.windowScale.Scale = 0.92
+    self.windowScale.Scale = 0.94
     -- [[Entrance starts as a capsule (theme pill) then opens to CornerRoundness.]]
     self.windowCorner.CornerRadius = self.theme.PillCornerRadius or UDim.new(1, 0)
     -- [[Which entrance owns the staged content reveal below. A hide, a repeat
@@ -2432,7 +2508,7 @@ function Window:_firstShow()
     -- [[for when it is opened; the staged reveal below walks the page that is
     -- [[actually on screen, one control per beat.]]
     self:_applySettingsLayout(self._settingsMode)
-    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local tweenInfo = "smooth"
     if self.topbarIcon then
         self.topbarIcon.ImageTransparency = 1
         motion.tween(self.topbarIcon, { ImageTransparency = 0 }, tweenInfo)
@@ -2470,7 +2546,11 @@ function Window:_firstShow()
         settled = true
         self.main.ClipsDescendants = false
         self:_syncDragBar()
-        self.drag.drag.Visible = false
+        -- [[The shell has landed: the handle becomes reachable (unseen, at the
+        -- [[parked look the entrance started from) and the hover reveal takes
+        -- [[it from there. This is the write that used to keep the handle off
+        -- [[for the whole life of an expanded window.
+        self.drag:enable()
         self.animating = false
         self._revealing = false
         -- [[The window is stable now, so park the selected tab in view and
@@ -2705,8 +2785,8 @@ function Window:_flashResult(element, ok)
     local flashStroke = ok and constants.accent.onStroke or self.theme.ErrorStrokeColor
     -- [[Hoisted out of the function: these two are fixed, and the flash runs
     -- on every element callback that reports a result.]]
-    local flashTween = TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local restoreTween = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local flashTween = "fast"
+    local restoreTween = "normal"
 
     motion.tween(box, { BackgroundColor3 = flashColor }, flashTween)
     if boxStroke then
@@ -2828,7 +2908,7 @@ function Window:_runGuarded(element, fn, ...)
         element._errored = true
 
         local flashTarget = element.flashTarget or element.main
-        local errorTween = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local errorTween = "snappy"
         motion.tween(flashTarget, { BackgroundColor3 = self.theme.ErrorColor }, errorTween)
         motion.tween(element.stroke, { Color = self.theme.ErrorStrokeColor }, errorTween)
                 if element.title then
@@ -2848,12 +2928,12 @@ function Window:_runGuarded(element, fn, ...)
         motion.tween(
             flashTarget,
             { BackgroundColor3 = Color3.fromRGB(255, 255, 255) },
-            TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+            "normal"
         )
         motion.tween(
             element.stroke,
             { Color = self.theme.ElementStroke },
-            TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+            "emphasized"
         )
         element._errored = false
     end)
@@ -2972,7 +3052,7 @@ function Window:_reveal(instance, targets, animate, tweenInfo)
         -- and cancels an in-flight tween on the same property — the cascade
         -- asks every element on the page to show on one frame, and a
         -- hidden/reshown window used to stack a second reveal on the first.]]
-        motion.tween(instance, targets, tweenInfo or revealTween)
+        motion.tween(instance, targets, tweenInfo or "normal")
     else
         for prop, value in targets do
             instance[prop] = value
@@ -2988,7 +3068,7 @@ function Window:_revealCommon(element, animate)
         self:_reveal(element.iconLabel, { ImageTransparency = 0 }, animate)
     end
     if element.tapIcon then
-        self:_reveal(element.tapIcon, { ImageTransparency = 0 }, animate)
+        self:_reveal(element.tapIcon, { ImageTransparency = 0.5 }, animate)
     end
     if element.descriptionLabel then
         self:_reveal(element.descriptionLabel, { TextTransparency = 0.45 }, animate)
@@ -3019,7 +3099,7 @@ function Window:_resetCapsulePosition()
     self._collapsedPosition = nil
     if self._collapsedShown and not self.animating then
         local position = self:_collapsedRect()
-        motion.tween(self.main, { Position = position }, tweenStyle)
+        motion.tween(self.main, { Position = position }, "glide")
     end
 end
 
@@ -3194,7 +3274,10 @@ function Window:Unload()
     table.clear(self.localeProperties)
     table.clear(self.controls)
     table.clear(self.tabs)
-    table.clear(self._overlayQueue)
+    -- [[overlayQueue.close already drained the queue into its safe resting
+    -- [[shape (empty pending list, closed flag); wiping the table itself used
+    -- [[to pull `pending` out from under the pump coroutine on its next resume
+    -- [[(a `#nil` error racing an unload that landed mid-gate).]]
     self._overlayQueueRunning = false
 end
 

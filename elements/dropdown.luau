@@ -5,6 +5,7 @@ state.__type = "Dropdown"
 local constants = script.Parent.Parent.utilities
 
 local Dropdown = require(constants.Parent.core.state)
+local motion = require(constants.motion)
 local tab = require(script.Parent.Parent.functions)
 local props = require(script.Parent.Parent.images.image)
 local name = require(constants.constants)
@@ -36,15 +37,27 @@ local a26 = a24 + a25
 
 local a27 = 4
 
-local a28 = 22
-local a29 = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local a30 = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local a31 = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local a32 = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-local a33 = TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+-- [[The bulk-action row is one line of controls, taller than the bare text
+-- [[buttons it replaced so the checkbox it now carries sits in the same 16px
+-- [[slot an option row gives its glyph. The drawn outline is the 12px square
+-- [[inside that slot - the exact width of the row glyphs - so the two states
+-- [[of the box are never a size apart.]]
+local a28 = 32
+local actionBox = 12
+local actionBoxRadius = UDim.new(0, 3)
+local actionStrokeIdle = 0.45
+local actionStrokeHover = 0.2
+local actionStrokeChecked = 1
+local actionTextIdle = 0.45
+local actionTextHover = 0.15
+
+-- [[The dropdown's motion vocabulary, resolved through the shared service:
+-- rows snap, panels fade on the normal reveal curve, the list opens on the
+-- smooth surface curve and the chevron spins.]]
+local a29, a30, a31 = "fast", "snappy", "normal"
+local a32, a33, a35 = "smooth", "spin", "normal"
 
 local a34 = 0.4
-local a35 = TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
 local function a36(a37)
     local a38 = {}
@@ -370,11 +383,10 @@ function state.new(tab, a49)
         props.assign(a55.checkIcon, "Image", if a57 then callback else element)
 
         if a56 then
-            local a62 = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-            Dropdown.tweenService:Create(a55.frame, a62, { BackgroundTransparency = a58 }):Play()
-            Dropdown.tweenService:Create(a55.title, a62, { TextTransparency = a59 }):Play()
-            Dropdown.tweenService:Create(a55.checkIcon, a62, { ImageTransparency = a60 }):Play()
-            Dropdown.tweenService:Create(a55.stroke, a62, { Transparency = a61 }):Play()
+            motion.tween(a55.frame, { BackgroundTransparency = a58 }, "snappy")
+            motion.tween(a55.title, { TextTransparency = a59 }, "snappy")
+            motion.tween(a55.checkIcon, { ImageTransparency = a60 }, "snappy")
+            motion.tween(a55.stroke, { Transparency = a61 }, "snappy")
         else
             a55.frame.BackgroundTransparency = a58
             a55.title.TextTransparency = a59
@@ -494,20 +506,8 @@ function state.new(tab, a49)
                 if a52(a73.name) then
                     return
                 end
-                Dropdown.tweenService
-                    :Create(
-                        a66,
-                        a29,
-                        { BackgroundTransparency = 0.9 }
-                    )
-                    :Play()
-                Dropdown.tweenService
-                    :Create(
-                        a72,
-                        a29,
-                        { TextTransparency = 0.15 }
-                    )
-                    :Play()
+                motion.tween(a66, { BackgroundTransparency = 0.9 }, a29)
+                motion.tween(a72, { TextTransparency = 0.15 }, a29)
             end)
         )
 
@@ -520,20 +520,8 @@ function state.new(tab, a49)
                 if a52(a73.name) then
                     return
                 end
-                Dropdown.tweenService
-                    :Create(
-                        a66,
-                        a29,
-                        { BackgroundTransparency = 0.95 }
-                    )
-                    :Play()
-                Dropdown.tweenService
-                    :Create(
-                        a72,
-                        a29,
-                        { TextTransparency = 0.3 }
-                    )
-                    :Play()
+                motion.tween(a66, { BackgroundTransparency = 0.95 }, a29)
+                motion.tween(a72, { TextTransparency = 0.3 }, a29)
             end)
         )
 
@@ -571,6 +559,7 @@ function state.new(tab, a49)
                 end
 
                 a63()
+                self:_syncActions()
 
                 self.window:_runGuarded(self, self.callback, self:_callbackValue())
                 self.window:_persist(self)
@@ -611,27 +600,29 @@ function state.new(tab, a49)
         if self._isOpen or not self.window:_interactive() then
             return
         end
-        Dropdown.tweenService
-            :Create(self.title, a30, { TextColor3 = self.window.theme.ElementTextHoverColor })
-            :Play()
-        Dropdown.tweenService:Create(self.hoverOverlay, a30, { BackgroundTransparency = 0.97 }):Play()
-        Dropdown.tweenService
-            :Create(self.stroke, a30, {
+        motion.tween(self.title, { TextColor3 = self.window.theme.ElementTextHoverColor }, a30)
+        motion.tween(self.hoverOverlay, { BackgroundTransparency = 0.97 }, a30)
+        motion.tween(
+            self.stroke,
+            {
                 Transparency = self.window:_elementStrokeTransparency(self, true),
                 Color = self.window.theme.ElementStrokeHover,
-            })
-            :Play()
+            },
+            a30
+        )
     end)
 
     self.window:ConnectFor(self, self.main.MouseLeave, function()
-        Dropdown.tweenService:Create(self.title, a30, { TextColor3 = self.window.theme.ContentColor }):Play()
-        Dropdown.tweenService:Create(self.hoverOverlay, a30, { BackgroundTransparency = 1 }):Play()
-        Dropdown.tweenService
-            :Create(self.stroke, a30, {
+        motion.tween(self.title, { TextColor3 = self.window.theme.ContentColor }, a30)
+        motion.tween(self.hoverOverlay, { BackgroundTransparency = 1 }, a30)
+        motion.tween(
+            self.stroke,
+            {
                 Transparency = self.window:_elementStrokeTransparency(self, false),
                 Color = self.window.theme.ElementStroke,
-            })
-            :Play()
+            },
+            a30
+        )
     end)
 
     return self
@@ -700,6 +691,10 @@ function state:_buildSearch()
         Size = UDim2.fromOffset(20, 20),
         Position = UDim2.new(0, 24, 0.5, 0),         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundTransparency = 1,
+        -- [[A GuiObject border draws the square outline of the frame's
+        -- bounds (it never follows a UICorner), so every surface in the
+        -- window opts out of it.]]
+        BorderSizePixel = 0,
         ScaleType = Enum.ScaleType.Fit,
         AutoButtonColor = false,
         ZIndex = 53,
@@ -738,16 +733,14 @@ function state:_expandSearch()
     self.searchInput.TextEditable = true
     self.searchInput.Interactable = true
 
-    Dropdown.tweenService
-        :Create(
-            self.searchbar,
-            a35,
-            { Size = UDim2.new(1, -12, 0, selected), BackgroundTransparency = 0.92 }
-        )
-        :Play()
-    Dropdown.tweenService:Create(self.searchStroke, a35, { Transparency = 0.86 }):Play()
-    Dropdown.tweenService:Create(self.searchShadow, a35, { Transparency = 0.92 }):Play()
-    Dropdown.tweenService:Create(self.searchInput, a35, { TextTransparency = 0.3 }):Play()
+    motion.tween(
+        self.searchbar,
+        { Size = UDim2.new(1, -12, 0, selected), BackgroundTransparency = 0.92 },
+        a35
+    )
+    motion.tween(self.searchStroke, { Transparency = 0.86 }, a35)
+    motion.tween(self.searchShadow, { Transparency = 0.92 }, a35)
+    motion.tween(self.searchInput, { TextTransparency = 0.3 }, a35)
 
     self:_resizeToOptions()     self.searchInput:CaptureFocus()
 end
@@ -761,16 +754,14 @@ function state:_collapseSearch()
     self.searchInput.Interactable = false
     self.searchInput:ReleaseFocus()
     self.searchInput.Text = ""
-    Dropdown.tweenService
-        :Create(
-            self.searchbar,
-            a35,
-            { Size = UDim2.new(1, -12, 0, isOpen), BackgroundTransparency = 1 }
-        )
-        :Play()
-    Dropdown.tweenService:Create(self.searchStroke, a35, { Transparency = 1 }):Play()
-    Dropdown.tweenService:Create(self.searchShadow, a35, { Transparency = 1 }):Play()
-    Dropdown.tweenService:Create(self.searchInput, a35, { TextTransparency = 1 }):Play()
+    motion.tween(
+        self.searchbar,
+        { Size = UDim2.new(1, -12, 0, isOpen), BackgroundTransparency = 1 },
+        a35
+    )
+    motion.tween(self.searchStroke, { Transparency = 1 }, a35)
+    motion.tween(self.searchShadow, { Transparency = 1 }, a35)
+    motion.tween(self.searchInput, { TextTransparency = 1 }, a35)
 
     self:_resizeToOptions()
 end
@@ -788,6 +779,7 @@ function state:_applyFilter(a78)
 
             self.emptyLabel.Visible = a79 == 0 and a78 ~= ""
     self:_updateCorners()
+    self:_syncActions()
     self:_resizeToOptions()
     self:_syncScrollHint()
 end
@@ -801,9 +793,7 @@ function state:_syncScrollHint()
 
     local a84 = self._isOpen and a83.Y > 0 and a82.Y - (at.Y + a83.Y) > 1
 
-    Dropdown.tweenService
-        :Create(self.list, a29, { ScrollBarImageTransparency = if a84 then a34 else 1 })
-        :Play()
+    motion.tween(self.list, { ScrollBarImageTransparency = if a84 then a34 else 1 }, a29)
 end
 
 function state:_visibleOptions(): { string }
@@ -816,9 +806,16 @@ function state:_visibleOptions(): { string }
     return a85
 end
 
+-- [[The Select all / Clear row. It is the one two-ended line in the panel: the
+-- [[checkbox and its label sit at the left edge, Clear and its bin at the
+-- [[right. Both controls act on the options the list is showing, so a search
+-- [[that narrows the list narrows what they touch - and the checkbox answers
+-- [[for exactly that set (on when every visible option is selected, off when
+-- [[any of them is not, and off when the filter matches nothing).]]
 function state:_buildActions()
     if not self.multiSelect then
-        return     end
+        return
+    end
 
     self.actions = self.window:Create("Frame", {
         Name = "Actions",
@@ -829,57 +826,250 @@ function state:_buildActions()
         Parent = self.panel,
     })
 
-    self.window:Create("UIListLayout", {
-        Padding = UDim.new(0, 12),
-        FillDirection = Enum.FillDirection.Horizontal,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        SortOrder = Enum.SortOrder.LayoutOrder,
+    -- [[Select all: the glyph slot a row uses, then the label. Clicking it
+    -- [[toggles the visible options - everything visible already selected
+    -- [[clears them, anything else selects what is missing.]]
+    self.selectAll = self.window:Create("TextButton", {
+        Name = "SelectAll",
+        AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.fromOffset(0, a28),
+        Position = UDim2.new(0, 8, 0.5, 0),
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundTransparency = 1,
+        Text = "",
+        TextTransparency = 1,
+        AutoButtonColor = false,
 
         Parent = self.actions,
     })
 
-    local function a87(a88: string, a89: number, a90: () -> ())
-        local a91 = self.window:Create("TextButton", {
-            AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2.fromOffset(0, a28),
-            BackgroundTransparency = 1,
-            Text = flag.t(a88),
-            TextSize = 13,
-            TextTransparency = 0.45,             LayoutOrder = a89,
+    self.window:Create("UIListLayout", {
+        Padding = UDim.new(0, 8),
+        FillDirection = Enum.FillDirection.Horizontal,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
 
-            Parent = self.actions,
-        }, { TextColor3 = "ContentColor", FontFace = "Font" })
+        Parent = self.selectAll,
+    })
 
-        self.window:ConnectFor(self, a91.MouseEnter, function()
-            Dropdown.tweenService:Create(a91, a29, { TextTransparency = 0.15 }):Play()
-        end)
-        self.window:ConnectFor(self, a91.MouseLeave, function()
-            Dropdown.tweenService:Create(a91, a29, { TextTransparency = 0.45 }):Play()
-        end)
-        self.window:ConnectFor(self, a91.MouseButton1Click, function()
-            a90()
-            self:_afterBulkChange()
-        end)
+    local selectAllSlot = self.window:Create("Frame", {
+        Size = UDim2.fromOffset(16, 16),
+        BackgroundTransparency = 1,
+        LayoutOrder = 1,
 
-        return a91
+        Parent = self.selectAll,
+    })
+
+    -- [[Unchecked is the drawn outline and nothing else; checked hides it and
+    -- [[shows the same pack glyph a selected row shows.]]
+    self.selectAllBox = self.window:Create("Frame", {
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.5, 0.5),
+        Size = UDim2.fromOffset(actionBox, actionBox),
+        BackgroundTransparency = 1,
+
+        Parent = selectAllSlot,
+    })
+
+    self.window:Create("UICorner", {
+        CornerRadius = actionBoxRadius,
+
+        Parent = self.selectAllBox,
+    })
+
+    self.selectAllStroke = self.window:Create("UIStroke", {
+        Transparency = actionStrokeIdle,
+        Thickness = 1.5,
+
+        Parent = self.selectAllBox,
+    }, { Color = "ContentColor" })
+
+    self.selectAllCheck = self.window:Create("ImageLabel", {
+        Size = UDim2.fromOffset(16, 16),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://" .. tostring(callback),
+        ImageTransparency = 1,
+
+        Parent = selectAllSlot,
+    }, { ImageColor3 = "ContentColor" })
+
+    self.window:Create("TextLabel", {
+        Text = flag.t("Select all"),
+        AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.fromOffset(0, 16),
+        BackgroundTransparency = 1,
+        TextSize = 16,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        LayoutOrder = 2,
+
+        Parent = self.selectAll,
+    }, { TextColor3 = "ContentColor", FontFace = "Font" })
+
+    -- [[Clear: the label, then the bin. The bin is an ordinary pack icon, so it
+    -- [[resolves (and caches) exactly like the icons everywhere else.]]
+    self.clear = self.window:Create("TextButton", {
+        Name = "Clear",
+        AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.fromOffset(0, a28),
+        Position = UDim2.new(1, -10, 0.5, 0),
+        AnchorPoint = Vector2.new(1, 0.5),
+        BackgroundTransparency = 1,
+        Text = "",
+        TextTransparency = 1,
+        AutoButtonColor = false,
+
+        Parent = self.actions,
+    })
+
+    self.window:Create("UIListLayout", {
+        Padding = UDim.new(0, 6),
+        FillDirection = Enum.FillDirection.Horizontal,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+
+        Parent = self.clear,
+    })
+
+    self.clearLabel = self.window:Create("TextLabel", {
+        Text = flag.t("Clear"),
+        AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.fromOffset(0, 15),
+        BackgroundTransparency = 1,
+        TextSize = 15,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        TextTransparency = actionTextIdle,
+        LayoutOrder = 1,
+
+        Parent = self.clear,
+    }, { TextColor3 = "ContentColor", FontFace = "Font" })
+
+    self.clearIcon = self.window:Create("ImageLabel", {
+        Size = UDim2.fromOffset(16, 16),
+        BackgroundTransparency = 1,
+        Image = self.window:ResolveIcon("trash"),
+        ImageTransparency = actionTextIdle,
+        LayoutOrder = 2,
+
+        Parent = self.clear,
+    }, { ImageColor3 = "ContentColor" })
+
+    self.window:ConnectFor(self, self.selectAll.MouseEnter, function()
+        self._selectAllHovered = true
+        if self._selectAllChecked then
+            return
+        end
+        motion.tween(self.selectAllStroke, { Transparency = actionStrokeHover }, a29)
+    end)
+    self.window:ConnectFor(self, self.selectAll.MouseLeave, function()
+        self._selectAllHovered = false
+        if self._selectAllChecked then
+            return
+        end
+        motion.tween(self.selectAllStroke, { Transparency = actionStrokeIdle }, a29)
+    end)
+
+    local function fadeClear(transparency: number)
+        motion.tween(self.clearLabel, { TextTransparency = transparency }, a29)
+        motion.tween(self.clearIcon, { ImageTransparency = transparency }, a29)
+    end
+    self.window:ConnectFor(self, self.clear.MouseEnter, function()
+        fadeClear(actionTextHover)
+    end)
+    self.window:ConnectFor(self, self.clear.MouseLeave, function()
+        fadeClear(actionTextIdle)
+    end)
+
+    self.window:ConnectFor(self, self.selectAll.MouseButton1Click, function()
+        if not self._isOpen then
+            return
+        end
+        self:_toggleVisibleSelection()
+        self:_afterBulkChange()
+    end)
+    self.window:ConnectFor(self, self.clear.MouseButton1Click, function()
+        if not self._isOpen then
+            return
+        end
+        self:_clearVisibleSelection()
+        self:_afterBulkChange()
+    end)
+
+    self:_syncActions()
+end
+
+-- [[The options a bulk action applies to: what the list shows right now. Rows
+-- [[are materialised on the first open, and until then no filter can be on
+-- [[(the bar does not exist yet), so the whole option list is what is shown.]]
+function state:_actionOptions(): { string }
+    if #self._optionFrames == 0 then
+        return self.options
+    end
+    return self:_visibleOptions()
+end
+
+-- [[On when every visible option is selected. A filter that matches nothing
+-- [[leaves the box off: there is nothing there to select.]]
+function state:_visibleSelection(): boolean
+    local names = self:_actionOptions()
+    if #names == 0 then
+        return false
+    end
+    for _, name in names do
+        if not table.find(self.value, name) then
+            return false
+        end
+    end
+    return true
+end
+
+function state:_toggleVisibleSelection()
+    if self:_visibleSelection() then
+        self:_clearVisibleSelection()
+        return
+    end
+    for _, name in self:_actionOptions() do
+        if not table.find(self.value, name) then
+            table.insert(self.value, name)
+        end
+    end
+end
+
+function state:_clearVisibleSelection()
+    local names = self:_actionOptions()
+    for index = #self.value, 1, -1 do
+        if table.find(names, self.value[index]) then
+            table.remove(self.value, index)
+        end
+    end
+end
+
+-- [[Put the checkbox in step with the list. Everything that can move the
+-- [[selection or the visible set calls this, so the box never lags the rows -
+-- [[and one of those callers is the search filter, which runs on every
+-- [[keystroke: a sync that would not change either half is left alone rather
+-- [[than replaying the same two tweens per character.
+-- [[]]
+-- [[An unchecked box keeps its hover brightness: a click that empties it while
+-- [[the pointer is still on it must not drop it to the idle dim.]]
+function state:_syncActions()
+    if not self.selectAllCheck then
+        return
     end
 
-                a87("Select all", 1, function()
-        local a92 = self:_visibleOptions()
-        for _, a93 in a92 do
-            if not table.find(self.value, a93) then
-                table.insert(self.value, a93)
-            end
-        end
-    end)
-    a87("Clear", 2, function()
-        local a94 = self:_visibleOptions()
-        for a95 = #self.value, 1, -1 do
-            if table.find(a94, self.value[a95]) then
-                table.remove(self.value, a95)
-            end
-        end
-    end)
+    local checked = self:_visibleSelection()
+    local outline = if checked
+        then actionStrokeChecked
+        elseif self._selectAllHovered then actionStrokeHover
+        else actionStrokeIdle
+
+    if checked == self._selectAllChecked and outline == self._selectAllOutline then
+        return
+    end
+    self._selectAllChecked = checked
+    self._selectAllOutline = outline
+
+    motion.tween(self.selectAllCheck, { ImageTransparency = if checked then 0 else 1 }, a29)
+    motion.tween(self.selectAllStroke, { Transparency = outline }, a29)
 end
 
 function state:_afterBulkChange()
@@ -890,6 +1080,7 @@ function state:_afterBulkChange()
     end
     self:_updateSelectedLabel()
     self:_updateCorners()
+    self:_syncActions()
     self.window:_runGuarded(self, self.callback, self:_callbackValue())
     self.window:_persist(self)
     options.click()
@@ -899,7 +1090,7 @@ function state:_resizeToOptions()
     if not self._isOpen then
         return
     end
-    Dropdown.tweenService:Create(self.main, a35, { Size = UDim2.new(1, -20, 0, self:_openHeight()) }):Play()
+    motion.tween(self.main, { Size = UDim2.new(1, -20, 0, self:_openHeight()) }, a35)
 end
 
 function state:_updateCorners()
@@ -1023,46 +1214,25 @@ function state:_open()
         end
     end)
 
-    Dropdown.tweenService
-        :Create(
-            self.main,
-            a32,
-            { Size = UDim2.new(1, -20, 0, self:_openHeight()) }
-        )
-        :Play()
-    Dropdown.tweenService
-        :Create(
-            self.chevron,
-            a33,
-            { Rotation = 0 }
-        )
-        :Play()
-    Dropdown.tweenService
-        :Create(
-            self.panel,
-            a31,
-            { BackgroundTransparency = self.window:_elementBackgroundTransparency(self) }
-        )
-        :Play()
-    Dropdown.tweenService
-        :Create(
-            self.panelStroke,
-            a31,
-            { Transparency = self.window:_elementStrokeTransparency(self, false) }
-        )
-        :Play()
-    Dropdown.tweenService
-        :Create(
-            self.searchIcon,
-            a31,
-            { ImageTransparency = 0.5 }
-        )
-        :Play()
+    motion.tween(self.main, { Size = UDim2.new(1, -20, 0, self:_openHeight()) }, a32)
+    motion.tween(self.chevron, { Rotation = 0 }, a33)
+    motion.tween(
+        self.panel,
+        { BackgroundTransparency = self.window:_elementBackgroundTransparency(self) },
+        a31
+    )
+    motion.tween(
+        self.panelStroke,
+        { Transparency = self.window:_elementStrokeTransparency(self, false) },
+        a31
+    )
+    motion.tween(self.searchIcon, { ImageTransparency = 0.5 }, a31)
 
     for _, a116 in self._optionFrames do
         self._renderOptionState(a116, true)
     end
 
+    self:_syncActions()
     self:_syncScrollHint()
     self:_bringIntoView()
 end
@@ -1096,11 +1266,13 @@ function state:_bringIntoView()
         return     end
 
             local a124 = math.min(at.Y + a123 + 8, a121)
-    Dropdown.tweenService
-        :Create(a117, a31, {
+    motion.tween(
+        a117,
+        {
             CanvasPosition = Vector2.new(at.X, a124),
-        })
-        :Play()
+        },
+        a31
+    )
 end
 
 function state:_close()
@@ -1117,46 +1289,16 @@ function state:_close()
     self:_collapseSearch()
     self:_syncScrollHint()
 
-    Dropdown.tweenService
-        :Create(
-            self.chevron,
-            a33,
-            { Rotation = 180 }
-        )
-        :Play()
-    Dropdown.tweenService
-        :Create(
-            self.panel,
-            a31,
-            { BackgroundTransparency = 1 }
-        )
-        :Play()
-    Dropdown.tweenService
-        :Create(
-            self.panelStroke,
-            a31,
-            { Transparency = 1 }
-        )
-        :Play()
-    Dropdown.tweenService
-        :Create(
-            self.searchIcon,
-            a31,
-            { ImageTransparency = 1 }
-        )
-        :Play()
+    motion.tween(self.chevron, { Rotation = 180 }, a33)
+    motion.tween(self.panel, { BackgroundTransparency = 1 }, a31)
+    motion.tween(self.panelStroke, { Transparency = 1 }, a31)
+    motion.tween(self.searchIcon, { ImageTransparency = 1 }, a31)
 
     for _, a125 in self._optionFrames do
         self._renderOptionState(a125, true)
     end
 
-    Dropdown.tweenService
-        :Create(
-            self.main,
-            a32,
-            { Size = UDim2.new(1, -20, 0, description.height(self, 41)) }
-        )
-        :Play()
+    motion.tween(self.main, { Size = UDim2.new(1, -20, 0, description.height(self, 41)) }, a32)
 end
 
 function state:_destroyOption(a126)
@@ -1319,6 +1461,7 @@ function state:Set(a156, a157)
         self._renderOptionState(a159, true)
     end
     self._updateSelectedLabel()
+    self:_syncActions()
 
     if not a157 then
         self.window:_runGuarded(self, self.callback, self:_callbackValue())

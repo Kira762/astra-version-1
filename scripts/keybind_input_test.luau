@@ -1,19 +1,19 @@
--- Editable focus events exercise the built-in Settings field.
+-- Settings binds the menu key through the shared Input element (a typed field).
 local window = Astra:CreateWindow({ name = "Keybind input test" })
 TestPump(0.6)
 window:Show()
 TestPump(0.6)
 window:_buildSettingsContent(window.rfSettings)
-local binding
--- [[Settings controls live inside Collapsible Groups now, so the menu]]
--- [[binding is one level below the tab's top-level elements.]]
-local function scan(elements)
+
+-- [[Settings controls live inside Collapsible Groups, so the menu binding is]]
+-- [[one level below the tab's top-level elements.]]
+local function scan(elements, wanted)
     for _, control in elements do
-        if control.isMenuToggle then
+        if wanted(control) then
             return control
         end
         if control.elements then
-            local found = scan(control.elements)
+            local found = scan(control.elements, wanted)
             if found then
                 return found
             end
@@ -21,85 +21,92 @@ local function scan(elements)
     end
     return nil
 end
-binding = scan(window.rfSettings.elements)
-assert(binding, "Settings must expose the menu binding")
-assert(binding.keyLabel.ClassName == "TextBox", "Binding must be focusable")
-assert(binding.keyLabel.TextEditable == true, "Settings binding must remain editable")
-assert(binding.recording == false, "Editable settings binding must not start recording")
 
-local focused = false
-binding.keyLabel.IsFocused = function() return focused end
-binding.keyLabel.ReleaseFocus = function()
-    focused = false
-    binding.keyLabel.FocusLost:Fire()
-end
+local field = scan(window.rfSettings.elements, function(control)
+    return control.name == "Toggle Keybind"
+end)
+assert(field, "Settings must expose the menu binding")
+assert(field.__type == "Input", "Settings must bind the menu key through the Input element")
+assert(field.input.ClassName == "TextBox", "The binding must be a typed field")
+assert(field.value == "K", "The field shows the bound key's name")
+assert(typeof(window.settings.toggleKeybind) == "EnumItem", "The setting stays an EnumItem")
+
 local saves = 0
-window.SaveSettings = function() saves += 1 end
--- The stub fires TextChanged on assignment, like the engine, so typing is
--- just a property write: no extra manual fire (a second fire would make a
--- dropped "7" indistinguishable from a real backspace).
-local function focus()
-    focused = true
-    local shown = binding.keyLabel.Text
-    binding.keyLabel.Focused:Fire()
-    assert(not binding.recording, "Focus must not start recording")
-    assert(binding.keyLabel.Text == shown, "Focus keeps the current binding visible to replace")
+window.SaveSettings = function()
+    saves += 1
 end
-local function typeText(text)
-    binding.keyLabel.Text = text
+
+-- Typing into the field and leaving it is the commit, exactly like every other
+-- Input element in the library.
+local function typeKey(text)
+    field.input.Text = text
+    field.input.FocusLost:Fire(true)
     TestPump(0.1)
 end
-local function stillEditing()
-    assert(focused, "Editing must keep the field focused")
-    assert(not binding.recording, "Editable input must never record")
+
+local function press(key, processed)
+    Astra.Core.state.userInputService.InputBegan:Fire({
+        UserInputType = Enum.UserInputType.Keyboard,
+        KeyCode = key,
+    }, processed == true)
+    TestPump(0.1)
 end
 
--- The first letter is kept, uppercased, and persisted; all extra text is removed.
-focus()
-typeText("pasted")
-assert(binding.value == Enum.KeyCode.P, "First typed letter must become the binding")
-assert(binding.keyLabel.Text == "P", "Extra typed letters must be removed")
-assert(window.settings.toggleKeybind == Enum.KeyCode.P, "Settings must update")
-assert(saves == 1, "Changed binding must be saved")
-stillEditing()
+typeKey("P")
+assert(window.settings.toggleKeybind == Enum.KeyCode.P, "A typed key must bind")
+assert(saves == 1, "A changed binding must be saved")
+assert(field.value == "P" and field.input.Text == "P", "The field reads back the bound key")
+assert(not window.hidden, "Binding must not hide the window")
 
--- Replacing the value works with one letter, without leaving the field.
-typeText("q2")
-assert(binding.value == Enum.KeyCode.Q and binding.keyLabel.Text == "Q", "Binding must be replaceable with one letter")
-assert(saves == 2, "Replacement must be saved")
-stillEditing()
+typeKey("p") -- Case-insensitive, and the same key: normalised without a save.
+assert(window.settings.toggleKeybind == Enum.KeyCode.P, "Lowercase must reach the same KeyCode")
+assert(field.value == "P", "The field normalises the typed case")
+assert(saves == 1, "Re-typing the bound key must not save again")
 
--- Backspacing clears the binding but leaves the field ready for the next key.
-typeText("")
-assert(binding.value == Enum.KeyCode.Unknown, "Backspace must clear the binding")
-assert(window.settings.toggleKeybind == Enum.KeyCode.Unknown, "Cleared binding must update Settings")
-assert(saves == 3, "Cleared binding must be saved")
-assert(binding.keyLabel.Text == "", "Backspace must leave an empty field, not a stray label")
-stillEditing()
+-- Text-focused input is game-processed, so typing the bound key cannot toggle.
+press(Enum.KeyCode.P, true)
+assert(not window.hidden, "Typing the bound key inside the field must not hide the window")
 
--- A letter typed after the backspace becomes the new binding.
-typeText("j")
-assert(binding.value == Enum.KeyCode.J and binding.keyLabel.Text == "J", "A letter typed after backspacing must rebind")
-assert(saves == 4, "Rebinding after backspace must be saved")
-stillEditing()
+typeKey("space") -- Names people type that are not enum names as typed.
+assert(window.settings.toggleKeybind == Enum.KeyCode.Space, "Aliased and lowercase names must bind")
+assert(field.value == "Space", "The field shows the enum's own name")
+assert(saves == 2, "A changed binding must be saved")
 
--- Non-letters are dropped without replacing or clearing the current value.
-typeText("7")
-assert(binding.value == Enum.KeyCode.J, "Non-letter input must not change the binding")
-assert(binding.keyLabel.Text == "", "Non-letter input must be dropped, not bound")
-assert(saves == 4, "Rejected input must not be saved")
-stillEditing()
+typeKey("MB2")
+assert(window.settings.toggleKeybind == Enum.UserInputType.MouseButton2, "Right mouse must bind")
+assert(field.value == "MB2", "Mouse bindings use the short label the caps use")
+assert(saves == 3, "Mouse binding must save")
 
--- Leaving the field restores the bound key's display.
-binding.keyLabel:ReleaseFocus()
-TestPump(0.1)
-assert(not binding.recording, "Focus loss must not leave a recording session")
-assert(binding.keyLabel.Text == "J", "Focus loss must show the bound key again")
+typeKey("MB1")
+assert(
+    window.settings.toggleKeybind == Enum.UserInputType.MouseButton2 and saves == 3,
+    "Left click must be refused as a menu toggle"
+)
+assert(field.value == "MB2", "A refused key must restore the field")
 
--- Reopening the field still replaces the binding in one letter.
-focus()
-typeText("k")
-assert(binding.value == Enum.KeyCode.K and binding.keyLabel.Text == "K", "A refocused field must rebind with one letter")
-binding.keyLabel:ReleaseFocus()
-TestPump(0.1)
-print("Editable one-letter Settings keybind and persistence passed")
+typeKey("???")
+assert(window.settings.toggleKeybind == Enum.UserInputType.MouseButton2 and saves == 3, "Junk text must not bind")
+assert(field.value == "MB2", "Junk text must restore the field")
+
+typeKey("none")
+assert(window.settings.toggleKeybind == Enum.KeyCode.Unknown, "'none' must clear the binding")
+assert(field.value == "None", "A cleared binding reads None")
+assert(saves == 4, "Clearing must save")
+
+typeKey("")
+assert(window.settings.toggleKeybind == Enum.KeyCode.Unknown and saves == 4, "An empty field stays cleared")
+assert(field.value == "None", "An empty field reads None back")
+
+typeKey("T")
+assert(window.settings.toggleKeybind == Enum.KeyCode.T, "A key must bind after clearing")
+assert(saves == 5, "A changed binding must be saved")
+
+-- Outside the field, the newly saved key still toggles the window.
+press(Enum.KeyCode.T, false)
+TestPump(0.6)
+assert(window.hidden, "The new key must toggle the window")
+press(Enum.KeyCode.T, false)
+TestPump(0.6)
+assert(not window.hidden, "The new key must toggle the window back")
+
+print("Keybind field commits, refusals and toggle passed")

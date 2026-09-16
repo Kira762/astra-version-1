@@ -5,6 +5,7 @@ state.__type = "Tab"
 local constants = script.Parent.Parent.utilities
 
 local Tab = require(constants.Parent.core.state)
+local motion = require(constants.motion)
 local window = require(constants.ordering)
 local props = require(constants.HapticEngine)
 local name = require(script.Parent.Parent.components.search)
@@ -30,9 +31,6 @@ local function customOrder(window, forgetState)
             element._dragConnection:Disconnect()
             element._dragConnection = nil
         end
-                        if window._recordingKeybind == element then
-            window._recordingKeybind = nil
-        end
         if element._outsideClickConn then
             window:Disconnect(element._outsideClickConn)
             element._outsideClickConn = nil
@@ -40,8 +38,9 @@ local function customOrder(window, forgetState)
     end
 end
 
-local element = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local page = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+-- [[Tab state changes ride the motion service's shared specs: `normal` for
+-- the pill's selected/rest states, `snappy` for the page hand-off.]]
+local element, page = "normal", "snappy"
 
 local function selector(elements)
     if elements.mode == "sidebar" then
@@ -177,9 +176,8 @@ function state:_spinGradients()
         return
     end
 
-    local a22 = TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     for _, a23 in { self.topbarItemGradient, self.topbarItemStrokeGradient } do
-        a23.Rotation = 90 - 360         Tab.tweenService:Create(a23, a22, { Rotation = 90 }):Play()
+        a23.Rotation = 90 - 360         Tab.tweenService:Create(a23, motion.spec("spin"), { Rotation = 90 }):Play()
     end
 end
 
@@ -230,13 +228,7 @@ function state:Select(a24)
         if a25 then
             self.window.settingsAction.iconLabel.ImageTransparency = actionTransparency
         else
-            Tab.tweenService
-                :Create(
-                    self.window.settingsAction.iconLabel,
-                    TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-                    { ImageTransparency = actionTransparency }
-                )
-                :Play()
+            motion.tween(self.window.settingsAction.iconLabel, { ImageTransparency = actionTransparency }, "snappy")
         end
     end
 end
@@ -293,10 +285,6 @@ function state:CreateDivider(a32)
     return self:_register(require(script.Parent.divider).new(self, a32))
 end
 
-function state:CreateProgress(a33)
-    return self:_register(require(script.Parent.progress).new(self, a33))
-end
-
 function state:CreateStat(a35)
     return self:_register(require(script.Parent.stat).new(self, a35))
 end
@@ -311,10 +299,6 @@ end
 
 function state:CreateInput(a38)
     return self:_register(require(script.Parent.input).new(self, a38))
-end
-
-function state:CreateKeybind(a39)
-    return self:_register(require(script.Parent.keybind).new(self, a39))
 end
 
 function state:CreateCollapsibleGroup(props)

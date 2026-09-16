@@ -12,16 +12,18 @@ local icon = require(constants.locale)
 local callback = require(constants.HapticEngine)
 local baseCard = require(script.Parent.baseCard)
 local description = require(script.Parent.description)
-local element = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local tapPress = TweenInfo.new(0.11, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+-- [[The click choreography rides the motion service's specs: the tap glyph
+-- dips on `fast` and springs back on `settle` (a small overshoot that reads
+-- as a physical press), the card nudges in on `snappy` and lands back on
+-- `settle`, and the stroke follows hover on `snappy`.]]
+local motion = require(constants.motion)
+local element = "snappy"
+local tapPress = "fast"
+local tapRelease = "settle"
 
--- [[Built-in "tap" glyph for the card's right edge. Candidates are tried in
--- [[catalog order and the first hit wins: `icons.resolve` answers an
--- [[unresolved request with the request itself, so a changed string is the
--- [[signal that a name (or a `custom_asset/` file) actually loaded. `hand-tap`
--- [[is the phosphor hand-with-tap-lines glyph the affordance is named after;
--- [[the rest keep the icon present when a host strips a pack.]]
-local tapCandidates = { "hand-tap", "touch_app", "tabler:hand-click", "mouse-pointer-click", "hand" }
+-- [[Built-in "tap" glyph for the card's right edge. Uses `mouse-pointer-click`
+-- [[(lucide) as the trailing affordance, revealed at 50% transparency.]]
+local tapCandidates = { "mouse-pointer-click" }
 
 local function resolveTapIcon(window, override)
     if override ~= nil and override ~= true then
@@ -121,19 +123,19 @@ function state:_buildFull()
     self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
         callback.click()
         if self.tapScale then
-            Button.tweenService:Create(self.tapScale, tapPress, { Scale = 0.8 }):Play()
+            Button.tweenService:Create(self.tapScale, motion.spec(tapPress), { Scale = 0.78 }):Play()
         end
         Button.tweenService
             :Create(
                 self.stroke,
-                element,
+                motion.spec(element),
                 { Transparency = 1 }
             )
             :Play()
         Button.tweenService
             :Create(
                 self.main,
-                TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
+                motion.spec("snappy"),
                 { Size = UDim2.new(1, -26, 0, description.height(self, 43)) }
             )
             :Play()
@@ -147,19 +149,19 @@ function state:_buildFull()
         end
 
         if self.tapScale then
-            Button.tweenService:Create(self.tapScale, element, { Scale = 1 }):Play()
+            Button.tweenService:Create(self.tapScale, motion.spec(tapRelease), { Scale = 1 }):Play()
         end
         Button.tweenService
             :Create(
                 self.main,
-                TweenInfo.new(0.25, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
+                motion.spec(tapRelease),
                 { Size = UDim2.new(1, -20, 0, description.height(self, 43)) }
             )
             :Play()
         Button.tweenService
             :Create(
                 self.stroke,
-                element,
+                motion.spec(element),
                 { Transparency = self.window:_elementStrokeTransparency(self, false) }
             )
             :Play()
@@ -248,12 +250,12 @@ function state:_buildCompact()
     self.window:ConnectFor(self, self.interact.MouseButton1Click, function()
         callback.click()
         if self.tapScale then
-            Button.tweenService:Create(self.tapScale, tapPress, { Scale = 0.8 }):Play()
+            Button.tweenService:Create(self.tapScale, motion.spec(tapPress), { Scale = 0.78 }):Play()
         end
         Button.tweenService
             :Create(
                 self.stroke,
-                element,
+                motion.spec(element),
                 { Transparency = 1 }
             )
             :Play()
@@ -267,12 +269,12 @@ function state:_buildCompact()
         end
 
         if self.tapScale then
-            Button.tweenService:Create(self.tapScale, element, { Scale = 1 }):Play()
+            Button.tweenService:Create(self.tapScale, motion.spec(tapRelease), { Scale = 1 }):Play()
         end
         Button.tweenService
             :Create(
                 self.stroke,
-                element,
+                motion.spec(element),
                 { Transparency = self.window:_elementStrokeTransparency(self, false) }
             )
             :Play()

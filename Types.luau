@@ -66,8 +66,8 @@ export type GroupProps = {
 -- Definitions use the corresponding element's normal properties plus `type`.
 -- `elements` is allowed only for ordinary Groups; CollapsibleGroups cannot nest.
 export type CollapsibleElementProps = {
-    type: "Button" | "Toggle" | "Switch" | "Slider" | "Dropdown" | "Input" | "Keybind"
-        | "Stat" | "Progress" | "Section" | "Text" | "Changelog" | "Divider" | "Group",
+    type: "Button" | "Toggle" | "Switch" | "Slider" | "Dropdown" | "Input"
+        | "Stat" | "Section" | "Text" | "Changelog" | "Divider" | "Group",
     elements: { CollapsibleElementProps }?,
     [string]: any,
 }
@@ -130,28 +130,18 @@ export type InputProps = {
     callback: ((value: string) -> ())?,
 }
 
-export type KeybindProps = {
-    name: string?,
-    icon: (string | number)?,
-    flag: string?,
-    value: (EnumItem | string)?,     forgetState: boolean?,     editable: boolean?,
-    isMenuToggle: boolean?,     hold: boolean?,     holdThreshold: number?,     callback: ((value: EnumItem | boolean) -> ())?,     onChanged: ((key: EnumItem) -> ())?, }
-
 export type StatProps = {
     name: string?,
     icon: (string | number)?,
     prefix: string?,
     suffix: string?,
-    value: number?,
+    value: (number | string)?,
     display: string?,     compact: boolean?,
+    -- Show the value as a single letter badge (no icon) instead of the numeric
+    -- readouts; text values use this automatically unless set to false.
+    letter: boolean?,
     changeMode: string?,     changeBaseline: string?,     numberEasing: boolean?,
 }
-
-export type ProgressProps = {
-    name: string?,
-    icon: (string | number)?,
-    range: { number }?,     value: number?,
-    steps: number?,     text: string?,     format: ((value: number, min: number, max: number) -> string)?,     showValue: boolean?,     indeterminate: boolean?, }
 
 export type NotifyProps = {
     title: string?,
@@ -221,24 +211,10 @@ export type Input = Moveable & Lockable & {
     Set: (self: Input, value: string, skipCallback: boolean?) -> (),
 }
 
-export type Keybind = Moveable & Lockable & {
-    value: EnumItem,
-    Set: (self: Keybind, value: EnumItem | string, skipChanged: boolean?) -> (),
-}
-
 export type Stat = Moveable & {
     value: number,
     Set: (self: Stat, value: number) -> (),
     ResetBaseline: (self: Stat, value: number?) -> (),
-}
-
-export type Progress = Moveable & {
-    value: number,
-    Set: (self: Progress, value: number) -> (),
-    Get: (self: Progress) -> number,
-    GetPercentage: (self: Progress) -> number,     SetRange: (self: Progress, min: number, max: number) -> (),
-    SetText: (self: Progress, text: string?) -> (),     SetIndeterminate: (self: Progress, state: boolean) -> (),
-    Remove: (self: Progress) -> (),
 }
 
 export type Section = Moveable & {}
@@ -293,9 +269,7 @@ export type Tab = {
     CreateSlider: (self: Tab, props: SliderProps) -> Slider,
     CreateDropdown: (self: Tab, props: DropdownProps) -> Dropdown,
     CreateInput: (self: Tab, props: InputProps) -> Input,
-    CreateKeybind: (self: Tab, props: KeybindProps) -> Keybind,
     CreateStat: (self: Tab, props: StatProps) -> Stat,
-    CreateProgress: (self: Tab, props: ProgressProps) -> Progress,
     CreateSection: (self: Tab, props: SectionProps) -> Section,
     CreateText: (self: Tab, props: TextProps) -> Text,
     CreateChangelog: (self: Tab, props: ChangelogProps) -> Changelog,

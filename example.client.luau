@@ -2,17 +2,10 @@
 -- [[Everything lives in one tab so startup pacing and every element type can be
 -- [[tested without navigating through a collection of duplicate demo tabs.]]
 
-local bundleSource = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
-local compile = loadstring or load
-assert(type(compile) == "function", "[Astra] This executor does not provide loadstring/load.")
-local bundleLoader, compileError = compile(bundleSource)
-assert(type(bundleLoader) == "function", "[Astra] Bundle compilation failed: " .. tostring(compileError))
-local Astra = bundleLoader()
-
-assert(
-    type(Astra) == "table" and type(Astra.CreateWindow) == "function",
-    "[Astra] Failed to load Astra bundle."
-)
+-- [[The one and only bundle loader: fetch the published bundle and call the
+-- [[chunk it compiles to. `loadstring` needs an executor — plain Studio does
+-- [[not provide it — and the URL must be the raw file of a public repo.]]
+local Astra = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"))()
 
 local window = Astra:CreateWindow({
     name = "Astra Element Test",
@@ -34,22 +27,13 @@ elements:CreateText({
     text = "This single tab builds every Astra element so startup batching and layout pacing are easy to observe.",
 })
 
-local progress = elements:CreateProgress({
-    name = "Progress",
-    range = { 0, 100 },
-    value = 42,
-    steps = 10,
-    suffix = "%",
-    showValue = true,
-})
-
 local stat = elements:CreateStat({
     name = "Stat",
     value = 128,
     suffix = " requests",
     compact = true,
     changeMode = "delta",
-    changeBaseline = 100,
+    changeBaseline = "initial",
 })
 
 elements:CreateDivider({ text = "Interactive elements" })
@@ -58,9 +42,8 @@ elements:CreateButton({
     name = "Button",
     icon = "hand-tap",
     callback = function()
-        progress:Set(math.random(0, 100))
         stat:Set(stat.value + 1)
-        window:Notify({ title = "Button", content = "Progress and stat were updated." })
+        window:Notify({ title = "Button", content = "Stat was updated." })
     end,
 })
 
@@ -79,7 +62,7 @@ elements:CreateSlider({
     increment = 5,
     suffix = "%",
     callback = function(value)
-        progress:Set(value)
+        stat:Set(value)
     end,
 })
 
@@ -100,26 +83,13 @@ elements:CreateDropdown({
     placeholder = "Choose tags",
 })
 
+-- [[Keep the example to the original Input element: one useful text field,
+-- [[not extra one-off input rows.]]
 elements:CreateInput({
     name = "Input",
     placeholder = "Type something",
     callback = function(value)
         window:Toast({ title = "Input", subtitle = tostring(value) })
-    end,
-})
-
-elements:CreateInput({
-    name = "Numeric input",
-    placeholder = "Enter a number",
-    numeric = true,
-    clearOnFocus = true,
-})
-
-elements:CreateKeybind({
-    name = "Keybind",
-    value = Enum.KeyCode.RightShift,
-    callback = function()
-        window:Toast({ title = "Keybind", subtitle = "Shortcut activated" })
     end,
 })
 
@@ -148,12 +118,12 @@ group:CreateButton({
 })
 group:CreateToggle({ name = "Grouped toggle", value = false })
 
--- [[The declarative group exercises the CollapsibleGroup path and every child
--- [[constructor, including the Switch alias used by declarative definitions.]]
+-- [[The declarative group exercises the CollapsibleGroup path with useful child
+-- [[rows; the standalone Input above covers the original input element.]]
 elements:CreateCollapsibleGroup({
     name = "Collapsible Group",
     icon = "panels-top-left",
-    description = "Expand this card to inspect every declarative child type.",
+    description = "Expand this card to inspect the useful declarative child rows.",
     elements = {
         { type = "Section", name = "Declarative children" },
         { type = "Text", name = "Text child", text = "All child controls are constructed while the group is collapsed." },
@@ -162,10 +132,7 @@ elements:CreateCollapsibleGroup({
         { type = "Switch", name = "Switch alias child", value = false },
         { type = "Slider", name = "Slider child", range = { 0, 100 }, value = 25 },
         { type = "Dropdown", name = "Dropdown child", options = { "One", "Two" }, value = "One" },
-        { type = "Input", name = "Input child", placeholder = "Child input" },
-        { type = "Keybind", name = "Keybind child", value = Enum.KeyCode.RightControl },
         { type = "Stat", name = "Stat child", value = 42, suffix = " checks" },
-        { type = "Progress", name = "Progress child", range = { 0, 100 }, value = 62, steps = 10, suffix = "%" },
         { type = "Divider", text = "Nested diagnostics" },
         {
             type = "Changelog",

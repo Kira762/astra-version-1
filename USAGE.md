@@ -6,24 +6,54 @@ Load Astra and build your first window in a few lines.
 
 ## Load the library
 
-Two ways in, depending on where you run:
+One loader, one line — this is what `example.client.luau` does:
 
 ```lua
--- Studio / Rojo (recommended): Astra is a ModuleScript in ReplicatedStorage
-local Astra = require(game:GetService("ReplicatedStorage").Astra)
+local Astra = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau"))()
 ```
 
-```lua
--- Executor: the example loads the bundle from the repo and compiles it.
--- This is what example.client.luau does:
-local bundleSource = game:HttpGet("https://raw.githubusercontent.com/Kira762/astra-version-1/main/version-1.luau")
-local compile = loadstring or load
-local bundleLoader = compile(bundleSource)
-local Astra = bundleLoader()
+Three things have to be right for that line to return a table:
+
+- **The URL is the raw file of a public repo**, pointing at the published bundle
+  `version-1.luau`. It is a generated artifact — load the single bundle, never the
+  modular tree. `game:HttpGet` also needs `HttpService` requests enabled.
+- **The runtime has `loadstring`.** Executors provide it; plain Studio does not, so in
+  Studio / Rojo the library is a ModuleScript and you `require` it instead
+  (`require(game:GetService("ReplicatedStorage").Astra)`). That is a load path, not a
+  second loader — nothing that fetches the bundle does anything else.
+- **The trailing `()` is there.** `loadstring(text)` only *compiles*; it returns the
+  chunk, and calling it is what runs Astra and hands back the module table. `local
+  Astra = loadstring(...)` without the call gives you a function, and every later
+  `Astra:CreateWindow` fails with `attempt to index a function value`.
+
+**What a failed load looks like.** `loadstring` does not throw when the text will not
+compile — it returns `nil` plus the error, so the one-liner reports nothing more useful
+than
+
+```
+rAnDoMcHuNkNaMe:1: attempt to call a nil value
+Stack Begin
+Script 'LocalScript', Line 1
+Stack End
 ```
 
-The bundle (`version-1.luau`) is a generated artifact — require/load the single
-bundle, never the modular tree, when running outside Rojo.
+That message is about the *loader*, not about a bug inside Astra: the random name is the
+executor's chunk, `Line 1` is the line holding the call, and "attempt to call a nil
+value" only means the compiled chunk was `nil`. Read it as "the text I fetched never
+compiled" and check, in order:
+
+1. **The fetch returned something that is not Luau.** A private repository, a wrong
+   branch/file name, or a rate limit all hand back an HTML error page (`404: Not
+   Found`, `<html>…`) which never compiles. `print(game:HttpGet(url):sub(1, 120))`
+   settles it in one line.
+2. **The source really does have a syntax error.** Published files are compile-checked
+   with `scripts/check_syntax.sh`; run it after editing anything here, then regenerate
+   with `node scripts/generate_bundle.js`.
+
+Once the line returns a table the compile is fine, and any later
+`attempt to call a nil value` names the Astra line that called it — a missing
+element method, a `Create…` on the wrong parent (Collapsible Groups live on a
+Tab, not on a Group), or props passed positionally instead of as one table.
 
 ---
 
@@ -168,7 +198,7 @@ local col = row:CreateGroup({ direction = "column" }) -- nested column
 col:CreateToggle({ name = "Left 1" })
 ```
 
-Tab methods: `CreateButton`, `CreateToggle`, `CreateSlider`, `CreateDropdown`, `CreateInput`, `CreateKeybind`, `CreateStat`, `CreateProgress`, `CreateSection`, `CreateText`, `CreateChangelog`, `CreateDivider`, `CreateGroup`, and optional `CreateCollapsibleGroup`.
+Tab methods: `CreateButton`, `CreateToggle`, `CreateSlider`, `CreateDropdown`, `CreateInput`, `CreateStat`, `CreateSection`, `CreateText`, `CreateChangelog`, `CreateDivider`, `CreateGroup`, and optional `CreateCollapsibleGroup`.
 
 Groups support: `CreateButton`, `CreateToggle`, `CreateSlider`, `CreateDropdown`, `CreateStat`, `CreateSection`, `CreateText`, `CreateDivider`, `CreateGroup`. Collapsible Groups can only be created directly on a tab.
 
@@ -181,7 +211,6 @@ tab:CreateButton({ name = "Click Me", icon = "play", callback = function() end }
 tab:CreateSlider({ name = "Sensitivity", range = { 1, 10 }, value = 5, suffix = "x", minimal = true, callback = function(v, dragging) end })
 tab:CreateDropdown({ name = "Preset", options = { "Low", "Medium", "High" }, value = "Medium", multiSelect = true, placeholder = "Pick items", callback = function(s) end })
 tab:CreateInput({ name = "Name", placeholder = "Type here", numeric = true, clearOnFocus = true, callback = function(t) end })
-tab:CreateKeybind({ name = "Toggle Panel", value = Enum.KeyCode.F3, isMenuToggle = true, callback = function(v) end })
 ```
 
 ### Button
@@ -250,35 +279,13 @@ tab:CreateInput({
 })
 ```
 
-### Keybind
-```lua
-tab:CreateKeybind({
-    name = "Toggle Panel", value = Enum.KeyCode.F3,
-    isMenuToggle = true, hold = true, holdThreshold = 0.2,
-    callback = function(value) end, onChanged = function(key) end,
-})
-```
-
 ### Stat
 ```lua
 local s = tab:CreateStat({ name = "Kills", value = 128, prefix = "", suffix = " kills" })
 s:Set(200)
 s:ResetBaseline(0)
 ```
-Extra props: `display`, `compact`, `changeMode`, `changeBaseline`, `numberEasing`.
-
-### Progress
-```lua
-local p = tab:CreateProgress({ name = "Download", range = { 0, 100 }, value = 35 })
-p:Set(80)
-p:Get()                 -- current value
-p:GetPercentage()       -- 0–100
-p:SetRange(0, 500)
-p:SetText("Downloading...")
-p:SetIndeterminate(true)
-p:Remove()
-```
-Extra props: `steps`, `text`, `format(value, min, max)`, `showValue`, `indeterminate`.
+Extra props: `display` (`"value"` | `"change"`), `compact`, `changeMode` (`"percentage"` | `"delta"`), `changeBaseline` (`"previous"` (default) | `"initial"` — which value a change is measured against; any other value, a number included, is read as `"previous"`, so `stat:ResetBaseline(number)` is the way to set a numeric baseline), `numberEasing`.
 
 ### Text / Divider / Group
 ```lua
@@ -330,7 +337,7 @@ The settings tabs are:
 
 | Tab | Contents |
 |---|---|
-| **General** | Menu Toggle keybind, unlock-cursor toggle, welcome toast toggle, Window Behavior (prevent duplicate windows, keep window on screen, draggable capsule, reset window & capsule positions), and Performance & Motion (haptics, animation speed). |
+| **General** | Menu Toggle keybind field — type a key name (`K`, `Space`, `MB2`) and click away to bind it, `none` or an empty field to unbind — plus the unlock-cursor toggle, welcome toast toggle, Window Behavior (prevent duplicate windows, keep window on screen, draggable capsule, reset window & capsule positions), and Performance & Motion (haptics, animation speed). |
 | **Appearance** | Theme dropdown + Apply (popup confirm), Bar Layout dropdown (Default Topbar / Sidebar / Collapsed Sidebar), and Profile card controls (Show profile / Profile side / Reveal profile details). |
 | **Persistence** | Auto Save Config / Auto Load Config toggles; Saved-configurations dropdown + name input + Save/Load/Delete. |
 | **About** | Library info and links. |
@@ -421,19 +428,26 @@ remove files. Qualified names are never shadowed by the folder.
 ### Motion (animation)
 
 Astra's window transitions — hover, element reveal, the window entrance, the
-result flashes — run through one service, so your own animations can use the
-same timing and answer the same "Animation speed" setting the user picked in
-Performance → Motion. (The entrance queue that spaces the notification and
-toast arrivals paces itself through `Motion.step`, so it stretches and
-shortens with that setting too; each card's own entrance tweens still run on
-their component-local specs.)
+result flashes, every card's entrance and dismissal — run through one service,
+so your own animations can use the same timing and answer the same
+"Animation speed" setting the user picked in Performance → Motion. (The
+entrance queue that spaces the notification and toast arrivals paces itself
+through `Motion.step`, so it stretches and shortens with that setting too;
+the only curves outside the vocabulary are two delayed glow beats, and those rescale with the
+profile as well.)
 
 ```lua
 -- Animate with the library's own specs.
 Astra.Motion.tween(frame, { BackgroundTransparency = 0.5 }, "snappy")
 
--- Specs: instant, fast, snappy, normal, smooth, emphasized, pop, exit,
--- spring, spin, drift. A TweenInfo works anywhere a name does.
+-- Specs: instant, fast, snappy, normal, smooth, emphasized, pop, glide,
+-- exit, spring, settle, spin, drift. A TweenInfo works anywhere a name does.
+--
+-- The vocabulary is a system: entrances decelerate (Out), exits accelerate
+-- (`exit` is In — a dismissal is quicker than its entrance), lateral state
+-- moves ease InOut (`glide` — the window folding into its capsule), and the
+-- playful surfaces get a small Back overshoot (`pop` for the shell, `settle`
+-- for small elements, `spring` for drag landings).
 Astra.Motion.tween(stroke, { Color = Color3.new(1, 1, 1) }, TweenInfo.new(0.3))
 
 -- Settle work after the animation, without racing a synchronous completion.
@@ -464,7 +478,7 @@ window:SetTranslator(function(source, localeId) return ... end)
 
 ### Full example
 
-See `example.client.luau` — a 20-tab example (Home, Controls, Appearance, Information, Changelog, Updates, plus 15 labelled test tabs) that loads the bundle with the remote loader and exercises tags, every element type, groups, and the Changelog element end to end.
+See `example.client.luau` — a single-tab example that loads the bundle with the one-line loader above and builds every element type (including ordinary and Collapsible Groups and the Changelog element) end to end.
 
 ---
 
@@ -576,7 +590,7 @@ local playerControls = tab:CreateCollapsibleGroup({
 ```
 
 **Supported types:** `Button`, `Toggle`, `Switch` (declarative alias of the
-toggle control), `Slider`, `Dropdown`, `Input`, `Keybind`, `Stat`, `Progress`,
+toggle control), `Slider`, `Dropdown`, `Input`, `Stat`,
 `Section`, `Text`, `Changelog`, `Divider`, and ordinary `Group`. Each uses the
 same properties and implementation as its normal `Create…` method, including
 the optional `description` helper line. `elements` can be omitted for an empty
@@ -595,8 +609,8 @@ are rejected before creating any UI.
 - Expansion uses Astra's motion service, including the instant-motion setting.
 - Values, flags and running features remain active when collapsed. Closing and
   reopening do not recreate controls, reset them, or rerun their value callbacks.
-- Closing cancels an uncommitted input edit, closes open dropdowns, and ends
-  keybind recording; already committed values remain unchanged.
+- Closing cancels an uncommitted input edit and closes open dropdowns;
+  already committed values remain unchanged.
 - Search includes child names and temporarily expands matching groups. Closing
   search restores their previous expansion state.
 - Children render at the same width as standalone elements, and the header
@@ -609,6 +623,6 @@ are rejected before creating any UI.
 - `MoveTo`, `MoveToTop`, `MoveToBottom`, `MoveUp`, `MoveDown`, `Lock`, and `Unlock`
   work on the container. Created child handles are also available in its
   `elements` array, in definition order, just like an ordinary Group.
-- Controls are built in startup batches even while collapsed, so keybinds and
-  saved flags are usable before the first expansion. The optional feature adds
+- Controls are built in startup batches even while collapsed, so saved flags
+  are usable before the first expansion. The optional feature adds
   no container instances unless you explicitly create one.

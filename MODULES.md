@@ -25,7 +25,7 @@ Exported names (typed surface is `Types.luau`'s `Astra`): `CreateWindow`, `Icons
 `CreateWindow` side effects: enforces the anti-duplicate guard (persisted `antiWindowDuplicate` setting, per-window opt-out via `settings.antiWindowDuplicate`), in secure mode preloads window images (`Image.preload` → failure `Notify`) and swaps in the brand fonts via `ChangeTheme({ Font, TitleFont })` once the entrance has landed (a theme pass over every instance the window owns is not something to spend while the window is still arriving; `FONT_SETTLE_BUDGET` bounds the wait so a window that never shows still gets its font), then auto-`Show()`s the window on the next frame (a `task.defer` plus one heartbeat, so a script's first synchronous `CreateTab` calls land before the shell appears; remaining constructors stream in behind it in small budget-limited batches until the build goes quiet, and an explicit `Hide()` before that tick cancels it via `_autoShowCancelled`). The two secure-mode branches (optional-icon preload, brand-font swap) run as sibling threads under one guard.
 
 ### `example.client.luau`
-Usage example (not minified). Loads the bundle with `game:HttpGet` + `loadstring`, then builds a 20-tab window: Home, Controls, Appearance, Information, Changelog, Updates, plus 15 labelled test tabs. Demonstrates window tags, every element type, groups, and the `CreateChangelog` element (including a runtime `changelog:Add`), and ends with an explicit `home:Select()`.
+Usage example (not minified). Loads the bundle with the single-line loader — `local Astra = loadstring(game:HttpGet(url))()` — then builds one tab holding every supported element type: Section, Text, Stat, Divider, Button, Toggle, Slider, a single-select and a multi-select Dropdown, Input, Changelog, an ordinary Group and a Collapsible Group of declarative children. It ends with an explicit `elements:Select()` so the run is deterministic.
 
 ---
 
@@ -137,6 +137,15 @@ re-clamps for the card that comes back), `_setLayoutMode`, `_toggleSettingsMode`
 
 ### `components/settings.luau`
 Dedicated settings component providing UI generation and management for Astra's built-in settings tabs (Appearance, Persistence, About, and General controls):
+- `keyLabel(item)` / `parseKey(text)` — the menu binding's display and parse
+  rules. The General → Toggle Keybind row is an ordinary `Input` field, so the
+  label writes the bound key's name into it (`None` when unbound, `MB2`/`MB3`
+  for mouse buttons) and the parse reads a typed name back into the `EnumItem`
+  `window.settings.toggleKeybind` holds: canonical names for the keys people
+  type (`k`, `space`, `left shift`, `f7`, `5`, `mb2`/`rmb`), separators dropped,
+  an empty field or `none` clearing the binding, left click refused, and any
+  unlisted name left to an `Enum.KeyCode`/`Enum.UserInputType` lookup. Text
+  that names no key is refused with the previous binding restored.
 - `buildUI(window)` — instantiates the settings tab shells on demand.
 - `buildContent(window, tab)` — lazily constructs controls within a given settings tab upon first selection.
 - `toggleSettingsMode(window)` — toggles between user tabs and settings tabs.
@@ -306,8 +315,33 @@ that ran while hidden only parks `_restorePosition`) and `_applyWindowSize`
 the screen lacks room for the pair (portrait phones) and with
 hide/minimise/close.
 
-### `components/drag.luau`
-- `utility` — `core.state` alias. Locals `a1..a8` — drag input state (start pos, delta thresholds, RenderStepped connection).
+### `components/drag.luau` (the detached drag handle)
+- `Drag.new(window)` — builds the handle under the window: an 80x16 invisible
+  hitbox (`self.drag`) holding the visible pill (`self.dragCosmetic`, 48x3 at
+  rest) and the `dragInteract` TextButton, all parented to `window.screenGui`
+  so the handle rides screen coordinates. `handleGap` (22) is how far the
+  pill's centre sits below the window's bottom edge; `Window:_syncDragBar` and
+  the window's own `dragHandleGap` place it with the same number.
+- The pill's look is four named specs — `handleHover` (64x3, 0.5), `handleGrab`
+  (56x3, 0), `handleIdle` (48x3, 0.7) and `handleParked` (0x3, 1.0) — so every
+  state writes the same values. Hovering the hitbox reveals the hover look;
+  dragging from it shows the grab look and moves the window with the pointer
+  (positions lerped per frame, `constrainPosition` clamps through
+  `settings.keepOnScreen`); letting go settles the pill through
+  `restingLook(self)` — the hover look while the pointer is still on the
+  handle, the idle hint otherwise.
+- Lifecycle, driven by the window: `Drag:enable()` (the hitbox becomes
+  reachable, the pill is left where its own states put it), `Drag:disable()`
+  (off at once, pill parked), `Drag:fadeOut(spec)` (pill shrinks away first,
+  hitbox follows when the fade has read — a token makes a pending hide stand
+  down if an entrance claims the handle first) and `Drag:setMoving(active)`
+  (the window is being moved by its topbar: pill brightened for the move,
+  settled back when it ends). `Window:Show`/`Hide`/`Close`/`ToggleMinimise`
+  and both settle paths (`_firstShow`, `_quickRestore`) call these; nothing
+  pokes `self.drag.drag.Visible` any more.
+- State fields a test can read: `dragging`, `moving`, `hovering` and
+  `_handleToken`; the observable handle is `window.drag.drag.Visible` plus the
+  pill's `Size`/`BackgroundTransparency`.
 
 ### `components/action.luau`, `chrome.luau`, `tabSelector.luau`
 Small window-furniture classes; top-level `utility` require + constructor locals for created frames/buttons.
@@ -407,9 +441,8 @@ All element classes share the pattern:
 Per-element specifics:
 - `toggle.luau` — track/knob frames, accent tween locals.
 - `slider.luau` — fill frame, handle, drag math locals (`a1..a12`: range min/max, step, value normalization).
-- `dropdown.luau` — button, list frame, option rows (built on first open, `_materialiseOptions`/`_buildOptionAt`), highlight, search filter.
+- `dropdown.luau` — button, list frame, option rows (built on first open, `_materialiseOptions`/`_buildOptionAt`), highlight, search filter, and the multi-select action row: a checkbox in the rows' own 16px glyph slot (a drawn 12px outline when off, the rows' check glyph when on) with Select all, which toggles the visible options, and Clear with its pack bin, which removes only those. The box is re-synced by every path that can move the selection or the visible set (`_syncActions`), and only a multi-select dropdown builds any of it.
 - `input.luau` — TextBox, placeholder/focus locals, validation callback.
-- `keybind.luau` — listening state flag, input connection. Editable fields keep the current key selected, accept exactly one letter (extras are truncated, non-letters dropped), unbind on backspace while staying focused for the next key, and restore the bound key's display on focus loss; capture mode is unchanged.
 - `collapsibleGroup.luau` — optional declarative container for all tab element
   types and ordinary Groups. Validates definitions, rejects nested collapsibles,
   marks descendants as visually nested (transparent cards/no child outlines),
@@ -431,7 +464,7 @@ Per-element specifics:
 - `tab.luau` — tab class: `tabPage` (ScrollingFrame), `_register(element)` pipeline into `window.controls[flag]`, selector button visuals.
 - `group.luau`, `section.luau`, `tabSection.luau` — container classes with UIListLayout locals.
 - `changelog.luau` — release-history element (`__type = "Changelog"`): normalizes `ChangelogEntry`/`ChangelogChange` props, maps symbols (`+`/`-`/`~`, or words like "added"/"removed"/"changed") to green/red/amber, fades entries in, supports `Set`/`Refresh`/`Add(entry, prepend?)`/`Clear`.
-- `divider.luau`, `progress.luau`, `stat.luau`, `text.luau` — display and interaction elements.
+- `divider.luau`, `stat.luau`, `text.luau` — display and interaction elements.
 - `button.luau` — action card with a built-in right-edge tap glyph (`tapIcon` opts out or replaces it), themed through `ContentColor`, revealed with the card, and pulsed on press.
 - `baseCard.luau` — shared card container and header layout helper for element modules.
 
@@ -549,12 +582,16 @@ Per-element specifics:
 - `constants.luau` — static constants incl. `icons` map (with `profileAvatarPlaceholder`).
 - `motion.luau` — the library's animation service: named `TweenInfo` specs
   created once (`instant`, `fast`, `snappy`, `normal`, `smooth`, `emphasized`,
-  `pop`, `exit`, `spring`, `spin`, `drift`), `motion.tween(instance, props,
-  spec, onCompleted)` which drops already-satisfied properties and cancels an
-  in-flight tween that would fight over the same property, `motion.step(base)`
-  for cascade pacing, and the speed profiles (`relaxed` 1.35x, `normal` 1x,
-  `snappy` 0.7x, `instant` = no animation) behind the window's "Animation
-  speed" setting. Public as `Astra.Motion`.
+  `pop`, `glide`, `exit`, `spring`, `settle`, `spin`, `drift` — entrances
+  decelerate, exits accelerate on `exit`'s In curve, lateral state moves ride
+  `glide`'s InOut, `pop`/`settle`/`spring` carry the Back-overshoot family),
+  `motion.tween(instance, props, spec, onCompleted)` which drops
+  already-satisfied properties and cancels an in-flight tween that would fight
+  over the same property, `motion.spec(info)` for rescaling a bespoke
+  TweenInfo (delayed glow beats, the odometer reel) with the active profile,
+  `motion.step(base)` for cascade pacing, and the speed profiles (`relaxed`
+  1.35x, `normal` 1x, `snappy` 0.7x, `instant` = no animation) behind the
+  window's "Animation speed" setting. Public as `Astra.Motion`.
 - `persistenceSettings.luau` — settings JSON encode/decode; `activeSubTab` round-trips here.
 - `persistenceWrite.luau` — atomic write helper.
 - `persistenceConfig.luau`, `persistencePaths.luau` — window-config serialization and key paths.
@@ -585,15 +622,18 @@ Per-element specifics:
 | `generate_bundle.js` | Rebuilds `version-1.luau` from the modular tree. |
 | `check_requires.py` | Static require graph: every module resolves, no cycles. |
 | `check_instance_fields.py` | Fails on custom-field writes on instances (the `_profileGeneration` crash class). |
+| `check_syntax.sh` | Compiles every published file (modular tree, `example.client.luau`, `version-1.luau`). A syntax error in a loadstring'd bundle is invisible to the user — it only shows up as `attempt to call a nil value` at line 1 of the executor's chunk — so this is the gate that catches it here. |
 | `profile_{compact,centering,reveal,details}_test.sh` | Profile card suites: geometry/visibility, window-pair centring, the reveal toggle, and the redesigned card (tokens, pinned header + scrolling, live server/session values, license rows, tooltip, no-player case). |
 | `sidebar_tab_sizing_test.sh`, `smoke_test_bundle.sh` | Rail sizing (name-driven width, cap, restore) and a bundle smoke run; also the collapsed rail: rows are icon-only (title hidden, content centred, no expanded padding) whether they were collapsed in place, rebuilt by a layout switch, or created while the rail was already icon-only, and a capped title re-constrains after that rebuild. |
 | `collapsible_group_test.sh` | Collapsible groups: every declarative element type, state/callbacks, the connected-card geometry and surface recipe, and the corner treatment (band's top arcs matching the container, body clipper's bottom arcs). |
 | `instance_budget_test.sh` | Per-element instance ceilings plus a realistic-page budget — the frame-time proxy guard. |
 | `odometer_test.sh` | Odometer readout: lazy row materialisation, and the resting row still showing the value's digit through plain/wrap/roll-down transitions. |
 | `dropdown_rows_test.sh` | Dropdown option rows: none (and no search bar) while closed whatever the list length, one per option in order on open plus the bar once, the rendered selected/unselected state and corner tiers, reopening reusing the rows, edits and picks made while closed, and the search filter. |
+| `dropdown_actions_test.sh` | The multi-select action row: only a multi-select dropdown builds it, the checkbox's two states (the drawn outline against the rows' check glyph), Select all filling the visible set and toggling it back off, Clear sparing what the filter hides, the box following picks and filters, the 32px row in the open height, and the bin resolving to the pack's trash icon. |
 | `tab_elements_test.sh` | Tab elements: only the selected tab is walked on a show/hide, a tab opened later shows its elements in the same frame and state, the search shows every tab it renders, and a late element shows with its tab. |
 | `toggle_switch_test.sh` | Switch geometry: one set of metrics, mirrored resting states, equal clearance, the sheen under the knob, and the animated positions matching the built ones. |
-| `input_field_test.sh` | Field-box corners: the Input field and the Keybind cap round with the theme's `ElementCornerRadius` as theme bindings (pixel radii, never capsule scales), re-stated on a theme switch, and shared with their element cards. |
+| `input_field_test.sh` | Field-box corners: the Input field rounds with the theme's `ElementCornerRadius` as a theme binding (pixel radius, never a capsule scale), re-stated on a theme switch, and shared with its element card. |
+| `keybind_input_test.sh` | Menu-toggle binding: the Settings menu binding is an `Input` field whose typed text commits an `EnumItem` (case/alias tolerant, `MB2`, `none`/empty clearing), refuses junk and left click without saving, keeps typing inside the field from toggling the window, and still toggles it afterwards. |
 | `slider_travel_test.sh` | Slider knob travel: the capsule's centre stays half a knob inside each track end (resting, held and after release), so it never overlaps the track end or card edge at max/min, and the fill ends at the knob's centre. |
 | `icons_test.sh` | Icon resolver: name-only lookup across the packs in priority order (and how lazily they load), qualified `pack:name`, case sensitivity, unknown-pack warnings, custom assets (one import per path, memoised misses, the `listfiles` index), cache-key separation, and `window:ResolveIcon`. |
 | `motion_test.sh` | Motion service: shared specs, time scale + its cache, profiles, tween ownership (cancel-on-overlap vs. unrelated properties), the no-op and animation-off paths, the window's "Animation speed" setting, and hover going through the service. |

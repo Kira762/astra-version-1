@@ -1,5 +1,14 @@
 #!/bin/sh
-# Run the Settings menu-toggle binding regressions against the standalone bundle.
+# Runtime test for the button's click choreography: the card and the compact
+# row both press, run their callback, and spring back.
+#
+# The element used to call `motion.spec(...)` in its click handler without
+# ever requiring the motion module, so the first tap died with "attempt to
+# index nil with 'spec'" before the user's callback could run.
+#
+# Assembles: mini Roblox stubs + bundle (wrapped in a function to keep
+# `local` scoping) + assertions, writes it to a temp file, and runs it under
+# the Luau CLI from PATH if available, else /tmp/luau.
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -25,7 +34,7 @@ if [ -z "$LUAU_BIN" ]; then
 fi
 
 TMPDIR_LOCAL="${TMPDIR:-/tmp}"
-OUT="$TMPDIR_LOCAL/astra_keybind_input_$$.luau"
+OUT="$TMPDIR_LOCAL/astra_button_click_$$.luau"
 trap 'rm -f "$OUT"' EXIT
 
 {
@@ -37,13 +46,13 @@ trap 'rm -f "$OUT"' EXIT
 	echo ""
 	echo "end)()"
 	echo ""
-	cat "$ROOT/scripts/keybind_input_test.luau"
+	cat "$ROOT/scripts/button_click_test.luau"
 } > "$OUT"
 
 if "$LUAU_BIN" "$OUT"; then
-	echo "KEYBIND INPUT TEST PASSED"
+	echo "BUTTON CLICK TEST PASSED"
 	exit 0
 else
-	echo "KEYBIND INPUT TEST FAILED (see above)" >&2
+	echo "BUTTON CLICK TEST FAILED (see above)" >&2
 	exit 1
 fi
