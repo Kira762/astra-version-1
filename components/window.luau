@@ -24,7 +24,7 @@ local themes = require(script.Parent.Parent.themes)
 local Window = {}
 Window.__index = Window
 
--- [[Element reveals, theme cross-fades and the toast stack's lane changes all
+-- [[Element reveals, theme cross-fades and the notification stack's lane changes all
 -- ride the motion service's shared specs (see utilities/motion.luau) instead
 -- of per-call TweenInfo values: one vocabulary, one time scale, one owner per
 -- animated property.]]
@@ -39,10 +39,7 @@ local contentRevealBeat = 0.12
 local collapsedWideSize = UDim2.fromOffset(185, 50)
 local collapsedIconOnlySize = UDim2.fromOffset(50, 50)
 local collapsedPosition = UDim2.new(0.5, 0, 0, 20)
-local toastsTopPosition = UDim2.new(0.5, 0, 0, 12)
-local toastsTopWhenCollapsed = UDim2.new(0.5, 0, 0, collapsedPosition.Y.Offset + collapsedWideSize.Y.Offset + 12)
 
-local toastWidth = 320
 
 local compactRowHeight = 41
 
@@ -75,7 +72,7 @@ local viewportCheckInterval = 2
 local constructionFrameBudget = 0.003
 local constructionInstanceBudget = 48
 
--- Toasts and notifications share one entrance lane. Their 0.6s transitions do
+-- Notifications share one entrance lane. Their 0.6s transitions do
 -- not overlap, but already-visible messages are still allowed to remain in
 -- their normal stacks while the next one enters.
 -- The first open reads as an entrance instead of one large visibility flip:
@@ -112,21 +109,6 @@ local coerceValue = themes.coerceValue
 local firstColor = themes.firstColor
 local deriveStrokes = themes.deriveStrokes
 local resolveTheme = themes.resolve
-
-local function updateToastPosition(window, animate)
-    local toastsTop = window._toastsTop
-    if not toastsTop then
-        return
-    end
-
-    local targetPos = if window._collapsedShown then toastsTopWhenCollapsed else toastsTopPosition
-    if not animate or toastsTop.Position == targetPos then
-        toastsTop.Position = targetPos
-        return
-    end
-
-    motion.tween(toastsTop, { Position = targetPos }, "snappy")
-end
 
 function Window:ResolveIcon(value, pack)
     return icons.resolve(value, pack)
@@ -234,7 +216,7 @@ function Window.new(props)
             self.settings = {
         toggleKeybind = Enum.KeyCode.K,
         theme = if type(props.theme or props.Theme) == "string" then string.lower(props.theme or props.Theme) else "default",
-        mouseOverride = false,         keepOnScreen = true,         welcomeToast = false,         haptics = false,
+        mouseOverride = false,         keepOnScreen = true,         haptics = false,
         dragMinimisedBar = false,
         showProfile = false,
         showFullUsername = false,
@@ -611,7 +593,7 @@ function Window.new(props)
     -- [[Overlays wait for the window's own entrance before any of them starts]]
     -- [[building: the gate opens when that entrance lands (in `_firstShow`,]]
     -- [[after its settle and the reveal cascade that follows it). A host that]]
-    -- [[fires a toast between CreateWindow and the first show still gets it —]]
+    -- [[fires a notification between CreateWindow and the first show still gets it —]]
     -- [[just behind the window instead of on top of it.]]
     overlayQueue.pause(self)
 
@@ -813,7 +795,7 @@ function Window:CreateTab(props)
     if not tab.neglectSelector then
         local isFirst = true
         for _, existingTab in self.tabs do
-            if existingTab ~= tab and not existingTab.neglectSelector and existingTab._isSettingsTab == tab._isSettingsTab then
+            if existingTab ~= tab and not existingTab.neglectSelector and self:_railGroup(existingTab) == self:_railGroup(tab) then
                 isFirst = false
                 break
             end
@@ -968,59 +950,6 @@ function Window:_showNotification(props)
     end)
 end
 
-function Window:Toast(props)
-    if self.unloaded then
-        return
-    end
-
-        -- [[Cloned before anything is read off it: the card is built on the
-    -- [[queue's turn (see `Window:Notify`), and the resolved `position` below
-    -- [[belongs to this call rather than to the table the host handed in —
-    -- [[which also means the call no longer writes through to the caller's
-    -- [[props.]]
-    props = if typeof(props) == "table" then table.clone(props) else {}
-    local position = props.position or props.Position or "Top"
-    local isTop = typeof(position) ~= "string" or position:lower() ~= "bottom"
-    props.position = if isTop then "Top" else "Bottom"
-    local toastKey = if isTop then "_toastsTop" else "_toastsBottom"
-    local container = self[toastKey]
-
-    if not container then
-        container = self:Create("Frame", {
-            Name = "Toasts",
-            Size = UDim2.new(0, toastWidth, 1, -24),
-            Position = if isTop then toastsTopPosition else UDim2.new(0.5, 0, 1, -12),
-            AnchorPoint = if isTop then Vector2.new(0.5, 0) else Vector2.new(0.5, 1),
-            BackgroundTransparency = 1,
-            ZIndex = constants.zIndex.toast,
-
-            Parent = self.screenGui,
-        })
-
-        self:Create("UIListLayout", {
-            FillDirection = Enum.FillDirection.Vertical,
-            VerticalAlignment = if isTop then Enum.VerticalAlignment.Top else Enum.VerticalAlignment.Bottom,
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Padding = UDim.new(0, 0),
-
-            Parent = container,
-        })
-
-        self[toastKey] = container
-        if isTop then
-            updateToastPosition(self, false)
-        end
-    end
-
-    -- [[Queued with the notifications rather than beside them: the two overlay
-    -- kinds share one turn at a time, because the cost being spread is the same
-    -- one — a card's instances and its entrance tweens landing on one frame.]]
-    overlayQueue.request(self, function(release)
-        require(script.Parent.Parent.components.toast).new(self, props, container, release)
-    end)
-end
-
 function Window:Popup(props)
     if self.unloaded then
         return
@@ -1167,8 +1096,12 @@ function Window:Hide()
     end
 
     for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
+        local iconLabel = self:_actionIconLabel(actionFrame)
+        if iconLabel then
+            motion.tween(iconLabel, { ImageTransparency = 1 }, hideTween)
+        end
         if actionFrame:IsA("Frame") then
-            motion.tween(actionFrame.ImageLabel, { ImageTransparency = 1 }, hideTween)
+            self:_syncActionChrome(actionFrame, false, hideTween)
         end
     end
 
@@ -1191,7 +1124,6 @@ function Window:Hide()
         collapsed = true
 
                         self._collapsedShown = true
-        updateToastPosition(self, true)
         self.collapsedInteract.Visible = true
         self.animating = false
         self._revealing = false
@@ -2148,6 +2080,55 @@ function Window:_applySettingsLayout(isSettings)
     settingsComponent.applySettingsLayout(self, isSettings)
 end
 
+-- [[Rail groups: the rail shows exactly one group at a time - main tabs]]
+-- [[or settings tabs. Every rail filter reads these helpers so the two]]
+-- [[of them cannot drift apart.]]
+function Window:_railGroup(tab)
+    if tab._isSettingsTab then
+        return "settings"
+    end
+    return "main"
+end
+
+function Window:_activeRail()
+    if self._settingsMode then
+        return "settings"
+    end
+    return "main"
+end
+
+-- [[The icon label of a topbar action frame, or nil. `frame.ImageLabel` is a]]
+-- [[direct child read on Roblox, not a safe one: the action container also]]
+-- [[holds chrome with no icon - the search pill and other dividers - and]]
+-- [[indexing a missing child raises "ImageLabel is not a valid member of]]
+-- [[Frame". Every action-loop read goes through here instead of reading]]
+-- [[frame.ImageLabel directly.]]
+function Window:_actionIconLabel(actionFrame)
+    return actionFrame:FindFirstChild("ImageLabel")
+end
+
+-- [[Badge + divider follow their action frame: hidden with them, restored]]
+-- [[with them. The badge restores to opaque only while it is meant to show.]]
+function Window:_syncActionChrome(actionFrame, shown, tween)
+    local badge = actionFrame:FindFirstChild("Badge")
+    if badge then
+        local badgeTarget = if shown and badge.Visible then 0 else 1
+        if tween then
+            motion.tween(badge, { BackgroundTransparency = badgeTarget }, tween)
+        else
+            badge.BackgroundTransparency = badgeTarget
+        end
+    end
+    if actionFrame.Name == "Divider" then
+        local dividerTarget = if shown then 0.8 else 1
+        if tween then
+            motion.tween(actionFrame, { BackgroundTransparency = dividerTarget }, tween)
+        else
+            actionFrame.BackgroundTransparency = dividerTarget
+        end
+    end
+end
+
 -- [[Shared by the topbar gear action and the profile panel's gear.]]
 function Window:_toggleSettingsMode()
     settingsComponent.toggleSettingsMode(self)
@@ -2422,8 +2403,12 @@ function Window:_quickRestore()
         self.subtitle.TextTransparency = 0.7
     end
     for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
-        if actionFrame:IsA("Frame") and actionFrame.ImageLabel then
-            actionFrame.ImageLabel.ImageTransparency = 0.6
+        local iconLabel = self:_actionIconLabel(actionFrame)
+        if iconLabel then
+            iconLabel.ImageTransparency = 0.6
+        end
+        if actionFrame:IsA("Frame") then
+            self:_syncActionChrome(actionFrame, true)
         end
     end
 
@@ -2446,7 +2431,6 @@ function Window:_quickRestore()
         self.drag:enable()
         self.animating = false
         self._revealing = false
-        updateToastPosition(self, true)
         -- [[The overlay gate opens with the shell, exactly as on the first
         -- [[show, and the staged reveal below re-opens it after the page has
         -- [[committed: whichever lands last is the one that lets a waiting
@@ -2522,9 +2506,13 @@ function Window:_firstShow()
         motion.tween(self.subtitle, { TextTransparency = 0.7 }, tweenInfo)
     end
     for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
-        if actionFrame:IsA("Frame") and actionFrame.ImageLabel then
-            actionFrame.ImageLabel.ImageTransparency = 1
-            motion.tween(actionFrame.ImageLabel, { ImageTransparency = 0.6 }, tweenInfo)
+        local iconLabel = self:_actionIconLabel(actionFrame)
+        if iconLabel then
+            iconLabel.ImageTransparency = 1
+            motion.tween(iconLabel, { ImageTransparency = 0.6 }, tweenInfo)
+        end
+        if actionFrame:IsA("Frame") then
+            self:_syncActionChrome(actionFrame, true, tweenInfo)
         end
     end
 
@@ -2560,7 +2548,7 @@ function Window:_firstShow()
         -- [[The shell has landed, so the entrance is over as far as the
         -- [[overlay queue is concerned. The staged reveal below opens the same
         -- [[gate again when it has committed the page; whichever of the two
-        -- [[happens last is what lets a waiting toast through.]]
+        -- [[happens last is what lets a waiting notification through.]]
         overlayQueue.resume(self)
     end
 
@@ -2572,22 +2560,13 @@ function Window:_firstShow()
 
     -- [[Second beat of the entrance: the single cascade walks the page's
     -- [[controls in once the frame is close to its resting size, and only
-    -- [[then do the queued notifications and toasts start arriving one at a
-    -- [[time. Everything after `CreateWindow` — the welcome toast, a host's
+    -- [[then do the queued notifications start arriving one at a
+    -- [[time. Everything after `CreateWindow` — a host's
     -- [["loaded N modules" notifications, the optional-icon warning — rides
     -- [[that queue instead of sharing the frame the window itself opens on.]]
     self:_stageContentReveal(motion.step(contentRevealBeat), 0.02, 0.35, entranceId)
 
     local player = state.localPlayer
-    if player and self.settings.welcomeToast and chrome.isNewUser() then
-        self:Toast({
-            title = player.DisplayName,
-            subtitle = locale.resolve("Signed in as"),
-            subtitleAbove = true,
-            avatar = player.UserId,
-            minWidth = 220,
-        })
-    end
 end
 
 function Window:GetPath()

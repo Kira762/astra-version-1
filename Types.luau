@@ -3,7 +3,28 @@ export type Theme = string | { [string]: any }
 export type Translator = (source: string, localeId: string) -> string?
 
 export type Translations = { [string]: { [string]: string } }
-export type IconPack = "lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather"
+export type IconPack = "lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather" | "remix"
+
+export type ChangelogChange = {
+    symbol: string?,
+    text: string?,
+    category: string?,
+}
+
+export type ChangelogEntry = {
+    version: string?,
+    date: string?,
+    game: string?,
+    gameId: string?,
+    title: string?,
+    changes: { ChangelogChange }?,
+}
+
+export type ChangelogProps = {
+    name: string?,
+    emptyText: string?,
+    entries: { ChangelogEntry }?,
+}
 
 export type WindowConfiguration = {
     autoSave: boolean?,
@@ -34,27 +55,6 @@ export type SectionProps = {
 
 export type TextProps = {
     name: string?,     text: string?,     icon: (string | number)?,
-}
-
-export type ChangelogChange = {
-    symbol: string?,
-    text: string?,
-    category: string?,
-}
-
-export type ChangelogEntry = {
-    version: string?,
-    date: string?,
-    game: string?,
-    gameId: string?,
-    title: string?,
-    changes: { ChangelogChange }?,
-}
-
-export type ChangelogProps = {
-    name: string?,
-    emptyText: string?,
-    entries: { ChangelogEntry }?,
 }
 
 export type DividerProps = {
@@ -138,7 +138,9 @@ export type StatProps = {
     value: (number | string)?,
     display: string?,     compact: boolean?,
     -- Show the value as a single letter badge (no icon) instead of the numeric
-    -- readouts; text values use this automatically unless set to false.
+    -- readouts; text values use this automatically unless set to false, in
+    -- which case the whole value reads out as a text readout (no odometer, no
+    -- change readout) that Set / SetText / ResetBaseline all write to.
     letter: boolean?,
     changeMode: string?,     changeBaseline: string?,     numberEasing: boolean?,
 }
@@ -148,12 +150,6 @@ export type NotifyProps = {
     content: string?,
     icon: (string | number)?,
     duration: number?,
-}
-
-export type ToastProps = {
-    title: string?,
-    subtitle: string?,     subtitleAbove: boolean?,     icon: (string | number)?,     avatar: number?,     minWidth: number?,     duration: number?,
-    position: "Top" | "Bottom"?,
 }
 
 export type PopupBox = {
@@ -284,7 +280,6 @@ export type Window = {
     CreateTab: (self: Window, props: TabProps) -> Tab,
         CreateSection: (self: Window, props: SectionProps) -> TabSection,
     Notify: (self: Window, props: NotifyProps) -> (),
-    Toast: (self: Window, props: ToastProps) -> (),
     Popup: (self: Window, props: PopupProps) -> Popup?,     Show: (self: Window) -> (),
     Hide: (self: Window) -> (),
     ToggleHide: (self: Window) -> (),
@@ -311,6 +306,7 @@ export type IconCatalog = {
     Phosphor: IconPack,
     Heroicons: IconPack,
     Feather: IconPack,
+    Remix: IconPack,
     -- [[`name` may be a bare icon name (searched in every pack, in priority]]
     -- [[order) or a pack-qualified `"pack:name"`; `pack` addresses one pack.]]
     get: (name: string, pack: IconPack?) -> string?,

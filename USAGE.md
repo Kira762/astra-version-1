@@ -144,7 +144,6 @@ Titles, themes, and every window method.
 | `window:CreateTab({ name, icon })` | Create a tab. Returns a `Tab`. |
 | `window:CreateSection({ name, icon })` | Top-level section — a `TabSection`. |
 | `window:Notify({ title, content, icon, duration })` | Classic notification; opens on the entrance queue (see [Startup performance](#startup-performance)). |
-| `window:Toast({ title, subtitle, icon, duration, position, ... })` | Compact toast; same queue, same one-at-a-time arrivals. |
 | `window:Popup({ title, content, boxes, options, ... })` | Modal popup. Returns `Popup:Close()`. |
 | `window:Navigate(tab)` | Select a tab by name or Tab object. |
 | `window:Show()` / `window:Hide()` / `window:ToggleHide()` | Visibility. |
@@ -198,7 +197,7 @@ local col = row:CreateGroup({ direction = "column" }) -- nested column
 col:CreateToggle({ name = "Left 1" })
 ```
 
-Tab methods: `CreateButton`, `CreateToggle`, `CreateSlider`, `CreateDropdown`, `CreateInput`, `CreateStat`, `CreateSection`, `CreateText`, `CreateChangelog`, `CreateDivider`, `CreateGroup`, and optional `CreateCollapsibleGroup`.
+Tab methods: `CreateButton`, `CreateToggle`, `CreateSlider`, `CreateDropdown`, `CreateInput`, `CreateStat`, `CreateSection`, `CreateText`, `CreateDivider`, `CreateGroup`, and optional `CreateCollapsibleGroup`.
 
 Groups support: `CreateButton`, `CreateToggle`, `CreateSlider`, `CreateDropdown`, `CreateStat`, `CreateSection`, `CreateText`, `CreateDivider`, `CreateGroup`. Collapsible Groups can only be created directly on a tab.
 
@@ -285,7 +284,14 @@ local s = tab:CreateStat({ name = "Kills", value = 128, prefix = "", suffix = " 
 s:Set(200)
 s:ResetBaseline(0)
 ```
-Extra props: `display` (`"value"` | `"change"`), `compact`, `changeMode` (`"percentage"` | `"delta"`), `changeBaseline` (`"previous"` (default) | `"initial"` — which value a change is measured against; any other value, a number included, is read as `"previous"`, so `stat:ResetBaseline(number)` is the way to set a numeric baseline), `numberEasing`.
+Extra props: `display` (`"value"` | `"change"`), `compact`, `changeMode` (`"percentage"` | `"delta"`), `changeBaseline` (`"previous"` (default) | `"initial"` — which value a change is measured against; any other value, a number included, is read as `"previous"`, so `stat:ResetBaseline(number)` is the way to set a numeric baseline), `numberEasing`, `letter`.
+
+A stat's `value` may be a string. Text values render as a single-letter badge by default (`letter = true` is the same thing explicitly); `letter = false` reads the whole value out as text instead — one label, no digit roll and no change readout — and `Set` / `SetText` / `ResetBaseline` all write to it:
+
+```lua
+local theme = tab:CreateStat({ name = "Current theme", value = "Default", letter = false })
+theme:SetText("Emerald")  -- the card reads "Emerald", not "E"
+```
 
 ### Text / Divider / Group
 ```lua
@@ -299,35 +305,33 @@ local col = row:CreateGroup({ direction = "column" })
 col:CreateToggle({ name = "Left 1" })
 ```
 
-### Changelog
+### Changelog (element)
 
-Scrollable release-history element with `+` (added), `-` (removed) and `~` (changed) change symbols, rendered in green/red/amber.
+Release history renders as a standalone element wherever it is declared:
 
 ```lua
 local log = tab:CreateChangelog({
     name = "Release history",
-    emptyText = "No entries yet.",   -- optional
+    emptyText = "No entries yet.",
     entries = {
         {
             version = "0.0.35",
             date = "2026-09-11",
-            game = "Game Name",      -- optional, game = "..." or gameId = number
             title = "Settings highlight",
             changes = {
                 { symbol = "~", category = "Fixed", text = "Settings stays highlighted while its tab is active." },
-                { symbol = "+", text = "Added the Changelog element." },
-                { symbol = "-", text = "Removed the old sub-tab API." },
+                { symbol = "+", text = "Added the changelog element." },
             },
         },
     },
 })
 
-log:Add({ version = "Test", date = "Live", changes = { { symbol = "+", text = "Runtime entry." } } })  -- prepends by default
-log:Add(entry, false)  -- append at the end instead
-log:Set({ ... })       -- replace all entries
-log:Refresh({ ... })   -- alias of Set
+log:Add({ version = "Live", date = "Today", changes = { { symbol = "+", text = "Runtime entry." } } })
+log:Set({ ... })
 log:Clear()
 ```
+
+Symbols: `+` added (green), `-` removed (red), `~` changed (amber); words `"added"`/`"removed"`/`"changed"` map to the same colours. Keep the history in its own file (see `changelog.example.luau`) and require it into the element props. The element supports `MoveTo`, `Lock`, etc. like other elements.
 
 ### Built-in Settings (window only)
 
@@ -385,7 +389,7 @@ window:ResolveIcon("feather:home")      -- selects one exact icon
 No window-wide `iconPack` option is needed.
 
 **Name-only lookup.** A bare name is searched in every pack, in a fixed order —
-lucide, material, tabler, phosphor, heroicons, feather (`Astra.Icons.priority()`) —
+lucide, material, tabler, phosphor, heroicons, feather, remix (`Astra.Icons.priority()`) —
 and the first pack that has it wins. Nothing to pick, nothing to configure: lucide
 spells the home glyph `house`, material has no `house` but has `home`, so both
 `get("house")` and `get("home")` work, the latter from material. A name that exists
@@ -413,7 +417,7 @@ Icon names resolve to 48x48 PNGs that ship in this repo under
 `rbxassetid` lookups are needed. Values already usable as-is — numbers,
 `rbxassetid://…`, `rbxasset://…`, `rbxthumb://…`, `http(s)://…` — pass through
 untouched, and an unresolved value comes back unchanged. See
-[the visual icon catalog](assets/icons/README.md) for previews and copyable names across all six packs.
+[the visual icon catalog](assets/icons/README.md) for previews and copyable names across all seven packs.
 
 **Custom assets.** A `custom_asset/` folder next to your script takes precedence
 over the packs at resolve time: one file per icon name, in `.png`, `.jpg`, `.jpeg`,
@@ -478,7 +482,7 @@ window:SetTranslator(function(source, localeId) return ... end)
 
 ### Full example
 
-See `example.client.luau` — a single-tab example that loads the bundle with the one-line loader above and builds every element type (including ordinary and Collapsible Groups and the Changelog element) end to end.
+See `example.client.luau` — a single-tab example that loads the bundle with the one-line loader above and builds every element type (including ordinary and Collapsible Groups and Changelog) end to end.
 
 ---
 
@@ -496,6 +500,7 @@ local window = Astra:CreateWindow({
     translator = function(source, localeId) return ... end,  -- optional custom translator
     locale = "en",
     translations = { ... },
+
 })
 ```
 Layout is **not** a CreateWindow prop — switch it in **Settings → Appearance → Bar Layout**.
@@ -517,7 +522,7 @@ first reveal cancels auto-show; `window:Show()` can still be called explicitly.
 
 The arrival itself is staged rather than instant: the window's shell (frame, surface,
 corner, topbar) animates in first, the page's controls cascade in one control per beat
-a beat later, and overlays follow the content. `window:Notify` and `window:Toast` are
+a beat later, and overlays follow the content. `window:Notify` overlays are
 therefore queued — the card is *built* on its own turn, one entrance at a time, with a
 cooldown between two of them — instead of all landing on the frame the window opens
 on. A backlog stays bounded: past six waiting requests the oldest one that has not
@@ -591,7 +596,7 @@ local playerControls = tab:CreateCollapsibleGroup({
 
 **Supported types:** `Button`, `Toggle`, `Switch` (declarative alias of the
 toggle control), `Slider`, `Dropdown`, `Input`, `Stat`,
-`Section`, `Text`, `Changelog`, `Divider`, and ordinary `Group`. Each uses the
+`Section`, `Text`, `Divider`, and ordinary `Group`. Each uses the
 same properties and implementation as its normal `Create…` method, including
 the optional `description` helper line. `elements` can be omitted for an empty
 header.
@@ -604,6 +609,7 @@ chosen element is silently discarded. Ordinary Groups may contain ordinary Group
 Group. Invalid types, sparse lists, and cyclic/nested Collapsible Group definitions
 are rejected before creating any UI.
 
+- `{ type = "Changelog", ... }` renders as a regular Changelog element.
 - Every Collapsible Group starts collapsed; there is no `expanded` usage property.
 - Click the header to open/close. Multiple groups operate independently.
 - Expansion uses Astra's motion service, including the instant-motion setting.

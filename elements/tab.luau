@@ -342,7 +342,7 @@ function state:Remove()
         for _, tab in ipairs(window.tabs) do
             if not tab.neglectSelector then
                 fallback = fallback or tab
-                if (tab._isSettingsTab == true) == (self._isSettingsTab == true) then
+                if window:_railGroup(tab) == window:_railGroup(self) then
                     fallback = tab
                     break
                 end

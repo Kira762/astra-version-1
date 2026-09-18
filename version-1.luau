@@ -38,7 +38,6 @@ export type StatProps = types.StatProps
 export type TextProps = types.TextProps
 export type DividerProps = types.DividerProps
 export type NotifyProps = types.NotifyProps
-export type ToastProps = types.ToastProps
 export type PopupBox = types.PopupBox
 export type PopupOption = types.PopupOption
 export type PopupProps = types.PopupProps
@@ -246,7 +245,28 @@ export type Theme = string | { [string]: any }
 export type Translator = (source: string, localeId: string) -> string?
 
 export type Translations = { [string]: { [string]: string } }
-export type IconPack = "lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather"
+export type IconPack = "lucide" | "material" | "tabler" | "phosphor" | "heroicons" | "feather" | "remix"
+
+export type ChangelogChange = {
+    symbol: string?,
+    text: string?,
+    category: string?,
+}
+
+export type ChangelogEntry = {
+    version: string?,
+    date: string?,
+    game: string?,
+    gameId: string?,
+    title: string?,
+    changes: { ChangelogChange }?,
+}
+
+export type ChangelogProps = {
+    name: string?,
+    emptyText: string?,
+    entries: { ChangelogEntry }?,
+}
 
 export type WindowConfiguration = {
     autoSave: boolean?,
@@ -277,27 +297,6 @@ export type SectionProps = {
 
 export type TextProps = {
     name: string?,     text: string?,     icon: (string | number)?,
-}
-
-export type ChangelogChange = {
-    symbol: string?,
-    text: string?,
-    category: string?,
-}
-
-export type ChangelogEntry = {
-    version: string?,
-    date: string?,
-    game: string?,
-    gameId: string?,
-    title: string?,
-    changes: { ChangelogChange }?,
-}
-
-export type ChangelogProps = {
-    name: string?,
-    emptyText: string?,
-    entries: { ChangelogEntry }?,
 }
 
 export type DividerProps = {
@@ -381,7 +380,9 @@ export type StatProps = {
     value: (number | string)?,
     display: string?,     compact: boolean?,
     -- Show the value as a single letter badge (no icon) instead of the numeric
-    -- readouts; text values use this automatically unless set to false.
+    -- readouts; text values use this automatically unless set to false, in
+    -- which case the whole value reads out as a text readout (no odometer, no
+    -- change readout) that Set / SetText / ResetBaseline all write to.
     letter: boolean?,
     changeMode: string?,     changeBaseline: string?,     numberEasing: boolean?,
 }
@@ -391,12 +392,6 @@ export type NotifyProps = {
     content: string?,
     icon: (string | number)?,
     duration: number?,
-}
-
-export type ToastProps = {
-    title: string?,
-    subtitle: string?,     subtitleAbove: boolean?,     icon: (string | number)?,     avatar: number?,     minWidth: number?,     duration: number?,
-    position: "Top" | "Bottom"?,
 }
 
 export type PopupBox = {
@@ -527,7 +522,6 @@ export type Window = {
     CreateTab: (self: Window, props: TabProps) -> Tab,
         CreateSection: (self: Window, props: SectionProps) -> TabSection,
     Notify: (self: Window, props: NotifyProps) -> (),
-    Toast: (self: Window, props: ToastProps) -> (),
     Popup: (self: Window, props: PopupProps) -> Popup?,     Show: (self: Window) -> (),
     Hide: (self: Window) -> (),
     ToggleHide: (self: Window) -> (),
@@ -554,6 +548,7 @@ export type IconCatalog = {
     Phosphor: IconPack,
     Heroicons: IconPack,
     Feather: IconPack,
+    Remix: IconPack,
     -- [[`name` may be a bare icon name (searched in every pack, in priority]]
     -- [[order) or a pack-qualified `"pack:name"`; `pack` addresses one pack.]]
     get: (name: string, pack: IconPack?) -> string?,
@@ -864,6 +859,27 @@ function Action.new(window, props)
         Parent = self.action,
     })
 
+    -- [[Optional unread dot: a fixed red badge pinned to the]]
+    -- [[action's top-right corner. Created after the]]
+    -- [[interact button so it renders above it; frames sink no input.]]
+    if props.badge or props.Badge then
+        self.badge = self.window:Create("Frame", {
+            Name = "Badge",
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, 1, 0, -1),
+            Size = UDim2.fromOffset(8, 8),
+            BorderSizePixel = 0,
+            BackgroundColor3 = Color3.fromRGB(239, 68, 68),
+            BackgroundTransparency = 1,
+            Visible = false,
+            Parent = self.action,
+        })
+        self.window:Create("UICorner", {
+            CornerRadius = UDim.new(1, 0),
+            Parent = self.badge,
+        })
+    end
+
     local function idleTransparency()
         if self.window.unloaded then
             return
@@ -905,6 +921,20 @@ function Action.new(window, props)
 
     return self
 end
+
+function Action:SetBadge(shown, animate)
+    if not self.badge or self.window.unloaded then
+        return
+    end
+    self.badge.Visible = shown == true
+    local target = if shown then 0 else 1
+    if animate == false or not self.window:_interactive() then
+        self.badge.BackgroundTransparency = target
+        return
+    end
+    motion.tween(self.badge, { BackgroundTransparency = target }, "snappy")
+end
+
 
 return Action
 
@@ -1849,7 +1879,7 @@ end)() end,
     [13] = function()local wax,script,require=ImportGlobals(13)local ImportGlobals return (function(...)
 -- [[Astra overlay entrance queue.
 --
--- Notifications and toasts are the cheapest thing in the interface to look at
+-- Notifications are the cheapest thing in the interface to look at
 -- and the most expensive thing to build on a cold start: a host that fires
 -- twenty of them while it boots — one per module it loaded — builds twenty
 -- cards on the same frame the window's own entrance lands, and every card is
@@ -2101,7 +2131,7 @@ function OverlayQueue.request(window, build): boolean
     -- [[gate only to flush what was already waiting, so a cancelled entrance
     -- [[cannot strand a card - new work must still wait for a window that is
     -- [[not on screen. A window that showed once queues normally while
-    -- [[hidden, matching the steady-state toast behaviour.]]
+    -- [[hidden.]]
     if window.hidden and not window.hasShownOnce then
         queue.paused = true
     end
@@ -5888,15 +5918,6 @@ function settingsComponent.buildUI(window)
                         window:SaveSettings()
                     end,
                 },
-                {
-                    type = "Toggle",
-                    name = "Welcome toast",
-                    value = window.settings.welcomeToast,
-                    callback = function(value)
-                        window.settings.welcomeToast = value
-                        window:SaveSettings()
-                    end,
-                },
             },
         })
         keybindField = generalControls.elements[1]
@@ -6021,15 +6042,18 @@ function settingsComponent.buildUI(window)
 
         -- [[The theme row follows a staged apply: the dropdown only *selects*
         -- a candidate (currentTheme stays untouched until the Apply button is
-        -- confirmed), while the stat above shows the theme in effect — as a
-        -- single letter badge, no icon. While a candidate differs from the
-        -- active theme, the reset/apply pair appears.]]
+        -- confirmed), while the stat above shows the theme in effect — the
+        -- full theme name, no icon, via the stat's text readout. Reset to
+        -- Default is always on the row; only the Apply half is staged, and it
+        -- appears beside Reset while a candidate differs from the active
+        -- theme, then goes back to being absent once that candidate is
+        -- applied (or dropped by picking the active theme again).]]
         local currentTheme = if themes[window.settings.theme] then window.settings.theme else "default"
         local pendingTheme
 
         -- Forward-declared so the element callbacks below can capture them;
         -- their bodies are assigned after the group is built.
-        local themeStat, themeDropdown, themeButtonGroup
+        local themeStat, themeDropdown, themeButtonGroup, themeApplyButton
         local setPendingThemeButtons, syncThemeControls, confirmThemeReset
 
         local themeGroup = appearance:CreateCollapsibleGroup({
@@ -6039,8 +6063,10 @@ function settingsComponent.buildUI(window)
                 {
                     type = "Stat",
                     name = "Current theme",
+                    -- Reads the whole theme name out; letter = false opts this
+                    -- text value out of the stat's single-letter badge.
                     value = themeLabel(currentTheme),
-                    letter = true,
+                    letter = false,
                 },
                 {
                     type = "Dropdown",
@@ -6118,13 +6144,17 @@ function settingsComponent.buildUI(window)
         themeStat = themeGroup.elements[1]
         themeDropdown = themeGroup.elements[2]
         themeButtonGroup = themeGroup.elements[3]
+        themeApplyButton = themeButtonGroup and themeButtonGroup.elements[2]
         function setPendingThemeButtons(show)
-            if not themeButtonGroup or not themeButtonGroup.main then
+            if not themeApplyButton or not themeApplyButton.main then
                 return
             end
-            -- Hidden outright until there is a pending change, so the pair
-            -- does not sit as a dead "Apply" button when nothing changed.
-            themeButtonGroup.main.Visible = show == true
+            -- [[Only the Apply half of the row is staged: Reset to Default is
+            -- permanent, so the row is never hidden and Reset never appears
+            -- and disappears. Apply is absent until a candidate differs from
+            -- the active theme, and returns to absent the moment that
+            -- candidate is applied or dropped again.]]
+            themeApplyButton.main.Visible = show == true
         end
         function syncThemeControls()
             if themeDropdown then
@@ -6356,15 +6386,15 @@ function settingsComponent.buildUI(window)
                                     end
                                     selected = name
                                     refresh()
-                                    window:Toast({
+                                    window:Notify({
                                         title = locale.resolve("Saved configuration"),
-                                        subtitle = name,
+                                        content = name,
                                         icon = constants.icons.config,
                                     })
                                 else
-                                    window:Toast({
+                                    window:Notify({
                                         title = locale.resolve("Couldn't save configuration"),
-                                        subtitle = name,
+                                        content = name,
                                     })
                                 end
                             end,
@@ -6374,18 +6404,18 @@ function settingsComponent.buildUI(window)
                             name = "Load",
                             callback = function()
                                 if not selected or selected == "" then
-                                    window:Toast({ title = locale.resolve("Pick a configuration to load") })
+                                    window:Notify({ title = locale.resolve("Pick a configuration to load") })
                                     return
                                 end
                                 if window:_applyNamedConfig(selected) then
-                                    window:Toast({
+                                    window:Notify({
                                         title = locale.resolve("Loaded configuration"),
-                                        subtitle = selected,
+                                        content = selected,
                                     })
                                 else
-                                    window:Toast({
+                                    window:Notify({
                                         title = locale.resolve("Couldn't load configuration"),
-                                        subtitle = selected,
+                                        content = selected,
                                     })
                                 end
                             end,
@@ -6396,20 +6426,20 @@ function settingsComponent.buildUI(window)
                             callback = function()
                                 local name = selected
                                 if not name or name == "" then
-                                    window:Toast({ title = locale.resolve("Pick a configuration to delete") })
+                                    window:Notify({ title = locale.resolve("Pick a configuration to delete") })
                                     return
                                 end
                                 if window:DeleteConfig(name) then
                                     selected = nil
                                     refresh()
-                                    window:Toast({
+                                    window:Notify({
                                         title = locale.resolve("Deleted configuration"),
-                                        subtitle = name,
+                                        content = name,
                                     })
                                 else
-                                    window:Toast({
+                                    window:Notify({
                                         title = locale.resolve("Couldn't delete configuration"),
-                                        subtitle = name,
+                                        content = name,
                                     })
                                 end
                             end,
@@ -6440,7 +6470,10 @@ function settingsComponent.buildContent(window, tab)
 end
 
 function settingsComponent.applySettingsLayout(window, isSettings)
-    window._settingsLayoutActive = isSettings == true
+    -- [[isSettings is retained for callers; the flags derive from the live]]
+    -- [[rail so settings modes share one layout switch.]]
+    local rail = window:_activeRail()
+    window._settingsLayoutActive = rail == "settings"
     if window.tabList then
         window.tabList.Visible = not window.hidden and not window.minimised
     end
@@ -6450,7 +6483,7 @@ function settingsComponent.applySettingsLayout(window, isSettings)
     for _, tab in window.tabs do
         if tab.topbarItem then
             tab.topbarItem.Visible = not window.hidden and not window.minimised
-                and (window._settingsMode == (tab._isSettingsTab == true))
+                and (window:_railGroup(tab) == window:_activeRail())
         end
     end
     if window.selectedTab and window.selectedTab.tabPage then
@@ -6495,7 +6528,7 @@ function settingsComponent.setSettingsMode(window, active)
     for _, tab in window.tabs do
         if tab.topbarItem then
             tab.topbarItem.Visible = not window.hidden and not window.minimised
-                and (active == (tab._isSettingsTab == true))
+                and (window:_railGroup(tab) == window:_activeRail())
         end
     end
     settingsComponent.applySettingsLayout(window, active)
@@ -6830,7 +6863,7 @@ local function inCurrentRail(window, tab)
     return not tab.neglectSelector
         and tab.topbarItem ~= nil
         and tab.topbarItem.Parent ~= nil
-        and (tab._isSettingsTab == true) == (window._settingsMode == true)
+        and window:_railGroup(tab) == window:_activeRail()
 end
 
 local function rowNaturalWidth(tab, window, layout)
@@ -6981,423 +7014,6 @@ return tabSelector
 
 end)() end,
     [20] = function()local wax,script,require=ImportGlobals(20)local ImportGlobals return (function(...)
-local Toast = {}
-Toast.__index = Toast
-Toast.__type = "Toast"
-
-local utilities = script.Parent.Parent.utilities
-local state = require(utilities.Parent.core.state)
-local functions = require(script.Parent.Parent.functions)
-local constants = require(utilities.constants)
-local imageModule = require(script.Parent.Parent.images.image)
-local haptic = require(utilities.HapticEngine)
-local motion = require(utilities.motion)
-
--- [[The entrance rides the motion service's shared vocabulary: the slot
--- opens with a small overshoot (`settle`) so the stack visibly lands, the
--- card slides to rest on `emphasized`, fades run on `normal`, copy on
--- `snappy`, and the dismissal accelerates out on `exit` — a card leaves
--- faster than it arrived.]]
-local showTween, fadeInTween, textFadeTween = "emphasized", "normal", "snappy"
-local expandTween = "settle"
-local dismissTween = "exit"
-
-local avatarSize = 24
-local largeIconSize = 32
-local smallIconPad = 18
-local largeIconPad = 18
-local avatarLeftPad = 10
-local avatarRightPad = 28
-local outerPadding = 8
-local layoutPad = 19
-local minContentWidth = 140
-local maxContentWidth = 320
-
-local maxVisible = 6
-
-local topPosition = UDim2.new(0.5, 0, 0.5, -180)
-local bottomPosition = UDim2.new(0.5, 0, 0.5, 180)
-local centerPosition = UDim2.new(0.5, 0, 0.5, 0)
-
-local function autoDuration(text)
-    return math.clamp(#text * 0.06 + 3, 3, 9)
-end
-
-local function resolveAssetId(asset)
-    if type(asset) == "number" then
-        return "rbxassetid://" .. tostring(asset)
-    end
-    return asset
-end
-
-function Toast.new(window, props, parent, release)
-    props = if typeof(props) == "table" then props else {}
-
-    local self = setmetatable({
-        window = assert(window, "Missing argument #1 (Window expected)"),
-        title = props.title or props.Title or "",
-        subtitle = props.subtitle or props.Subtitle,
-        icon = window:ResolveIcon(props.icon or props.Icon),
-        avatar = props.avatar or props.Avatar,
-        minWidth = props.minWidth or props.MinWidth,
-        subtitleAbove = props.subtitleAbove or props.SubtitleAbove or false,
-        position = props.position or "Top",
-        _hovered = false,
-        _dismissed = false,
-        -- [[The entrance queue's slot: released when this toast's entrance is
-        -- committed, which is what lets a burst of them cascade instead of all
-        -- landing on one frame. See `components/overlayQueue.luau`.]]
-        _release = release,
-    }, Toast)
-
-    self.duration = props.duration or props.Duration or autoDuration(self.title .. (self.subtitle or ""))
-
-    local isAvatar = self.avatar ~= nil and self.avatar ~= 0
-    local hasIcon = isAvatar or (self.icon ~= nil and self.icon ~= 0 and self.icon ~= "")
-    self._iconImage = if isAvatar
-        then imageModule.avatar(self.avatar, function(uri)
-            if self.iconLabel and not self._dismissed and self.main.Parent then
-                imageModule.assign(self.iconLabel, "Image", uri)
-            end
-        end)
-        elseif hasIcon then resolveAssetId(self.icon)
-        else nil
-    self._iconSize = if isAvatar then largeIconSize else avatarSize
-    self._leftPad = if isAvatar then avatarLeftPad else smallIconPad
-    self._rightPad = if isAvatar then avatarRightPad else largeIconPad
-    self._minWidth = math.clamp(self.minWidth or 0, minContentWidth, maxContentWidth)
-    local hasSubtitle = self.subtitle ~= nil and self.subtitle ~= ""
-
-    self.main = self.window:Create("Frame", {
-        Name = "Toast",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(0, 0, 0, 0),
-        BorderSizePixel = 0,
-        ZIndex = constants.zIndex.toast,
-        Parent = parent or self.window.toasts,
-    })
-
-    self.window:Create("UIPadding", {
-        PaddingTop = UDim.new(0, outerPadding),
-        Parent = self.main,
-    })
-
-    self.body = self.window:Create("Frame", {
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        Size = UDim2.new(1, 0, 1, 0),
-        Position = if self.position == "Bottom" then bottomPosition else topPosition,
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Active = true,
-        BorderSizePixel = 0,
-        ZIndex = constants.zIndex.toast,
-        BackgroundTransparency = 1,
-        Parent = self.main,
-    })
-
-    self.window:Create("UIGradient", {
-        Rotation = 270,
-        Offset = Vector2.new(0, -0.1),
-        Parent = self.body,
-    }, { Color = { "WindowColor", functions.toColorSequence } })
-
-    self.window:Create("UICorner", {
-        Parent = self.body,
-    }, { CornerRadius = "CornerRoundness" })
-
-    self.stroke = self.window:Create("UIStroke", {
-        Transparency = 1,
-        Parent = self.body,
-    }, { Color = "SurfaceStroke" })
-
-    self.shadow = self.window:CreateGlow(self.body, "ShadowColor", 20, 1)
-    self.window:Create("UIPadding", {
-        PaddingLeft = UDim.new(0, self._leftPad),
-        PaddingRight = UDim.new(0, self._rightPad),
-        Parent = self.body,
-    })
-
-    self.window:Create("UIListLayout", {
-        FillDirection = Enum.FillDirection.Horizontal,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        HorizontalAlignment = Enum.HorizontalAlignment.Left,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, layoutPad),
-        Parent = self.body,
-    })
-
-    if hasIcon then
-        self.iconLabel = self.window:Create("ImageLabel", {
-            Image = self._iconImage,
-            Size = UDim2.fromOffset(self._iconSize, self._iconSize),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BorderSizePixel = 0,
-            LayoutOrder = 1,
-            ZIndex = constants.zIndex.toastContent,
-            BackgroundTransparency = 1,
-            ImageTransparency = 1,
-            Parent = self.body,
-        }, if isAvatar then nil else { ImageColor3 = "ContentColor" })
-
-        self.window:Create("UICorner", {
-            CornerRadius = UDim.new(1, 0),
-            Parent = self.iconLabel,
-        })
-    end
-
-    self.container = self.window:Create("Frame", {
-        AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, hasSubtitle and 32 or 16),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        LayoutOrder = 2,
-        ZIndex = constants.zIndex.toastContent,
-        Parent = self.body,
-    })
-
-    self.window:Create("UIListLayout", {
-        FillDirection = Enum.FillDirection.Vertical,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 1),
-        Parent = self.container,
-    })
-
-    self.titleLabel = self.window:Create("TextLabel", {
-        Text = self.title,
-        AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, 16),
-        BackgroundTransparency = 1,
-        TextSize = 16,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        LayoutOrder = if self.subtitleAbove then 2 else 1,
-        ZIndex = constants.zIndex.toastContent,
-        TextTransparency = 1,
-        Parent = self.container,
-    }, { TextColor3 = "ContentColor", FontFace = "TitleFont" })
-
-    if hasSubtitle then
-        self.subtitleLabel = self.window:Create("TextLabel", {
-            Text = self.subtitle,
-            AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2.fromOffset(0, 14),
-            BackgroundTransparency = 1,
-            TextSize = 14,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            LayoutOrder = if self.subtitleAbove then 1 else 2,
-            ZIndex = constants.zIndex.toastContent,
-            TextTransparency = 1,
-            Parent = self.container,
-        }, { TextColor3 = "ContentColor", FontFace = "Font" })
-    end
-
-    self.window._toastCount = (self.window._toastCount or 0) + 1
-    self.main.LayoutOrder = -self.window._toastCount
-
-    local liveToasts = self.window._liveToasts
-    if not liveToasts then
-        liveToasts = {}
-        self.window._liveToasts = liveToasts
-    end
-    local liveList = liveToasts[self.main.Parent]
-    if not liveList then
-        liveList = {}
-        liveToasts[self.main.Parent] = liveList
-    end
-    self._live = liveList
-    table.insert(liveList, self)
-    while #liveList > maxVisible do
-        local oldest = table.remove(liveList, 1)
-        if oldest and oldest ~= self then
-            task.spawn(oldest._dismiss, oldest)
-        end
-    end
-
-    self._connections = {
-        self.window:Connect(self.body.MouseEnter, function()
-            self._hovered = true
-        end),
-        self.window:Connect(self.body.MouseLeave, function()
-            self._hovered = false
-        end),
-        self.window:Connect(self.body.InputBegan, function(input)
-            if
-                input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch
-            then
-                self:_dismiss()
-            end
-        end),
-    }
-
-    task.spawn(function()
-        self:_show()
-    end)
-
-    return self
-end
-
-function Toast:_measure()
-    local titleWidth = functions.textWidth(self.window.theme.TitleFont, 16, self.title)
-    local subtitleWidth = if self.subtitleLabel
-        then functions.textWidth(self.window.theme.Font, 14, self.subtitle)
-        else 0
-    local textWidth = math.max(titleWidth, subtitleWidth)
-
-    local iconOffset = if self.iconLabel then self._leftPad + self._iconSize + layoutPad else self._leftPad
-    local totalWidth = math.clamp(iconOffset + textWidth + self._rightPad, self._minWidth, maxContentWidth)
-
-    if iconOffset + textWidth + self._rightPad > maxContentWidth then
-        local availableWidth = maxContentWidth - iconOffset - self._rightPad
-        for _, label in { self.titleLabel, self.subtitleLabel } do
-            if label then
-                label.AutomaticSize = Enum.AutomaticSize.None
-                label.TextTruncate = Enum.TextTruncate.AtEnd
-                label.Size = UDim2.fromOffset(availableWidth, label.Size.Y.Offset)
-            end
-        end
-    end
-
-    local textHeight = if self.subtitleLabel then 16 + 1 + 14 else 16
-    local totalHeight = math.max(textHeight, if self.iconLabel then self._iconSize else 0) + 18
-
-    return totalWidth, totalHeight
-end
-
--- [[Hands the entrance slot back to the queue once the toast's entrance is
--- committed (or once it is dismissed, whichever comes first) so the next
--- queued overlay can start. Idempotent by design: both paths reach it.]]
-function Toast:_entranceDone(early)
-    local release = self._release
-    if not release then
-        return
-    end
-    self._release = nil
-    -- [[`early` marks a dismissal/retirement mid-entrance: the queue skips its
-    -- [[full entrance cadence then, since no transition needs protecting.]]
-    release(early == true)
-end
-
-function Toast:_show()
-    if self._dismissed or not self.main.Parent then
-        self:_entranceDone(true)
-        return
-    end
-
-    haptic.notify()
-
-    local width, height = self:_measure()
-    if self._dismissed or not self.main.Parent then
-        self:_entranceDone(true)
-        return
-    end
-    self.main.Size = UDim2.new(0, width, 0, 0)
-
-    motion.tween(self.main, { Size = UDim2.new(0, width, 0, height + outerPadding) }, expandTween)
-    motion.tween(self.body, { Position = centerPosition, BackgroundTransparency = 0 }, showTween)
-    motion.tween(self.stroke, { Transparency = 0.9 }, fadeInTween)
-    motion.tween(self.shadow, { Transparency = 0.6 }, textFadeTween)
-    motion.tween(self.titleLabel, { TextTransparency = 0 }, textFadeTween)
-
-    -- [[The two stagger beats answer the motion profile: with animation
-    -- [[switched off they collapse to immediate frames and the queue drains
-    -- [[a card a frame. The queue itself holds the lane for the entrance
-    -- [[cadence afterwards, so transitions never overlap.]]
-    local firstBeat = motion.step(0.05)
-    if firstBeat > 0 then
-        task.wait(firstBeat)
-    end
-    if self._dismissed or not self.main.Parent then
-        self:_entranceDone(true)
-        return
-    end
-    if self.iconLabel then
-        motion.tween(self.iconLabel, { BackgroundTransparency = 0.95, ImageTransparency = 0 }, textFadeTween)
-    end
-
-    local secondBeat = motion.step(0.05)
-    if secondBeat > 0 then
-        task.wait(secondBeat)
-    end
-    if self._dismissed or not self.main.Parent then
-        self:_entranceDone(true)
-        return
-    end
-    if self.subtitleLabel then
-        motion.tween(self.subtitleLabel, { TextTransparency = 0.5 }, textFadeTween)
-    end
-
-    -- [[Everything still running is the hold time now, not the entrance.
-    -- [[A dismissal below releases early; the natural end lets the queue
-    -- [[wait out the full entrance cadence before the next card starts.]]
-    self:_entranceDone()
-
-    local elapsed = 0
-    while elapsed < self.duration and not self._dismissed and self.main.Parent do
-        local dt = task.wait()
-        if not self._hovered then
-            elapsed += dt
-        end
-    end
-
-    self:_dismiss()
-end
-
-function Toast:_dismiss()
-    if self._dismissed then
-        return
-    end
-    self._dismissed = true
-
-    -- [[A toast retired before its entrance finished still owes the queue its
-    -- slot; `_entranceDone` is a no-op once the show path handed it back.
-    -- Early release lets the queue skip the full entrance cadence.]]
-    self:_entranceDone(true)
-
-    local liveList = self._live
-    local index = liveList and table.find(liveList, self)
-    if liveList and index then
-        table.remove(liveList, index)
-    end
-
-    if not self.main.Parent then
-        return
-    end
-
-    motion.tween(self.body, { BackgroundTransparency = 1, Size = UDim2.new(1, -60, 1, 0) }, dismissTween)
-    motion.tween(self.stroke, { Transparency = 1 }, dismissTween)
-    motion.tween(self.shadow, { Transparency = 1 }, dismissTween)
-    motion.tween(self.titleLabel, { TextTransparency = 1 }, dismissTween)
-    if self.subtitleLabel then
-        motion.tween(self.subtitleLabel, { TextTransparency = 1 }, dismissTween)
-    end
-    if self.iconLabel then
-        motion.tween(self.iconLabel, { ImageTransparency = 1, BackgroundTransparency = 1 }, dismissTween)
-    end
-
-    local collapseTween =
-        state.tweenService:Create(self.main, motion.spec(dismissTween), { Size = UDim2.new(0, self.main.Size.X.Offset, 0, 0) })
-    local connection
-    connection = collapseTween.Completed:Connect(function(playbackState)
-        if connection then
-            connection:Disconnect()
-            connection = nil
-        end
-        if playbackState ~= Enum.PlaybackState.Completed or not self._dismissed or not self.main.Parent then
-            return
-        end
-
-        for _, conn in self._connections do
-            self.window:Disconnect(conn)
-        end
-        self.window:DestroySubtree(self.main)
-    end)
-    collapseTween:Play()
-end
-
-return Toast
-
-end)() end,
-    [21] = function()local wax,script,require=ImportGlobals(21)local ImportGlobals return (function(...)
 local utilities = script.Parent.Parent.utilities
 local image = require(script.Parent.Parent.images.image)
 local icons = require(script.Parent.Parent.icons)
@@ -7424,7 +7040,7 @@ local themes = require(script.Parent.Parent.themes)
 local Window = {}
 Window.__index = Window
 
--- [[Element reveals, theme cross-fades and the toast stack's lane changes all
+-- [[Element reveals, theme cross-fades and the notification stack's lane changes all
 -- ride the motion service's shared specs (see utilities/motion.luau) instead
 -- of per-call TweenInfo values: one vocabulary, one time scale, one owner per
 -- animated property.]]
@@ -7439,10 +7055,7 @@ local contentRevealBeat = 0.12
 local collapsedWideSize = UDim2.fromOffset(185, 50)
 local collapsedIconOnlySize = UDim2.fromOffset(50, 50)
 local collapsedPosition = UDim2.new(0.5, 0, 0, 20)
-local toastsTopPosition = UDim2.new(0.5, 0, 0, 12)
-local toastsTopWhenCollapsed = UDim2.new(0.5, 0, 0, collapsedPosition.Y.Offset + collapsedWideSize.Y.Offset + 12)
 
-local toastWidth = 320
 
 local compactRowHeight = 41
 
@@ -7475,7 +7088,7 @@ local viewportCheckInterval = 2
 local constructionFrameBudget = 0.003
 local constructionInstanceBudget = 48
 
--- Toasts and notifications share one entrance lane. Their 0.6s transitions do
+-- Notifications share one entrance lane. Their 0.6s transitions do
 -- not overlap, but already-visible messages are still allowed to remain in
 -- their normal stacks while the next one enters.
 -- The first open reads as an entrance instead of one large visibility flip:
@@ -7512,21 +7125,6 @@ local coerceValue = themes.coerceValue
 local firstColor = themes.firstColor
 local deriveStrokes = themes.deriveStrokes
 local resolveTheme = themes.resolve
-
-local function updateToastPosition(window, animate)
-    local toastsTop = window._toastsTop
-    if not toastsTop then
-        return
-    end
-
-    local targetPos = if window._collapsedShown then toastsTopWhenCollapsed else toastsTopPosition
-    if not animate or toastsTop.Position == targetPos then
-        toastsTop.Position = targetPos
-        return
-    end
-
-    motion.tween(toastsTop, { Position = targetPos }, "snappy")
-end
 
 function Window:ResolveIcon(value, pack)
     return icons.resolve(value, pack)
@@ -7634,7 +7232,7 @@ function Window.new(props)
             self.settings = {
         toggleKeybind = Enum.KeyCode.K,
         theme = if type(props.theme or props.Theme) == "string" then string.lower(props.theme or props.Theme) else "default",
-        mouseOverride = false,         keepOnScreen = true,         welcomeToast = false,         haptics = false,
+        mouseOverride = false,         keepOnScreen = true,         haptics = false,
         dragMinimisedBar = false,
         showProfile = false,
         showFullUsername = false,
@@ -8011,7 +7609,7 @@ function Window.new(props)
     -- [[Overlays wait for the window's own entrance before any of them starts]]
     -- [[building: the gate opens when that entrance lands (in `_firstShow`,]]
     -- [[after its settle and the reveal cascade that follows it). A host that]]
-    -- [[fires a toast between CreateWindow and the first show still gets it —]]
+    -- [[fires a notification between CreateWindow and the first show still gets it —]]
     -- [[just behind the window instead of on top of it.]]
     overlayQueue.pause(self)
 
@@ -8213,7 +7811,7 @@ function Window:CreateTab(props)
     if not tab.neglectSelector then
         local isFirst = true
         for _, existingTab in self.tabs do
-            if existingTab ~= tab and not existingTab.neglectSelector and existingTab._isSettingsTab == tab._isSettingsTab then
+            if existingTab ~= tab and not existingTab.neglectSelector and self:_railGroup(existingTab) == self:_railGroup(tab) then
                 isFirst = false
                 break
             end
@@ -8368,59 +7966,6 @@ function Window:_showNotification(props)
     end)
 end
 
-function Window:Toast(props)
-    if self.unloaded then
-        return
-    end
-
-        -- [[Cloned before anything is read off it: the card is built on the
-    -- [[queue's turn (see `Window:Notify`), and the resolved `position` below
-    -- [[belongs to this call rather than to the table the host handed in —
-    -- [[which also means the call no longer writes through to the caller's
-    -- [[props.]]
-    props = if typeof(props) == "table" then table.clone(props) else {}
-    local position = props.position or props.Position or "Top"
-    local isTop = typeof(position) ~= "string" or position:lower() ~= "bottom"
-    props.position = if isTop then "Top" else "Bottom"
-    local toastKey = if isTop then "_toastsTop" else "_toastsBottom"
-    local container = self[toastKey]
-
-    if not container then
-        container = self:Create("Frame", {
-            Name = "Toasts",
-            Size = UDim2.new(0, toastWidth, 1, -24),
-            Position = if isTop then toastsTopPosition else UDim2.new(0.5, 0, 1, -12),
-            AnchorPoint = if isTop then Vector2.new(0.5, 0) else Vector2.new(0.5, 1),
-            BackgroundTransparency = 1,
-            ZIndex = constants.zIndex.toast,
-
-            Parent = self.screenGui,
-        })
-
-        self:Create("UIListLayout", {
-            FillDirection = Enum.FillDirection.Vertical,
-            VerticalAlignment = if isTop then Enum.VerticalAlignment.Top else Enum.VerticalAlignment.Bottom,
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Padding = UDim.new(0, 0),
-
-            Parent = container,
-        })
-
-        self[toastKey] = container
-        if isTop then
-            updateToastPosition(self, false)
-        end
-    end
-
-    -- [[Queued with the notifications rather than beside them: the two overlay
-    -- kinds share one turn at a time, because the cost being spread is the same
-    -- one — a card's instances and its entrance tweens landing on one frame.]]
-    overlayQueue.request(self, function(release)
-        require(script.Parent.Parent.components.toast).new(self, props, container, release)
-    end)
-end
-
 function Window:Popup(props)
     if self.unloaded then
         return
@@ -8567,8 +8112,12 @@ function Window:Hide()
     end
 
     for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
+        local iconLabel = self:_actionIconLabel(actionFrame)
+        if iconLabel then
+            motion.tween(iconLabel, { ImageTransparency = 1 }, hideTween)
+        end
         if actionFrame:IsA("Frame") then
-            motion.tween(actionFrame.ImageLabel, { ImageTransparency = 1 }, hideTween)
+            self:_syncActionChrome(actionFrame, false, hideTween)
         end
     end
 
@@ -8591,7 +8140,6 @@ function Window:Hide()
         collapsed = true
 
                         self._collapsedShown = true
-        updateToastPosition(self, true)
         self.collapsedInteract.Visible = true
         self.animating = false
         self._revealing = false
@@ -9548,6 +9096,55 @@ function Window:_applySettingsLayout(isSettings)
     settingsComponent.applySettingsLayout(self, isSettings)
 end
 
+-- [[Rail groups: the rail shows exactly one group at a time - main tabs]]
+-- [[or settings tabs. Every rail filter reads these helpers so the two]]
+-- [[of them cannot drift apart.]]
+function Window:_railGroup(tab)
+    if tab._isSettingsTab then
+        return "settings"
+    end
+    return "main"
+end
+
+function Window:_activeRail()
+    if self._settingsMode then
+        return "settings"
+    end
+    return "main"
+end
+
+-- [[The icon label of a topbar action frame, or nil. `frame.ImageLabel` is a]]
+-- [[direct child read on Roblox, not a safe one: the action container also]]
+-- [[holds chrome with no icon - the search pill and other dividers - and]]
+-- [[indexing a missing child raises "ImageLabel is not a valid member of]]
+-- [[Frame". Every action-loop read goes through here instead of reading]]
+-- [[frame.ImageLabel directly.]]
+function Window:_actionIconLabel(actionFrame)
+    return actionFrame:FindFirstChild("ImageLabel")
+end
+
+-- [[Badge + divider follow their action frame: hidden with them, restored]]
+-- [[with them. The badge restores to opaque only while it is meant to show.]]
+function Window:_syncActionChrome(actionFrame, shown, tween)
+    local badge = actionFrame:FindFirstChild("Badge")
+    if badge then
+        local badgeTarget = if shown and badge.Visible then 0 else 1
+        if tween then
+            motion.tween(badge, { BackgroundTransparency = badgeTarget }, tween)
+        else
+            badge.BackgroundTransparency = badgeTarget
+        end
+    end
+    if actionFrame.Name == "Divider" then
+        local dividerTarget = if shown then 0.8 else 1
+        if tween then
+            motion.tween(actionFrame, { BackgroundTransparency = dividerTarget }, tween)
+        else
+            actionFrame.BackgroundTransparency = dividerTarget
+        end
+    end
+end
+
 -- [[Shared by the topbar gear action and the profile panel's gear.]]
 function Window:_toggleSettingsMode()
     settingsComponent.toggleSettingsMode(self)
@@ -9822,8 +9419,12 @@ function Window:_quickRestore()
         self.subtitle.TextTransparency = 0.7
     end
     for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
-        if actionFrame:IsA("Frame") and actionFrame.ImageLabel then
-            actionFrame.ImageLabel.ImageTransparency = 0.6
+        local iconLabel = self:_actionIconLabel(actionFrame)
+        if iconLabel then
+            iconLabel.ImageTransparency = 0.6
+        end
+        if actionFrame:IsA("Frame") then
+            self:_syncActionChrome(actionFrame, true)
         end
     end
 
@@ -9846,7 +9447,6 @@ function Window:_quickRestore()
         self.drag:enable()
         self.animating = false
         self._revealing = false
-        updateToastPosition(self, true)
         -- [[The overlay gate opens with the shell, exactly as on the first
         -- [[show, and the staged reveal below re-opens it after the page has
         -- [[committed: whichever lands last is the one that lets a waiting
@@ -9922,9 +9522,13 @@ function Window:_firstShow()
         motion.tween(self.subtitle, { TextTransparency = 0.7 }, tweenInfo)
     end
     for _, actionFrame in ipairs(self.actionContainer:GetChildren()) do
-        if actionFrame:IsA("Frame") and actionFrame.ImageLabel then
-            actionFrame.ImageLabel.ImageTransparency = 1
-            motion.tween(actionFrame.ImageLabel, { ImageTransparency = 0.6 }, tweenInfo)
+        local iconLabel = self:_actionIconLabel(actionFrame)
+        if iconLabel then
+            iconLabel.ImageTransparency = 1
+            motion.tween(iconLabel, { ImageTransparency = 0.6 }, tweenInfo)
+        end
+        if actionFrame:IsA("Frame") then
+            self:_syncActionChrome(actionFrame, true, tweenInfo)
         end
     end
 
@@ -9960,7 +9564,7 @@ function Window:_firstShow()
         -- [[The shell has landed, so the entrance is over as far as the
         -- [[overlay queue is concerned. The staged reveal below opens the same
         -- [[gate again when it has committed the page; whichever of the two
-        -- [[happens last is what lets a waiting toast through.]]
+        -- [[happens last is what lets a waiting notification through.]]
         overlayQueue.resume(self)
     end
 
@@ -9972,22 +9576,13 @@ function Window:_firstShow()
 
     -- [[Second beat of the entrance: the single cascade walks the page's
     -- [[controls in once the frame is close to its resting size, and only
-    -- [[then do the queued notifications and toasts start arriving one at a
-    -- [[time. Everything after `CreateWindow` — the welcome toast, a host's
+    -- [[then do the queued notifications start arriving one at a
+    -- [[time. Everything after `CreateWindow` — a host's
     -- [["loaded N modules" notifications, the optional-icon warning — rides
     -- [[that queue instead of sharing the frame the window itself opens on.]]
     self:_stageContentReveal(motion.step(contentRevealBeat), 0.02, 0.35, entranceId)
 
     local player = state.localPlayer
-    if player and self.settings.welcomeToast and chrome.isNewUser() then
-        self:Toast({
-            title = player.DisplayName,
-            subtitle = locale.resolve("Signed in as"),
-            subtitleAbove = true,
-            avatar = player.UserId,
-            minWidth = 220,
-        })
-    end
 end
 
 function Window:GetPath()
@@ -10684,7 +10279,7 @@ end
 return Window
 
 end)() end,
-    [23] = function()local wax,script,require=ImportGlobals(23)local ImportGlobals return (function(...)
+    [22] = function()local wax,script,require=ImportGlobals(22)local ImportGlobals return (function(...)
 -- [[Shared base card layout and styling for Astra UI elements.]]
 -- [[Handles standard background frame, theme strokes, hover overlay,]]
 -- [[content container, icon, and title label.]]
@@ -10770,7 +10365,7 @@ end
 return baseCard
 
 end)() end,
-    [24] = function()local wax,script,require=ImportGlobals(24)local ImportGlobals return (function(...)
+    [23] = function()local wax,script,require=ImportGlobals(23)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Button"
@@ -10955,6 +10550,7 @@ function state:_buildCompact()
     })
 
     window:Create("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
         FillDirection = Enum.FillDirection.Horizontal,
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -11080,7 +10676,7 @@ name(state)
 return state
 
 end)() end,
-    [25] = function()local wax,script,require=ImportGlobals(25)local ImportGlobals return (function(...)
+    [24] = function()local wax,script,require=ImportGlobals(24)local ImportGlobals return (function(...)
 local Changelog = {}
 Changelog.__index = Changelog
 Changelog.__type = "Changelog"
@@ -11501,7 +11097,7 @@ moveable(Changelog)
 return Changelog
 
 end)() end,
-    [26] = function()local wax,script,require=ImportGlobals(26)local ImportGlobals return (function(...)
+    [25] = function()local wax,script,require=ImportGlobals(25)local ImportGlobals return (function(...)
 local utilities = script.Parent.Parent.utilities
 local motion = require(utilities.motion)
 local locale = require(utilities.locale)
@@ -11903,7 +11499,7 @@ lockable(Collapsible)
 return Collapsible
 
 end)() end,
-    [27] = function()local wax,script,require=ImportGlobals(27)local ImportGlobals return (function(...)
+    [26] = function()local wax,script,require=ImportGlobals(26)local ImportGlobals return (function(...)
 -- [[The in-card description line. An element created with a `description` prop
 -- [[grows its own card by the measured height of this line instead of spawning
 -- [[a standalone row beneath the card, so the description can never sit on top
@@ -12073,7 +11669,7 @@ end
 return description
 
 end)() end,
-    [28] = function()local wax,script,require=ImportGlobals(28)local ImportGlobals return (function(...)
+    [27] = function()local wax,script,require=ImportGlobals(27)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Divider"
@@ -12218,7 +11814,7 @@ constants(state)
 return state
 
 end)() end,
-    [29] = function()local wax,script,require=ImportGlobals(29)local ImportGlobals return (function(...)
+    [28] = function()local wax,script,require=ImportGlobals(28)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Dropdown"
@@ -13736,7 +13332,7 @@ multiSelect(state)
 return state
 
 end)() end,
-    [30] = function()local wax,script,require=ImportGlobals(30)local ImportGlobals return (function(...)
+    [29] = function()local wax,script,require=ImportGlobals(29)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Group"
@@ -13955,7 +13551,7 @@ constants(state)
 return state
 
 end)() end,
-    [31] = function()local wax,script,require=ImportGlobals(31)local ImportGlobals return (function(...)
+    [30] = function()local wax,script,require=ImportGlobals(30)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Input"
@@ -14229,7 +13825,7 @@ name(state)
 return state
 
 end)() end,
-    [32] = function()local wax,script,require=ImportGlobals(32)local ImportGlobals return (function(...)
+    [31] = function()local wax,script,require=ImportGlobals(31)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Section"
@@ -14315,7 +13911,7 @@ constants(state)
 return state
 
 end)() end,
-    [33] = function()local wax,script,require=ImportGlobals(33)local ImportGlobals return (function(...)
+    [32] = function()local wax,script,require=ImportGlobals(32)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Slider"
@@ -14902,7 +14498,7 @@ flag(state)
 return state
 
 end)() end,
-    [34] = function()local wax,script,require=ImportGlobals(34)local ImportGlobals return (function(...)
+    [33] = function()local wax,script,require=ImportGlobals(33)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Statistic"
@@ -15000,9 +14596,13 @@ function state.new(tab, a25)
     -- readouts are skipped and the first letter of the value (or of the stat's
     -- own name) renders as a glyph badge instead. String values adopted the
     -- same passthrough the description already has, so "Default" reads as the
-    -- letter D rather than a number roll.]]
+    -- letter D rather than a number roll. `letter = false` opts a text value
+    -- out of the badge: the whole value then renders as a text readout.]]
     local desiredValue = if (a25.value or a25.Value) ~= nil then (a25.value or a25.Value) else 0
     local numeric = type(desiredValue) == "number"
+    local letterMode = if (a25.letter ~= nil or a25.Letter ~= nil)
+        then (a25.letter or a25.Letter) == true
+        else not numeric
 
     local resolvedIcon = tab.window:ResolveIcon(a25.icon or a25.Icon)
 
@@ -15029,12 +14629,14 @@ function state.new(tab, a25)
                         compact = a25.compact or a25.Compact or tab.compact or false,
         display = (a25.display or a25.Display or "value"),
         -- [[The glyph badge replaces the numeric readouts for text values and
-        -- whenever the caller asks for a letter explicitly (a placeholder slot
-        -- now that the settings Theme card uses it for the active-theme
-        -- letter). A provided icon keeps the normal leading icon.]]
-        letter = if (a25.letter ~= nil or a25.Letter ~= nil)
-            then (a25.letter or a25.Letter) == true
-            else not numeric,
+        -- whenever the caller asks for a letter explicitly. A provided icon
+        -- keeps the normal leading icon.]]
+        letter = letterMode,
+        -- [[A text value that opts out of the badge (`letter = false`) reads
+        -- as a plain text readout: one label carrying the whole value. The
+        -- odometer stays out of it — it is a digit machine, so a word would
+        -- cost it a label per character.]]
+        textValue = not numeric and not letterMode,
         _initialValue = if (a25.value or a25.Value) ~= nil
             then (a25.value or a25.Value)
             else nil,
@@ -15195,6 +14797,31 @@ function state:_buildFull()
 
             Parent = self.letterHost,
         }, { TextColor3 = "TitlingColor", FontFace = "TitleFont" })
+
+        return
+    end
+
+    -- [[Text readout: the same slot as the badge, but carrying the whole
+    -- value. No change readout rides along — a percentage delta has no
+    -- meaning for a word — and no odometer is built, so a text stat is
+    -- cheaper than either of the numeric paths.]]
+    if self.textValue then
+        self.textLabel = window:Create("TextLabel", {
+            Text = self:_formatValue(self.value),
+            AnchorPoint = Vector2.new(0, 1),
+            Position = UDim2.new(0, 15, 1, -12 - (self._descriptionExtra or 0)),
+            Size = UDim2.new(1, -30, 0, 18),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            TextSize = 17,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Center,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            TextTransparency = 1,
+            ZIndex = 10,
+
+            Parent = self.main,
+        }, { TextColor3 = "ContentColor", FontFace = "Font" })
 
         return
     end
@@ -15390,23 +15017,46 @@ function state:_buildCompact()
         Parent = self.title,
     })
 
-    self.readoutHost = window:Create("Frame", {
-        AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, 16),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        LayoutOrder = 1,
-        ZIndex = 6,
+    if self.textValue then
+        -- [[Text readout in the compact card: the whole value in one label.
+        -- It joins the card's own flex row directly rather than sitting in
+        -- the odometer's host frame — an AutomaticSize host with no layout
+        -- inside it measures zero and would clip the word away.]]
+        self.textLabel = window:Create("TextLabel", {
+            Text = self:_formatValue(self.value),
+            Size = UDim2.fromOffset(0, 15),
+            AutomaticSize = Enum.AutomaticSize.X,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            LayoutOrder = 1,
+            TextSize = 15,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            TextYAlignment = Enum.TextYAlignment.Center,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            TextTransparency = 1,
+            ZIndex = 6,
 
-        Parent = self.card,
-    })
+            Parent = self.card,
+        }, { TextColor3 = "ContentColor", FontFace = "Font" })
+    else
+        self.readoutHost = window:Create("Frame", {
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2.fromOffset(0, 16),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            LayoutOrder = 1,
+            ZIndex = 6,
 
-    self.readoutOdo = props.new(window, self.readoutHost, {
-        textSize = 15,
-        alignment = Enum.HorizontalAlignment.Right,
-        transparency = 1,
-    })
-    self.readoutOdo:snap(self.display == "change" and self:_formatChange(0) or self:_formatValue(self.value))
+            Parent = self.card,
+        })
+
+        self.readoutOdo = props.new(window, self.readoutHost, {
+            textSize = 15,
+            alignment = Enum.HorizontalAlignment.Right,
+            transparency = 1,
+        })
+        self.readoutOdo:snap(self.display == "change" and self:_formatChange(0) or self:_formatValue(self.value))
+    end
 
     self._accentGradients = { self.strokeGradient, self.mainGradient }
 end
@@ -15492,6 +15142,15 @@ function state:Set(a51)
         return
     end
 
+    -- [[A text stat has no odometers or baselines either: Set() writes the
+    -- value straight into the whole-value label.]]
+    if self.textValue then
+        self.value = a51
+        self._hasValue = a51 ~= nil
+        self:_writeTextReadout()
+        return
+    end
+
     assert(typeof(a51) == "number", "Statistic:Set() - value must be a number, got " .. typeof(a51))
 
     local a52 = self.value
@@ -15549,6 +15208,16 @@ function state:ResetBaseline(a62)
         return
     end
 
+    -- [[Same for the text readout: the value is rewritten, there is no
+    -- baseline to clear.]]
+    if self.textValue then
+        self._initialValue = a62
+        self.value = a62
+        self._hasValue = a62 ~= nil
+        self:_writeTextReadout()
+        return
+    end
+
     local a63 = self.value
     local a64 = not self._hasValue
     local a65 = if typeof(a62) == "number" then a62 else self.value
@@ -15571,9 +15240,17 @@ function state:ResetBaseline(a62)
     self:_setAccent("neutral", 0)
 end
 
--- [[Letter readout update: swaps the glyph badge to the value's first letter.
--- Only meaningful on a stat built in letter mode (text value or letter=true);
--- numeric stats keep their own Set() path.]]
+-- [[Text readout update: rewrites the whole-value label. Text stats only —
+-- the numeric paths drive their odometers and the badge path its glyph.]]
+function state:_writeTextReadout()
+    if self.textLabel then
+        self.textLabel.Text = self:_formatValue(self.value)
+    end
+end
+
+-- [[Text readout update: swaps the value's own text. Only meaningful on a
+-- stat built in text mode (a text value with letter = false); letter stats
+-- keep their badge and numeric stats keep their own Set() path.]]
 function state:SetText(text)
     if type(text) == "number" then
         self:Set(text)
@@ -15583,6 +15260,8 @@ function state:SetText(text)
     self._hasValue = text ~= nil
     if self.letterGlyph then
         self.letterGlyph.Text = glyphText(text, self.name)
+    else
+        self:_writeTextReadout()
     end
 end
 
@@ -15620,7 +15299,11 @@ function state:_setShown(a66, a67)
         if self.iconLabel then
             w:_reveal(self.iconLabel, { ImageTransparency = if a66 then 0 else 1 }, a67)
         end
-        self.readoutOdo:reveal(if a66 then 0 else 1, a67)
+        if self.readoutOdo then
+            self.readoutOdo:reveal(if a66 then 0 else 1, a67)
+        else
+            w:_reveal(self.textLabel, { TextTransparency = if a66 then 0 else 1 }, a67)
+        end
         return
     end
 
@@ -15628,14 +15311,23 @@ function state:_setShown(a66, a67)
         w:_revealCommon(self, a67)
         w:_reveal(self.gradientContainer, { BackgroundTransparency = 0 }, a67)
         w:_reveal(self.glow, { Transparency = 0.82 }, a67)
-        self.valueOdo:reveal(0, a67)
-        self.changeOdo:reveal(0, a67)
+        if self.valueOdo then
+            self.valueOdo:reveal(0, a67)
+            self.changeOdo:reveal(0, a67)
+        else
+            -- Text readout: one label where the value/change pair would be.
+            w:_reveal(self.textLabel, { TextTransparency = 0 }, a67)
+        end
     else
         w:_hideCommon(self, a67)
         w:_reveal(self.gradientContainer, { BackgroundTransparency = 1 }, a67)
         w:_reveal(self.glow, { Transparency = 1 }, a67)
-        self.valueOdo:reveal(1, a67)
-        self.changeOdo:reveal(1, a67)
+        if self.valueOdo then
+            self.valueOdo:reveal(1, a67)
+            self.changeOdo:reveal(1, a67)
+        else
+            w:_reveal(self.textLabel, { TextTransparency = 1 }, a67)
+        end
     end
 end
 
@@ -15655,7 +15347,7 @@ name(state)
 return state
 
 end)() end,
-    [35] = function()local wax,script,require=ImportGlobals(35)local ImportGlobals return (function(...)
+    [34] = function()local wax,script,require=ImportGlobals(34)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Tab"
@@ -16000,7 +15692,7 @@ function state:Remove()
         for _, tab in ipairs(window.tabs) do
             if not tab.neglectSelector then
                 fallback = fallback or tab
-                if (tab._isSettingsTab == true) == (self._isSettingsTab == true) then
+                if window:_railGroup(tab) == window:_railGroup(self) then
                     fallback = tab
                     break
                 end
@@ -16035,7 +15727,7 @@ end
 return state
 
 end)() end,
-    [36] = function()local wax,script,require=ImportGlobals(36)local ImportGlobals return (function(...)
+    [35] = function()local wax,script,require=ImportGlobals(35)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "TabSection"
@@ -16165,7 +15857,7 @@ end
 return state
 
 end)() end,
-    [37] = function()local wax,script,require=ImportGlobals(37)local ImportGlobals return (function(...)
+    [36] = function()local wax,script,require=ImportGlobals(36)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Text"
@@ -16317,7 +16009,7 @@ constants(state)
 return state
 
 end)() end,
-    [38] = function()local wax,script,require=ImportGlobals(38)local ImportGlobals return (function(...)
+    [37] = function()local wax,script,require=ImportGlobals(37)local ImportGlobals return (function(...)
 local state = {}
 state.__index = state
 state.__type = "Toggle"
@@ -16786,7 +16478,7 @@ end
 return state
 
 end)() end,
-    [47] = function()local wax,script,require=ImportGlobals(47)local ImportGlobals return (function(...)
+    [46] = function()local wax,script,require=ImportGlobals(46)local ImportGlobals return (function(...)
 
 local managerModule = require(script.manager)
 local registryModule = require(script.registry)
@@ -16811,7 +16503,7 @@ end
 return settings
 
 end)() end,
-    [40] = function()local wax,script,require=ImportGlobals(40)local ImportGlobals return (function(...)
+    [39] = function()local wax,script,require=ImportGlobals(39)local ImportGlobals return (function(...)
 
 local appearance = {}
 
@@ -16834,7 +16526,7 @@ end
 return appearance
 
 end)() end,
-    [41] = function()local wax,script,require=ImportGlobals(41)local ImportGlobals return (function(...)
+    [40] = function()local wax,script,require=ImportGlobals(40)local ImportGlobals return (function(...)
 
 local behavior = {}
 
@@ -16842,7 +16534,7 @@ function behavior.validate(key: string, value: any): (boolean, any)
     if key == "toggleKeybind" then
         return typeof(value) == "EnumItem", value
     end
-    if key == "mouseOverride" or key == "welcomeToast" or key == "antiWindowDuplicate" or key == "autoSaveConfig" or key == "autoLoadConfig" then
+    if key == "mouseOverride" or key == "antiWindowDuplicate" or key == "autoSaveConfig" or key == "autoLoadConfig" then
         return type(value) == "boolean", value == true
     end
     return false, nil
@@ -16851,7 +16543,7 @@ end
 return behavior
 
 end)() end,
-    [42] = function()local wax,script,require=ImportGlobals(42)local ImportGlobals return (function(...)
+    [41] = function()local wax,script,require=ImportGlobals(41)local ImportGlobals return (function(...)
 
 local defaults = {}
 
@@ -16859,7 +16551,6 @@ defaults.values = {
     toggleKeybind = Enum.KeyCode.K,
     mouseOverride = false,
     keepOnScreen = true,
-    welcomeToast = false,
     haptics = false,
     showProfile = false,
     showFullUsername = false,
@@ -16884,7 +16575,7 @@ end
 return defaults
 
 end)() end,
-    [43] = function()local wax,script,require=ImportGlobals(43)local ImportGlobals return (function(...)
+    [42] = function()local wax,script,require=ImportGlobals(42)local ImportGlobals return (function(...)
 
 local registry = require(script.Parent.registry)
 local defaults = require(script.Parent.defaults)
@@ -17006,7 +16697,7 @@ end
 return SettingsManager
 
 end)() end,
-    [44] = function()local wax,script,require=ImportGlobals(44)local ImportGlobals return (function(...)
+    [43] = function()local wax,script,require=ImportGlobals(43)local ImportGlobals return (function(...)
 
 local motion = require(script.Parent.Parent.utilities.motion)
 
@@ -17030,7 +16721,7 @@ end
 return performance
 
 end)() end,
-    [45] = function()local wax,script,require=ImportGlobals(45)local ImportGlobals return (function(...)
+    [44] = function()local wax,script,require=ImportGlobals(44)local ImportGlobals return (function(...)
 
 local settingsPersistence = require(script.Parent.Parent.utilities.persistenceSettings)
 local settingsCache = require(script.Parent.Parent.cache.persistenceCache)
@@ -17079,7 +16770,7 @@ end
 return persistenceWrite
 
 end)() end,
-    [46] = function()local wax,script,require=ImportGlobals(46)local ImportGlobals return (function(...)
+    [45] = function()local wax,script,require=ImportGlobals(45)local ImportGlobals return (function(...)
 
 local registry = {}
 
@@ -17116,12 +16807,6 @@ registry.definitions = {
         kind = "boolean",
         domain = "appearance",
         description = "Keeps the window clamped inside the viewport.",
-    },
-    welcomeToast = {
-        key = "welcomeToast",
-        kind = "boolean",
-        domain = "behavior",
-        description = "Shows a 'Signed in as' toast on first open of a new account.",
     },
     haptics = {
         key = "haptics",
@@ -17198,7 +16883,7 @@ end
 return registry
 
 end)() end,
-    [51] = function()local wax,script,require=ImportGlobals(51)local ImportGlobals return (function(...)
+    [50] = function()local wax,script,require=ImportGlobals(50)local ImportGlobals return (function(...)
 
 local imageCache = require(script.moduleCache)
 
@@ -17209,7 +16894,7 @@ local moduleCache = {
 return moduleCache
 
 end)() end,
-    [48] = function()local wax,script,require=ImportGlobals(48)local ImportGlobals return (function(...)
+    [47] = function()local wax,script,require=ImportGlobals(47)local ImportGlobals return (function(...)
 local filesystem = require(script.Parent.Parent.utilities.filesystem)
 local path = require(script.Parent.Parent.utilities.path)
 local variables = require(script.Parent.Parent.core.state)
@@ -17512,7 +17197,7 @@ end
 return imageCache
 
 end)() end,
-    [49] = function()local wax,script,require=ImportGlobals(49)local ImportGlobals return (function(...)
+    [48] = function()local wax,script,require=ImportGlobals(48)local ImportGlobals return (function(...)
 
 local moduleCache = {}
 
@@ -17543,7 +17228,7 @@ end
 return moduleCache
 
 end)() end,
-    [50] = function()local wax,script,require=ImportGlobals(50)local ImportGlobals return (function(...)
+    [49] = function()local wax,script,require=ImportGlobals(49)local ImportGlobals return (function(...)
 
 local persistenceCache = {}
 
@@ -17568,7 +17253,7 @@ end
 return persistenceCache
 
 end)() end,
-    [55] = function()local wax,script,require=ImportGlobals(55)local ImportGlobals return (function(...)
+    [54] = function()local wax,script,require=ImportGlobals(54)local ImportGlobals return (function(...)
 
 local textMetrics = require(script.textMetrics)
 local colors = require(script.colors)
@@ -17586,7 +17271,7 @@ functions.contrastText = colors.contrastText
 return functions
 
 end)() end,
-    [52] = function()local wax,script,require=ImportGlobals(52)local ImportGlobals return (function(...)
+    [51] = function()local wax,script,require=ImportGlobals(51)local ImportGlobals return (function(...)
 local colors = {}
 
 function colors.contrastColor(color: Color3): Color3
@@ -17606,7 +17291,7 @@ end
 return colors
 
 end)() end,
-    [53] = function()local wax,script,require=ImportGlobals(53)local ImportGlobals return (function(...)
+    [52] = function()local wax,script,require=ImportGlobals(52)local ImportGlobals return (function(...)
 local flagNames = {}
 
 local offsetBasis = 2166136261
@@ -17638,7 +17323,7 @@ end
 return flagNames
 
 end)() end,
-    [54] = function()local wax,script,require=ImportGlobals(54)local ImportGlobals return (function(...)
+    [53] = function()local wax,script,require=ImportGlobals(53)local ImportGlobals return (function(...)
 local state = require(script.Parent.Parent.core.state)
 local textService = state.textService
 
@@ -17745,7 +17430,7 @@ end
 return textMetrics
 
 end)() end,
-    [56] = function()local wax,script,require=ImportGlobals(56)local ImportGlobals return (function(...)
+    [55] = function()local wax,script,require=ImportGlobals(55)local ImportGlobals return (function(...)
 local sidebar = require(script.Parent.Parent.components.sidebar)
 
 local Sidebar = {}
@@ -17804,7 +17489,7 @@ end
 return Sidebar
 
 end)() end,
-    [57] = function()local wax,script,require=ImportGlobals(57)local ImportGlobals return (function(...)
+    [56] = function()local wax,script,require=ImportGlobals(56)local ImportGlobals return (function(...)
 local sidebar = require(script.Parent.Parent.components.sidebar)
 
 local SidebarCollapsed = {}
@@ -17864,7 +17549,7 @@ end
 return SidebarCollapsed
 
 end)() end,
-    [58] = function()local wax,script,require=ImportGlobals(58)local ImportGlobals return (function(...)
+    [57] = function()local wax,script,require=ImportGlobals(57)local ImportGlobals return (function(...)
 local search = require(script.Parent.Parent.components.search)
 local functions = require(script.Parent.Parent.functions)
 local utilities = script.Parent.Parent.utilities
@@ -17993,7 +17678,7 @@ end
 return Topbar
 
 end)() end,
-    [62] = function()local wax,script,require=ImportGlobals(62)local ImportGlobals return (function(...)
+    [61] = function()local wax,script,require=ImportGlobals(61)local ImportGlobals return (function(...)
 
 local image = require(script.image)
 
@@ -18008,7 +17693,7 @@ local windowIcons = {
 return windowIcons
 
 end)() end,
-    [60] = function()local wax,script,require=ImportGlobals(60)local ImportGlobals return (function(...)
+    [59] = function()local wax,script,require=ImportGlobals(59)local ImportGlobals return (function(...)
 local imageCache = require(script.Parent.Parent.cache.imageCache)
 local variables = require(script.Parent.Parent.core.state)
 
@@ -18173,7 +17858,7 @@ end
 return image
 
 end)() end,
-    [61] = function()local wax,script,require=ImportGlobals(61)local ImportGlobals return (function(...)
+    [60] = function()local wax,script,require=ImportGlobals(60)local ImportGlobals return (function(...)
 
 local windowIcons = {}
 
@@ -18270,8 +17955,8 @@ end)() end,
 -- [[Lookups are exact. Icon names and pack names are case-sensitive: nothing]]
 -- [[is lowercased, corrected or fuzzy-matched, so a miss is a miss. A name]]
 -- [[that exists in several packs resolves to the first pack listed by]]
--- [[`Icons.priority()` (lucide, material, tabler, phosphor, heroicons,]]
--- [[feather); an explicit pack - `get(name, pack)` or the `"pack:name"` form -]]
+-- [[`Icons.priority()` (lucide, material, tabler, phosphor, heroicons, feather,]]
+-- [[remix); an explicit pack - `get(name, pack)` or the `"pack:name"` form -]]
 -- [[is never overridden by that order, and an unknown or mis-cased pack name]]
 -- [[resolves to nothing rather than to some other pack.]]
 
@@ -18282,8 +17967,8 @@ icons.BASE = "https://raw.githubusercontent.com/Haijo12/sisys_ididh/main"
 
 -- [[Pack priority for a bare name. Deterministic, and also the order packs]]
 -- [[load in: the search stops at the first pack that has the name, so a lucide]]
--- [[icon never pulls in the other five tables.]]
-local PACK_ORDER = { "lucide", "material", "tabler", "phosphor", "heroicons", "feather" }
+-- [[icon never pulls in the other six tables.]]
+local PACK_ORDER = { "lucide", "material", "tabler", "phosphor", "heroicons", "feather", "remix" }
 
 -- [[Pack registry: pack name -> lazy loader. Each loader requires the pack]]
 -- [[module on demand; require() itself caches the module table afterwards.]]
@@ -18306,6 +17991,9 @@ local packLoaders = {
     feather = function()
         return require(script.feather)
     end,
+    remix = function()
+        return require(script.remix)
+    end,
 }
 
 local loadedPacks: { [string]: { [string]: string } } = {}
@@ -18317,6 +18005,7 @@ icons.Tabler = "tabler"
 icons.Phosphor = "phosphor"
 icons.Heroicons = "heroicons"
 icons.Feather = "feather"
+icons.Remix = "remix"
 
 -- [[Lazily exposed pack tables (Icons.lucide, Icons.material, ...).]]
 setmetatable(icons, {
@@ -18366,7 +18055,7 @@ function icons.priority(): { string }
 end
 
 -- [[Which packs have been loaded so far. Laziness is part of the contract]]
--- [[(startup must not read 10.6k lines of tables to show one icon), so it is]]
+-- [[(startup must not read 13.7k lines of tables to show one icon), so it is]]
 -- [[observable: a suite asserts that one lucide name loads one pack.]]
 function icons.loaded(): { string }
     local names = {}
@@ -18747,7 +18436,7 @@ end
 return icons
 
 end)() end,
-    [63] = function()local wax,script,require=ImportGlobals(63)local ImportGlobals return (function(...)
+    [62] = function()local wax,script,require=ImportGlobals(62)local ImportGlobals return (function(...)
 -- [[feather icon pack.]]
 -- [[Compact catalog: names only. PNG URLs are derived on demand by]]
 -- [[icons/packBuilder (kebab/snake name to PascalCase), so this module]]
@@ -18791,7 +18480,7 @@ x-square x youtube zap-off zap zoom-in zoom-out
 )
 
 end)() end,
-    [64] = function()local wax,script,require=ImportGlobals(64)local ImportGlobals return (function(...)
+    [63] = function()local wax,script,require=ImportGlobals(63)local ImportGlobals return (function(...)
 -- [[heroicons icon pack.]]
 -- [[Compact catalog: names only. PNG URLs are derived on demand by]]
 -- [[icons/packBuilder (kebab/snake name to PascalCase), so this module]]
@@ -18871,7 +18560,7 @@ wrench-screwdriver wrench-screwdriver_solid wrench wrench_solid x-circle x-circl
 )
 
 end)() end,
-    [65] = function()local wax,script,require=ImportGlobals(65)local ImportGlobals return (function(...)
+    [64] = function()local wax,script,require=ImportGlobals(64)local ImportGlobals return (function(...)
 -- [[lucide icon pack.]]
 -- [[Compact catalog: names only. PNG URLs are derived on demand by]]
 -- [[icons/packBuilder (kebab/snake name to PascalCase), so this module]]
@@ -19064,7 +18753,7 @@ zodiac-sagittarius zodiac-scorpio zodiac-taurus zodiac-virgo zoom-in zoom-out
 )
 
 end)() end,
-    [66] = function()local wax,script,require=ImportGlobals(66)local ImportGlobals return (function(...)
+    [65] = function()local wax,script,require=ImportGlobals(65)local ImportGlobals return (function(...)
 -- [[material icon pack.]]
 -- [[Compact catalog: names only. PNG URLs are derived on demand by]]
 -- [[icons/packBuilder (kebab/snake name to PascalCase), so this module]]
@@ -19193,7 +18882,7 @@ zoom_in zoom_out zoom_out_map
 )
 
 end)() end,
-    [67] = function()local wax,script,require=ImportGlobals(67)local ImportGlobals return (function(...)
+    [66] = function()local wax,script,require=ImportGlobals(66)local ImportGlobals return (function(...)
 -- [[Lazy icon-pack builder.
 -- [[]]
 -- [[A pack is a compact newline-separated list of kebab names plus the shared
@@ -19287,7 +18976,7 @@ end
 return PackBuilder
 
 end)() end,
-    [68] = function()local wax,script,require=ImportGlobals(68)local ImportGlobals return (function(...)
+    [67] = function()local wax,script,require=ImportGlobals(67)local ImportGlobals return (function(...)
 -- [[phosphor icon pack.]]
 -- [[Compact catalog: names only. PNG URLs are derived on demand by]]
 -- [[icons/packBuilder (kebab/snake name to PascalCase), so this module]]
@@ -19450,6 +19139,344 @@ wave-sawtooth wave-sine wave-square wave-triangle waveform-slash waveform waves 
 wechat-logo whatsapp-logo wheelchair-motion wheelchair wifi-high wifi-low wifi-medium wifi-none wifi-slash wifi-x
 wind windmill windows-logo wine wrench x-circle x-logo x-square x yarn
 yin-yang youtube-logo
+]==]
+)
+
+end)() end,
+    [68] = function()local wax,script,require=ImportGlobals(68)local ImportGlobals return (function(...)
+-- [[remix icon pack.]]
+-- [[Compact catalog: names only. PNG URLs are derived on demand by]]
+-- [[icons/packBuilder (kebab/snake name to PascalCase), so this module]]
+-- [[parses as one string constant instead of thousands of table]]
+-- [[constructors. Render with scripts/render_remix_pack.js.]]
+
+return require(script.Parent.packBuilder).create(
+	"assets/icons/remix-pack/",
+	"remix",
+[==[
+24-hours-fill 24-hours-line 4k-fill 4k-line a-b accessibility-fill accessibility-line account-box-2-fill account-box-2-line account-box-fill
+account-box-line account-circle-2-fill account-circle-2-line account-circle-fill account-circle-line account-pin-box-fill account-pin-box-line account-pin-circle-fill account-pin-circle-line add-box-fill
+add-box-line add-circle-fill add-circle-line add-fill add-large-fill add-large-line add-line admin-fill admin-line advertisement-fill
+advertisement-line aed-electrodes-fill aed-electrodes-line aed-fill aed-line ai ai-agent-fill ai-agent-line ai-generate ai-generate-2
+ai-generate-2-fill ai-generate-2-line ai-generate-3d-fill ai-generate-3d-line ai-generate-text airplay-fill airplay-line alarm-add-fill alarm-add-line alarm-fill
+alarm-line alarm-snooze-fill alarm-snooze-line alarm-warning-fill alarm-warning-line album-fill album-line alert-fill alert-line alibaba-cloud-fill
+alibaba-cloud-line aliens-fill aliens-line align-bottom align-center align-item-bottom-fill align-item-bottom-line align-item-horizontal-center-fill align-item-horizontal-center-line align-item-left-fill
+align-item-left-line align-item-right-fill align-item-right-line align-item-top-fill align-item-top-line align-item-vertical-center-fill align-item-vertical-center-line align-justify align-left align-right
+align-top align-vertically alipay-fill alipay-line amazon-fill amazon-line anchor-fill anchor-line ancient-gate-fill ancient-gate-line
+ancient-pavilion-fill ancient-pavilion-line android-fill android-line angularjs-fill angularjs-line anthropic-fill anthropic-line anticlockwise-2-fill anticlockwise-2-line
+anticlockwise-fill anticlockwise-line app-store-fill app-store-line apple-fill apple-line apps-2-add-fill apps-2-add-line apps-2-ai-fill apps-2-ai-line
+apps-2-fill apps-2-line apps-ai-fill apps-ai-line apps-fill apps-line archive-2-fill archive-2-line archive-drawer-fill archive-drawer-line
+archive-fill archive-line archive-stack-fill archive-stack-line area-chart-fill area-chart-line armchair-fill armchair-line arrow-down-box-fill arrow-down-box-line
+arrow-down-circle-fill arrow-down-circle-line arrow-down-double-fill arrow-down-double-line arrow-down-fill arrow-down-line arrow-down-long-fill arrow-down-long-line arrow-down-s-fill arrow-down-s-line
+arrow-down-wide-fill arrow-down-wide-line arrow-drop-down-fill arrow-drop-down-line arrow-drop-left-fill arrow-drop-left-line arrow-drop-right-fill arrow-drop-right-line arrow-drop-up-fill arrow-drop-up-line
+arrow-go-back-fill arrow-go-back-line arrow-go-forward-fill arrow-go-forward-line arrow-left-box-fill arrow-left-box-line arrow-left-circle-fill arrow-left-circle-line arrow-left-double-fill arrow-left-double-line
+arrow-left-down-box-fill arrow-left-down-box-line arrow-left-down-fill arrow-left-down-line arrow-left-down-long-fill arrow-left-down-long-line arrow-left-fill arrow-left-line arrow-left-long-fill arrow-left-long-line
+arrow-left-right-fill arrow-left-right-line arrow-left-s-fill arrow-left-s-line arrow-left-up-box-fill arrow-left-up-box-line arrow-left-up-fill arrow-left-up-line arrow-left-up-long-fill arrow-left-up-long-line
+arrow-left-wide-fill arrow-left-wide-line arrow-right-box-fill arrow-right-box-line arrow-right-circle-fill arrow-right-circle-line arrow-right-double-fill arrow-right-double-line arrow-right-down-box-fill arrow-right-down-box-line
+arrow-right-down-fill arrow-right-down-line arrow-right-down-long-fill arrow-right-down-long-line arrow-right-fill arrow-right-line arrow-right-long-fill arrow-right-long-line arrow-right-s-fill arrow-right-s-line
+arrow-right-up-box-fill arrow-right-up-box-line arrow-right-up-fill arrow-right-up-line arrow-right-up-long-fill arrow-right-up-long-line arrow-right-wide-fill arrow-right-wide-line arrow-turn-back-fill arrow-turn-back-line
+arrow-turn-forward-fill arrow-turn-forward-line arrow-up-box-fill arrow-up-box-line arrow-up-circle-fill arrow-up-circle-line arrow-up-double-fill arrow-up-double-line arrow-up-down-fill arrow-up-down-line
+arrow-up-fill arrow-up-line arrow-up-long-fill arrow-up-long-line arrow-up-s-fill arrow-up-s-line arrow-up-wide-fill arrow-up-wide-line artboard-2-fill artboard-2-line
+artboard-fill artboard-line article-fill article-line aspect-ratio-fill aspect-ratio-line asterisk at-fill at-line atom-fill
+atom-line attachment-2 attachment-fill attachment-line auction-fill auction-line award-fill award-line baidu-fill baidu-line
+ball-pen-fill ball-pen-line bank-card-2-fill bank-card-2-line bank-card-fill bank-card-line bank-fill bank-line bar-chart-2-fill bar-chart-2-line
+bar-chart-box-ai-fill bar-chart-box-ai-line bar-chart-box-fill bar-chart-box-line bar-chart-fill bar-chart-grouped-fill bar-chart-grouped-line bar-chart-horizontal-fill bar-chart-horizontal-line bar-chart-line
+barcode-box-fill barcode-box-line barcode-fill barcode-line bard-fill bard-line barricade-fill barricade-line base-station-fill base-station-line
+baseball-fill baseball-line basketball-fill basketball-line battery-2-charge-fill battery-2-charge-line battery-2-fill battery-2-line battery-charge-fill battery-charge-line
+battery-fill battery-line battery-low-fill battery-low-line battery-saver-fill battery-saver-line battery-share-fill battery-share-line bear-smile-fill bear-smile-line
+beer-fill beer-line behance-fill behance-line bell-fill bell-line bike-fill bike-line bilibili-fill bilibili-line
+bill-fill bill-line billiards-fill billiards-line binoculars-fill binoculars-line bit-coin-fill bit-coin-line blaze-fill blaze-line
+blender-fill blender-line blogger-fill blogger-line bluesky-fill bluesky-line bluetooth-connect-fill bluetooth-connect-line bluetooth-fill bluetooth-line
+blur-off-fill blur-off-line bnb-fill bnb-line body-scan-fill body-scan-line bold book-2-fill book-2-line book-3-fill
+book-3-line book-ai-fill book-ai-line book-fill book-line book-marked-fill book-marked-line book-open-fill book-open-line book-read-fill
+book-read-line book-shelf-fill book-shelf-line booklet-fill booklet-line bookmark-2-fill bookmark-2-line bookmark-3-fill bookmark-3-line bookmark-fill
+bookmark-line bootstrap-fill bootstrap-line bowl-fill bowl-line box-1-fill box-1-line box-2-fill box-2-line box-3-fill
+box-3-line boxing-fill boxing-line braces-fill braces-line brackets-fill brackets-line brain-2-fill brain-2-line brain-3-fill
+brain-3-line brain-4-fill brain-4-line brain-ai-3-fill brain-ai-3-line brain-fill brain-line bread-fill bread-line briefcase-2-fill
+briefcase-2-line briefcase-3-fill briefcase-3-line briefcase-4-fill briefcase-4-line briefcase-5-fill briefcase-5-line briefcase-fill briefcase-line bring-forward
+bring-to-front broadcast-fill broadcast-line brush-2-fill brush-2-line brush-3-fill brush-3-line brush-4-fill brush-4-line brush-ai-3-fill
+brush-ai-3-line brush-ai-fill brush-ai-line brush-fill brush-line btc-fill btc-line bubble-chart-fill bubble-chart-line bug-2-fill
+bug-2-line bug-fill bug-line building-2-fill building-2-line building-3-fill building-3-line building-4-fill building-4-line building-fill
+building-line bus-2-fill bus-2-line bus-fill bus-line bus-wifi-fill bus-wifi-line cactus-fill cactus-line cake-2-fill
+cake-2-line cake-3-fill cake-3-line cake-fill cake-line calculator-fill calculator-line calendar-2-fill calendar-2-line calendar-check-fill
+calendar-check-line calendar-close-fill calendar-close-line calendar-event-fill calendar-event-line calendar-fill calendar-line calendar-schedule-fill calendar-schedule-line calendar-todo-fill
+calendar-todo-line calendar-view camera-2-fill camera-2-line camera-3-fill camera-3-line camera-4-fill camera-4-line camera-ai-2-fill camera-ai-2-line
+camera-ai-fill camera-ai-line camera-fill camera-lens-ai-fill camera-lens-ai-line camera-lens-fill camera-lens-line camera-line camera-off-fill camera-off-line
+camera-switch-fill camera-switch-line candle-fill candle-line capsule-fill capsule-line car-fill car-line car-washing-fill car-washing-line
+caravan-fill caravan-line carousel-view cash-fill cash-line cast-fill cast-line cellphone-fill cellphone-line celsius-fill
+celsius-line centos-fill centos-line certificate-2-fill certificate-2-line certificate-fill certificate-line character-recognition-fill character-recognition-line charging-pile-2-fill
+charging-pile-2-line charging-pile-fill charging-pile-line chat-1-fill chat-1-line chat-2-fill chat-2-line chat-3-fill chat-3-line chat-4-fill
+chat-4-line chat-ai-2-fill chat-ai-2-line chat-ai-3-fill chat-ai-3-line chat-ai-4-fill chat-ai-4-line chat-ai-fill chat-ai-line chat-check-fill
+chat-check-line chat-delete-fill chat-delete-line chat-download-fill chat-download-line chat-follow-up-fill chat-follow-up-line chat-forward-fill chat-forward-line chat-heart-fill
+chat-heart-line chat-history-fill chat-history-line chat-new-fill chat-new-line chat-off-fill chat-off-line chat-poll-fill chat-poll-line chat-private-fill
+chat-private-line chat-quote-fill chat-quote-line chat-search-fill chat-search-line chat-settings-fill chat-settings-line chat-smile-2-fill chat-smile-2-line chat-smile-3-fill
+chat-smile-3-line chat-smile-ai-3-fill chat-smile-ai-3-line chat-smile-ai-fill chat-smile-ai-line chat-smile-fill chat-smile-line chat-thread-fill chat-thread-line chat-unread-fill
+chat-unread-line chat-upload-fill chat-upload-line chat-voice-ai-fill chat-voice-ai-line chat-voice-fill chat-voice-line check-double-fill check-double-line check-fill
+check-line checkbox-blank-circle-fill checkbox-blank-circle-line checkbox-blank-fill checkbox-blank-line checkbox-circle-fill checkbox-circle-line checkbox-fill checkbox-indeterminate-fill checkbox-indeterminate-line
+checkbox-line checkbox-multiple-blank-fill checkbox-multiple-blank-line checkbox-multiple-fill checkbox-multiple-line chess-fill chess-line china-railway-fill china-railway-line chrome-fill
+chrome-line circle-fill circle-line clapperboard-ai-fill clapperboard-ai-line clapperboard-fill clapperboard-line claude-fill claude-line clipboard-fill
+clipboard-line clockwise-2-fill clockwise-2-line clockwise-fill clockwise-line close-circle-fill close-circle-line close-fill close-large-fill close-large-line
+close-line closed-captioning-ai-fill closed-captioning-ai-line closed-captioning-fill closed-captioning-line cloud-fill cloud-line cloud-off-fill cloud-off-line cloud-windy-fill
+cloud-windy-line cloudy-2-fill cloudy-2-line cloudy-fill cloudy-line code-ai-fill code-ai-line code-block code-box-fill code-box-line
+code-fill code-line code-s-fill code-s-line code-s-slash-fill code-s-slash-line code-view codepen-fill codepen-line coin-fill
+coin-line coins-fill coins-line collage-fill collage-line collapse-diagonal-2-fill collapse-diagonal-2-line collapse-diagonal-fill collapse-diagonal-line collapse-horizontal-fill
+collapse-horizontal-line collapse-vertical-fill collapse-vertical-line color-filter-ai-fill color-filter-ai-line color-filter-fill color-filter-line command-fill command-line community-fill
+community-line compass-2-fill compass-2-line compass-3-fill compass-3-line compass-4-fill compass-4-line compass-discover-fill compass-discover-line compass-fill
+compass-line compasses-2-fill compasses-2-line compasses-fill compasses-line computer-fill computer-line connector-fill connector-line contacts-book-2-fill
+contacts-book-2-line contacts-book-3-fill contacts-book-3-line contacts-book-fill contacts-book-line contacts-book-upload-fill contacts-book-upload-line contacts-fill contacts-line contract-fill
+contract-left-fill contract-left-line contract-left-right-fill contract-left-right-line contract-line contract-right-fill contract-right-line contract-up-down-fill contract-up-down-line contrast-2-fill
+contrast-2-line contrast-drop-2-fill contrast-drop-2-line contrast-drop-fill contrast-drop-line contrast-fill contrast-line cookie-fill cookie-line copilot-fill
+copilot-line copper-coin-fill copper-coin-line copper-diamond-fill copper-diamond-line copyleft-fill copyleft-line copyright-fill copyright-line coreos-fill
+coreos-line corner-down-left-fill corner-down-left-line corner-down-right-fill corner-down-right-line corner-left-down-fill corner-left-down-line corner-left-up-fill corner-left-up-line corner-right-down-fill
+corner-right-down-line corner-right-up-fill corner-right-up-line corner-up-left-double-fill corner-up-left-double-line corner-up-left-fill corner-up-left-line corner-up-right-double-fill corner-up-right-double-line corner-up-right-fill
+corner-up-right-line coupon-2-fill coupon-2-line coupon-3-fill coupon-3-line coupon-4-fill coupon-4-line coupon-5-fill coupon-5-line coupon-fill
+coupon-line cpu-fill cpu-line creative-commons-by-fill creative-commons-by-line creative-commons-fill creative-commons-line creative-commons-nc-fill creative-commons-nc-line creative-commons-nd-fill
+creative-commons-nd-line creative-commons-sa-fill creative-commons-sa-line creative-commons-zero-fill creative-commons-zero-line criminal-fill criminal-line crop-2-fill crop-2-line crop-fill
+crop-line cross-fill cross-line crosshair-2-fill crosshair-2-line crosshair-fill crosshair-line css3-fill css3-line cup-fill
+cup-line currency-fill currency-line cursor-ai-fill cursor-ai-line cursor-fill cursor-hand cursor-line custom-size customer-service-2-fill
+customer-service-2-line customer-service-fill customer-service-line dashboard-2-fill dashboard-2-line dashboard-3-fill dashboard-3-line dashboard-fill dashboard-horizontal-fill dashboard-horizontal-line
+dashboard-line database-2-fill database-2-line database-fill database-line deepseek-fill deepseek-line delete-back-2-fill delete-back-2-line delete-back-fill
+delete-back-line delete-bin-2-fill delete-bin-2-line delete-bin-3-fill delete-bin-3-line delete-bin-4-fill delete-bin-4-line delete-bin-5-fill delete-bin-5-line delete-bin-6-fill
+delete-bin-6-line delete-bin-7-fill delete-bin-7-line delete-bin-fill delete-bin-line delete-column delete-row device-fill device-line device-recover-fill
+device-recover-line diamond-fill diamond-line diamond-ring-fill diamond-ring-line dice-1-fill dice-1-line dice-2-fill dice-2-line dice-3-fill
+dice-3-line dice-4-fill dice-4-line dice-5-fill dice-5-line dice-6-fill dice-6-line dice-fill dice-line dingding-fill
+dingding-line direction-fill direction-line disc-fill disc-line discord-fill discord-line discount-percent-fill discount-percent-line discuss-fill
+discuss-line dislike-fill dislike-line disqus-fill disqus-line divide-fill divide-line dna-fill dna-line donut-chart-fill
+donut-chart-line door-closed-fill door-closed-line door-fill door-line door-lock-box-fill door-lock-box-line door-lock-fill door-lock-line door-open-fill
+door-open-line dossier-fill dossier-line douban-fill douban-line double-quotes-l double-quotes-r download-2-fill download-2-line download-cloud-2-fill
+download-cloud-2-line download-cloud-fill download-cloud-line download-fill download-line draft-fill draft-line drag-drop-fill drag-drop-line drag-move-2-fill
+drag-move-2-line drag-move-fill drag-move-line draggable draw-fill draw-line dribbble-fill dribbble-line drinks-2-fill drinks-2-line
+drinks-fill drinks-line drive-fill drive-line drizzle-fill drizzle-line drop-fill drop-line dropbox-fill dropbox-line
+dropdown-list dropper-fill dropper-line dual-sim-1-fill dual-sim-1-line dual-sim-2-fill dual-sim-2-line dv-fill dv-line dvd-ai-fill
+dvd-ai-line dvd-fill dvd-line e-bike-2-fill e-bike-2-line e-bike-fill e-bike-line earth-fill earth-line earthquake-fill
+earthquake-line edge-fill edge-line edge-new-fill edge-new-line edit-2-fill edit-2-line edit-box-fill edit-box-line edit-circle-fill
+edit-circle-line edit-fill edit-line eject-fill eject-line emoji-sticker-fill emoji-sticker-line emotion-2-fill emotion-2-line emotion-add-fill
+emotion-add-line emotion-fill emotion-happy-fill emotion-happy-line emotion-laugh-fill emotion-laugh-line emotion-line emotion-normal-fill emotion-normal-line emotion-sad-fill
+emotion-sad-line emotion-unhappy-fill emotion-unhappy-line empathize-fill empathize-line emphasis emphasis-cn english-input equal-fill equal-line
+equalizer-2-fill equalizer-2-line equalizer-3-fill equalizer-3-line equalizer-fill equalizer-line eraser-fill eraser-line error-warning-fill error-warning-line
+eth-fill eth-line evernote-fill evernote-line exchange-2-fill exchange-2-line exchange-box-fill exchange-box-line exchange-cny-fill exchange-cny-line
+exchange-dollar-fill exchange-dollar-line exchange-fill exchange-funds-fill exchange-funds-line exchange-line expand-diagonal-2-fill expand-diagonal-2-line expand-diagonal-fill expand-diagonal-line
+expand-diagonal-s-2-fill expand-diagonal-s-2-line expand-diagonal-s-fill expand-diagonal-s-line expand-height-fill expand-height-line expand-horizontal-fill expand-horizontal-line expand-horizontal-s-fill expand-horizontal-s-line
+expand-left-fill expand-left-line expand-left-right-fill expand-left-right-line expand-right-fill expand-right-line expand-up-down-fill expand-up-down-line expand-vertical-fill expand-vertical-line
+expand-vertical-s-fill expand-vertical-s-line expand-width-fill expand-width-line export-fill export-line external-link-fill external-link-line eye-2-fill eye-2-line
+eye-close-fill eye-close-line eye-fill eye-line eye-off-fill eye-off-line facebook-box-fill facebook-box-line facebook-circle-fill facebook-circle-line
+facebook-fill facebook-line fahrenheit-fill fahrenheit-line fediverse-fill fediverse-line feedback-fill feedback-line figma-fill figma-line
+file-2-fill file-2-line file-3-fill file-3-line file-4-fill file-4-line file-add-fill file-add-line file-ai-2-fill file-ai-2-line
+file-ai-fill file-ai-line file-chart-2-fill file-chart-2-line file-chart-fill file-chart-line file-check-fill file-check-line file-close-fill file-close-line
+file-cloud-fill file-cloud-line file-code-fill file-code-line file-copy-2-fill file-copy-2-line file-copy-fill file-copy-line file-damage-fill file-damage-line
+file-download-fill file-download-line file-edit-fill file-edit-line file-excel-2-fill file-excel-2-line file-excel-fill file-excel-line file-fill file-forbid-fill
+file-forbid-line file-gif-fill file-gif-line file-history-fill file-history-line file-hwp-fill file-hwp-line file-image-fill file-image-line file-info-fill
+file-info-line file-line file-list-2-fill file-list-2-line file-list-3-fill file-list-3-line file-list-fill file-list-line file-lock-fill file-lock-line
+file-marked-fill file-marked-line file-music-fill file-music-line file-paper-2-fill file-paper-2-line file-paper-fill file-paper-line file-pdf-2-fill file-pdf-2-line
+file-pdf-fill file-pdf-line file-ppt-2-fill file-ppt-2-line file-ppt-fill file-ppt-line file-reduce-fill file-reduce-line file-scan-fill file-scan-line
+file-search-fill file-search-line file-settings-fill file-settings-line file-shield-2-fill file-shield-2-line file-shield-fill file-shield-line file-shred-fill file-shred-line
+file-text-fill file-text-line file-transfer-fill file-transfer-line file-unknow-fill file-unknow-line file-upload-fill file-upload-line file-user-fill file-user-line
+file-video-fill file-video-line file-warning-fill file-warning-line file-word-2-fill file-word-2-line file-word-fill file-word-line file-zip-fill file-zip-line
+film-ai-fill film-ai-line film-fill film-line filter-2-fill filter-2-line filter-3-fill filter-3-line filter-fill filter-line
+filter-off-fill filter-off-line find-replace-fill find-replace-line finder-fill finder-line fingerprint-2-fill fingerprint-2-line fingerprint-fill fingerprint-line
+fire-fill fire-line firebase-fill firebase-line firefox-browser-fill firefox-browser-line firefox-fill firefox-line first-aid-kit-fill first-aid-kit-line
+fiverr-fill fiverr-line flag-2-fill flag-2-line flag-fill flag-line flag-off-fill flag-off-line flashlight-fill flashlight-line
+flask-fill flask-line flickr-fill flickr-line flight-land-fill flight-land-line flight-takeoff-fill flight-takeoff-line flip-horizontal-2-fill flip-horizontal-2-line
+flip-horizontal-fill flip-horizontal-line flip-vertical-2-fill flip-vertical-2-line flip-vertical-fill flip-vertical-line flood-fill flood-line flow-chart flower-fill
+flower-line flutter-fill flutter-line focus-2-fill focus-2-line focus-3-fill focus-3-line focus-fill focus-line focus-mode
+foggy-fill foggy-line folder-2-fill folder-2-line folder-3-fill folder-3-line folder-4-fill folder-4-line folder-5-fill folder-5-line
+folder-6-fill folder-6-line folder-add-fill folder-add-line folder-chart-2-fill folder-chart-2-line folder-chart-fill folder-chart-line folder-check-fill folder-check-line
+folder-close-fill folder-close-line folder-cloud-fill folder-cloud-line folder-download-fill folder-download-line folder-fill folder-forbid-fill folder-forbid-line folder-history-fill
+folder-history-line folder-image-fill folder-image-line folder-info-fill folder-info-line folder-keyhole-fill folder-keyhole-line folder-line folder-lock-fill folder-lock-line
+folder-music-fill folder-music-line folder-open-fill folder-open-line folder-received-fill folder-received-line folder-reduce-fill folder-reduce-line folder-settings-fill folder-settings-line
+folder-shared-fill folder-shared-line folder-shield-2-fill folder-shield-2-line folder-shield-fill folder-shield-line folder-transfer-fill folder-transfer-line folder-unknow-fill folder-unknow-line
+folder-upload-fill folder-upload-line folder-user-fill folder-user-line folder-video-fill folder-video-line folder-warning-fill folder-warning-line folder-zip-fill folder-zip-line
+folders-fill folders-line font-color font-family font-mono font-sans-serif font-serif font-size font-size-2 font-size-ai
+football-fill football-line footprint-fill footprint-line forbid-2-fill forbid-2-line forbid-fill forbid-line format-clear formula
+forward-10-fill forward-10-line forward-15-fill forward-15-line forward-30-fill forward-30-line forward-5-fill forward-5-line forward-end-fill forward-end-line
+forward-end-mini-fill forward-end-mini-line fridge-fill fridge-line friendica-fill friendica-line fullscreen-exit-fill fullscreen-exit-line fullscreen-fill fullscreen-line
+function-add-fill function-add-line function-ai-fill function-ai-line function-fill function-line functions funds-box-fill funds-box-line funds-fill
+funds-line gallery-fill gallery-line gallery-upload-fill gallery-upload-line gallery-view gallery-view-2 game-2-fill game-2-line game-fill
+game-line gamepad-fill gamepad-line gas-station-fill gas-station-line gatsby-fill gatsby-line gemini-fill gemini-line genderless-fill
+genderless-line ghost-2-fill ghost-2-line ghost-3-fill ghost-3-line ghost-4-fill ghost-4-line ghost-fill ghost-line ghost-smile-fill
+ghost-smile-line gift-2-fill gift-2-line gift-fill gift-line git-branch-fill git-branch-line git-close-pull-request-fill git-close-pull-request-line git-commit-fill
+git-commit-line git-fork-fill git-fork-line git-merge-fill git-merge-line git-pr-draft-fill git-pr-draft-line git-pull-request-fill git-pull-request-line git-repository-commits-fill
+git-repository-commits-line git-repository-fill git-repository-line git-repository-private-fill git-repository-private-line gitbook-fill gitbook-line gitee-fill gitee-line github-fill
+github-line gitlab-fill gitlab-line glasses-2-fill glasses-2-line glasses-fill glasses-line global-fill global-line global-off-fill
+global-off-line globe-fill globe-line goblet-2-fill goblet-2-line goblet-broken-fill goblet-broken-line goblet-fill goblet-line goggles-fill
+goggles-line golf-ball-fill golf-ball-line google-fill google-line google-play-fill google-play-line government-fill government-line gps-fill
+gps-line gradienter-fill gradienter-line graduation-cap-fill graduation-cap-line grid-fill grid-line grok-ai-fill grok-ai-line group-2-fill
+group-2-line group-3-fill group-3-line group-fill group-line guide-fill guide-line h-1 h-2 h-3
+h-4 h-5 h-6 hail-fill hail-line hammer-fill hammer-line hand hand-2 hand-coin-fill
+hand-coin-line hand-heart-fill hand-heart-line hand-sanitizer-fill hand-sanitizer-line handbag-fill handbag-line hard-drive-2-fill hard-drive-2-line hard-drive-3-fill
+hard-drive-3-line hard-drive-fill hard-drive-line hashtag haze-2-fill haze-2-line haze-fill haze-line hd-fill hd-line
+heading headphone-fill headphone-line health-book-fill health-book-line heart-2-fill heart-2-line heart-3-fill heart-3-line heart-add-2-fill
+heart-add-2-line heart-add-fill heart-add-line heart-fill heart-line heart-pulse-fill heart-pulse-line hearts-fill hearts-line heavy-showers-fill
+heavy-showers-line hexagon-fill hexagon-line history-fill history-line home-2-fill home-2-line home-3-fill home-3-line home-4-fill
+home-4-line home-5-fill home-5-line home-6-fill home-6-line home-7-fill home-7-line home-8-fill home-8-line home-9-fill
+home-9-line home-fill home-gear-fill home-gear-line home-heart-fill home-heart-line home-line home-office-fill home-office-line home-smile-2-fill
+home-smile-2-line home-smile-fill home-smile-line home-wifi-fill home-wifi-line honor-of-kings-fill honor-of-kings-line honour-fill honour-line hospital-fill
+hospital-line hotel-bed-fill hotel-bed-line hotel-fill hotel-line hotspot-fill hotspot-line hourglass-2-fill hourglass-2-line hourglass-fill
+hourglass-line hq-fill hq-line html5-fill html5-line id-card-fill id-card-line ie-fill ie-line image-2-fill
+image-2-line image-add-fill image-add-line image-ai-fill image-ai-line image-circle-ai-fill image-circle-ai-line image-circle-fill image-circle-line image-download-fill
+image-download-line image-edit-fill image-edit-line image-fill image-line image-upload-fill image-upload-line import-fill import-line inbox-2-fill
+inbox-2-line inbox-archive-fill inbox-archive-line inbox-fill inbox-line inbox-unarchive-fill inbox-unarchive-line increase-decrease-fill increase-decrease-line indent-decrease
+indent-increase indeterminate-circle-fill indeterminate-circle-line infinity-fill infinity-line info-card-fill info-card-line info-i information-2-fill information-2-line
+information-fill information-line information-off-fill information-off-line infrared-thermometer-fill infrared-thermometer-line ink-bottle-fill ink-bottle-line input-cursor-move input-field
+input-method-fill input-method-line insert-column-left insert-column-right insert-row-bottom insert-row-top instagram-fill instagram-line install-fill install-line
+instance-fill instance-line invision-fill invision-line issues-fill issues-line issues-reopen-fill issues-reopen-line italic java-fill
+java-line javascript-fill javascript-line jewelry-fill jewelry-line kakao-talk-fill kakao-talk-line kanban-view kanban-view-2 key-2-fill
+key-2-line key-fill key-line keyboard-box-fill keyboard-box-line keyboard-fill keyboard-line keynote-fill keynote-line kick-fill
+kick-line knife-blood-fill knife-blood-line knife-fill knife-line landscape-ai-fill landscape-ai-line landscape-fill landscape-line layout-2-fill
+layout-2-line layout-3-fill layout-3-line layout-4-fill layout-4-line layout-5-fill layout-5-line layout-6-fill layout-6-line layout-bottom-2-fill
+layout-bottom-2-line layout-bottom-fill layout-bottom-line layout-column-fill layout-column-line layout-fill layout-grid-2-fill layout-grid-2-line layout-grid-fill layout-grid-line
+layout-horizontal-fill layout-horizontal-line layout-left-2-fill layout-left-2-line layout-left-fill layout-left-line layout-line layout-masonry-fill layout-masonry-line layout-right-2-fill
+layout-right-2-line layout-right-fill layout-right-line layout-row-fill layout-row-line layout-top-2-fill layout-top-2-line layout-top-fill layout-top-line layout-vertical-fill
+layout-vertical-line leaf-fill leaf-line letter-spacing-2 lifebuoy-fill lifebuoy-line lightbulb-ai-fill lightbulb-ai-line lightbulb-fill lightbulb-flash-fill
+lightbulb-flash-line lightbulb-line line-chart-fill line-chart-line line-fill line-height line-height-2 line-line link link-m
+link-unlink link-unlink-m linkedin-box-fill linkedin-box-line linkedin-fill linkedin-line links-fill links-line list-check list-check-2
+list-check-3 list-indefinite list-ordered list-ordered-2 list-radio list-settings-fill list-settings-line list-unordered list-view live-fill
+live-line loader-2-fill loader-2-line loader-3-fill loader-3-line loader-4-fill loader-4-line loader-5-fill loader-5-line loader-fill
+loader-line lock-2-fill lock-2-line lock-fill lock-line lock-password-fill lock-password-line lock-star-fill lock-star-line lock-unlock-fill
+lock-unlock-line login-box-fill login-box-line login-circle-fill login-circle-line logout-box-fill logout-box-line logout-box-r-fill logout-box-r-line logout-circle-fill
+logout-circle-line logout-circle-r-fill logout-circle-r-line loop-left-ai-fill loop-left-ai-line loop-left-fill loop-left-line loop-right-ai-fill loop-right-ai-line loop-right-fill
+loop-right-line luggage-cart-fill luggage-cart-line luggage-deposit-fill luggage-deposit-line lungs-fill lungs-line mac-fill mac-line macbook-fill
+macbook-line magic-fill magic-line mail-add-fill mail-add-line mail-ai-fill mail-ai-line mail-check-fill mail-check-line mail-close-fill
+mail-close-line mail-download-fill mail-download-line mail-fill mail-forbid-fill mail-forbid-line mail-line mail-lock-fill mail-lock-line mail-open-fill
+mail-open-line mail-send-fill mail-send-line mail-settings-fill mail-settings-line mail-star-fill mail-star-line mail-unread-fill mail-unread-line mail-volume-fill
+mail-volume-line map-2-fill map-2-line map-fill map-line map-pin-2-fill map-pin-2-line map-pin-3-fill map-pin-3-line map-pin-4-fill
+map-pin-4-line map-pin-5-fill map-pin-5-line map-pin-add-fill map-pin-add-line map-pin-fill map-pin-line map-pin-range-fill map-pin-range-line map-pin-time-fill
+map-pin-time-line map-pin-user-fill map-pin-user-line mark-pen-fill mark-pen-line markdown-fill markdown-line markup-fill markup-line mastercard-fill
+mastercard-line mastodon-fill mastodon-line medal-2-fill medal-2-line medal-fill medal-line medicine-bottle-fill medicine-bottle-line medium-fill
+medium-line megaphone-2-fill megaphone-2-line megaphone-fill megaphone-line memories-fill memories-line men-fill men-line mental-health-fill
+mental-health-line menu-2-fill menu-2-line menu-3-fill menu-3-line menu-4-fill menu-4-line menu-5-fill menu-5-line menu-add-fill
+menu-add-line menu-fill menu-fold-2-fill menu-fold-2-line menu-fold-3-fill menu-fold-3-line menu-fold-4-fill menu-fold-4-line menu-fold-fill menu-fold-line
+menu-line menu-search-fill menu-search-line menu-unfold-2-fill menu-unfold-2-line menu-unfold-3-fill menu-unfold-3-line menu-unfold-4-fill menu-unfold-4-line menu-unfold-fill
+menu-unfold-line merge-cells-horizontal merge-cells-vertical message-2-fill message-2-line message-3-fill message-3-line message-ai-3-fill message-ai-3-line message-fill
+message-line messenger-fill messenger-line meta-fill meta-line meteor-fill meteor-line mic-2-ai-fill mic-2-ai-line mic-2-fill
+mic-2-line mic-ai-fill mic-ai-line mic-fill mic-line mic-off-fill mic-off-line mickey-fill mickey-line microscope-fill
+microscope-line microsoft-copilot-fill microsoft-copilot-line microsoft-fill microsoft-line microsoft-loop-fill microsoft-loop-line mind-map mini-program-fill mini-program-line
+mist-fill mist-line mixtral-fill mixtral-line mobile-download-fill mobile-download-line money-cny-box-fill money-cny-box-line money-cny-circle-fill money-cny-circle-line
+money-dollar-box-fill money-dollar-box-line money-dollar-circle-fill money-dollar-circle-line money-euro-box-fill money-euro-box-line money-euro-circle-fill money-euro-circle-line money-pound-box-fill money-pound-box-line
+money-pound-circle-fill money-pound-circle-line money-rupee-circle-fill money-rupee-circle-line moon-clear-fill moon-clear-line moon-cloudy-fill moon-cloudy-line moon-fill moon-foggy-fill
+moon-foggy-line moon-line more-2-fill more-2-line more-fill more-line mosaic-fill mosaic-line motorbike-fill motorbike-line
+mouse-fill mouse-line movie-2-ai-fill movie-2-ai-line movie-2-fill movie-2-line movie-ai-fill movie-ai-line movie-fill movie-line
+multi-image-fill multi-image-line music-2-fill music-2-line music-ai-fill music-ai-line music-fill music-line mv-ai-fill mv-ai-line
+mv-fill mv-line navigation-fill navigation-line netease-cloud-music-fill netease-cloud-music-line netflix-fill netflix-line network-error-fill network-error-line
+network-fill network-line network-off-fill network-off-line news-fill news-line newspaper-fill newspaper-line nextjs-fill nextjs-line
+nft-fill nft-line no-credit-card-fill no-credit-card-line node-tree nodejs-fill nodejs-line notification-2-fill notification-2-line notification-3-fill
+notification-3-line notification-4-fill notification-4-line notification-badge-fill notification-badge-line notification-fill notification-line notification-off-fill notification-off-line notification-snooze-fill
+notification-snooze-line notion-fill notion-line npmjs-fill npmjs-line number-0 number-1 number-2 number-3 number-4
+number-5 number-6 number-7 number-8 number-9 numbers-fill numbers-line nurse-fill nurse-line octagon-fill
+octagon-line oil-fill oil-line omega open-arm-fill open-arm-line open-source-fill open-source-line openai-fill openai-line
+openbase-fill openbase-line opera-fill opera-line order-play-fill order-play-line organization-chart outlet-2-fill outlet-2-line outlet-fill
+outlet-line overline p2p-fill p2p-line page-separator pages-fill pages-line paint-brush-fill paint-brush-line paint-fill
+paint-line painting-ai-fill painting-ai-line painting-fill painting-line palette-fill palette-line pantone-fill pantone-line paragraph
+parent-fill parent-line parentheses-fill parentheses-line parking-box-fill parking-box-line parking-fill parking-line pass-expired-fill pass-expired-line
+pass-pending-fill pass-pending-line pass-valid-fill pass-valid-line passport-fill passport-line patreon-fill patreon-line pause-circle-fill pause-circle-line
+pause-fill pause-large-fill pause-large-line pause-line pause-mini-fill pause-mini-line paypal-fill paypal-line pen-nib-fill pen-nib-line
+pencil-ai-2-fill pencil-ai-2-line pencil-ai-fill pencil-ai-line pencil-fill pencil-line pencil-ruler-2-fill pencil-ruler-2-line pencil-ruler-fill pencil-ruler-line
+pentagon-fill pentagon-line percent-fill percent-line perplexity-fill perplexity-line phone-camera-fill phone-camera-line phone-fill phone-find-fill
+phone-find-line phone-line phone-lock-fill phone-lock-line php-fill php-line piano-fill piano-grand-fill piano-grand-line piano-line
+picture-in-picture-2-fill picture-in-picture-2-line picture-in-picture-exit-fill picture-in-picture-exit-line picture-in-picture-fill picture-in-picture-line pie-chart-2-fill pie-chart-2-line pie-chart-box-fill pie-chart-box-line
+pie-chart-fill pie-chart-line pin-distance-fill pin-distance-line ping-pong-fill ping-pong-line pinterest-fill pinterest-line pinyin-input pix-fill
+pix-line pixelfed-fill pixelfed-line plane-fill plane-line planet-fill planet-line plant-fill plant-line play-circle-fill
+play-circle-line play-fill play-large-fill play-large-line play-line play-list-2-fill play-list-2-line play-list-add-fill play-list-add-line play-list-fill
+play-list-line play-mini-fill play-mini-line play-reverse-fill play-reverse-large-fill play-reverse-large-line play-reverse-line play-reverse-mini-fill play-reverse-mini-line playstation-fill
+playstation-line plug-2-fill plug-2-line plug-3-fill plug-3-line plug-fill plug-line poker-clubs-fill poker-clubs-line poker-diamonds-fill
+poker-diamonds-line poker-hearts-fill poker-hearts-line poker-spades-fill poker-spades-line polaroid-2-fill polaroid-2-line polaroid-fill polaroid-line police-badge-fill
+police-badge-line police-car-fill police-car-line presentation-fill presentation-line price-tag-2-fill price-tag-2-line price-tag-3-fill price-tag-3-line price-tag-fill
+price-tag-line printer-cloud-fill printer-cloud-line printer-fill printer-line product-hunt-fill product-hunt-line profile-fill profile-line progress-1-fill
+progress-1-line progress-2-fill progress-2-line progress-3-fill progress-3-line progress-4-fill progress-4-line progress-5-fill progress-5-line progress-6-fill
+progress-6-line progress-7-fill progress-7-line progress-8-fill progress-8-line prohibited-2-fill prohibited-2-line prohibited-fill prohibited-line projector-2-fill
+projector-2-line projector-fill projector-line psychotherapy-fill psychotherapy-line pulse-ai-fill pulse-ai-line pulse-fill pulse-line pushpin-2-fill
+pushpin-2-line pushpin-fill pushpin-line puzzle-2-fill puzzle-2-line puzzle-fill puzzle-line qq-fill qq-line qr-code-fill
+qr-code-line qr-scan-2-fill qr-scan-2-line qr-scan-ai-fill qr-scan-ai-line qr-scan-fill qr-scan-line question-answer-fill question-answer-line question-fill
+question-line question-mark questionnaire-fill questionnaire-line quill-pen-ai-fill quill-pen-ai-line quill-pen-fill quill-pen-line quote-text qwen-ai-fill
+qwen-ai-line radar-fill radar-line radio-2-fill radio-2-line radio-button-fill radio-button-line radio-fill radio-line rainbow-fill
+rainbow-line rainy-fill rainy-line ram-2-fill ram-2-line ram-fill ram-line reactjs-fill reactjs-line receipt-fill
+receipt-line record-circle-fill record-circle-line record-mail-fill record-mail-line rectangle-fill rectangle-line recycle-fill recycle-line red-packet-fill
+red-packet-line reddit-2-fill reddit-2-line reddit-fill reddit-line refresh-fill refresh-line refund-2-fill refund-2-line refund-fill
+refund-line registered-fill registered-line remix-fill remix-line remix-run-fill remix-run-line remixicon-fill remixicon-line remote-control-2-fill
+remote-control-2-line remote-control-fill remote-control-line repeat-2-fill repeat-2-line repeat-fill repeat-line repeat-one-fill repeat-one-line replay-10-fill
+replay-10-line replay-15-fill replay-15-line replay-30-fill replay-30-line replay-5-fill replay-5-line reply-all-fill reply-all-line reply-fill
+reply-line reserved-fill reserved-line reset-left-fill reset-left-line reset-right-fill reset-right-line rest-time-fill rest-time-line restart-fill
+restart-line restaurant-2-fill restaurant-2-line restaurant-fill restaurant-line rewind-fill rewind-line rewind-mini-fill rewind-mini-line rewind-start-fill
+rewind-start-line rewind-start-mini-fill rewind-start-mini-line rfid-fill rfid-line rhythm-fill rhythm-line riding-fill riding-line road-map-fill
+road-map-line roadster-fill roadster-line robot-2-fill robot-2-line robot-3-fill robot-3-line robot-fill robot-line rocket-2-fill
+rocket-2-line rocket-fill rocket-line rotate-lock-fill rotate-lock-line rounded-corner route-fill route-line router-fill router-line
+rss-fill rss-line ruler-2-fill ruler-2-line ruler-fill ruler-line run-fill run-line safari-fill safari-line
+safe-2-fill safe-2-line safe-3-fill safe-3-line safe-fill safe-line sailboat-fill sailboat-line save-2-fill save-2-line
+save-3-fill save-3-line save-fill save-line scales-2-fill scales-2-line scales-3-fill scales-3-line scales-fill scales-line
+scan-2-fill scan-2-line scan-fill scan-line school-fill school-line scissors-2-fill scissors-2-line scissors-cut-fill scissors-cut-line
+scissors-fill scissors-line screenshot-2-fill screenshot-2-line screenshot-fill screenshot-line scroll-to-bottom-fill scroll-to-bottom-line sd-card-fill sd-card-line
+sd-card-mini-fill sd-card-mini-line search-2-fill search-2-line search-ai-2-fill search-ai-2-line search-ai-3-fill search-ai-3-line search-ai-4-fill search-ai-4-line
+search-ai-fill search-ai-line search-eye-fill search-eye-line search-fill search-line secure-payment-fill secure-payment-line seedling-fill seedling-line
+send-backward send-ins-fill send-ins-line send-plane-2-fill send-plane-2-line send-plane-fill send-plane-line send-to-back sensor-fill sensor-line
+seo-fill seo-line separator server-fill server-line service-bell-fill service-bell-line service-fill service-line settings-2-fill
+settings-2-line settings-3-fill settings-3-line settings-4-fill settings-4-line settings-5-fill settings-5-line settings-6-fill settings-6-line settings-fill
+settings-line shadow-fill shadow-line shake-hands-fill shake-hands-line shape-2-fill shape-2-line shape-fill shape-line shapes-fill
+shapes-line share-2-fill share-2-line share-box-fill share-box-line share-circle-fill share-circle-line share-fill share-forward-2-fill share-forward-2-line
+share-forward-box-fill share-forward-box-line share-forward-fill share-forward-line share-line shield-check-fill shield-check-line shield-cross-fill shield-cross-line shield-fill
+shield-flash-fill shield-flash-line shield-keyhole-fill shield-keyhole-line shield-line shield-star-fill shield-star-line shield-user-fill shield-user-line shining-2-fill
+shining-2-line shining-fill shining-line ship-2-fill ship-2-line ship-fill ship-line shirt-fill shirt-line shopping-bag-2-fill
+shopping-bag-2-line shopping-bag-3-fill shopping-bag-3-line shopping-bag-4-fill shopping-bag-4-line shopping-bag-fill shopping-bag-line shopping-basket-2-fill shopping-basket-2-line shopping-basket-fill
+shopping-basket-line shopping-cart-2-fill shopping-cart-2-line shopping-cart-fill shopping-cart-line showers-fill showers-line shuffle-fill shuffle-line shut-down-fill
+shut-down-line side-bar-fill side-bar-line sidebar-fold-fill sidebar-fold-line sidebar-unfold-fill sidebar-unfold-line signal-cellular-1-fill signal-cellular-1-line signal-cellular-2-fill
+signal-cellular-2-line signal-cellular-3-fill signal-cellular-3-line signal-cellular-off-fill signal-cellular-off-line signal-tower-fill signal-tower-line signal-wifi-1-fill signal-wifi-1-line signal-wifi-2-fill
+signal-wifi-2-line signal-wifi-3-fill signal-wifi-3-line signal-wifi-error-fill signal-wifi-error-line signal-wifi-fill signal-wifi-line signal-wifi-off-fill signal-wifi-off-line signpost-fill
+signpost-line sim-card-2-fill sim-card-2-line sim-card-fill sim-card-line sim-card-warning-fill sim-card-warning-line single-quotes-l single-quotes-r sip-fill
+sip-line sketching skip-back-fill skip-back-line skip-back-mini-fill skip-back-mini-line skip-down-fill skip-down-line skip-forward-fill skip-forward-line
+skip-forward-mini-fill skip-forward-mini-line skip-left-fill skip-left-line skip-right-fill skip-right-line skip-up-fill skip-up-line skull-2-fill skull-2-line
+skull-fill skull-line skype-fill skype-line slack-fill slack-line slash-commands slash-commands-2 slice-fill slice-line
+slideshow-2-fill slideshow-2-line slideshow-3-fill slideshow-3-line slideshow-4-fill slideshow-4-line slideshow-fill slideshow-line slideshow-view slow-down-fill
+slow-down-line smartphone-fill smartphone-line snapchat-fill snapchat-line snowflake-fill snowflake-line snowy-fill snowy-line sofa-fill
+sofa-line sort-alphabet-asc sort-alphabet-desc sort-asc sort-desc sort-number-asc sort-number-desc sound-module-fill sound-module-line soundcloud-fill
+soundcloud-line space space-ship-2-fill space-ship-2-line space-ship-fill space-ship-line spam-2-fill spam-2-line spam-3-fill spam-3-line
+spam-fill spam-line sparkling-2-fill sparkling-2-line sparkling-fill sparkling-line speak-ai-fill speak-ai-line speak-fill speak-line
+speaker-2-fill speaker-2-line speaker-3-fill speaker-3-line speaker-fill speaker-line spectrum-fill spectrum-line speech-to-text-fill speech-to-text-line
+speed-fill speed-line speed-mini-fill speed-mini-line speed-up-fill speed-up-line split-cells-horizontal split-cells-vertical spotify-fill spotify-line
+spy-fill spy-line square-fill square-line square-root stack-fill stack-line stack-overflow-fill stack-overflow-line stacked-chart-fill
+stacked-chart-line stacked-view stackshare-fill stackshare-line stairs-fill stairs-line star-fill star-half-fill star-half-line star-half-s-fill
+star-half-s-line star-line star-off-fill star-off-line star-s-fill star-s-line star-smile-fill star-smile-line steam-fill steam-line
+steering-2-fill steering-2-line steering-fill steering-line stethoscope-fill stethoscope-line sticky-note-2-fill sticky-note-2-line sticky-note-add-fill sticky-note-add-line
+sticky-note-fill sticky-note-line stock-fill stock-line stop-circle-fill stop-circle-line stop-fill stop-large-fill stop-large-line stop-line
+stop-mini-fill stop-mini-line store-2-fill store-2-line store-3-fill store-3-line store-fill store-line strikethrough strikethrough-2
+subreddit-fill subreddit-line subscript subscript-2 subtract-fill subtract-line subway-fill subway-line subway-wifi-fill subway-wifi-line
+suitcase-2-fill suitcase-2-line suitcase-3-fill suitcase-3-line suitcase-fill suitcase-line sun-cloudy-fill sun-cloudy-line sun-fill sun-foggy-fill
+sun-foggy-line sun-line supabase-fill supabase-line superscript superscript-2 surgical-mask-fill surgical-mask-line surround-sound-fill surround-sound-line
+survey-fill survey-line svelte-fill svelte-line swap-2-fill swap-2-line swap-3-fill swap-3-line swap-box-fill swap-box-line
+swap-fill swap-line switch-fill switch-line sword-fill sword-line syringe-fill syringe-line t-box-fill t-box-line
+t-shirt-2-fill t-shirt-2-line t-shirt-air-fill t-shirt-air-line t-shirt-fill t-shirt-line table-2 table-3 table-alt-fill table-alt-line
+table-fill table-line table-view tablet-fill tablet-line tailwind-css-fill tailwind-css-line takeaway-fill takeaway-line taobao-fill
+taobao-line tape-fill tape-line target-fill target-line task-fill task-line taxi-fill taxi-line taxi-wifi-fill
+taxi-wifi-line team-fill team-line telegram-2-fill telegram-2-line telegram-fill telegram-line temp-cold-fill temp-cold-line temp-hot-fill
+temp-hot-line tent-fill tent-line terminal-box-fill terminal-box-line terminal-fill terminal-line terminal-window-fill terminal-window-line test-tube-fill
+test-tube-line text text-block text-direction-l text-direction-r text-snippet text-spacing text-to-speech-fill text-to-speech-line text-wrap
+thermometer-fill thermometer-line threads-fill threads-line thumb-down-fill thumb-down-line thumb-up-fill thumb-up-line thunderstorms-fill thunderstorms-line
+ticket-2-fill ticket-2-line ticket-fill ticket-line tiktok-fill tiktok-line time-fill time-line time-zone-fill time-zone-line
+timeline-view timer-2-fill timer-2-line timer-fill timer-flash-fill timer-flash-line timer-line todo-fill todo-line toggle-fill
+toggle-line token-swap-fill token-swap-line tools-fill tools-line tooth-fill tooth-line tornado-fill tornado-line trademark-fill
+trademark-line traffic-light-fill traffic-light-line train-fill train-line train-wifi-fill train-wifi-line translate translate-2 translate-ai
+translate-ai-2 travesti-fill travesti-line treasure-map-fill treasure-map-line tree-fill tree-line trello-fill trello-line triangle-fill
+triangle-line triangular-flag-fill triangular-flag-line trophy-fill trophy-line truck-fill truck-line tumblr-fill tumblr-line tv-2-fill
+tv-2-line tv-fill tv-line twitch-fill twitch-line twitter-fill twitter-line twitter-x-fill twitter-x-line typhoon-fill
+typhoon-line u-disk-fill u-disk-line ubuntu-fill ubuntu-line umbrella-fill umbrella-line underline uninstall-fill uninstall-line
+unpin-fill unpin-line unsplash-fill unsplash-line upload-2-fill upload-2-line upload-cloud-2-fill upload-cloud-2-line upload-cloud-fill upload-cloud-line
+upload-fill upload-line upwork-fill upwork-line usb-fill usb-line user-2-fill user-2-line user-3-fill user-3-line
+user-4-fill user-4-line user-5-fill user-5-line user-6-fill user-6-line user-add-fill user-add-line user-community-fill user-community-line
+user-fill user-follow-fill user-follow-line user-forbid-fill user-forbid-line user-heart-fill user-heart-line user-line user-location-fill user-location-line
+user-minus-fill user-minus-line user-received-2-fill user-received-2-line user-received-fill user-received-line user-search-fill user-search-line user-settings-fill user-settings-line
+user-shared-2-fill user-shared-2-line user-shared-fill user-shared-line user-smile-fill user-smile-line user-star-fill user-star-line user-unfollow-fill user-unfollow-line
+user-voice-fill user-voice-line vercel-fill vercel-line verified-badge-fill verified-badge-line video-add-fill video-add-line video-ai-fill video-ai-line
+video-chat-fill video-chat-line video-download-fill video-download-line video-fill video-line video-off-fill video-off-line video-on-ai-fill video-on-ai-line
+video-on-fill video-on-line video-upload-fill video-upload-line vidicon-2-fill vidicon-2-line vidicon-fill vidicon-line vimeo-fill vimeo-line
+vip-crown-2-fill vip-crown-2-line vip-crown-fill vip-crown-line vip-diamond-fill vip-diamond-line vip-fill vip-line virus-fill virus-line
+visa-fill visa-line vk-fill vk-line voice-ai-fill voice-ai-line voice-recognition-fill voice-recognition-line voiceprint-fill voiceprint-line
+volume-down-fill volume-down-line volume-mute-fill volume-mute-line volume-off-vibrate-fill volume-off-vibrate-line volume-up-fill volume-up-line volume-vibrate-fill volume-vibrate-line
+vuejs-fill vuejs-line walk-fill walk-line wallet-2-fill wallet-2-line wallet-3-fill wallet-3-line wallet-fill wallet-line
+water-flash-fill water-flash-line water-percent-fill water-percent-line webcam-fill webcam-line webhook-fill webhook-line wechat-2-fill wechat-2-line
+wechat-channels-fill wechat-channels-line wechat-fill wechat-line wechat-pay-fill wechat-pay-line weibo-fill weibo-line weight-fill weight-line
+whatsapp-fill whatsapp-line wheelchair-fill wheelchair-line wifi-fill wifi-line wifi-off-fill wifi-off-line window-2-fill window-2-line
+window-fill window-line windows-fill windows-line windy-fill windy-line wireless-charging-fill wireless-charging-line women-fill women-line
+wordpress-fill wordpress-line wrench-fill wrench-line wubi-input xbox-fill xbox-line xing-fill xing-line xrp-fill
+xrp-line xtz-fill xtz-line youtube-fill youtube-line yuque-fill yuque-line zcool-fill zcool-line zhihu-fill
+zhihu-line zhipu-ai-fill zhipu-ai-line zoom-in-fill zoom-in-line zoom-out-fill zoom-out-line zzz-fill zzz-line
 ]==]
 )
 
@@ -21144,8 +21171,6 @@ constants.zIndex = {
     tabFade = 2,
     notification = 1500,
     drag = 100003,
-    toast = 2000,
-    toastContent = 2001,
     restoreContent = 100001,
     restoreInteract = 100002,
 }
@@ -22287,7 +22312,11 @@ function log.warn(...)
     if shouldSuppress() then
         return
     end
-    warn(...)
+    -- [[`warn` is a Roblox global; plain Luau runtimes (the CLI suites) do]]
+    -- [[not provide it. Logging must never crash the library.]]
+    if typeof(warn) == "function" then
+        warn(...)
+    end
 end
 
 function log.print(...)
@@ -22321,7 +22350,7 @@ end)() end,
 -- over the same property, and everything animated through it answers to a
 -- single time scale (`motion.setProfile`, the "Animation speed" setting).
 -- Sites that still call `TweenService:Create` directly (component-local
--- flourishes such as the toast queue) keep their own timing until they are
+-- flourishes such as the notification queue) keep their own timing until they are
 -- moved over.
 --
 -- Behaviour contract, deliberately conservative:
@@ -23457,7 +23486,6 @@ type SettingsWindow = {
         mouseOverride: boolean,
         keepOnScreen: boolean,
         dragMinimisedBar: boolean,
-        welcomeToast: boolean,
         haptics: boolean,
         showProfile: boolean,
         showFullUsername: boolean,
@@ -23478,7 +23506,6 @@ type DecodedSettings = {
     mouseOverride: unknown?,
     keepOnScreen: unknown?,
     dragMinimisedBar: unknown?,
-    welcomeToast: unknown?,
         haptics: unknown?,
         showProfile: unknown?,
         showFullUsername: unknown?,    profileSide: unknown?,
@@ -23507,7 +23534,6 @@ function persistenceSettings.saveSettings(window: SettingsWindow): boolean
         mouseOverride = window.settings.mouseOverride,
         keepOnScreen = window.settings.keepOnScreen,
         dragMinimisedBar = window.settings.dragMinimisedBar,
-        welcomeToast = window.settings.welcomeToast,
         haptics = window.settings.haptics,
         showProfile = window.settings.showProfile,
         showFullUsername = window.settings.showFullUsername,
@@ -23629,10 +23655,6 @@ function persistenceSettings.loadSettings(window: SettingsWindow): (boolean, boo
 
     if type(decodedSettings.dragMinimisedBar) == "boolean" then
         window.settings.dragMinimisedBar = decodedSettings.dragMinimisedBar
-    end
-
-    if type(decodedSettings.welcomeToast) == "boolean" then
-        window.settings.welcomeToast = decodedSettings.welcomeToast
     end
 
     if type(decodedSettings.haptics) == "boolean" then
@@ -23927,106 +23949,106 @@ end)() end,
 
 local LineOffsets = {
     [2] = 12,
-    [3] = 244,
-    [5] = 618,
-    [6] = 653,
-    [7] = 698,
-    [8] = 604,
-    [9] = 815,
-    [10] = 913,
-    [11] = 1152,
-    [12] = 1498,
-    [13] = 1850,
-    [14] = 2138,
-    [15] = 2859,
-    [16] = 5286,
-    [17] = 5633,
-    [18] = 6508,
-    [19] = 6569,
-    [20] = 6984,
-    [21] = 7401,
-    [23] = 10688,
-    [24] = 10774,
-    [25] = 11084,
-    [26] = 11505,
-    [27] = 11907,
-    [28] = 12077,
-    [29] = 12222,
-    [30] = 13740,
-    [31] = 13959,
-    [32] = 14233,
-    [33] = 14319,
-    [34] = 14906,
-    [35] = 15659,
-    [36] = 16039,
-    [37] = 16169,
-    [38] = 16321,
-    [40] = 16815,
-    [41] = 16838,
-    [42] = 16855,
-    [43] = 16888,
-    [44] = 17010,
-    [45] = 17034,
-    [46] = 17083,
-    [47] = 16790,
-    [48] = 17213,
-    [49] = 17516,
-    [50] = 17547,
-    [51] = 17202,
-    [52] = 17590,
-    [53] = 17610,
-    [54] = 17642,
-    [55] = 17572,
-    [56] = 17749,
-    [57] = 17808,
-    [58] = 17868,
-    [60] = 18012,
-    [61] = 18177,
-    [62] = 17997,
-    [63] = 18751,
-    [64] = 18795,
-    [65] = 18875,
-    [66] = 19068,
-    [67] = 19197,
-    [68] = 19291,
-    [69] = 19458,
-    [70] = 18253,
-    [71] = 20092,
-    [72] = 20158,
-    [73] = 20224,
-    [74] = 20299,
-    [75] = 20405,
-    [76] = 20471,
-    [77] = 20546,
-    [78] = 20621,
-    [79] = 20696,
-    [80] = 20771,
-    [81] = 19986,
-    [82] = 20837,
-    [83] = 20935,
-    [84] = 21113,
-    [85] = 21163,
-    [86] = 21193,
-    [87] = 21444,
-    [88] = 21493,
-    [89] = 21946,
-    [90] = 21964,
-    [91] = 22133,
-    [92] = 22232,
-    [93] = 22254,
-    [94] = 22304,
-    [95] = 22654,
-    [96] = 22690,
-    [97] = 22708,
-    [98] = 23062,
-    [99] = 23074,
-    [100] = 23125,
-    [101] = 23144,
-    [102] = 23395,
-    [103] = 23439,
-    [104] = 23682,
-    [105] = 23710,
-    [106] = 23721,
+    [3] = 243,
+    [5] = 613,
+    [6] = 648,
+    [7] = 693,
+    [8] = 599,
+    [9] = 810,
+    [10] = 943,
+    [11] = 1182,
+    [12] = 1528,
+    [13] = 1880,
+    [14] = 2168,
+    [15] = 2889,
+    [16] = 5316,
+    [17] = 5663,
+    [18] = 6541,
+    [19] = 6602,
+    [20] = 7017,
+    [22] = 10283,
+    [23] = 10369,
+    [24] = 10680,
+    [25] = 11101,
+    [26] = 11503,
+    [27] = 11673,
+    [28] = 11818,
+    [29] = 13336,
+    [30] = 13555,
+    [31] = 13829,
+    [32] = 13915,
+    [33] = 14502,
+    [34] = 15351,
+    [35] = 15731,
+    [36] = 15861,
+    [37] = 16013,
+    [39] = 16507,
+    [40] = 16530,
+    [41] = 16547,
+    [42] = 16579,
+    [43] = 16701,
+    [44] = 16725,
+    [45] = 16774,
+    [46] = 16482,
+    [47] = 16898,
+    [48] = 17201,
+    [49] = 17232,
+    [50] = 16887,
+    [51] = 17275,
+    [52] = 17295,
+    [53] = 17327,
+    [54] = 17257,
+    [55] = 17434,
+    [56] = 17493,
+    [57] = 17553,
+    [59] = 17697,
+    [60] = 17862,
+    [61] = 17682,
+    [62] = 18440,
+    [63] = 18484,
+    [64] = 18564,
+    [65] = 18757,
+    [66] = 18886,
+    [67] = 18980,
+    [68] = 19147,
+    [69] = 19485,
+    [70] = 17938,
+    [71] = 20119,
+    [72] = 20185,
+    [73] = 20251,
+    [74] = 20326,
+    [75] = 20432,
+    [76] = 20498,
+    [77] = 20573,
+    [78] = 20648,
+    [79] = 20723,
+    [80] = 20798,
+    [81] = 20013,
+    [82] = 20864,
+    [83] = 20962,
+    [84] = 21140,
+    [85] = 21188,
+    [86] = 21218,
+    [87] = 21469,
+    [88] = 21518,
+    [89] = 21971,
+    [90] = 21989,
+    [91] = 22158,
+    [92] = 22257,
+    [93] = 22279,
+    [94] = 22333,
+    [95] = 22683,
+    [96] = 22719,
+    [97] = 22737,
+    [98] = 23091,
+    [99] = 23103,
+    [100] = 23154,
+    [101] = 23173,
+    [102] = 23424,
+    [103] = 23468,
+    [104] = 23704,
+    [105] = 23732,
+    [106] = 23743,
 }
 
 -- [[Misc AOT variable imports]]
@@ -24094,7 +24116,7 @@ local ObjectTree = {
                 },
             },
             {
-                22,
+                21,
                 1,
                 {
                     "components",
@@ -24181,132 +24203,125 @@ local ObjectTree = {
                         20,
                         2,
                         {
-                            "toast",
-                        },
-                    },
-                    {
-                        21,
-                        2,
-                        {
                             "window",
                         },
                     },
                 },
             },
             {
-                39,
+                38,
                 1,
                 {
                     "elements",
                 },
                 {
                     {
-                        23,
+                        22,
                         2,
                         {
                             "baseCard",
                         },
                     },
                     {
-                        24,
+                        23,
                         2,
                         {
                             "button",
                         },
                     },
                     {
-                        25,
+                        24,
                         2,
                         {
                             "changelog",
                         },
                     },
                     {
-                        26,
+                        25,
                         2,
                         {
                             "collapsibleGroup",
                         },
                     },
                     {
-                        27,
+                        26,
                         2,
                         {
                             "description",
                         },
                     },
                     {
-                        28,
+                        27,
                         2,
                         {
                             "divider",
                         },
                     },
                     {
-                        29,
+                        28,
                         2,
                         {
                             "dropdown",
                         },
                     },
                     {
-                        30,
+                        29,
                         2,
                         {
                             "group",
                         },
                     },
                     {
-                        31,
+                        30,
                         2,
                         {
                             "input",
                         },
                     },
                     {
-                        32,
+                        31,
                         2,
                         {
                             "section",
                         },
                     },
                     {
-                        33,
+                        32,
                         2,
                         {
                             "slider",
                         },
                     },
                     {
-                        34,
+                        33,
                         2,
                         {
                             "stat",
                         },
                     },
                     {
-                        35,
+                        34,
                         2,
                         {
                             "tab",
                         },
                     },
                     {
-                        36,
+                        35,
                         2,
                         {
                             "tabSection",
                         },
                     },
                     {
-                        37,
+                        36,
                         2,
                         {
                             "text",
                         },
                     },
                     {
-                        38,
+                        37,
                         2,
                         {
                             "toggle",
@@ -24315,56 +24330,56 @@ local ObjectTree = {
                 },
             },
             {
-                47,
+                46,
                 2,
                 {
                     "settings",
                 },
                 {
                     {
-                        40,
+                        39,
                         2,
                         {
                             "appearance",
                         },
                     },
                     {
-                        41,
+                        40,
                         2,
                         {
                             "behavior",
                         },
                     },
                     {
-                        42,
+                        41,
                         2,
                         {
                             "defaults",
                         },
                     },
                     {
-                        43,
+                        42,
                         2,
                         {
                             "manager",
                         },
                     },
                     {
-                        44,
+                        43,
                         2,
                         {
                             "performance",
                         },
                     },
                     {
-                        45,
+                        44,
                         2,
                         {
                             "persistence",
                         },
                     },
                     {
-                        46,
+                        45,
                         2,
                         {
                             "registry",
@@ -24373,28 +24388,28 @@ local ObjectTree = {
                 },
             },
             {
-                51,
+                50,
                 2,
                 {
                     "cache",
                 },
                 {
                     {
-                        48,
+                        47,
                         2,
                         {
                             "imageCache",
                         },
                     },
                     {
-                        49,
+                        48,
                         2,
                         {
                             "moduleCache",
                         },
                     },
                     {
-                        50,
+                        49,
                         2,
                         {
                             "persistenceCache",
@@ -24403,28 +24418,28 @@ local ObjectTree = {
                 },
             },
             {
-                55,
+                54,
                 2,
                 {
                     "functions",
                 },
                 {
                     {
-                        52,
+                        51,
                         2,
                         {
                             "colors",
                         },
                     },
                     {
-                        53,
+                        52,
                         2,
                         {
                             "flagNames",
                         },
                     },
                     {
-                        54,
+                        53,
                         2,
                         {
                             "textMetrics",
@@ -24433,28 +24448,28 @@ local ObjectTree = {
                 },
             },
             {
-                59,
+                58,
                 1,
                 {
                     "layouts",
                 },
                 {
                     {
-                        56,
+                        55,
                         2,
                         {
                             "Sidebar",
                         },
                     },
                     {
-                        57,
+                        56,
                         2,
                         {
                             "SidebarCollapsed",
                         },
                     },
                     {
-                        58,
+                        57,
                         2,
                         {
                             "Topbar",
@@ -24463,21 +24478,21 @@ local ObjectTree = {
                 },
             },
             {
-                62,
+                61,
                 2,
                 {
                     "images",
                 },
                 {
                     {
-                        60,
+                        59,
                         2,
                         {
                             "image",
                         },
                     },
                     {
-                        61,
+                        60,
                         2,
                         {
                             "windowIcons",
@@ -24493,45 +24508,52 @@ local ObjectTree = {
                 },
                 {
                     {
-                        63,
+                        62,
                         2,
                         {
                             "feather",
                         },
                     },
                     {
-                        64,
+                        63,
                         2,
                         {
                             "heroicons",
                         },
                     },
                     {
-                        65,
+                        64,
                         2,
                         {
                             "lucide",
                         },
                     },
                     {
-                        66,
+                        65,
                         2,
                         {
                             "material",
                         },
                     },
                     {
-                        67,
+                        66,
                         2,
                         {
                             "packBuilder",
                         },
                     },
                     {
-                        68,
+                        67,
                         2,
                         {
                             "phosphor",
+                        },
+                    },
+                    {
+                        68,
+                        2,
+                        {
+                            "remix",
                         },
                     },
                     {
